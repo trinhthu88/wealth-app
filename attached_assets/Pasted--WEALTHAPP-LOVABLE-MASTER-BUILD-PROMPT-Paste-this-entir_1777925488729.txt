@@ -1,0 +1,1351 @@
+# WEALTHAPP — LOVABLE MASTER BUILD PROMPT
+# Paste this entire prompt into Lovable to scaffold the full application.
+# App name placeholder: WEALTHAPP (replace with your brand name throughout)
+
+---
+
+Build a full-stack financial planning and investment web application called **WEALTHAPP** using React, TypeScript, Tailwind CSS, and Supabase. This app serves a boutique financial advisory firm in Southeast Asia. It is mobile-first, responsive, and supports USD and VND currencies.
+
+---
+
+## DESIGN SYSTEM
+
+**Colors**
+- Primary: #1D9E75 (teal)
+- Primary dark: #0F6E56
+- Dark navy: #042C53
+- Background: #FFFFFF
+- Surface: #F8FAFB
+- Border: #E2E8F0
+- Text primary: #0F172A
+- Text secondary: #64748B
+- Success: #10B981
+- Warning: #F59E0B
+- Danger: #EF4444
+
+**Typography**
+- Font: Inter (Google Fonts)
+- Headings: 600 weight
+- Body: 400 weight
+- Small/labels: 500 weight, 12–13px
+
+**Components**
+- Border radius: 12px for cards, 8px for inputs and buttons
+- Card shadow: 0 1px 3px rgba(0,0,0,0.08)
+- Primary button: bg #1D9E75, white text, hover #0F6E56
+- Input fields: border #E2E8F0, focus ring #1D9E75
+- Mobile-first: all layouts stack vertically on small screens
+
+---
+
+## USER ROLES AND ACCESS
+
+The app has 4 user roles managed via Supabase Auth + a `profiles` table with a `role` column:
+
+1. **free_user** — signed up with email, no payment
+2. **investment_client** — existing advisory client, manually activated by admin
+3. **advisor** — firm team member, manages assigned investment clients only
+4. **super_admin** — full access to all users, all data, all settings
+
+Each role sees a completely different UI. Use a `role` field in the `profiles` table to route users to the correct portal after login.
+
+---
+
+## SUPABASE DATABASE SCHEMA
+
+Create the following tables with Row Level Security enabled on all:
+
+```sql
+-- Core user profile (extends Supabase auth.users)
+CREATE TABLE profiles (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  email TEXT NOT NULL,
+  full_name TEXT,
+  role TEXT NOT NULL DEFAULT 'free_user'
+    CHECK (role IN ('free_user','investment_client','advisor','super_admin')),
+  avatar_url TEXT,
+  preferred_currency TEXT DEFAULT 'USD' CHECK (preferred_currency IN ('USD','VND')),
+  country_code TEXT,
+  is_expat BOOLEAN DEFAULT FALSE,
+  onboarding_complete BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Pathway progress tracking
+CREATE TABLE pathway_progress (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  step_number INT NOT NULL,
+  step_name TEXT NOT NULL,
+  status TEXT DEFAULT 'not_started'
+    CHECK (status IN ('not_started','in_progress','completed','skipped')),
+  form_data JSONB,
+  completed_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Budget entries (monthly)
+CREATE TABLE budget_entries (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  period_month DATE NOT NULL,
+  currency TEXT DEFAULT 'USD',
+  income NUMERIC,
+  needs_actual NUMERIC,
+  wants_actual NUMERIC,
+  savings_actual NUMERIC,
+  savings_rate_percent NUMERIC,
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Financial goals
+CREATE TABLE financial_goals (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  goal_type TEXT NOT NULL,
+  target_amount NUMERIC,
+  current_amount NUMERIC DEFAULT 0,
+  monthly_contribution NUMERIC DEFAULT 0,
+  target_date DATE,
+  currency TEXT DEFAULT 'USD',
+  priority TEXT DEFAULT 'medium' CHECK (priority IN ('high','medium','low')),
+  status TEXT DEFAULT 'on_track'
+    CHECK (status IN ('on_track','at_risk','off_track','achieved')),
+  notes TEXT,
+  is_advisor_managed BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Net worth snapshots
+CREATE TABLE net_worth_snapshots (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  snapshot_date DATE NOT NULL,
+  total_assets_usd NUMERIC DEFAULT 0,
+  total_liabilities_usd NUMERIC DEFAULT 0,
+  net_worth_usd NUMERIC GENERATED ALWAYS AS (total_assets_usd - total_liabilities_usd) STORED,
+  notes TEXT,
+  created_by UUID REFERENCES profiles(id),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Assets
+CREATE TABLE assets (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  category TEXT NOT NULL
+    CHECK (category IN ('cash','investments','property','business','pension','vehicle','other')),
+  value_usd NUMERIC NOT NULL,
+  currency_original TEXT DEFAULT 'USD',
+  value_original NUMERIC,
+  as_of_date DATE DEFAULT CURRENT_DATE,
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Liabilities
+CREATE TABLE liabilities (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  category TEXT NOT NULL
+    CHECK (category IN ('mortgage','personal_loan','student_loan','credit_card','car_loan','other')),
+  balance_usd NUMERIC NOT NULL,
+  interest_rate_percent NUMERIC,
+  monthly_payment_usd NUMERIC,
+  currency_original TEXT DEFAULT 'USD',
+  balance_original NUMERIC,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Portfolio holdings (self-reported for free users, advisor-managed for investment clients)
+CREATE TABLE portfolio_holdings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  asset_name TEXT NOT NULL,
+  asset_class TEXT NOT NULL
+    CHECK (asset_class IN ('equity','etf','bond','real_estate','cash','crypto','alternative','other')),
+  current_value_usd NUMERIC NOT NULL,
+  currency_original TEXT DEFAULT 'USD',
+  value_original NUMERIC,
+  weight_percent NUMERIC,
+  is_advisor_managed BOOLEAN DEFAULT FALSE,
+  ticker_symbol TEXT,
+  notes TEXT,
+  last_updated_at TIMESTAMPTZ DEFAULT NOW(),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Financial health score (monthly)
+CREATE TABLE health_scores (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  score_date DATE NOT NULL,
+  overall_score INT CHECK (overall_score BETWEEN 0 AND 100),
+  budget_score INT,
+  goals_score INT,
+  net_worth_score INT,
+  savings_score INT,
+  insights JSONB,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Investment client extended profile
+CREATE TABLE client_profiles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE UNIQUE,
+  advisor_id UUID REFERENCES profiles(id),
+  kyc_status TEXT DEFAULT 'not_started'
+    CHECK (kyc_status IN ('not_started','submitted','under_review','approved','rejected')),
+  risk_profile TEXT
+    CHECK (risk_profile IN ('conservative','moderately_conservative','moderate','moderately_aggressive','aggressive')),
+  onboarding_step INT DEFAULT 1,
+  relationship_start_date DATE,
+  annual_review_date DATE,
+  internal_notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- KYC documents
+CREATE TABLE kyc_documents (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  document_type TEXT NOT NULL
+    CHECK (document_type IN ('passport','national_id','proof_of_address','source_of_funds','other')),
+  file_url TEXT NOT NULL,
+  file_name TEXT,
+  status TEXT DEFAULT 'pending'
+    CHECK (status IN ('pending','verified','rejected')),
+  rejection_reason TEXT,
+  uploaded_at TIMESTAMPTZ DEFAULT NOW(),
+  verified_by UUID REFERENCES profiles(id),
+  verified_at TIMESTAMPTZ
+);
+
+-- Financial plan (investment clients)
+CREATE TABLE financial_plans (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  advisor_id UUID REFERENCES profiles(id),
+  title TEXT NOT NULL,
+  status TEXT DEFAULT 'draft' CHECK (status IN ('draft','active','archived')),
+  plan_data JSONB,
+  next_review_date DATE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Plan milestones
+CREATE TABLE plan_milestones (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  plan_id UUID REFERENCES financial_plans(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  target_date DATE,
+  status TEXT DEFAULT 'upcoming'
+    CHECK (status IN ('upcoming','in_progress','completed','missed')),
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Documents vault
+CREATE TABLE documents (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  uploaded_by UUID REFERENCES profiles(id),
+  title TEXT NOT NULL,
+  category TEXT NOT NULL
+    CHECK (category IN ('contract','statement','report','tax','insurance','legal','other')),
+  file_url TEXT NOT NULL,
+  file_name TEXT,
+  file_size_bytes BIGINT,
+  is_admin_uploaded BOOLEAN DEFAULT FALSE,
+  uploaded_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Advisor-client messaging
+CREATE TABLE conversations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id UUID REFERENCES profiles(id),
+  advisor_id UUID REFERENCES profiles(id),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  conversation_id UUID REFERENCES conversations(id) ON DELETE CASCADE,
+  sender_id UUID REFERENCES profiles(id),
+  sender_role TEXT CHECK (sender_role IN ('client','advisor')),
+  content TEXT NOT NULL,
+  attachment_url TEXT,
+  sent_at TIMESTAMPTZ DEFAULT NOW(),
+  read_at TIMESTAMPTZ
+);
+
+-- Advisor tasks (per client)
+CREATE TABLE advisor_tasks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id UUID REFERENCES profiles(id),
+  advisor_id UUID REFERENCES profiles(id),
+  title TEXT NOT NULL,
+  description TEXT,
+  due_date DATE,
+  priority TEXT DEFAULT 'medium' CHECK (priority IN ('low','medium','high','urgent')),
+  status TEXT DEFAULT 'todo' CHECK (status IN ('todo','in_progress','done')),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Leads (from public tools)
+CREATE TABLE leads (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email TEXT NOT NULL,
+  first_name TEXT,
+  source TEXT,
+  quiz_result TEXT,
+  health_score INT,
+  status TEXT DEFAULT 'new'
+    CHECK (status IN ('new','contacted','qualified','converted','lost')),
+  assigned_advisor_id UUID REFERENCES profiles(id),
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Blog posts
+CREATE TABLE blog_posts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  author_id UUID REFERENCES profiles(id),
+  title TEXT NOT NULL,
+  slug TEXT UNIQUE NOT NULL,
+  excerpt TEXT,
+  content_markdown TEXT,
+  category TEXT,
+  status TEXT DEFAULT 'draft' CHECK (status IN ('draft','published')),
+  published_at TIMESTAMPTZ,
+  cover_image_url TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+**RLS Policies — apply these after creating tables:**
+
+```sql
+-- Profiles: users see only their own row; admins see all
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "users_own_profile" ON profiles FOR ALL TO authenticated
+  USING (id = auth.uid());
+CREATE POLICY "admins_all_profiles" ON profiles FOR ALL TO authenticated
+  USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('advisor','super_admin')));
+
+-- All user data tables: same pattern — own data only, advisors see assigned clients
+ALTER TABLE budget_entries ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "own_budget" ON budget_entries FOR ALL TO authenticated USING (user_id = auth.uid());
+
+ALTER TABLE financial_goals ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "own_goals" ON financial_goals FOR ALL TO authenticated USING (user_id = auth.uid());
+CREATE POLICY "advisor_client_goals" ON financial_goals FOR ALL TO authenticated
+  USING (EXISTS (SELECT 1 FROM client_profiles cp JOIN profiles p ON p.id = auth.uid()
+    WHERE cp.user_id = financial_goals.user_id AND cp.advisor_id = auth.uid() AND p.role IN ('advisor','super_admin')));
+
+ALTER TABLE net_worth_snapshots ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "own_nw" ON net_worth_snapshots FOR ALL TO authenticated USING (user_id = auth.uid());
+
+ALTER TABLE assets ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "own_assets" ON assets FOR ALL TO authenticated USING (user_id = auth.uid());
+
+ALTER TABLE liabilities ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "own_liabilities" ON liabilities FOR ALL TO authenticated USING (user_id = auth.uid());
+
+ALTER TABLE portfolio_holdings ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "own_portfolio" ON portfolio_holdings FOR ALL TO authenticated USING (user_id = auth.uid());
+
+ALTER TABLE health_scores ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "own_scores" ON health_scores FOR ALL TO authenticated USING (user_id = auth.uid());
+
+ALTER TABLE client_profiles ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "own_client_profile" ON client_profiles FOR ALL TO authenticated USING (user_id = auth.uid());
+CREATE POLICY "advisor_client_profiles" ON client_profiles FOR ALL TO authenticated
+  USING (advisor_id = auth.uid() OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'super_admin'));
+
+ALTER TABLE kyc_documents ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "own_kyc" ON kyc_documents FOR ALL TO authenticated USING (user_id = auth.uid());
+
+ALTER TABLE financial_plans ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "client_own_plan" ON financial_plans FOR SELECT TO authenticated USING (client_id = auth.uid());
+CREATE POLICY "advisor_manage_plans" ON financial_plans FOR ALL TO authenticated
+  USING (advisor_id = auth.uid() OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'super_admin'));
+
+ALTER TABLE documents ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "own_documents" ON documents FOR ALL TO authenticated USING (user_id = auth.uid());
+
+ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "conversation_parties" ON conversations FOR ALL TO authenticated
+  USING (client_id = auth.uid() OR advisor_id = auth.uid());
+
+ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "conversation_members_messages" ON messages FOR ALL TO authenticated
+  USING (EXISTS (SELECT 1 FROM conversations c WHERE c.id = messages.conversation_id
+    AND (c.client_id = auth.uid() OR c.advisor_id = auth.uid())));
+
+ALTER TABLE advisor_tasks ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "advisor_own_tasks" ON advisor_tasks FOR ALL TO authenticated
+  USING (advisor_id = auth.uid() OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'super_admin'));
+
+ALTER TABLE leads ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "advisors_see_leads" ON leads FOR ALL TO authenticated
+  USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('advisor','super_admin')));
+
+ALTER TABLE blog_posts ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "published_posts_public" ON blog_posts FOR SELECT USING (status = 'published');
+CREATE POLICY "admins_manage_posts" ON blog_posts FOR ALL TO authenticated
+  USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('advisor','super_admin')));
+```
+
+---
+
+## APP ARCHITECTURE — ROUTING
+
+Build the following route structure using React Router:
+
+```
+/ → PublicLandingPage
+/login → LoginPage
+/register → RegisterPage
+/blog → BlogListPage
+/blog/:slug → BlogPostPage
+/tools/budget → BudgetCalculatorPage (public)
+/tools/retirement → RetirementCalculatorPage (public)
+/tools/net-worth → NetWorthCalculatorPage (public)
+/tools/fi-number → FINumberCalculatorPage (public)
+/tools/money-quiz → MoneyPersonalityQuizPage (public, multi-step)
+/tools/expat-check → ExpatHealthCheckPage (public, multi-step)
+/tools/risk-quiz → RiskProfileQuizPage (public, multi-step)
+/book → BookDiscoveryCallPage (public)
+
+/app → redirect based on role:
+  free_user → /app/dashboard
+  investment_client → /portal/dashboard
+  advisor → /advisor/dashboard
+  super_admin → /admin/dashboard
+
+/app/dashboard → FreeUserDashboard (auth: free_user)
+/app/pathway → FreeUserPathway (auth: free_user)
+/app/budget → FreeUserBudget (auth: free_user)
+/app/goals → FreeUserGoals (auth: free_user)
+/app/health-score → FreeUserHealthScore (auth: free_user)
+/app/settings → FreeUserSettings (auth: free_user)
+/app/upgrade → UpgradePage (auth: free_user)
+
+/portal/dashboard → InvestmentClientDashboard (auth: investment_client)
+/portal/pathway → InvestmentClientPathway (auth: investment_client)
+/portal/portfolio → InvestmentClientPortfolio (auth: investment_client)
+/portal/plan → InvestmentClientPlan (auth: investment_client)
+/portal/goals → InvestmentClientGoals (auth: investment_client)
+/portal/net-worth → InvestmentClientNetWorth (auth: investment_client)
+/portal/documents → InvestmentClientDocuments (auth: investment_client)
+/portal/messages → InvestmentClientMessages (auth: investment_client)
+/portal/reports → InvestmentClientReports (auth: investment_client)
+/portal/settings → InvestmentClientSettings (auth: investment_client)
+
+/advisor/dashboard → AdvisorDashboard (auth: advisor, super_admin)
+/advisor/clients → AdvisorClientList (auth: advisor, super_admin)
+/advisor/clients/:id → AdvisorClientDetail (auth: advisor, super_admin)
+/advisor/tasks → AdvisorTaskManager (auth: advisor, super_admin)
+/advisor/leads → AdvisorLeadPipeline (auth: advisor, super_admin)
+
+/admin/dashboard → SuperAdminDashboard (auth: super_admin)
+/admin/users → SuperAdminUserList (auth: super_admin)
+/admin/users/:id → SuperAdminUserDetail (auth: super_admin)
+/admin/analytics → SuperAdminAnalytics (auth: super_admin)
+/admin/content → SuperAdminContent (auth: super_admin)
+/admin/settings → SuperAdminSettings (auth: super_admin)
+```
+
+Create an `AuthGuard` component that:
+- Redirects unauthenticated users to /login
+- Redirects authenticated users to the correct portal based on their role
+- Shows a loading spinner while checking auth state
+
+---
+
+## PAGE-BY-PAGE SPECIFICATIONS
+
+### PUBLIC: Landing Page (/)
+Layout: full-width, mobile-first, sticky navigation
+
+Navigation bar:
+- Logo left (WEALTHAPP text in primary teal)
+- Links: Tools, Blog, About
+- Right: Login button (outline) + Book a Call button (primary teal)
+- Mobile: hamburger menu
+
+Hero section:
+- Headline: "Your financial future, planned with purpose"
+- Subheadline: "Financial planning and investment management for expats and investors across Southeast Asia"
+- Two CTAs: "Start for free" (primary) + "Book a discovery call" (outline)
+- Background: white with subtle teal geometric accent
+
+Value props (3 cards in a row, stack on mobile):
+- Card 1: icon + "Financial Planning" + "Build a personalised plan with clear goals and a timeline to achieve them"
+- Card 2: icon + "Investment Management" + "Professional portfolio management tailored to your risk profile and life goals"
+- Card 3: icon + "Expat Expertise" + "Specialist knowledge for international clients navigating cross-border finance"
+
+Free tools section:
+- Headline: "Free tools to get you started"
+- 6 tool cards in a 3×2 grid (2×3 on mobile), each linking to the tool page:
+  1. Budget Tracker — "See where your money goes"
+  2. Retirement Calculator — "When can you retire?"
+  3. Net Worth Calculator — "Know your number"
+  4. FI Number — "Your path to financial independence"
+  5. Money Personality Quiz — "Discover your money type"
+  6. Expat Health Check — "Are your finances expat-ready?"
+
+How it works (3 steps):
+- Step 1: Use the free tools to understand your finances
+- Step 2: Create a free account to track your progress
+- Step 3: Work with an advisor to accelerate your plan
+
+CTA section (teal background):
+- "Ready to take control of your financial future?"
+- Book a Discovery Call button (white)
+
+Footer: logo, links, copyright
+
+---
+
+### PUBLIC: Free Tools
+
+Build each tool as a standalone page with this consistent layout:
+- Tool title + one-line description
+- Input form (left/top on desktop, full width on mobile)
+- Result card (right/bottom on desktop, below inputs on mobile)
+- Lead capture: after result is shown, display a card: "Save your result and track progress over time — free account, 30 seconds" with email input + "Create free account" button
+- Book a call CTA below results: contextual based on result (e.g. if retirement gap detected: "You have a $X/month retirement gap — an advisor can help you close it")
+
+**Budget Tracker (/tools/budget)**
+Inputs:
+- Monthly income (number, currency toggle USD/VND)
+- Housing/rent (number)
+- Food (number)
+- Transport (number)
+- Utilities (number)
+- Entertainment (number)
+- Other (number)
+
+Live outputs (update as user types):
+- Total expenses
+- Monthly savings
+- Savings rate %
+- 50/30/20 comparison donut chart (use Recharts PieChart)
+- Verdict card: green if savings rate >20%, amber if 10-20%, red if <10%
+
+**Retirement Calculator (/tools/retirement)**
+Inputs:
+- Current age (slider 18–65)
+- Target retirement age (slider 45–80)
+- Current savings (number)
+- Monthly contribution (number)
+- Expected annual return % (slider 4–12%, default 7%)
+- Desired monthly retirement income (number)
+
+Outputs:
+- Projected savings at retirement
+- Monthly income it sustains (4% rule)
+- Gap vs desired income (highlighted in red if negative)
+- Line chart showing savings growth over time (Recharts LineChart)
+
+**Net Worth Calculator (/tools/net-worth)**
+Inputs (two sections):
+Assets: cash + investments + property + other (each a number input)
+Liabilities: mortgage + loans + credit cards + other
+
+Outputs:
+- Total assets
+- Total liabilities
+- Net worth (large, prominent number — green if positive, red if negative)
+- Stacked bar chart showing assets vs liabilities
+
+**FI Number Calculator (/tools/fi-number)**
+Inputs:
+- Monthly expenses (number)
+- Current invested assets (number)
+- Monthly investment contribution (number)
+- Expected annual return % (slider 5–12%, default 7%)
+
+Outputs:
+- FI number (expenses × 12 / 0.04)
+- Current gap
+- Years to FI at current contribution
+- Progress bar showing % of FI number achieved
+- Area chart showing projected growth to FI number
+
+**Money Personality Quiz (/tools/money-quiz)**
+Multi-step quiz, one question per screen with progress bar:
+
+Question 1: "If your investments dropped 20% in a month, you would..."
+- A) Sell everything immediately
+- B) Feel anxious but hold on
+- C) Stay calm and do nothing
+- D) See it as a buying opportunity
+- E) Invest more aggressively
+
+Question 2: "When you get an unexpected bonus, your first instinct is..."
+- A) Pay off debt immediately
+- B) Put it all in savings
+- C) Split between saving and spending
+- D) Treat yourself — you earned it
+- E) Invest it straight away
+
+Question 3: "Your relationship with financial planning is..."
+- A) I avoid thinking about it
+- B) I know I should do more
+- C) I have some basics in place
+- D) I track things carefully
+- E) I'm very organised and strategic
+
+Question 4: "Your biggest financial fear is..."
+- A) Losing all my money
+- B) Not having enough to retire
+- C) Missing out on good investments
+- D) Being in debt
+- E) Not reaching my financial goals
+
+Question 5: "When making a big financial decision, you..."
+- A) Ask family or friends
+- B) Research extensively online
+- C) Trust your gut
+- D) Consult a professional
+- E) Delay the decision as long as possible
+
+Question 6: "Your ideal investment would..."
+- A) Never lose value even if returns are low
+- B) Grow steadily with minimal risk
+- C) Offer balanced growth and security
+- D) Grow strongly even with some risk
+- E) Maximise returns regardless of risk
+
+Question 7: "You think about your financial future..."
+- A) Rarely — it stresses me out
+- B) Sometimes when I remember
+- C) Monthly when I check accounts
+- D) Weekly as part of my routine
+- E) Daily — it's a priority
+
+Question 8: "Your current savings habit is..."
+- A) I don't really save
+- B) I save whatever's left over
+- C) I save a fixed amount monthly
+- D) I save and invest regularly
+- E) I maximise every saving opportunity
+
+Score answers A=1, B=2, C=3, D=4, E=5. Total score determines archetype:
+- 8–16: The Avoider — overwhelmed by money, tends to procrastinate financial decisions
+- 17–24: The Protector — security-focused, risk-averse, prioritises safety over growth
+- 25–31: The Balancer — thoughtful and measured, seeks stability with some growth
+- 32–38: The Builder — growth-oriented, disciplined, focused on long-term wealth
+- 39–40: The Optimizer — highly strategic, maximises every financial opportunity
+
+Result page shows:
+- Archetype name (large, with teal accent)
+- 2-sentence description
+- 3 strengths
+- 3 blind spots
+- 3 recommended actions
+
+Email gate: show archetype name, gate full result (blind spots + actions) behind "Enter your email to unlock your full profile" form. On submission, create lead record in Supabase and show full result.
+
+**Expat Health Check (/tools/expat-check)**
+Multi-step form, 8 questions, one per screen:
+
+Q1: "Are you currently living outside your home country?" (Yes/No — if No, redirect to general health check)
+Q2: "Do you know your tax obligations in both your home country and country of residence?" (Yes clearly / Somewhat / No / Not sure)
+Q3: "How many months of living expenses do you have in an accessible emergency fund?" (0-1 / 1-3 / 3-6 / 6+)
+Q4: "What percentage of your savings is in your home country currency?" (<25% / 25-50% / 50-75% / >75%)
+Q5: "Are you still contributing to a pension or retirement account?" (Yes actively / Stopped when I moved / Never had one / Not sure)
+Q6: "Do you have international health insurance coverage?" (Yes comprehensive / Yes basic / Home country only / None)
+Q7: "Do you have a strategy for international money transfers?" (Yes optimised / Basic bank transfers / No strategy / Not applicable)
+Q8: "Do you have a valid will in your country of residence?" (Yes / In home country only / No will / Not sure)
+
+Scoring: each answer scores 0, 5, 8, or 10. Total out of 80 converted to 100.
+
+Result shows:
+- Score out of 100 with colour coding (0-40 red / 41-70 amber / 71-100 green)
+- Breakdown by category with individual scores
+- Top 3 areas needing attention with brief explanation
+- Email gate for full personalised recommendations
+- "Book a free expat financial review" CTA
+
+**Risk Profile Quiz (/tools/risk-quiz)**
+5 quick questions:
+Q1: Investment time horizon (Less than 3 years / 3-7 years / 7-15 years / 15+ years)
+Q2: If your portfolio fell 25% what would you do? (Sell everything / Sell some / Hold / Buy more)
+Q3: Primary investment goal (Preserve capital / Steady income / Balanced growth / Maximum growth)
+Q4: Investment experience (None / Some / Experienced / Expert)
+Q5: How would you feel losing 10% in a month? (Very stressed / Uncomfortable / Manageable / Fine)
+
+Result: Conservative / Moderately Conservative / Moderate / Moderately Aggressive / Aggressive
+Each result shows: profile description, suggested asset allocation pie chart, typical portfolio example
+
+---
+
+### FREE USER: Dashboard (/app/dashboard)
+
+After login, free users land here. Layout: mobile-first single column, desktop 2-column grid.
+
+Top section:
+- Welcome message: "Good morning, [name]" with today's date
+- Financial plan completion progress bar: "Your financial plan is X% complete" with "Continue setup" button linking to /app/pathway
+- Financial health score ring: circular progress showing score/100 (show "--" if pathway not started)
+
+4 summary cards (2×2 grid on desktop, stack on mobile):
+- Monthly budget: income vs expenses this month, savings rate %
+- Top goal: title, progress bar, target date
+- Net worth: total number with up/down arrow vs last month
+- Streak: "X week streak" with flame icon
+
+Quick actions row:
+- Update budget
+- Add a goal
+- Calculate retirement
+- Book a call
+
+Upgrade prompt card (teal gradient):
+- "Unlock your full financial picture"
+- List of 3 locked features: Portfolio tracker, Full net worth history, Unlimited goals
+- "Upgrade to Premium" button
+
+Recent activity feed:
+- List of last 5 actions (goal added, budget updated, quiz taken, etc.)
+
+---
+
+### FREE USER: Financial Planning Pathway (/app/pathway)
+
+This is the step-by-step data collection flow. Show a vertical stepper on desktop, full-screen steps on mobile.
+
+Progress indicator at top: step X of 6 + overall % complete
+
+**Step 1 — About you**
+Fields: First name, Current age (number), Life stage (select: just starting / building career / growing family / established / pre-retirement), Country of residence (select), Are you an expat? (toggle), Preferred currency (USD/VND toggle)
+Save to: profiles table
+On complete: show micro-celebration "Step 1 complete ✓"
+
+**Step 2 — Your income**
+Fields: Monthly take-home income (number with currency toggle), Income type (multi-select checkboxes: salary / freelance / business / rental / other), Income stability (radio: stable / variable)
+Save to: budget_entries (income field) + pathway_progress
+On complete: REWARD UNLOCK — animate health score ring appearing with partial score
+
+**Step 3 — Your monthly expenses**
+Fields: Housing (number), Food (number), Transport (number), Utilities (number), Entertainment (number), Other (number)
+Live calculation shown below inputs: "You're saving X% of your income" with coloured indicator
+Save to: budget_entries
+On complete: show savings rate analysis card
+
+**Step 4 — Your #1 financial goal**
+Fields: Goal type (visual card selector: retire comfortably / buy property / build emergency fund / reach financial independence / pay off debt / other), Goal name (text, pre-filled), Target amount (number, currency toggle), Target date (date picker)
+Save to: financial_goals
+On complete: REWARD UNLOCK — goal progress bar appears on dashboard preview
+
+**Step 5 — Your savings and debts**
+Fields: Total current savings (number, currency toggle), Do you have investments? (yes/no toggle), Investment value if yes (number), Do you have debts? (yes/no toggle), Total debt if yes (number), Main debt type (select)
+Save to: assets (savings + investments) + liabilities
+On complete: show net worth calculation card
+
+**Step 6 — Your risk profile**
+Show the 5-question risk quiz (same as public quiz but results are saved to user profile)
+Save to: profiles (risk_profile field) + pathway_progress
+On complete: REWARD UNLOCK — full dashboard unlocks, health score finalises with number, show "Your financial plan is ready" celebration screen with 3 personalised insights
+
+Each step has:
+- Skip button (saves step as 'skipped', user can return)
+- Auto-save on every field change (debounced 500ms, save to pathway_progress form_data JSONB)
+- "Saving..." indicator
+- Back button to previous step
+
+---
+
+### FREE USER: Budget Tracker (/app/budget)
+
+Shows current month budget with ability to update.
+
+If no budget data: show empty state with "Set up your budget" button linking to pathway step 3.
+
+If data exists:
+- Month selector (previous months grayed out if no data)
+- Income display (from pathway data)
+- Expense categories with actual amounts (editable inline)
+- Live 50/30/20 donut chart (Recharts) updating as amounts change
+- Savings rate badge: green/>20%, amber/10-20%, red/<10%
+- "Update this month" save button
+
+Locked feature prompt at bottom: "See 12 months of budget history — upgrade to Premium"
+
+---
+
+### FREE USER: Goals (/app/goals)
+
+Shows the 1 goal allowed on free tier.
+
+Goal card showing:
+- Goal title and type icon
+- Progress bar: current amount / target amount
+- % complete
+- Target date with countdown
+- Projected achievement date at current contribution rate
+- "Add contribution" button (opens modal to log money added)
+- "Edit goal" button
+
+Locked feature: greyed-out "Add another goal" card with lock icon and "Upgrade to unlock unlimited goals"
+
+---
+
+### FREE USER: Health Score (/app/health-score)
+
+Shows the financial health score breakdown.
+
+Large score ring (animated, teal) at top showing score/100.
+
+Score breakdown (4 components, each scored individually):
+- Budget health (based on savings rate)
+- Goals progress (based on goal completion %)
+- Net worth trend (positive/negative)
+- Plan completion (% of pathway completed)
+
+Below each component: a one-sentence insight explaining the score.
+
+"Your score updates monthly" message.
+
+3 personalised insight cards at bottom based on data:
+- Each card has an icon, brief finding, and one suggested action
+
+---
+
+### INVESTMENT CLIENT PORTAL (/portal/*)
+
+This is a COMPLETELY DIFFERENT design from the free user portal. Use a premium dark navy (#042C53) sidebar on desktop with white content area. Mobile: bottom navigation bar.
+
+Sidebar navigation items:
+- Dashboard (home icon)
+- My Portfolio (chart icon)
+- Financial Plan (map icon)
+- My Goals (target icon)
+- Net Worth (trending up icon)
+- Documents (folder icon)
+- Messages (chat icon)
+- Reports (file icon)
+- Settings (gear icon)
+
+**Investment Client: Onboarding Pathway (/portal/pathway)**
+
+4-section stepper for new investment clients. Show section tabs at top (Section 1/2/3/4) with step dots within each section.
+
+SECTION 1 — About You (4 steps)
+Step 1: Full legal name, Date of birth, Nationality (select), Country of residence (select), Are you an expat? (toggle), Tax residency countries (repeatable: add country + tax ID)
+Step 2: Employment status (select), Employer name, Job title, Annual gross income (number + currency), Additional income sources (repeatable: source + amount)
+Step 3: Marital status (select), Number of dependants (number), Partner employment status (select if married), Major planned life events (multi-select: property purchase / children's education / business sale / retirement)
+Step 4: Current monthly living expenses (number), Lifestyle descriptor (radio: modest / comfortable / affluent), Any existing financial advisor? (yes/no), If yes: who?
+
+SECTION 2 — Your Finances (4 steps)
+Step 5: Add all assets using repeatable field groups:
+  - Bank accounts (institution + country + balance + currency)
+  - Investment accounts (institution + account type + current value)
+  - Properties (description + estimated value + outstanding mortgage)
+  - Pension accounts (scheme name + country + balance)
+  - Other assets (description + value)
+  Shows live total assets calculation
+Step 6: Add all liabilities (repeatable):
+  - Mortgages (property + balance + rate + monthly payment)
+  - Loans (type + lender + balance + rate + monthly payment)
+  - Credit cards (bank + balance)
+  Shows live total liabilities + net worth calculation
+Step 7: Insurance inventory:
+  - Life insurance (yes/no + sum insured)
+  - Income protection (yes/no + monthly benefit)
+  - Health insurance (yes/no + type: local/international)
+  - Are policies in home country or current country? (important for expats)
+Step 8: Current investments:
+  - How is money currently invested? (multi-select)
+  - Satisfied with current approach? (yes/no + comments)
+
+[After Section 2 completes: animate net worth dashboard populating with real data]
+
+SECTION 3 — Your Goals (4 steps)
+Step 9: Retirement vision:
+  - Target retirement age (slider 45–80)
+  - Desired monthly retirement income (number)
+  - Where do you plan to retire? (select)
+  - Will you support family in retirement? (yes/no + amount)
+Step 10: Financial goals (add up to 8):
+  - Repeatable goal cards: type + name + target amount + target date + priority (drag to rank)
+  - Shows projected achievement date and monthly contribution needed
+Step 11: Estate planning:
+  - Do you have a will? (yes/no/outdated)
+  - Valid in country of residence? (yes/no/unsure)
+  - Beneficiaries designated? (yes/all/some/no)
+  - Any charitable giving intentions? (yes/no)
+Step 12: Review section 3 summary — show all goals on a visual timeline (horizontal scroll on mobile)
+
+[After Section 3 completes: financial plan timeline appears, advisor notified]
+
+SECTION 4 — Risk and Compliance (4 steps)
+Step 13: Investment knowledge:
+  - Overall experience (slider: none to expert)
+  - Products invested in (multi-select checkboxes)
+  - Frequency of investment decisions (radio)
+Step 14: Risk profile questionnaire (12 questions, one per screen):
+  Q1: Investment objective (4 options)
+  Q2: Time horizon (4 options)
+  Q3: Reaction to 20% loss (5 options)
+  Q4: Reaction to 40% loss (5 options)
+  Q5: Acceptable drawdown period (4 options)
+  Q6: Income needs from portfolio (4 options)
+  Q7: Liquidity needs (4 options)
+  Q8: Return expectations (4 options)
+  Q9: Inflation concern level (4 options)
+  Q10: ESG/ethical preference (3 options)
+  Q11: Previous significant investment loss (yes/no/amount)
+  Q12: Overall risk comfort self-assessment (slider 1–10)
+  Result: calculates risk profile and shows recommended asset allocation
+Step 15: KYC document upload:
+  - Passport upload (drag-drop file zone, PDF/JPG/PNG, max 10MB)
+  - Proof of address upload (utility bill or bank statement)
+  - Source of funds declaration (select + optional explanation)
+  Each file shows upload progress bar and "Pending review" badge after upload
+Step 16: Declarations:
+  - PEP declaration (radio: yes/no + explanation if yes)
+  - Terms and conditions (link + required checkbox)
+  - Privacy policy (link + required checkbox)
+  - Investment risk warning (required checkbox)
+  - Data processing consent (required checkbox)
+  - Marketing communications (optional checkbox)
+  Submit button: "Complete my application"
+
+[After Section 4: show celebration screen — "Application submitted! Your advisor will be in touch within 24 hours." Show advisor name and photo placeholder. Show "Book your welcome call" button.]
+
+**Investment Client: Dashboard (/portal/dashboard)**
+
+Premium design. Dark navy sidebar. White content area.
+
+Top: "Welcome back, [name]" + date + advisor assigned chip ("Your advisor: [name]")
+
+3 hero metric cards:
+- Portfolio value: total USD with % change this month
+- Net worth: total with trend arrow
+- Financial health score: ring with number
+
+Financial plan progress section:
+- Horizontal milestone timeline showing upcoming milestones (next 3)
+- Next milestone highlighted in teal
+
+Goals overview: 3 goal cards showing top priority goals with progress bars
+
+Recent advisor activity: list of recent messages, uploaded documents, or tasks completed
+
+Quick actions: Message advisor / View portfolio / View documents / Book a meeting
+
+**Investment Client: Portfolio (/portal/portfolio)**
+
+If advisor has not uploaded holdings: "Your portfolio is being set up — your advisor will update this shortly"
+
+If holdings exist:
+- Total portfolio value (large number) + % change
+- Asset allocation donut chart (Recharts PieChart) — colour coded by asset class
+- Geographic diversification chart
+- Holdings table: asset name / class / value / weight % / gain/loss
+- Performance chart: portfolio value over time (Recharts LineChart)
+- Transaction history (tab): date / type / asset / amount
+
+**Investment Client: Financial Plan (/portal/plan)**
+
+If no plan exists: "Your advisor is preparing your personalised financial plan"
+
+If plan exists:
+- Plan title and status badge
+- Horizontal scrollable milestone timeline
+- Each milestone: title, target date, status badge (upcoming/in-progress/completed/missed)
+- Plan notes section (advisor's narrative, read-only for client)
+- Next review date prominently shown
+- "Request plan review" button
+
+**Investment Client: Goals (/portal/goals)**
+
+All goals with full detail (advisor-managed and client-created):
+- Goal cards: title, type icon, progress bar, target date, status badge, monthly contribution
+- Add goal button (client can add goals, advisor can edit)
+- Goal detail modal: full breakdown including contribution history
+
+**Investment Client: Net Worth (/portal/net-worth)**
+
+Net worth number (large, prominent)
+Monthly trend chart showing net worth over time (Recharts AreaChart)
+
+Two sections side by side (stack on mobile):
+Assets list:
+- Grouped by category
+- Each line: name, value, % of total assets
+- Total assets at bottom
+
+Liabilities list:
+- Grouped by category
+- Each line: name, balance, interest rate
+- Total liabilities at bottom
+
+"Update my figures" button (client can add/edit their own assets/liabilities)
+
+**Investment Client: Documents (/portal/documents)**
+
+File browser layout:
+- Filter tabs: All / Contracts / Statements / Reports / Tax / Insurance / Other
+- Document cards: icon (based on type) + title + date uploaded + uploaded by (advisor or you) + download button
+- Upload button for client to add their own documents
+
+Upload modal: drag-drop zone + category select + title field
+
+**Investment Client: Messages (/portal/messages)**
+
+Chat interface:
+- Messages grouped by date
+- Advisor messages on left (navy bubble), client messages on right (teal bubble)
+- Message shows time sent and read receipt
+- Input box at bottom with send button and attachment option
+- File attachments shown as preview cards
+
+If no conversation: "Send a message to your advisor" prompt
+
+**Investment Client: Reports (/portal/reports)**
+
+List of quarterly/annual reports:
+- Report card: period (e.g. Q1 2025), generated date, status (ready/generating), download PDF button
+- Most recent report shown at top with preview summary card
+
+---
+
+### ADVISOR PORTAL (/advisor/*)
+
+Clean professional design. White sidebar with teal accents. Desktop-optimised (advisors primarily on desktop).
+
+**Advisor Dashboard (/advisor/dashboard)**
+
+Top KPI row (4 metric cards):
+- Total clients assigned: count
+- Tasks due this week: count with urgent count highlighted
+- Open messages: unread count
+- New leads assigned: count
+
+My clients table:
+Columns: client name / health score / last contact / open tasks / KYC status / action (View button)
+Sortable. Filter by KYC status.
+
+Tasks due today: list of tasks with client name, priority badge, due date, mark-done checkbox
+
+Recent messages: list of recent unread messages from clients with preview
+
+**Advisor Client List (/advisor/clients)**
+
+Searchable, filterable table of all assigned clients:
+Columns: name / email / portfolio value / health score / kyc status / advisor / last activity / actions
+
+Filter bar: KYC status / health score range / activity recency
+
+Each row links to client detail page.
+"Add new client" button (super admin only) — creates user with investment_client role and sends onboarding email.
+
+**Advisor Client Detail (/advisor/clients/:id)**
+
+Full client profile page with tabbed navigation:
+
+Tab 1 — Overview:
+- Client name, photo placeholder, advisor assigned chip
+- Summary cards: portfolio value, net worth, health score, goals count
+- KYC status with action button (approve/reject if under review)
+- Quick actions: Send message / Add task / Generate report / View documents
+- Notes field (private advisor notes, never shown to client)
+
+Tab 2 — Portfolio:
+- Same portfolio view as client sees, but with EDIT capabilities
+- "Update holdings" button opens a modal with a holdings editor table:
+  Each row: asset name + class + current value + delete button
+  "Add holding" button adds a new row
+  Save updates all portfolio_holdings records for this client
+
+Tab 3 — Financial Plan:
+- View and edit the financial plan
+- Milestones table with status dropdowns (editable)
+- "Add milestone" button
+- Plan notes editor (rich text — use a simple textarea)
+- Save plan button
+
+Tab 4 — Goals:
+- All client goals with edit capability
+- Edit modal for each goal: all fields editable by advisor
+- "Add goal for client" button
+
+Tab 5 — Documents:
+- Document vault with upload capability
+- Advisor can upload documents on behalf of client (is_admin_uploaded = true)
+
+Tab 6 — Messages:
+- Same chat interface as client sees
+
+Tab 7 — Tasks:
+- Task list for this client
+- Add task form: title + description + due date + priority
+- Mark done, edit, delete actions
+
+Tab 8 — KYC:
+- Show uploaded KYC documents with preview links
+- Approve / Reject buttons per document (with rejection reason text field)
+- Overall KYC status update
+
+**Advisor Lead Pipeline (/advisor/leads)**
+
+Kanban board with 5 columns:
+- New (auto-populated from tool lead captures assigned to this advisor)
+- Contacted
+- Qualified
+- Proposal Sent
+- Converted
+
+Each lead card: name + email + source tool + date + health/quiz score
+
+Drag cards between columns to update status. Click card to open lead detail modal:
+- All lead data
+- Activity log (add note, log call, log email)
+- "Convert to client" button — creates investment_client account and sends onboarding email
+
+**Advisor Task Manager (/advisor/tasks)**
+
+All tasks across all assigned clients.
+Group by: due date / client / priority (toggle)
+Filter by: status / priority / client
+
+Each task row: client name / task title / priority badge / due date / status / mark-done
+
+"Add task" button (select client first, then fill task details)
+
+---
+
+### SUPER ADMIN PORTAL (/admin/*)
+
+**Super Admin Dashboard (/admin/dashboard)**
+
+Platform overview with KPI cards:
+- Total users by role: free_user count / investment_client count
+- New signups this month
+- Active leads in pipeline
+- Total content posts published
+
+Users table: all users across all roles, sortable, filterable by role
+Quick action: click any user to go to user detail
+
+**Super Admin User List (/admin/users)**
+
+Full user table:
+Columns: name / email / role / created date / last login / status (active/suspended)
+Filter: by role, by date range, search by name/email
+
+"Create user" button: form to create any role user
+"Change role" button per row: dropdown to change user role (triggers automatic portal access change)
+"Suspend" / "Delete" actions per row
+
+**Super Admin User Detail (/admin/users/:id)**
+
+Full user profile with all data visible:
+- Profile info (editable)
+- Role change dropdown
+- For investment_client: assign/reassign advisor dropdown
+- Full pathway completion status
+- All financial data summary (read-only)
+- Login history
+- Audit log for this user
+
+**Super Admin Analytics (/admin/analytics)**
+
+Charts section:
+- Users by role over time (line chart, Recharts)
+- Tool usage by type (bar chart)
+- Lead funnel: leads → free users → investment clients (funnel chart)
+- Geographic distribution (table by country)
+
+All charts filterable by date range (last 7 days / 30 days / 90 days / 12 months)
+
+**Super Admin Content (/admin/content)**
+
+Blog post management:
+- Table of all posts: title / category / status / published date / actions
+- "New post" button → full editor page:
+  - Title field
+  - Category select
+  - Excerpt textarea
+  - Content (markdown textarea — render preview side-by-side on desktop)
+  - Cover image URL
+  - Status toggle (draft/published)
+  - Save + Publish buttons
+
+---
+
+## SHARED COMPONENTS TO BUILD
+
+Build these reusable components used throughout the app:
+
+**CurrencyToggle**: pill toggle between USD and VND. When toggled, all monetary inputs and displays in the current view switch currency. Store preference in user profile.
+
+**HealthScoreRing**: animated circular progress component (use SVG). Props: score (0-100), size, showLabel. Colors: 0-40 red, 41-70 amber, 71-100 teal.
+
+**GoalProgressCard**: card showing goal with progress bar, target date, status badge. Props: goal object. Clickable to open detail modal.
+
+**PortfolioDonut**: Recharts PieChart showing asset allocation by class. Color map: equity=teal, bonds=navy, real_estate=amber, cash=gray, crypto=purple, other=slate.
+
+**MetricCard**: summary number card. Props: label, value, subtitle, trend (up/down/neutral), trendValue. Used on all dashboards.
+
+**StepCard**: pathway step container. Props: stepNumber, stepName, status, isSkippable, children. Shows step header with status indicator, progress saved indicator, skip button.
+
+**FileUploadZone**: drag-and-drop file upload area. Uploads to Supabase Storage. Shows progress bar. Props: bucket, onUpload, acceptedTypes, maxSizeMB.
+
+**ConversationThread**: messaging UI. Props: messages array, currentUserId, onSend. Renders chat bubbles, timestamps, read receipts.
+
+**KanbanBoard**: drag-and-drop kanban. Props: columns (array of {id, title, cards}), onCardMove. Used for lead pipeline.
+
+**SmartUpgradePrompt**: contextual upgrade card. Only shown when a specific gap is detected in user data. Props: reason, gapDescription, ctaText. Example: reason="savings_rate_low", gapDescription="You're saving 8% — financial plans target 20%+", ctaText="See how to reach 20%".
+
+---
+
+## AUTHENTICATION FLOWS
+
+**Register (/register)**
+- Email + password fields
+- Full name field
+- "Create free account" button
+- On submit: create Supabase auth user → create profiles row with role='free_user' → redirect to /app/pathway
+
+**Login (/login)**
+- Email + password
+- "Sign in" button
+- Forgot password link
+- On success: check profile.role → redirect to correct portal
+- Social login: "Continue with Google" (Supabase OAuth)
+
+**Post-login routing logic:**
+```
+free_user → /app/dashboard
+investment_client → /portal/dashboard
+advisor → /advisor/dashboard
+super_admin → /admin/dashboard
+```
+
+**Password Reset**
+Standard Supabase reset flow. Email reset link → set new password page.
+
+---
+
+## NOTIFICATION SYSTEM
+
+Build a notification bell icon in all authenticated headers. Notifications stored in a `notifications` table:
+
+```sql
+CREATE TABLE notifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  type TEXT NOT NULL,
+  title TEXT NOT NULL,
+  message TEXT,
+  link TEXT,
+  read BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+Notification types to generate automatically:
+- New message from advisor (for investment clients)
+- KYC approved/rejected (for investment clients)
+- New task assigned (for advisors)
+- New lead assigned (for advisors)
+- Goal achieved (when current_amount >= target_amount)
+- Pathway step reminder (if pathway not completed after 3 days)
+
+Show unread count badge on notification bell. Click bell to open dropdown with list of recent notifications. Mark all as read button.
+
+---
+
+## MOBILE NAVIGATION
+
+**Free user app** (/app/*): bottom tab bar with 4 items:
+- Home (dashboard icon)
+- Budget
+- Goals
+- Health Score
+
+**Investment client portal** (/portal/*): bottom tab bar with 5 items:
+- Home
+- Portfolio
+- Plan
+- Documents
+- Messages
+
+**Advisor portal** (/advisor/*): side drawer (hamburger) with all nav items listed
+
+**Admin portal** (/admin/*): side drawer with all admin links
+
+All portals: top bar showing logo left, notification bell right, avatar/menu right
+
+---
+
+## KEY BEHAVIOURS
+
+1. **Auto-save**: All pathway forms auto-save to Supabase on field blur with a 500ms debounce. Show "Saving..." → "Saved ✓" indicator.
+
+2. **Currency conversion**: Use a fixed rate (1 USD = 25,000 VND) for display purposes. When user switches currency toggle, multiply/divide all displayed values. Store all values in USD in Supabase.
+
+3. **Role guard**: Wrap all protected routes in an AuthGuard component that checks the user's role. Wrong role → redirect to correct portal.
+
+4. **Empty states**: Every data-dependent section must have a well-designed empty state with an icon, message, and action button. Never show blank white space.
+
+5. **Loading states**: Every data fetch must show a skeleton loader (use Tailwind animate-pulse gray rectangles) while loading. Never show blank sections.
+
+6. **Error handling**: Wrap all Supabase operations in try/catch. Show toast notifications (top-right) for success and error states. Use a consistent toast component.
+
+7. **Realtime messages**: Use Supabase Realtime to subscribe to new messages in the active conversation. Update the chat UI instantly without refresh.
+
+8. **Responsive tables**: All data tables must be horizontally scrollable on mobile. Use overflow-x-auto wrapper.
+
+9. **Pathway progress persistence**: When a user leaves mid-pathway and returns, automatically restore their progress and jump to the last incomplete step.
+
+10. **Smart upgrade prompt logic**: Calculate these conditions from user data and show SmartUpgradePrompt only when true:
+    - savings_rate < 15% AND user has completed budget step
+    - goals count = 1 (free tier limit reached)
+    - pathway complete but no advisor booking
+
+---
+
+## IMPLEMENTATION ORDER
+
+Build in this exact order so each phase is testable:
+
+1. Supabase setup: all tables + RLS policies + Storage buckets (kyc-documents, user-documents)
+2. Auth: register, login, logout, password reset, role-based routing
+3. Shared layout components: headers, navigation, AuthGuard, toast system
+4. Public landing page
+5. Public tools: budget calculator, retirement calculator, net worth calculator, FI number calculator
+6. Public quizzes: money personality quiz, expat health check, risk quiz (all with lead capture)
+7. Free user pathway: all 6 steps with auto-save
+8. Free user dashboard: all 4 metric cards + health score ring
+9. Free user: budget tracker, goals, health score pages
+10. Investment client onboarding: all 4 sections, all 16 steps
+11. Investment client portal: dashboard, portfolio, plan, goals, net worth
+12. Investment client portal: documents, messages (with realtime), reports
+13. Advisor portal: dashboard, client list, client detail (all 8 tabs)
+14. Advisor portal: lead pipeline kanban, task manager
+15. Super admin: user management, analytics, content manager
+16. Notification system
+17. Mobile navigation (bottom tabs + side drawers)
+18. Polish: empty states, loading skeletons, error handling, responsive fixes
