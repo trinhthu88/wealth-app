@@ -1,8 +1,42 @@
 import { Router, type IRouter } from "express";
 import healthRouter from "./health";
+import profilesRouter from "./profiles";
+import pathwayRouter from "./pathway";
+import budgetRouter from "./budget";
+import goalsRouter from "./goals";
+import networthRouter from "./networth";
+import portfolioRouter from "./portfolio";
+import healthscoreRouter from "./healthscore";
+import clientsRouter from "./clients";
+import kycRouter from "./kyc";
+import plansRouter from "./plans";
+import documentsRouter from "./documents";
+import messagesRouter from "./messages";
+import tasksRouter from "./tasks";
+import leadsRouter from "./leads";
+import blogRouter from "./blog";
+import notificationsRouter from "./notifications";
+import adminRouter from "./admin";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
+router.use(profilesRouter);
+router.use(pathwayRouter);
+router.use(budgetRouter);
+router.use(goalsRouter);
+router.use(networthRouter);
+router.use(portfolioRouter);
+router.use(healthscoreRouter);
+router.use(clientsRouter);
+router.use(kycRouter);
+router.use(plansRouter);
+router.use(documentsRouter);
+router.use(messagesRouter);
+router.use(tasksRouter);
+router.use(leadsRouter);
+router.use(blogRouter);
+router.use(notificationsRouter);
+router.use(adminRouter);
 
 export default router;

@@ -3,20 +3,36 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: WealthApp API specification
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
-    description: Health operations
+  - name: profiles
+  - name: pathway
+  - name: budget
+  - name: goals
+  - name: networth
+  - name: portfolio
+  - name: healthscore
+  - name: clients
+  - name: kyc
+  - name: plans
+  - name: documents
+  - name: messages
+  - name: tasks
+  - name: leads
+  - name: blog
+  - name: notifications
+  - name: admin
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +40,1181 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /profiles/me:
+    get:
+      operationId: getMyProfile
+      tags: [profiles]
+      summary: Get current user profile
+      responses:
+        "200":
+          description: Profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    put:
+      operationId: updateMyProfile
+      tags: [profiles]
+      summary: Update current user profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfileBody"
+      responses:
+        "200":
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+
+  /profiles/me/upsert:
+    post:
+      operationId: upsertMyProfile
+      tags: [profiles]
+      summary: Create or update profile on login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertProfileBody"
+      responses:
+        "200":
+          description: Profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+
+  /pathway:
+    get:
+      operationId: getPathwayProgress
+      tags: [pathway]
+      summary: Get all pathway steps for current user
+      responses:
+        "200":
+          description: Pathway steps
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PathwayStep"
+
+  /pathway/{stepNumber}:
+    put:
+      operationId: upsertPathwayStep
+      tags: [pathway]
+      summary: Save pathway step progress
+      parameters:
+        - name: stepNumber
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertPathwayStepBody"
+      responses:
+        "200":
+          description: Updated step
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PathwayStep"
+
+  /budget:
+    get:
+      operationId: listBudgetEntries
+      tags: [budget]
+      summary: List budget entries for current user
+      responses:
+        "200":
+          description: Budget entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BudgetEntry"
+    post:
+      operationId: createBudgetEntry
+      tags: [budget]
+      summary: Create a budget entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBudgetEntryBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BudgetEntry"
+
+  /budget/{id}:
+    put:
+      operationId: updateBudgetEntry
+      tags: [budget]
+      summary: Update a budget entry
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBudgetEntryBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BudgetEntry"
+
+  /goals:
+    get:
+      operationId: listGoals
+      tags: [goals]
+      summary: List goals for current user
+      responses:
+        "200":
+          description: Goals
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FinancialGoal"
+    post:
+      operationId: createGoal
+      tags: [goals]
+      summary: Create a goal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateGoalBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinancialGoal"
+
+  /goals/{id}:
+    put:
+      operationId: updateGoal
+      tags: [goals]
+      summary: Update a goal
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateGoalBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinancialGoal"
+    delete:
+      operationId: deleteGoal
+      tags: [goals]
+      summary: Delete a goal
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  /assets:
+    get:
+      operationId: listAssets
+      tags: [networth]
+      summary: List assets for current user
+      responses:
+        "200":
+          description: Assets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Asset"
+    post:
+      operationId: createAsset
+      tags: [networth]
+      summary: Create an asset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAssetBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Asset"
+
+  /assets/{id}:
+    put:
+      operationId: updateAsset
+      tags: [networth]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAssetBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Asset"
+    delete:
+      operationId: deleteAsset
+      tags: [networth]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  /liabilities:
+    get:
+      operationId: listLiabilities
+      tags: [networth]
+      summary: List liabilities for current user
+      responses:
+        "200":
+          description: Liabilities
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Liability"
+    post:
+      operationId: createLiability
+      tags: [networth]
+      summary: Create a liability
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateLiabilityBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Liability"
+
+  /liabilities/{id}:
+    put:
+      operationId: updateLiability
+      tags: [networth]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateLiabilityBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Liability"
+    delete:
+      operationId: deleteLiability
+      tags: [networth]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  /portfolio:
+    get:
+      operationId: listPortfolioHoldings
+      tags: [portfolio]
+      summary: List portfolio holdings
+      responses:
+        "200":
+          description: Holdings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PortfolioHolding"
+    post:
+      operationId: createPortfolioHolding
+      tags: [portfolio]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePortfolioHoldingBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortfolioHolding"
+
+  /portfolio/{id}:
+    put:
+      operationId: updatePortfolioHolding
+      tags: [portfolio]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePortfolioHoldingBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortfolioHolding"
+    delete:
+      operationId: deletePortfolioHolding
+      tags: [portfolio]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  /health-score:
+    get:
+      operationId: getHealthScore
+      tags: [healthscore]
+      summary: Get latest health score
+      responses:
+        "200":
+          description: Health score
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthScore"
+        "404":
+          description: No score yet
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      operationId: computeHealthScore
+      tags: [healthscore]
+      summary: Compute and save health score
+      responses:
+        "200":
+          description: Health score
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthScore"
+
+  /client-profile:
+    get:
+      operationId: getClientProfile
+      tags: [clients]
+      summary: Get investment client profile
+      responses:
+        "200":
+          description: Client profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientProfile"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /kyc/documents:
+    get:
+      operationId: listKycDocuments
+      tags: [kyc]
+      summary: List KYC documents
+      responses:
+        "200":
+          description: Documents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/KycDocument"
+    post:
+      operationId: uploadKycDocument
+      tags: [kyc]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadKycDocumentBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KycDocument"
+
+  /plans:
+    get:
+      operationId: listFinancialPlans
+      tags: [plans]
+      summary: List financial plans for current user
+      responses:
+        "200":
+          description: Plans
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FinancialPlan"
+
+  /plans/{id}:
+    get:
+      operationId: getFinancialPlan
+      tags: [plans]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Plan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinancialPlan"
+    put:
+      operationId: updateFinancialPlan
+      tags: [plans]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateFinancialPlanBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinancialPlan"
+
+  /plans/{id}/milestones:
+    get:
+      operationId: listPlanMilestones
+      tags: [plans]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Milestones
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PlanMilestone"
+    post:
+      operationId: createPlanMilestone
+      tags: [plans]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePlanMilestoneBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlanMilestone"
+
+  /documents:
+    get:
+      operationId: listDocuments
+      tags: [documents]
+      summary: List documents for current user
+      responses:
+        "200":
+          description: Documents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserDocument"
+    post:
+      operationId: createDocument
+      tags: [documents]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDocumentBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserDocument"
+
+  /conversations:
+    get:
+      operationId: listConversations
+      tags: [messages]
+      summary: List conversations
+      responses:
+        "200":
+          description: Conversations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Conversation"
+    post:
+      operationId: createConversation
+      tags: [messages]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateConversationBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Conversation"
+
+  /conversations/{id}/messages:
+    get:
+      operationId: listMessages
+      tags: [messages]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Message"
+    post:
+      operationId: sendMessage
+      tags: [messages]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendMessageBody"
+      responses:
+        "201":
+          description: Sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+
+  /tasks:
+    get:
+      operationId: listAdvisorTasks
+      tags: [tasks]
+      summary: List tasks for current advisor
+      responses:
+        "200":
+          description: Tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdvisorTask"
+    post:
+      operationId: createAdvisorTask
+      tags: [tasks]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAdvisorTaskBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdvisorTask"
+
+  /tasks/{id}:
+    put:
+      operationId: updateAdvisorTask
+      tags: [tasks]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAdvisorTaskBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdvisorTask"
+    delete:
+      operationId: deleteAdvisorTask
+      tags: [tasks]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  /leads:
+    get:
+      operationId: listLeads
+      tags: [leads]
+      summary: List leads
+      responses:
+        "200":
+          description: Leads
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Lead"
+    post:
+      operationId: createLead
+      tags: [leads]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateLeadBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lead"
+
+  /leads/{id}:
+    put:
+      operationId: updateLead
+      tags: [leads]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateLeadBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lead"
+
+  /blog:
+    get:
+      operationId: listBlogPosts
+      tags: [blog]
+      summary: List published blog posts
+      responses:
+        "200":
+          description: Posts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BlogPost"
+    post:
+      operationId: createBlogPost
+      tags: [blog]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBlogPostBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BlogPost"
+
+  /blog/{slug}:
+    get:
+      operationId: getBlogPost
+      tags: [blog]
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Post
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BlogPost"
+
+  /blog/{id}/admin:
+    put:
+      operationId: updateBlogPost
+      tags: [blog]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBlogPostBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BlogPost"
+
+  /notifications:
+    get:
+      operationId: listNotifications
+      tags: [notifications]
+      summary: List notifications for current user
+      responses:
+        "200":
+          description: Notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Notification"
+
+  /notifications/read-all:
+    post:
+      operationId: markAllNotificationsRead
+      tags: [notifications]
+      summary: Mark all notifications as read
+      responses:
+        "204":
+          description: Done
+
+  /admin/users:
+    get:
+      operationId: adminListUsers
+      tags: [admin]
+      summary: List all users
+      responses:
+        "200":
+          description: Users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Profile"
+
+  /admin/users/{id}:
+    get:
+      operationId: adminGetUser
+      tags: [admin]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: User
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+    put:
+      operationId: adminUpdateUser
+      tags: [admin]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminUpdateUserBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+
+  /advisor/clients:
+    get:
+      operationId: advisorListClients
+      tags: [clients]
+      summary: List clients assigned to advisor
+      responses:
+        "200":
+          description: Clients
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdvisorClient"
+
+  /advisor/clients/{id}/portfolio:
+    get:
+      operationId: advisorGetClientPortfolio
+      tags: [portfolio]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Portfolio
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PortfolioHolding"
+    put:
+      operationId: advisorUpdateClientPortfolio
+      tags: [portfolio]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateClientPortfolioBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PortfolioHolding"
+
+  /advisor/clients/{id}/goals:
+    get:
+      operationId: advisorGetClientGoals
+      tags: [goals]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Goals
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FinancialGoal"
+
+  /advisor/clients/{id}/plan:
+    get:
+      operationId: advisorGetClientPlan
+      tags: [plans]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Plan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinancialPlan"
+        "404":
+          description: No plan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      operationId: advisorCreateClientPlan
+      tags: [plans]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateFinancialPlanBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinancialPlan"
+
+  /advisor/clients/{id}/kyc:
+    get:
+      operationId: advisorGetClientKyc
+      tags: [kyc]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: KYC docs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/KycDocument"
+
+  /advisor/clients/{id}/kyc/{docId}/verify:
+    post:
+      operationId: advisorVerifyKycDocument
+      tags: [kyc]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: docId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyKycDocumentBody"
+      responses:
+        "200":
+          description: Updated doc
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KycDocument"
+
+  /advisor/clients/{id}/tasks:
+    get:
+      operationId: advisorGetClientTasks
+      tags: [tasks]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdvisorTask"
+
 components:
   schemas:
     HealthStatus:
@@ -31,6 +1222,825 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+
+    Profile:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        fullName:
+          type: ["string", "null"]
+        role:
+          type: string
+        avatarUrl:
+          type: ["string", "null"]
+        preferredCurrency:
+          type: string
+        countryCode:
+          type: ["string", "null"]
+        isExpat:
+          type: boolean
+        onboardingComplete:
+          type: boolean
+        riskProfile:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required: [id, email, role, preferredCurrency, isExpat, onboardingComplete, createdAt, updatedAt]
+
+    UpdateProfileBody:
+      type: object
+      properties:
+        fullName:
+          type: string
+        preferredCurrency:
+          type: string
+        countryCode:
+          type: string
+        isExpat:
+          type: boolean
+        onboardingComplete:
+          type: boolean
+        riskProfile:
+          type: string
+        avatarUrl:
+          type: string
+
+    UpsertProfileBody:
+      type: object
+      properties:
+        email:
+          type: string
+        fullName:
+          type: string
+      required: [email]
+
+    PathwayStep:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        stepNumber:
+          type: integer
+        stepName:
+          type: string
+        status:
+          type: string
+        formData:
+          type: object
+          nullable: true
+        completedAt:
+          type: ["string", "null"]
+        updatedAt:
+          type: string
+      required: [id, userId, stepNumber, stepName, status, updatedAt]
+
+    UpsertPathwayStepBody:
+      type: object
+      properties:
+        stepName:
+          type: string
+        status:
+          type: string
+        formData:
+          type: object
+      required: [stepName, status]
+
+    BudgetEntry:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        periodMonth:
+          type: string
+        currency:
+          type: string
+        income:
+          type: ["string", "null"]
+        needsActual:
+          type: ["string", "null"]
+        wantsActual:
+          type: ["string", "null"]
+        savingsActual:
+          type: ["string", "null"]
+        savingsRatePercent:
+          type: ["string", "null"]
+        housing:
+          type: ["string", "null"]
+        food:
+          type: ["string", "null"]
+        transport:
+          type: ["string", "null"]
+        utilities:
+          type: ["string", "null"]
+        entertainment:
+          type: ["string", "null"]
+        other:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required: [id, userId, periodMonth, currency, createdAt, updatedAt]
+
+    CreateBudgetEntryBody:
+      type: object
+      properties:
+        periodMonth:
+          type: string
+        currency:
+          type: string
+        income:
+          type: string
+        housing:
+          type: string
+        food:
+          type: string
+        transport:
+          type: string
+        utilities:
+          type: string
+        entertainment:
+          type: string
+        other:
+          type: string
+        notes:
+          type: string
+      required: [periodMonth]
+
+    FinancialGoal:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        title:
+          type: string
+        goalType:
+          type: string
+        targetAmount:
+          type: ["string", "null"]
+        currentAmount:
+          type: string
+        monthlyContribution:
+          type: string
+        targetDate:
+          type: ["string", "null"]
+        currency:
+          type: string
+        priority:
+          type: string
+        status:
+          type: string
+        notes:
+          type: ["string", "null"]
+        isAdvisorManaged:
+          type: boolean
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required: [id, userId, title, goalType, currentAmount, monthlyContribution, currency, priority, status, isAdvisorManaged, createdAt, updatedAt]
+
+    CreateGoalBody:
+      type: object
+      properties:
+        title:
+          type: string
+        goalType:
+          type: string
+        targetAmount:
+          type: string
+        currentAmount:
+          type: string
+        monthlyContribution:
+          type: string
+        targetDate:
+          type: string
+        currency:
+          type: string
+        priority:
+          type: string
+        status:
+          type: string
+        notes:
+          type: string
+      required: [title, goalType]
+
+    Asset:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        name:
+          type: string
+        category:
+          type: string
+        valueUsd:
+          type: string
+        currencyOriginal:
+          type: string
+        valueOriginal:
+          type: ["string", "null"]
+        asOfDate:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required: [id, userId, name, category, valueUsd, currencyOriginal, createdAt, updatedAt]
+
+    CreateAssetBody:
+      type: object
+      properties:
+        name:
+          type: string
+        category:
+          type: string
+        valueUsd:
+          type: string
+        currencyOriginal:
+          type: string
+        valueOriginal:
+          type: string
+        notes:
+          type: string
+      required: [name, category, valueUsd]
+
+    Liability:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        name:
+          type: string
+        category:
+          type: string
+        balanceUsd:
+          type: string
+        interestRatePercent:
+          type: ["string", "null"]
+        monthlyPaymentUsd:
+          type: ["string", "null"]
+        currencyOriginal:
+          type: string
+        balanceOriginal:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required: [id, userId, name, category, balanceUsd, currencyOriginal, createdAt, updatedAt]
+
+    CreateLiabilityBody:
+      type: object
+      properties:
+        name:
+          type: string
+        category:
+          type: string
+        balanceUsd:
+          type: string
+        interestRatePercent:
+          type: string
+        monthlyPaymentUsd:
+          type: string
+        currencyOriginal:
+          type: string
+        balanceOriginal:
+          type: string
+      required: [name, category, balanceUsd]
+
+    PortfolioHolding:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        assetName:
+          type: string
+        assetClass:
+          type: string
+        currentValueUsd:
+          type: string
+        currencyOriginal:
+          type: string
+        valueOriginal:
+          type: ["string", "null"]
+        weightPercent:
+          type: ["string", "null"]
+        isAdvisorManaged:
+          type: boolean
+        tickerSymbol:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        lastUpdatedAt:
+          type: string
+        createdAt:
+          type: string
+      required: [id, userId, assetName, assetClass, currentValueUsd, currencyOriginal, isAdvisorManaged, lastUpdatedAt, createdAt]
+
+    CreatePortfolioHoldingBody:
+      type: object
+      properties:
+        assetName:
+          type: string
+        assetClass:
+          type: string
+        currentValueUsd:
+          type: string
+        currencyOriginal:
+          type: string
+        weightPercent:
+          type: string
+        tickerSymbol:
+          type: string
+        notes:
+          type: string
+      required: [assetName, assetClass, currentValueUsd]
+
+    UpdateClientPortfolioBody:
+      type: object
+      properties:
+        holdings:
+          type: array
+          items:
+            $ref: "#/components/schemas/CreatePortfolioHoldingBody"
+      required: [holdings]
+
+    HealthScore:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        scoreDate:
+          type: string
+        overallScore:
+          type: ["integer", "null"]
+        budgetScore:
+          type: ["integer", "null"]
+        goalsScore:
+          type: ["integer", "null"]
+        netWorthScore:
+          type: ["integer", "null"]
+        savingsScore:
+          type: ["integer", "null"]
+        insights:
+          nullable: true
+        createdAt:
+          type: string
+      required: [id, userId, scoreDate, createdAt]
+
+    ClientProfile:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        advisorId:
+          type: ["string", "null"]
+        kycStatus:
+          type: string
+        riskProfile:
+          type: ["string", "null"]
+        onboardingStep:
+          type: integer
+        relationshipStartDate:
+          type: ["string", "null"]
+        annualReviewDate:
+          type: ["string", "null"]
+        internalNotes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required: [id, userId, kycStatus, onboardingStep, createdAt, updatedAt]
+
+    KycDocument:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        documentType:
+          type: string
+        fileUrl:
+          type: string
+        fileName:
+          type: ["string", "null"]
+        status:
+          type: string
+        rejectionReason:
+          type: ["string", "null"]
+        uploadedAt:
+          type: string
+        verifiedBy:
+          type: ["string", "null"]
+        verifiedAt:
+          type: ["string", "null"]
+      required: [id, userId, documentType, fileUrl, status, uploadedAt]
+
+    UploadKycDocumentBody:
+      type: object
+      properties:
+        documentType:
+          type: string
+        fileUrl:
+          type: string
+        fileName:
+          type: string
+      required: [documentType, fileUrl]
+
+    VerifyKycDocumentBody:
+      type: object
+      properties:
+        status:
+          type: string
+        rejectionReason:
+          type: string
+      required: [status]
+
+    FinancialPlan:
+      type: object
+      properties:
+        id:
+          type: string
+        clientId:
+          type: string
+        advisorId:
+          type: ["string", "null"]
+        title:
+          type: string
+        status:
+          type: string
+        planData:
+          type: ["string", "null"]
+        nextReviewDate:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required: [id, clientId, title, status, createdAt, updatedAt]
+
+    UpdateFinancialPlanBody:
+      type: object
+      properties:
+        title:
+          type: string
+        status:
+          type: string
+        planData:
+          type: string
+        nextReviewDate:
+          type: string
+      required: [title]
+
+    PlanMilestone:
+      type: object
+      properties:
+        id:
+          type: string
+        planId:
+          type: string
+        title:
+          type: string
+        targetDate:
+          type: ["string", "null"]
+        status:
+          type: string
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required: [id, planId, title, status, createdAt]
+
+    CreatePlanMilestoneBody:
+      type: object
+      properties:
+        title:
+          type: string
+        targetDate:
+          type: string
+        status:
+          type: string
+        notes:
+          type: string
+      required: [title]
+
+    UserDocument:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        uploadedBy:
+          type: ["string", "null"]
+        title:
+          type: string
+        category:
+          type: string
+        fileUrl:
+          type: string
+        fileName:
+          type: ["string", "null"]
+        fileSizeBytes:
+          type: ["integer", "null"]
+        isAdminUploaded:
+          type: boolean
+        uploadedAt:
+          type: string
+      required: [id, userId, title, category, fileUrl, isAdminUploaded, uploadedAt]
+
+    CreateDocumentBody:
+      type: object
+      properties:
+        title:
+          type: string
+        category:
+          type: string
+        fileUrl:
+          type: string
+        fileName:
+          type: string
+        fileSizeBytes:
+          type: integer
+      required: [title, category, fileUrl]
+
+    Conversation:
+      type: object
+      properties:
+        id:
+          type: string
+        clientId:
+          type: ["string", "null"]
+        advisorId:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required: [id, createdAt]
+
+    CreateConversationBody:
+      type: object
+      properties:
+        clientId:
+          type: string
+        advisorId:
+          type: string
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: string
+        conversationId:
+          type: string
+        senderId:
+          type: ["string", "null"]
+        senderRole:
+          type: ["string", "null"]
+        content:
+          type: string
+        attachmentUrl:
+          type: ["string", "null"]
+        sentAt:
+          type: string
+        readAt:
+          type: ["string", "null"]
+      required: [id, conversationId, content, sentAt]
+
+    SendMessageBody:
+      type: object
+      properties:
+        content:
+          type: string
+        senderRole:
+          type: string
+        attachmentUrl:
+          type: string
+      required: [content]
+
+    AdvisorTask:
+      type: object
+      properties:
+        id:
+          type: string
+        clientId:
+          type: ["string", "null"]
+        advisorId:
+          type: ["string", "null"]
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        dueDate:
+          type: ["string", "null"]
+        priority:
+          type: string
+        status:
+          type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required: [id, title, priority, status, createdAt, updatedAt]
+
+    CreateAdvisorTaskBody:
+      type: object
+      properties:
+        clientId:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        dueDate:
+          type: string
+        priority:
+          type: string
+        status:
+          type: string
+      required: [title]
+
+    Lead:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        firstName:
+          type: ["string", "null"]
+        source:
+          type: ["string", "null"]
+        quizResult:
+          type: ["string", "null"]
+        healthScore:
+          type: ["integer", "null"]
+        status:
+          type: string
+        assignedAdvisorId:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required: [id, email, status, createdAt, updatedAt]
+
+    CreateLeadBody:
+      type: object
+      properties:
+        email:
+          type: string
+        firstName:
+          type: string
+        source:
+          type: string
+        quizResult:
+          type: string
+        healthScore:
+          type: integer
+        status:
+          type: string
+        notes:
+          type: string
+      required: [email]
+
+    BlogPost:
+      type: object
+      properties:
+        id:
+          type: string
+        authorId:
+          type: ["string", "null"]
+        title:
+          type: string
+        slug:
+          type: string
+        excerpt:
+          type: ["string", "null"]
+        contentMarkdown:
+          type: ["string", "null"]
+        category:
+          type: ["string", "null"]
+        status:
+          type: string
+        publishedAt:
+          type: ["string", "null"]
+        coverImageUrl:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required: [id, title, slug, status, createdAt, updatedAt]
+
+    CreateBlogPostBody:
+      type: object
+      properties:
+        title:
+          type: string
+        slug:
+          type: string
+        excerpt:
+          type: string
+        contentMarkdown:
+          type: string
+        category:
+          type: string
+        status:
+          type: string
+        coverImageUrl:
+          type: string
+      required: [title, slug]
+
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        type:
+          type: string
+        title:
+          type: string
+        message:
+          type: ["string", "null"]
+        link:
+          type: ["string", "null"]
+        read:
+          type: boolean
+        createdAt:
+          type: string
+      required: [id, userId, type, title, read, createdAt]
+
+    AdvisorClient:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        fullName:
+          type: ["string", "null"]
+        role:
+          type: string
+        kycStatus:
+          type: ["string", "null"]
+        riskProfile:
+          type: ["string", "null"]
+        onboardingStep:
+          type: ["integer", "null"]
+        advisorId:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required: [id, email, role, createdAt]
+
+    AdminUpdateUserBody:
+      type: object
+      properties:
+        fullName:
+          type: string
+        role:
+          type: string
+        advisorId:
+          type: string
+        preferredCurrency:
+          type: string
