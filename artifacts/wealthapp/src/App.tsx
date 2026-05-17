@@ -138,8 +138,8 @@ function ClerkQueryClientCacheInvalidator() {
 
 function ProtectedRoute({ component: C, role }: { component: React.ComponentType; role?: string[] }) {
   const { isLoaded, isSignedIn } = useUser();
-  const { profile, isLoading } = useProfile();
-  if (!isLoaded || isLoading) return (
+  const { profile } = useProfile();
+  if (!isLoaded) return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="animate-pulse text-muted-foreground">Loading…</div>
     </div>

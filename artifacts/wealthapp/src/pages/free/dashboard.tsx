@@ -193,7 +193,7 @@ export default function FreeDashboard() {
         </AnimatePresence>
 
         {/* Health Score Card */}
-        <Link href="/free/healthscore">
+        <Link href="/free/health-score">
           <div className="bg-[#042C53] rounded-2xl p-5 flex items-center gap-5 cursor-pointer hover:opacity-95 transition-opacity">
             <HealthScoreRing score={score?.overallScore ?? 0} size="md" animate darkMode />
             <div>
