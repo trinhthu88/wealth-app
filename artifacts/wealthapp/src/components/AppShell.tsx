@@ -51,16 +51,17 @@ function NavLink({ item, collapsed }: { item: NavItem; collapsed: boolean }) {
   const [active] = useRoute(item.href);
   const Icon = item.icon;
   return (
-    <Link href={item.href}>
-      <a className={cn(
+    <Link
+      href={item.href}
+      className={cn(
         "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150",
         "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent",
         active && "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary hover:text-sidebar-primary-foreground",
         collapsed && "justify-center px-2"
-      )}>
-        <Icon className="h-5 w-5 shrink-0" />
-        {!collapsed && <span>{item.label}</span>}
-      </a>
+      )}
+    >
+      <Icon className="h-5 w-5 shrink-0" />
+      {!collapsed && <span>{item.label}</span>}
     </Link>
   );
 }
