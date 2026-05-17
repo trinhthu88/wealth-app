@@ -30,3 +30,8 @@ externalPort = 80
 [[ports]]
 localPort = 24415
 externalPort = 3000
+
+[userenv]
+
+[userenv.shared]
+SUPER_ADMIN_EMAIL = "trinhthu.mktg@gmail.com"
