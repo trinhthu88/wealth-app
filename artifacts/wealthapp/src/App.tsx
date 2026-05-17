@@ -1,12 +1,13 @@
 import { Switch, Route, Router as WouterRouter, Redirect, useLocation } from "wouter";
 import { QueryClientProvider, useQueryClient } from "@tanstack/react-query";
-import { ClerkProvider, SignIn, SignUp, useUser, useClerk } from "@clerk/react";
+import { ClerkProvider, SignIn, SignUp, useUser, useClerk, useAuth } from "@clerk/react";
 import { publishableKeyFromHost } from "@clerk/react/internal";
 import { shadcn } from "@clerk/themes";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { queryClient } from "@/lib/queryClient";
 import { useProfile } from "@/hooks/useProfile";
+import { setTokenGetter } from "@/lib/api";
 import { useEffect, useRef } from "react";
 
 import LandingPage from "@/pages/landing";
@@ -104,6 +105,14 @@ const clerkAppearance = {
     main: "",
   },
 };
+
+function ClerkTokenSync() {
+  const { getToken } = useAuth();
+  useEffect(() => {
+    setTokenGetter(getToken);
+  }, [getToken]);
+  return null;
+}
 
 function ProfileSync() {
   const { user, isLoaded } = useUser();
@@ -236,6 +245,7 @@ function ClerkProviderWithRoutes() {
       routerReplace={(to) => setLocation(stripBase(to), { replace: true })}
     >
       <QueryClientProvider client={queryClient}>
+        <ClerkTokenSync />
         <ClerkQueryClientCacheInvalidator />
         <ProfileSync />
         <TooltipProvider>
