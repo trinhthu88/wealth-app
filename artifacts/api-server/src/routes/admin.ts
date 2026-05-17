@@ -1,28 +1,32 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
 import { db, profilesTable, clientProfilesTable } from "@workspace/db";
-import { requireAuth } from "../middlewares/requireAuth";
+import { requireAuth, requireRole } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
 
-router.get("/admin/users", requireAuth, async (req, res): Promise<void> => {
-  const users = await db.select().from(profilesTable);
+const adminGuard = [requireAuth, requireRole("super_admin")];
+
+router.get("/admin/users", ...adminGuard, async (req, res): Promise<void> => {
+  const users = await db.select().from(profilesTable).orderBy(profilesTable.createdAt);
   res.json(users);
 });
 
-router.get("/admin/users/:id", requireAuth, async (req, res): Promise<void> => {
+router.get("/admin/users/:id", ...adminGuard, async (req, res): Promise<void> => {
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const [user] = await db.select().from(profilesTable).where(eq(profilesTable.id, rawId));
   if (!user) { res.status(404).json({ error: "Not found" }); return; }
   res.json(user);
 });
 
-router.put("/admin/users/:id", requireAuth, async (req, res): Promise<void> => {
+router.put("/admin/users/:id", ...adminGuard, async (req, res): Promise<void> => {
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-  const { fullName, role, preferredCurrency } = req.body;
-  const { advisorId } = req.body;
+  const { fullName, role, preferredCurrency, advisorId } = req.body;
   const [updated] = await db.update(profilesTable).set({
-    fullName, role, preferredCurrency, updatedAt: new Date(),
+    ...(fullName !== undefined ? { fullName } : {}),
+    ...(role !== undefined ? { role } : {}),
+    ...(preferredCurrency !== undefined ? { preferredCurrency } : {}),
+    updatedAt: new Date(),
   }).where(eq(profilesTable.id, rawId)).returning();
   if (!updated) { res.status(404).json({ error: "Not found" }); return; }
   if (advisorId) {
@@ -34,6 +38,15 @@ router.put("/admin/users/:id", requireAuth, async (req, res): Promise<void> => {
     }
   }
   res.json(updated);
+});
+
+router.get("/admin/stats", ...adminGuard, async (req, res): Promise<void> => {
+  const users = await db.select().from(profilesTable);
+  const byRole = users.reduce<Record<string, number>>((acc, u) => {
+    acc[u.role] = (acc[u.role] ?? 0) + 1;
+    return acc;
+  }, {});
+  res.json({ totalUsers: users.length, byRole });
 });
 
 export default router;

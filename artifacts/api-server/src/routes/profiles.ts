@@ -12,17 +12,24 @@ router.post("/profiles/me/upsert", requireAuth, async (req, res): Promise<void> 
     res.status(400).json({ error: "email required" });
     return;
   }
+
+  const superAdminEmail = process.env.SUPER_ADMIN_EMAIL?.trim().toLowerCase();
+  const isSuperAdmin = superAdminEmail && email.trim().toLowerCase() === superAdminEmail;
+
   const existing = await db.select().from(profilesTable).where(eq(profilesTable.id, userId));
   if (existing.length > 0) {
+    const currentRole = existing[0].role;
+    const roleOverride = isSuperAdmin && currentRole !== "super_admin" ? { role: "super_admin" as const } : {};
     const [updated] = await db.update(profilesTable)
-      .set({ email, ...(fullName ? { fullName } : {}), updatedAt: new Date() })
+      .set({ email, ...(fullName ? { fullName } : {}), ...roleOverride, updatedAt: new Date() })
       .where(eq(profilesTable.id, userId))
       .returning();
     res.json(updated);
     return;
   }
+
   const [created] = await db.insert(profilesTable)
-    .values({ id: userId, email, fullName: fullName ?? null, role: "free_user" })
+    .values({ id: userId, email, fullName: fullName ?? null, role: isSuperAdmin ? "super_admin" : "free_user" })
     .returning();
   res.json(created);
 });
