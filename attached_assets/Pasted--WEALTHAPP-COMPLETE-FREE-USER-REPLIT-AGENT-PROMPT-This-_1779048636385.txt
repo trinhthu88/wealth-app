@@ -1,0 +1,1225 @@
+# WEALTHAPP — COMPLETE FREE USER REPLIT AGENT PROMPT
+# This is the single complete prompt. Paste entirely into Replit Agent.
+# Covers: auth, pathway, dashboard, budget (recurring), goals (off-track + projection),
+# health score, retention (tips, milestones, benchmarks), conversion CTAs.
+
+---
+
+Build a mobile-first financial planning web app called WEALTHAPP using React + TypeScript + Vite + Tailwind CSS + Supabase. Target user: 28–40 year old building wealth in Southeast Asia. Card-swipe interaction style. English only. USD/VND currency support.
+
+---
+
+## TECH STACK
+
+```json
+{
+  "dependencies": {
+    "react": "^18",
+    "react-dom": "^18",
+    "react-router-dom": "^6",
+    "@supabase/supabase-js": "^2",
+    "recharts": "^2",
+    "framer-motion": "^11",
+    "lucide-react": "^0.383.0",
+    "canvas-confetti": "^1"
+  },
+  "devDependencies": {
+    "vite": "^5",
+    "@vitejs/plugin-react": "^4",
+    "typescript": "^5",
+    "tailwindcss": "^3",
+    "autoprefixer": "^10",
+    "postcss": "^8"
+  }
+}
+```
+
+tailwind.config.js extend colors:
+```js
+primary: '#1D9E75',
+'primary-dark': '#0F6E56',
+navy: '#042C53',
+surface: '#F8FAFB',
+border: '#E2E8F0',
+muted: '#64748B',
+```
+
+vite.config.ts: server host 0.0.0.0, port 5000.
+.replit: `run = "npm run dev -- --host 0.0.0.0 --port 5000"`
+
+src/lib/supabase.ts:
+```ts
+import { createClient } from '@supabase/supabase-js'
+export const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY
+)
+```
+
+---
+
+## SUPABASE SCHEMA
+
+Create src/lib/schema.sql — tell user to paste into Supabase SQL editor:
+
+```sql
+-- Core profile
+create table profiles (
+  id uuid primary key references auth.users(id) on delete cascade,
+  email text not null,
+  full_name text,
+  role text not null default 'free_user',
+  age int,
+  life_stage text,
+  country_code text,
+  is_expat boolean default false,
+  preferred_currency text default 'USD',
+  risk_profile text,
+  total_savings numeric default 0,
+  savings_rate_percent numeric default 4.0,
+  total_investments numeric default 0,
+  investment_rate_percent numeric default 7.0,
+  pathway_step int default 0,
+  pathway_complete boolean default false,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+-- Pathway progress
+create table pathway_steps (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references profiles(id) on delete cascade,
+  step_number int not null,
+  step_name text not null,
+  status text default 'not_started',
+  form_data jsonb default '{}',
+  completed_at timestamptz,
+  updated_at timestamptz default now(),
+  unique(user_id, step_number)
+);
+
+-- Budget transactions (income + expenses, with recurring flag)
+create table budget_transactions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references profiles(id) on delete cascade,
+  transaction_date date not null default current_date,
+  description text not null,
+  category text not null check (category in (
+    'income','housing','food','transport',
+    'utilities','entertainment','savings','investment','other'
+  )),
+  amount numeric not null,
+  is_recurring boolean default false,
+  recurring_status text default 'confirmed'
+    check (recurring_status in ('confirmed','pending_confirm')),
+  created_at timestamptz default now()
+);
+
+-- Monthly budget summary (auto-calculated)
+create table budget_monthly_summaries (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references profiles(id) on delete cascade,
+  period_month date not null,
+  total_income numeric default 0,
+  total_expenses numeric default 0,
+  net_savings numeric default 0,
+  savings_rate numeric default 0,
+  recurring_confirmed boolean default false,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now(),
+  unique(user_id, period_month)
+);
+
+-- Financial goals
+create table financial_goals (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references profiles(id) on delete cascade,
+  title text not null,
+  goal_type text not null,
+  target_amount numeric default 0,
+  current_amount numeric default 0,
+  monthly_contribution numeric default 0,
+  target_date date,
+  currency text default 'USD',
+  status text default 'on_track',
+  on_track boolean default true,
+  required_monthly_saving numeric default 0,
+  projected_amount_at_target numeric default 0,
+  monthly_shortfall numeric default 0,
+  months_remaining int default 0,
+  gap_percent numeric default 0,
+  last_projection_update timestamptz default now(),
+  notes text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+-- Net worth snapshots
+create table net_worth_snapshots (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references profiles(id) on delete cascade,
+  snapshot_date date default current_date,
+  total_savings numeric default 0,
+  total_investments numeric default 0,
+  total_debts numeric default 0,
+  net_worth numeric generated always as (total_savings + total_investments - total_debts) stored,
+  created_at timestamptz default now()
+);
+
+-- Health scores (monthly)
+create table health_scores (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references profiles(id) on delete cascade,
+  score_date date default current_date,
+  overall_score int default 0,
+  savings_score int default 0,
+  goals_score int default 0,
+  net_worth_score int default 0,
+  wealth_growth_score int default 0,
+  plan_score int default 0,
+  insight_1 text,
+  insight_2 text,
+  insight_3 text,
+  created_at timestamptz default now()
+);
+
+-- Habit check-ins
+create table habit_checkins (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references profiles(id) on delete cascade,
+  checkin_date date default current_date,
+  current_streak int default 0,
+  created_at timestamptz default now()
+);
+
+-- Milestones / badges
+create table user_milestones (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references profiles(id) on delete cascade,
+  milestone_key text not null,
+  earned_at timestamptz default now(),
+  is_seen boolean default false,
+  unique(user_id, milestone_key)
+);
+
+-- Weekly personalised tips
+create table user_tips (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references profiles(id) on delete cascade,
+  week_start date not null,
+  tip_type text not null,
+  title text not null,
+  body text not null,
+  action_label text,
+  action_route text,
+  is_read boolean default false,
+  created_at timestamptz default now(),
+  unique(user_id, week_start)
+);
+
+-- Benchmark data
+create table benchmarks (
+  id uuid primary key default gen_random_uuid(),
+  age_group text not null,
+  metric text not null,
+  avg_value numeric not null,
+  percentile_75 numeric,
+  updated_at timestamptz default now()
+);
+
+insert into benchmarks (age_group, metric, avg_value, percentile_75) values
+  ('28-35','savings_rate',14,20),('36-40','savings_rate',17,24),
+  ('28-35','health_score',58,72),('36-40','health_score',63,78),
+  ('28-35','net_worth_usd',35000,75000),('36-40','net_worth_usd',85000,180000);
+
+-- RLS policies
+alter table profiles enable row level security;
+create policy "own_profile" on profiles for all to authenticated using (id = auth.uid());
+
+alter table pathway_steps enable row level security;
+create policy "own_steps" on pathway_steps for all to authenticated using (user_id = auth.uid());
+
+alter table budget_transactions enable row level security;
+create policy "own_tx" on budget_transactions for all to authenticated using (user_id = auth.uid());
+
+alter table budget_monthly_summaries enable row level security;
+create policy "own_summaries" on budget_monthly_summaries for all to authenticated using (user_id = auth.uid());
+
+alter table financial_goals enable row level security;
+create policy "own_goals" on financial_goals for all to authenticated using (user_id = auth.uid());
+
+alter table net_worth_snapshots enable row level security;
+create policy "own_nw" on net_worth_snapshots for all to authenticated using (user_id = auth.uid());
+
+alter table health_scores enable row level security;
+create policy "own_scores" on health_scores for all to authenticated using (user_id = auth.uid());
+
+alter table habit_checkins enable row level security;
+create policy "own_checkins" on habit_checkins for all to authenticated using (user_id = auth.uid());
+
+alter table user_milestones enable row level security;
+create policy "own_milestones" on user_milestones for all to authenticated using (user_id = auth.uid());
+
+alter table user_tips enable row level security;
+create policy "own_tips" on user_tips for all to authenticated using (user_id = auth.uid());
+
+alter table benchmarks enable row level security;
+create policy "public_benchmarks" on benchmarks for select using (true);
+```
+
+---
+
+## FILE STRUCTURE
+
+```
+src/
+  lib/
+    supabase.ts
+    schema.sql
+    goalProjection.ts
+    healthScore.ts
+    milestones.ts
+    tipEngine.ts
+  hooks/
+    useAuth.ts
+    useProfile.ts
+    useBudget.ts
+    useGoals.ts
+    useHealthScore.ts
+    usePathway.ts
+    useCheckin.ts
+    useMilestones.ts
+    useBenchmarks.ts
+  components/
+    ui/
+      Button.tsx
+      Input.tsx
+      Card.tsx
+      ProgressBar.tsx
+      CurrencyInput.tsx
+      RecurringToggle.tsx
+      HealthScoreRing.tsx
+      GoalCard.tsx
+      RewardReveal.tsx
+      SmartUpgradeCard.tsx
+      LoadingSkeleton.tsx
+      Toast.tsx
+      BottomNav.tsx
+      WeeklyTipCard.tsx
+      MilestoneChips.tsx
+      BenchmarkCard.tsx
+      RecurringConfirmBanner.tsx
+    layout/
+      AppShell.tsx
+      AuthGuard.tsx
+  pages/
+    Landing.tsx
+    Login.tsx
+    Register.tsx
+    Welcome.tsx
+    Pathway.tsx
+    Dashboard.tsx
+    Budget.tsx
+    Goals.tsx
+    HealthScore.tsx
+    Settings.tsx
+    tools/
+      BudgetTool.tsx
+      RetirementTool.tsx
+      QuizTool.tsx
+  App.tsx
+  main.tsx
+```
+
+---
+
+## CORE LOGIC LIBRARIES
+
+### src/lib/goalProjection.ts
+
+```typescript
+export interface ProjectionInput {
+  currentAmount: number
+  targetAmount: number
+  targetDate: string
+  monthlyCashSaved: number
+  savingsBalance: number
+  savingsRatePercent: number
+  investmentValue: number
+  investmentRatePercent: number
+}
+
+export interface ProjectionResult {
+  status: 'on_track' | 'almost' | 'off_track'
+  onTrack: boolean
+  monthsRemaining: number
+  requiredMonthlySaving: number
+  projectedAmount: number
+  monthlyShortfall: number
+  amountStillNeeded: number
+  projectedShortfall: number
+  gapPercent: number
+  monthlyGrowthFromReturns: number
+}
+
+export function calculateProjection(input: ProjectionInput): ProjectionResult {
+  const {
+    currentAmount, targetAmount, targetDate,
+    monthlyCashSaved, savingsBalance, savingsRatePercent,
+    investmentValue, investmentRatePercent
+  } = input
+
+  const today = new Date()
+  const target = new Date(targetDate)
+  const monthsRemaining = Math.max(0,
+    (target.getFullYear() - today.getFullYear()) * 12 +
+    (target.getMonth() - today.getMonth())
+  )
+
+  const amountStillNeeded = Math.max(0, targetAmount - currentAmount)
+  const requiredMonthlySaving = monthsRemaining > 0
+    ? amountStillNeeded / monthsRemaining : amountStillNeeded
+
+  const savingsMonthlyRate = savingsRatePercent / 100 / 12
+  const investMonthlyRate = investmentRatePercent / 100 / 12
+
+  const projectedInterest = savingsBalance *
+    (Math.pow(1 + savingsMonthlyRate, monthsRemaining) - 1)
+  const projectedInvestmentGrowth = investmentValue *
+    (Math.pow(1 + investMonthlyRate, monthsRemaining) - 1)
+  const projectedCashSavings = monthlyCashSaved * monthsRemaining
+
+  const projectedAmount = currentAmount + projectedCashSavings +
+    projectedInterest + projectedInvestmentGrowth
+
+  const projectedShortfall = Math.max(0, targetAmount - projectedAmount)
+  const gapPercent = targetAmount > 0 ? (projectedShortfall / targetAmount) * 100 : 0
+  const monthlyShortfall = Math.max(0, requiredMonthlySaving - monthlyCashSaved)
+  const monthlyGrowthFromReturns =
+    savingsBalance * savingsMonthlyRate + investmentValue * investMonthlyRate
+
+  const onTrack = projectedAmount >= targetAmount
+  const status = onTrack ? 'on_track' : gapPercent <= 20 ? 'almost' : 'off_track'
+
+  return {
+    status, onTrack, monthsRemaining, requiredMonthlySaving,
+    projectedAmount, monthlyShortfall, amountStillNeeded,
+    projectedShortfall, gapPercent, monthlyGrowthFromReturns
+  }
+}
+
+export function applyMonthlyGrowth(
+  currentAmount: number,
+  monthlyCashSaved: number,
+  savingsBalance: number,
+  savingsRatePercent: number,
+  investmentValue: number,
+  investmentRatePercent: number
+): number {
+  const monthlyInterest = savingsBalance * (savingsRatePercent / 100 / 12)
+  const monthlyInvestGain = investmentValue * (investmentRatePercent / 100 / 12)
+  return currentAmount + monthlyCashSaved + monthlyInterest + monthlyInvestGain
+}
+```
+
+### src/lib/healthScore.ts
+
+```typescript
+export interface HealthScoreInput {
+  income: number
+  totalExpenses: number
+  savingsBalance: number
+  savingsRatePercent: number
+  investmentValue: number
+  investmentRatePercent: number
+  netWorth: number
+  prevMonthNetWorth: number
+  goal: any | null
+  goalProjection: any | null
+  pathwayStepsCompleted: number
+}
+
+export interface HealthScoreResult {
+  overall: number
+  savingsScore: number
+  goalsScore: number
+  netWorthScore: number
+  wealthGrowthScore: number
+  planScore: number
+  effectiveSavingsRate: number
+  insight1: string
+  insight2: string
+  insight3: string
+}
+
+export function calculateHealthScore(input: HealthScoreInput): HealthScoreResult {
+  const {
+    income, totalExpenses, savingsBalance, savingsRatePercent,
+    investmentValue, investmentRatePercent, netWorth, prevMonthNetWorth,
+    goal, goalProjection, pathwayStepsCompleted
+  } = input
+
+  const monthlyCashSaved = income - totalExpenses
+  const monthlyInterest = savingsBalance * (savingsRatePercent / 100 / 12)
+  const monthlyInvestGain = investmentValue * (investmentRatePercent / 100 / 12)
+  const effectiveMonthlyGain = monthlyCashSaved + monthlyInterest + monthlyInvestGain
+  const effectiveSavingsRate = income > 0 ? (effectiveMonthlyGain / income) * 100 : 0
+
+  // Component 1: Effective savings rate (25 pts)
+  const savingsScore =
+    effectiveSavingsRate >= 25 ? 25 :
+    effectiveSavingsRate >= 20 ? 22 :
+    effectiveSavingsRate >= 15 ? 18 :
+    effectiveSavingsRate >= 10 ? 12 :
+    effectiveSavingsRate >= 5  ?  6 : 0
+
+  // Component 2: Goal on-track status (25 pts)
+  let goalsScore = 0
+  if (goalProjection) {
+    goalsScore = goalProjection.status === 'on_track' ? 25
+      : goalProjection.status === 'almost' ? 15 : 5
+  } else if (goal) {
+    goalsScore = 10
+  }
+
+  // Component 3: Net worth trend (20 pts)
+  const netWorthChange = netWorth - prevMonthNetWorth
+  const netWorthScore =
+    netWorthChange > 1000 ? 20 :
+    netWorthChange > 0    ? 15 :
+    netWorthChange === 0  ?  8 : 0
+
+  // Component 4: Wealth growth rate (20 pts)
+  const annualWealthGrowth =
+    monthlyCashSaved * 12 +
+    savingsBalance * (savingsRatePercent / 100) +
+    investmentValue * (investmentRatePercent / 100)
+  const wealthGrowthRate = netWorth > 0 ? (annualWealthGrowth / netWorth) * 100 : 0
+  const wealthGrowthScore =
+    wealthGrowthRate >= 10 ? 20 :
+    wealthGrowthRate >= 7  ? 16 :
+    wealthGrowthRate >= 4  ? 10 :
+    wealthGrowthRate >= 1  ?  5 : 0
+
+  // Component 5: Plan completion (10 pts)
+  const planScore = Math.round((pathwayStepsCompleted / 6) * 10)
+
+  const overall = Math.min(100,
+    savingsScore + goalsScore + netWorthScore + wealthGrowthScore + planScore)
+
+  // Generate insights from real data
+  const insights: string[] = []
+  if (effectiveSavingsRate < 15) {
+    insights.push(`Your effective savings rate is ${effectiveSavingsRate.toFixed(0)}% — including returns. Reaching 20% would significantly accelerate your financial goals.`)
+  } else {
+    insights.push(`You're saving ${effectiveSavingsRate.toFixed(0)}% effectively including investment returns. You're ahead of most people your age.`)
+  }
+
+  if (goal && goalProjection) {
+    if (goalProjection.status === 'on_track') {
+      insights.push(`Your "${goal.title}" goal is on track — you're projected to reach it by your target date.`)
+    } else {
+      insights.push(`Your "${goal.title}" goal needs attention — you're projected to fall $${Math.round(goalProjection.projectedShortfall).toLocaleString()} short.`)
+    }
+  } else {
+    insights.push('Setting a financial goal with a target date unlocks 25 more points on your health score.')
+  }
+
+  if (netWorthChange > 0) {
+    insights.push(`Your net worth grew $${Math.round(netWorthChange).toLocaleString()} this month. Keep building.`)
+  } else if (netWorth > 0) {
+    insights.push(`Your net worth is positive at $${Math.round(netWorth).toLocaleString()}. Focus on growing it further each month.`)
+  } else {
+    insights.push('A positive net worth is the foundation of financial health. Focus on reducing debts while growing savings.')
+  }
+
+  return {
+    overall, savingsScore, goalsScore, netWorthScore,
+    wealthGrowthScore, planScore, effectiveSavingsRate,
+    insight1: insights[0], insight2: insights[1], insight3: insights[2]
+  }
+}
+```
+
+### src/lib/milestones.ts
+
+```typescript
+export const MILESTONES = [
+  { key: 'goal_setter',       label: 'Goal setter',       emoji: '🎯', desc: 'Set your first financial goal',           check: (d: any) => d.goalsCount >= 1 },
+  { key: 'plan_starter',      label: 'Plan starter',      emoji: '📋', desc: 'Complete the 6-step pathway',             check: (d: any) => d.pathwayComplete },
+  { key: 'streak_4',          label: '4-week streak',     emoji: '🔥', desc: 'Check in 4 weeks in a row',               check: (d: any) => d.streakWeeks >= 4 },
+  { key: 'streak_12',         label: '3-month streak',    emoji: '🏆', desc: 'Check in every week for 3 months',        check: (d: any) => d.streakWeeks >= 12 },
+  { key: 'net_worth_pos',     label: 'Net worth positive',emoji: '📈', desc: 'Assets exceed liabilities',               check: (d: any) => d.netWorth > 0 },
+  { key: 'saver_20',          label: '20% saver',         emoji: '💰', desc: 'Reach 20% effective savings rate',        check: (d: any) => d.effectiveSavingsRate >= 20 },
+  { key: 'goal_on_track',     label: 'On the money',      emoji: '✅', desc: 'Goal fully on track',                     check: (d: any) => d.goalOnTrack },
+  { key: 'score_70',          label: 'Score 70+',         emoji: '⭐', desc: 'Health score above 70',                   check: (d: any) => d.healthScore >= 70 },
+  { key: 'score_80',          label: 'Score 80+',         emoji: '🌟', desc: 'Health score above 80',                   check: (d: any) => d.healthScore >= 80 },
+  { key: 'budget_3months',    label: 'Budget habit',      emoji: '📊', desc: 'Updated budget 3 months in a row',        check: (d: any) => d.budgetMonthsCount >= 3 },
+]
+
+export async function checkAndAwardMilestones(
+  supabase: any, userId: string, data: any, earnedKeys: string[]
+): Promise<string[]> {
+  const newlyEarned: string[] = []
+  for (const m of MILESTONES) {
+    if (earnedKeys.includes(m.key)) continue
+    if (m.check(data)) {
+      const { error } = await supabase.from('user_milestones')
+        .upsert({ user_id: userId, milestone_key: m.key },
+                 { onConflict: 'user_id,milestone_key' })
+      if (!error) newlyEarned.push(m.key)
+    }
+  }
+  return newlyEarned
+}
+```
+
+### src/lib/tipEngine.ts
+
+```typescript
+export function generateWeeklyTip(data: {
+  effectiveSavingsRate: number
+  healthScore: number
+  goal: any | null
+  goalStatus: string
+  ageBenchmarkSavingsRate: number
+  streakWeeks: number
+  isExpat: boolean
+  investmentRatePercent: number
+}) {
+  const { effectiveSavingsRate, healthScore, goal, goalStatus,
+          ageBenchmarkSavingsRate, streakWeeks, isExpat, investmentRatePercent } = data
+
+  if (goal && goalStatus === 'off_track') return {
+    type: 'goal_alert',
+    title: 'Your goal needs attention',
+    body: `Your "${goal.title}" is off track. An advisor can help close the gap without requiring you to save more each month.`,
+    actionLabel: 'See breakdown',
+    actionRoute: '/app/goals'
+  }
+
+  if (goal && goalStatus === 'almost') return {
+    type: 'goal_alert',
+    title: "You're almost on track",
+    body: `Your "${goal.title}" is within reach — just $${Math.round(goal.monthly_shortfall).toLocaleString()}/month more would put you fully on track.`,
+    actionLabel: 'Update my budget',
+    actionRoute: '/app/budget'
+  }
+
+  if (effectiveSavingsRate < ageBenchmarkSavingsRate) return {
+    type: 'benchmark',
+    title: 'Your savings vs your peers',
+    body: `You're saving ${effectiveSavingsRate.toFixed(0)}% effectively. People your age average ${ageBenchmarkSavingsRate}%. Closing this gap adds years to your retirement date.`,
+    actionLabel: 'Review my budget',
+    actionRoute: '/app/budget'
+  }
+
+  if (isExpat && investmentRatePercent < 5) return {
+    type: 'expat_tip',
+    title: 'Are your investments expat-optimised?',
+    body: 'As an expat, local investment accounts may offer better returns than home country accounts. An advisor can review your options.',
+    actionLabel: 'Book a free review',
+    actionRoute: '/book'
+  }
+
+  if (healthScore < 60) return {
+    type: 'score_tip',
+    title: 'Three quick wins for your score',
+    body: `Your score is ${healthScore}/100. Reach 20% savings (+5 pts), complete your pathway (+5 pts), and set a goal target date (+5 pts).`,
+    actionLabel: 'See my score',
+    actionRoute: '/app/health-score'
+  }
+
+  if (streakWeeks >= 4) return {
+    type: 'milestone',
+    title: `${streakWeeks}-week streak — you're building something real`,
+    body: 'Consistent financial tracking is one of the strongest predictors of long-term wealth. You\'re in the top 20% for engagement.',
+    actionLabel: 'View achievements',
+    actionRoute: '/app/dashboard'
+  }
+
+  return {
+    type: 'market_context',
+    title: 'Are your savings working hard enough?',
+    body: 'Vietnam bank deposit rates average 4.5–5.2% in 2025. Make sure your savings rate reflects what you\'re actually earning.',
+    actionLabel: 'Update savings rate',
+    actionRoute: '/app/settings'
+  }
+}
+```
+
+---
+
+## ALL HOOKS
+
+### src/hooks/useAuth.ts
+Standard Supabase auth hook. Exposes: session, loading.
+Uses supabase.auth.getSession() + onAuthStateChange subscription.
+
+### src/hooks/useProfile.ts
+Fetches profiles row for current user. Exposes: profile, loading, updateProfile(updates).
+Auto-fetches when session changes. updateProfile does supabase.from('profiles').update().
+
+### src/hooks/useBudget.ts
+```typescript
+// Fetches budget_transactions for current month (default) or selected month.
+// Exposes:
+//   transactions: all rows for month
+//   recurring: transactions where is_recurring = true
+//   oneOff: transactions where is_recurring = false
+//   pendingConfirm: transactions where recurring_status = 'pending_confirm'
+//   totalIncome: sum of positive amounts
+//   totalExpenses: sum of negative amounts (absolute value)
+//   monthlyCashSaved: totalIncome - totalExpenses
+//   savingsRate: (monthlyCashSaved / totalIncome) * 100
+//   loading, selectedMonth, setSelectedMonth
+//   addTransaction(data): inserts new row
+//   updateTransaction(id, data): updates row
+//   deleteTransaction(id): deletes row
+//   confirmAllRecurring(): updates all pending_confirm rows to confirmed for this month
+//   recalculateSummary(): upserts budget_monthly_summaries for current month
+
+// When month changes to current month and pending_confirm rows exist,
+// the pendingConfirm array will be non-empty, triggering RecurringConfirmBanner.
+
+// Auto-copy recurring logic runs client-side on first load of a new month:
+// 1. Check if any budget_monthly_summaries row exists for this month
+// 2. If not, find all confirmed recurring transactions from last month
+// 3. Insert them for this month with recurring_status = 'pending_confirm'
+// 4. Create budget_monthly_summaries row for this month
+```
+
+### src/hooks/useGoals.ts
+```typescript
+// Fetches financial_goals for current user.
+// Exposes: goals, loading, createGoal, updateGoal, addContribution, recalculateProjections
+
+// recalculateProjections():
+//   For each goal with target_date and target_amount:
+//     Call calculateProjection() from goalProjection.ts
+//     updateGoal() with projection results
+//   Runs automatically when: monthlyCashSaved changes, profile savings/investment rates change
+
+// addContribution(goalId, amount):
+//   Increments current_amount by amount
+//   Calls recalculateProjections() after
+
+// Monthly growth: on 1st of month (detected by checking last_projection_update date),
+//   apply applyMonthlyGrowth() to each goal's current_amount before recalculating
+```
+
+### src/hooks/useHealthScore.ts
+```typescript
+// Fetches health_scores for current user (latest row).
+// Exposes: score, history (last 6 rows), loading, calculateAndSave()
+
+// calculateAndSave():
+//   Gathers: income+expenses from useBudget, savings/investments from profile,
+//            net worth from latest net_worth_snapshots,
+//            prev month net worth from second-latest snapshot,
+//            goal + goalProjection from useGoals,
+//            pathway steps completed from usePathway
+//   Calls calculateHealthScore() from healthScore.ts
+//   Inserts new health_scores row
+//   Runs on: pathway completion, monthly first visit, manual trigger
+```
+
+### src/hooks/useCheckin.ts
+```typescript
+// Manages habit check-in streak.
+// Exposes: streakWeeks, lastCheckin, loading, checkin()
+
+// checkin(): inserts row to habit_checkins.
+// streakWeeks: count of consecutive weeks with a checkin (calculated from rows).
+```
+
+### src/hooks/useMilestones.ts
+```typescript
+// Fetches user_milestones. Exposes: earnedKeys, newlyEarned, loading, markSeen(key)
+// After every dashboard load, calls checkAndAwardMilestones() from milestones.ts
+// newlyEarned: array of keys earned this session (is_seen = false), shown as celebration
+```
+
+### src/hooks/useBenchmarks.ts
+```typescript
+// Fetches benchmarks table filtered by age_group.
+// getAgeGroup(age): returns '28-35' or '36-40' or '40+'
+// getBenchmark(metric): returns the benchmark row for given metric
+```
+
+### src/hooks/usePathway.ts
+```typescript
+// Fetches pathway_steps for current user.
+// completionPercent: (completed steps / 6) * 100
+// saveStep(stepNumber, formData, status): upserts pathway_steps row
+// currentStep: highest in_progress or not_started step number
+```
+
+---
+
+## ALL COMPONENTS
+
+### src/components/ui/Button.tsx
+Props: children, onClick, variant (primary|outline|ghost|danger), size (sm|md|lg), fullWidth, disabled, loading.
+Primary: bg-primary text-white rounded-xl active:scale-95 transition-all.
+Loading: spinner icon inside button.
+
+### src/components/ui/Input.tsx
+Props: label, placeholder, type, value, onChange, error, hint.
+Styling: border rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary.
+
+### src/components/ui/Card.tsx
+Props: children, className, onClick, padding.
+White bg, rounded-2xl, border border-border. Tap effect if onClick provided.
+
+### src/components/ui/ProgressBar.tsx
+Props: value (0-100), color (primary|warning|danger|info), height (sm|md|lg), animated.
+CSS transition on width. Colors: primary=#1D9E75, warning=#F59E0B, danger=#EF4444.
+
+### src/components/ui/CurrencyInput.tsx
+Props: value, onChange, currency (USD|VND), label, size (sm|md|lg).
+Large font centered. $ or ₫ symbol left. Formats with commas on blur.
+
+### src/components/ui/RecurringToggle.tsx
+Props: value (boolean), onChange.
+Pill toggle: ON = green, OFF = gray. Shows "Recurring monthly / auto-copies" or "One-off / this month only".
+
+### src/components/ui/HealthScoreRing.tsx
+Props: score (0-100), size (sm 56px | md 100px | lg 160px), animate, darkMode.
+SVG ring. Colors: 70-100 = #1D9E75, 40-69 = #F59E0B, 0-39 = #EF4444.
+Animates stroke-dashoffset from full to score value on mount if animate=true.
+Score number centered inside ring.
+
+### src/components/ui/GoalCard.tsx
+Full implementation with 3 visual states:
+
+ON TRACK (border-emerald-200, bg-emerald-50):
+  - Header: emoji + title + "On track" green badge
+  - Teal progress bar
+  - Monthly growth chip: "↑ +$X/month from savings & investment returns"
+  - Two buttons: "Add contribution" (teal) + "Edit" (outline)
+
+ALMOST (border-yellow-300, bg-yellow-50):
+  - Header: emoji + title + "Almost there" amber badge
+  - Amber progress bar
+  - Monthly growth chip
+  - Breakdown card (white, inner): amount needed / months / required monthly /
+    current pace / monthly gap / projected amount
+  - Advisor CTA card (navy bg): "Small optimisations could close this gap" +
+    "Book a free call" button (teal) → /book
+  - Buttons: "Add contribution" + "Edit"
+
+OFF TRACK (border-red-300, bg-red-50):
+  - Header: emoji + title + "Off track" red badge
+  - Red progress bar
+  - Monthly growth chip
+  - Breakdown card: same fields as almost + shows projected shortfall in red
+  - Advisor CTA card (navy bg): "This gap needs a professional strategy" +
+    specific shortfall amount in copy + "Book a free call" button → /book
+  - Buttons: "Add contribution" + "Edit"
+
+Breakdown fields shown for both ALMOST and OFF TRACK:
+  Amount still needed / Months remaining / Required monthly saving /
+  Your current monthly pace / Monthly shortfall / Projected at target date
+
+Goal type emoji map:
+  property=🏠, retirement=🌴, emergency_fund=🛡️, fi=🚀, debt=💳, other=🎯
+
+Monthly growth chip always shown when monthlyGrowthFromReturns > 0:
+  "↑ +$X/month from your savings interest + investment returns"
+  Green background, small text.
+
+### src/components/ui/RewardReveal.tsx
+Full-screen overlay. Props: rewardNumber (1|2|3), title, description, onDismiss.
+Emojis: 1=✨, 2=🎯, 3=🎉. Auto-dismiss 2500ms. Framer-motion scale+fade entrance.
+
+### src/components/ui/SmartUpgradeCard.tsx
+Props: condition, insightText, ctaText, onDismiss.
+Amber left border, yellow-50 bg. 💡 icon + specific insight + CTA link + X dismiss.
+Stores dismissed state in localStorage. Never re-renders after dismissed.
+
+### src/components/ui/LoadingSkeleton.tsx
+N animate-pulse gray bars. Use everywhere while data loads.
+
+### src/components/ui/Toast.tsx
+ToastContext + showToast(message, type). Top-right fixed, auto-dismiss 3s.
+success=green, error=red, info=teal.
+
+### src/components/ui/BottomNav.tsx
+Fixed bottom, 64px, 4 tabs. Hidden on md screens and above.
+Home → /app/dashboard, Budget → /app/budget, Goals → /app/goals, Score → /app/health-score.
+Active tab: text-primary. Icons from lucide-react: Home, Wallet, Target, Activity.
+
+### src/components/ui/RecurringConfirmBanner.tsx
+Shows at top of budget page when pendingConfirm.length > 0.
+"🔄 X recurring items copied from last month — anything change?"
+"Looks good" button calls confirmAllRecurring().
+"Edit" link opens inline edit mode on the pending items.
+Soft green background (emerald-50 border emerald-200).
+
+### src/components/ui/WeeklyTipCard.tsx
+Props: tip (from tipEngine). Left border accent (color by tip type: teal=goal, blue=market, amber=benchmark).
+Type label (uppercase small) + body text + action link.
+Dismissed per week via localStorage.
+
+### src/components/ui/MilestoneChips.tsx
+Props: earned (string[]), all milestones list, newlyEarned (string|null).
+Horizontal scroll of pill chips. Earned: green bg. Locked: gray, grayscale emoji.
+If newlyEarned: show celebration card above chips with emoji + description.
+
+### src/components/ui/BenchmarkCard.tsx
+Props: userSavingsRate, userHealthScore, ageGroup, getBenchmark function.
+Shows 2 rows: savings rate + health score.
+Each row: label / user bar (teal) / peer bar (blue) / positive or gap message.
+Never uses shaming language — always positive framing.
+
+### src/components/layout/AppShell.tsx
+Top bar: logo left, notification bell + avatar circle right.
+Bottom: BottomNav (mobile only). Content: children with pb-20 for nav clearance.
+
+### src/components/layout/AuthGuard.tsx
+Check session → loading spinner → redirect to /login if none.
+Check profile.role → redirect to correct portal.
+
+---
+
+## ROUTING (src/App.tsx)
+
+```
+/ → Landing
+/login → Login
+/register → Register
+/tools/budget → BudgetTool (public)
+/tools/retirement → RetirementTool (public)
+/tools/quiz → QuizTool (public)
+/app/welcome → Welcome (AuthGuard)
+/app/pathway → Pathway (AuthGuard)
+/app/dashboard → Dashboard (AuthGuard)
+/app/budget → Budget (AuthGuard)
+/app/goals → Goals (AuthGuard)
+/app/health-score → HealthScore (AuthGuard)
+/app/settings → Settings (AuthGuard)
+/book → simple page with "Book a discovery call" header and Calendly embed placeholder
+* → Navigate to /
+```
+
+Post-login role routing in AuthGuard:
+free_user → /app/dashboard
+investment_client → /portal/dashboard (show "coming soon" for now)
+advisor → /advisor/dashboard (show "coming soon" for now)
+super_admin → /admin/dashboard (show "coming soon" for now)
+
+---
+
+## ALL PAGES
+
+### Landing (/)
+Navbar: logo left, Login + "Start free" right.
+Hero: headline "Your financial future, planned with purpose" + subheadline + two CTAs.
+Tools grid: 6 tool cards 2-col on mobile, 3-col desktop.
+How it works: 3 steps.
+CTA section: navy bg.
+Footer.
+
+### Register (/register)
+Name + email + password form. On submit: supabase.auth.signUp → insert profile → navigate to /app/welcome.
+
+### Login (/login)
+Email + password. On submit: supabase.auth.signInWithPassword → role-based redirect.
+
+### Welcome (/app/welcome)
+Confetti animation. "Welcome [name]!" + "6 steps, ~8 minutes, skip anything."
+6 step dots. "Let's start" → /app/pathway. "Skip" → /app/dashboard.
+
+### Pathway (/app/pathway)
+Full-screen card-swipe. Top: progress bar + step counter. Bottom: skip link.
+Framer-motion slide transition (x: 100→0, exit x: -100).
+Auto-saves to pathway_steps on field change (debounced 800ms).
+Shows "Saving... / Saved ✓" in header.
+
+STEP 1 — About you:
+Age number input with +/- buttons (large centered font).
+Life stage chips (horizontal scroll, single select).
+Expat YES/NO large tap cards.
+Currency USD/VND pill toggle.
+Save to profiles. Next enabled when age + life_stage set.
+
+STEP 2 — Your income:
+Large CurrencyInput centered.
+Income type multi-select chips.
+Stability 3 tap cards.
+Save income to budget_transactions (category='income', is_recurring=true).
+ON COMPLETE → REWARD 1: HealthScoreRing fades in on dashboard showing "--/100".
+
+STEP 3 — Monthly expenses:
+6 expandable category rows with RecurringToggle per row.
+Each row: emoji + name + amount (tap to expand inline input) + recurring toggle.
+Live savings rate bar below (green>20%, amber 10-20%, red <10%).
+Save each category as budget_transactions row (is_recurring = toggle value).
+
+STEP 4 — Your #1 goal:
+6 goal type visual cards (2×3 grid, single select).
+After selecting type: goal name (pre-filled editable) + CurrencyInput target + month/year picker.
+Save to financial_goals. Run calculateProjection().
+ON COMPLETE → REWARD 2: GoalCard slides into dashboard.
+
+STEP 5 — Savings and debts:
+Three CurrencyInput sections:
+  "Total savings" (always shown)
+  "Investments" with toggle "I don't have investments yet"
+  "Debts" with toggle "I'm debt-free"
+Live net worth = savings + investments - debts (large teal number updates as user types).
+Simple 2-segment bar (green=assets, red=debts).
+Save to net_worth_snapshots. Save savings/investments to profiles.
+
+STEP 6 — Risk quiz:
+Sub-step counter (Q1/5 dots).
+5 questions, 4 answer cards each. Auto-advance 400ms after tap.
+Result card: risk profile name + description + allocation bars.
+Save risk_profile to profiles.
+ON COMPLETE → REWARD 3: Confetti + score animation + 3 insights.
+Navigate to /app/dashboard after dismiss.
+
+### Dashboard (/app/dashboard)
+Loads all hooks in parallel. Shows LoadingSkeleton while any loading.
+
+SECTIONS IN ORDER:
+
+1. Top bar: "Good morning/afternoon/evening, [name]" + avatar.
+
+2. Pathway banner (if !pathway_complete):
+   Teal soft card: "Your plan is X% complete" + thin progress bar + "Continue setup →".
+
+3. Health score ring card:
+   HealthScoreRing (md size, animate) + score/100 + "Financial Health Score" label.
+   Month delta if prev score exists. Tap → /app/health-score.
+
+4. 2×2 metric grid:
+   Savings rate card: effectiveSavingsRate% + target 20% sub.
+   Net worth card: total $ + trend arrow.
+   Top goal card: goal name + progress bar + % complete.
+   Streak card: "X weeks 🔥" + tap to open check-in modal.
+
+5. Weekly tip card (WeeklyTipCard):
+   Generated from generateWeeklyTip() with real user data.
+
+6. Milestones section (MilestoneChips):
+   "Your achievements" label + horizontal scroll chips.
+   Newly earned badge celebration card if any.
+
+7. Benchmark comparison (BenchmarkCard):
+   "How you compare" label + savings rate + health score rows.
+
+8. Smart upgrade card (SmartUpgradeCard):
+   Condition: savingsRate < 15 OR (goal exists AND !goalOnTrack).
+   Shows specific insight text, never generic. Dismissed per session.
+
+9. Quick action chips (horizontal scroll):
+   "Update budget" / "Add contribution" / "Check in this week" / "Book a call".
+
+10. Check-in modal (bottom sheet, triggered by streak card tap):
+    "Did you think about your finances this week?" + Yes/Skip buttons.
+    On yes: increment streak, save to habit_checkins, show toast "🔥 X week streak!".
+
+Check milestone awards after every dashboard load:
+  Pass: goalsCount, pathwayComplete, streakWeeks, netWorth, effectiveSavingsRate,
+        goalOnTrack, healthScore, budgetMonthsCount.
+  Award any newly earned milestones.
+
+### Budget (/app/budget)
+
+HEADER: "Monthly Budget" + month picker (← Month Year →).
+
+RECURRING CONFIRM BANNER (shows when pendingConfirm.length > 0):
+RecurringConfirmBanner component at top.
+
+INCOME SECTION:
+Total income from transactions where category='income'. Large teal number.
+Editable inline (tap pencil → input).
+
+SAVINGS RATE BAR:
+Horizontal 3-segment visual: Needs / Wants / Savings % vs 50/30/20 target.
+Color coded by proximity to target.
+
+FIXED & RECURRING SECTION:
+Section header with green dot + "Fixed & recurring".
+List of is_recurring=true transactions, sorted by category.
+Each row: emoji + description + amount (red expense, green income) + "Recurring" badge.
+Pending items (recurring_status='pending_confirm') show yellow "Unconfirmed" pill.
+Long-press or swipe right to edit. Swipe left to delete (with confirmation).
+
+ONE-OFF THIS MONTH SECTION:
+Section header with gray dot + "This month only".
+List of is_recurring=false transactions.
+"+ Add one-off" button at bottom of section.
+
+ADD TRANSACTION MODAL (bottom sheet):
+Description (text input).
+Category (select: housing/food/transport/utilities/entertainment/income/savings/other).
+Amount (CurrencyInput — positive for income, negative for expense).
+RecurringToggle.
+Date (date picker, default today).
+Save button.
+
+MONTHLY SUMMARY CARD (bottom):
+Total income / Total expenses / Saved this month / Savings rate.
+
+EMPTY STATE: "Set up your budget" → /app/pathway?step=2.
+
+### Goals (/app/goals)
+
+FREE TIER HEADER: "Your financial goal" (singular, with "1 of 1" counter).
+
+GOAL CARD (GoalCard component):
+Receives: goal, profile, monthlyCashSaved, onContribute, onEdit, onBookCall.
+Renders correct state (on_track / almost / off_track) with full breakdown and advisor CTA.
+
+CONTRIBUTION MODAL (bottom sheet):
+"Add to [goal name]".
+CurrencyInput for amount. Date picker. Optional note.
+Save: calls addContribution(goalId, amount) → recalculates projection.
+
+EDIT GOAL MODAL:
+Editable fields: title, target_amount, target_date, monthly_contribution.
+CurrencyInputs. Date picker.
+Save: calls updateGoal() → recalculates projection immediately.
+
+LOCKED GOAL CARD (below active goal):
+Dashed border, gray, lock emoji.
+"Add another goal — upgrade to Premium to unlock unlimited goals."
+(For now just shows locked state. No upgrade flow yet.)
+
+EMPTY STATE: "Set your first financial goal" + "Add a goal" button → /app/pathway?step=3.
+
+### HealthScore (/app/health-score)
+
+HERO CARD (navy bg):
+HealthScoreRing (lg, darkMode=true) + score/100 white text.
+"Financial Health Score" subtitle in blue-200.
+
+SCORE BREAKDOWN (2×2 + 1 grid):
+5 component cards:
+  Effective savings rate → savingsScore/25
+  Goal on-track → goalsScore/25
+  Net worth trend → netWorthScore/20
+  Wealth growth rate → wealthGrowthScore/20
+  Plan completion → planScore/10
+Each: label + "X pts" + thin progress bar + descriptor.
+
+PERSONALISED INSIGHTS (3 cards):
+insight_1, insight_2, insight_3 from health_scores table.
+Left border color: green if positive, amber if neutral, red if warning.
+
+SCORE HISTORY:
+"Score history" label.
+Recharts LineChart (height 100, no axes, smooth line, dots at each point).
+If < 2 data points: "Check back next month to see your trend".
+
+### Settings (/app/settings)
+
+PROFILE: Avatar + name (inline edit) + email.
+
+FINANCIAL RATES SECTION (important — feeds all projections):
+"Savings interest rate" — number input with % suffix, default 4.0.
+"Investment annual return" — number input with % suffix, default 7.0.
+"Your savings balance" — CurrencyInput.
+"Your investment value" — CurrencyInput.
+Save button: updates profiles table → triggers goal recalculation.
+Helper text: "These rates power your goal projections and health score."
+
+CURRENCY PREFERENCE: USD / VND pill toggle.
+
+PLAN STATUS: "X of 6 steps complete" + progress bar + "Resume setup" link.
+
+ACCOUNT: "Sign out" button + "Delete account" link (with confirmation).
+
+---
+
+## PUBLIC TOOLS
+
+### BudgetTool (/tools/budget)
+Inputs: income + 6 expense categories (all CurrencyInput).
+Live results: total expenses + savings + savings rate + 50/30/20 donut (Recharts PieChart).
+Lead capture: "Save and track this monthly — free account" → /register.
+
+### RetirementTool (/tools/retirement)
+Inputs: current age (slider), retirement age (slider), current savings, monthly contribution,
+expected return (slider 4-12%), desired monthly retirement income.
+Results: projected savings + monthly income (4% rule) + gap (red if negative) + Recharts AreaChart.
+Smart CTA: if gap detected → "You have a $X/month retirement shortfall — book a free call".
+
+### QuizTool (/tools/quiz) — Money Personality Quiz
+8 questions, 1 per screen, progress bar, 5 options each.
+Scores A-E = 1-5. Total determines archetype:
+  8-16: The Avoider, 17-24: The Protector, 25-31: The Balancer,
+  32-38: The Builder, 39-40: The Optimizer.
+Show archetype name + teaser.
+Email gate: "Enter your email to unlock your full profile" → creates lead record →
+shows strengths + blind spots + 3 action steps.
+
+---
+
+## KEY BEHAVIOURS
+
+1. AUTO-SAVE: pathway fields debounce 800ms → supabase upsert → "Saving... / Saved ✓".
+2. REAL-TIME PROJECTION: recalculateProjections() runs whenever monthlyCashSaved,
+   savings_rate_percent, or investment_rate_percent changes in profile.
+3. MONTHLY GROWTH: on first load of a new month, applyMonthlyGrowth() runs on each goal
+   before recalculating projections. Detected by comparing last_projection_update month.
+4. RECURRING COPY: on first load of a new month budget page, copies recurring transactions
+   from last month with pending_confirm status.
+5. CURRENCY: all amounts stored in USD. VND display = amount × 25000. Toggle updates all displays.
+6. EMPTY STATES: every section has a designed empty state. No blank white sections ever.
+7. LOADING STATES: LoadingSkeleton shown for every section while data fetches.
+8. HEALTH SCORE RECALC: triggered on pathway completion, monthly first visit,
+   and when user updates financial rates in settings.
+9. MILESTONE CHECK: runs after every dashboard load. Awards new milestones automatically.
+10. WEEKLY TIP: generateWeeklyTip() runs on dashboard load. Cached in user_tips table
+    (one per user per week). Same tip shows all week.
+
+---
+
+## BUILD ORDER
+
+Build in this exact sequence:
+
+1.  Supabase: run schema SQL, verify all tables + RLS work
+2.  src/lib/: supabase.ts, goalProjection.ts, healthScore.ts, milestones.ts, tipEngine.ts
+3.  Hooks: useAuth, useProfile (basic)
+4.  Components/ui: Button, Input, Card, Toast (with ToastContext), LoadingSkeleton
+5.  Layout: AuthGuard, AppShell
+6.  Pages: Landing (full), Register, Login — test auth flow end-to-end
+7.  Pages: Welcome
+8.  Components/ui: CurrencyInput, ProgressBar, RecurringToggle
+9.  Hooks: usePathway
+10. Pages: Pathway steps 1-2 (life stage + income) — test auto-save to Supabase
+11. Components/ui: RewardReveal — test reward 1 trigger
+12. Pages: Pathway steps 3-4 (expenses + goal) — test recurring toggle saves correctly
+13. Components/ui: GoalCard (all 3 states with breakdown + advisor CTA)
+14. Hooks: useGoals (with real-time projection recalculation)
+15. Pages: Pathway steps 5-6 (savings/debts + risk quiz) — test reward 3 + confetti
+16. Components/ui: HealthScoreRing
+17. Hooks: useHealthScore, useBudget (with recurring copy logic)
+18. Components/layout: BottomNav
+19. Pages: Dashboard (all sections — load all hooks in parallel)
+20. Components/ui: WeeklyTipCard, MilestoneChips, BenchmarkCard, SmartUpgradeCard
+21. Hooks: useCheckin, useMilestones, useBenchmarks
+22. Dashboard: add tips + milestones + benchmarks + check-in modal
+23. Components/ui: RecurringConfirmBanner
+24. Pages: Budget (recurring + one-off sections + confirm banner)
+25. Pages: Goals (GoalCard + contribution modal + edit modal + locked card)
+26. Pages: HealthScore (breakdown + insights + history chart)
+27. Pages: Settings (financial rates section critical — feeds all projections)
+28. Public tools: BudgetTool, RetirementTool, QuizTool
+29. Final: all empty states, all loading skeletons, all error handling, mobile responsive check
+30. Test checklist:
+    □ Register → welcome → complete pathway → dashboard populates
+    □ Update savings rate in settings → goal projection recalculates
+    □ Set impossible goal target → card shows off-track + breakdown + advisor CTA
+    □ Add recurring expense → next month it appears as pending_confirm
+    □ Confirm recurring → banner disappears, totals update
+    □ Complete goal (current = target) → card shows "achieved" state
+    □ Check in weekly → streak increments → milestone fires at 4 weeks
+    □ HealthScoreRing animates correctly on first render
+    □ Currency toggle: all amounts update simultaneously
+    □ Mobile: bottom nav works, all cards readable on 390px screen
