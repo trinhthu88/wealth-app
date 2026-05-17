@@ -1,0 +1,1068 @@
+Build a mobile-first financial planning web app called WEALTHAPP for free users. Use React + TypeScript + Vite + Tailwind CSS frontend, with Supabase for auth and database. Deploy-ready on Replit.
+
+---
+
+## TECH STACK
+
+- Frontend: React 18 + TypeScript + Vite
+- Styling: Tailwind CSS v3
+- Routing: React Router v6
+- Database + Auth: Supabase (use environment variables VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY)
+- Charts: Recharts
+- Animations: Framer Motion
+- Icons: Lucide React
+- HTTP: Supabase JS client only (no axios needed)
+
+Install all dependencies in package.json. Configure Tailwind with the custom colors below.
+
+---
+
+## TAILWIND CONFIG
+
+In tailwind.config.js extend colors with:
+
+```js
+colors: {
+  primary: '#1D9E75',
+  'primary-dark': '#0F6E56',
+  navy: '#042C53',
+  surface: '#F8FAFB',
+  border: '#E2E8F0',
+  muted: '#64748B',
+}
+```
+
+---
+
+## ENVIRONMENT VARIABLES
+
+Create a .env file with:
+```
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+Create src/lib/supabase.ts:
+```ts
+import { createClient } from '@supabase/supabase-js'
+export const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY
+)
+```
+
+---
+
+## DATABASE
+
+Create src/lib/schema.sql with this SQL. Tell the user to paste it into their Supabase SQL editor:
+
+```sql
+create table profiles (
+  id uuid primary key references auth.users(id) on delete cascade,
+  email text not null,
+  full_name text,
+  role text not null default 'free_user',
+  age int,
+  life_stage text,
+  country_code text,
+  is_expat boolean default false,
+  preferred_currency text default 'USD',
+  risk_profile text,
+  pathway_step int default 0,
+  pathway_complete boolean default false,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create table pathway_steps (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references profiles(id) on delete cascade,
+  step_number int not null,
+  step_name text not null,
+  status text default 'not_started',
+  form_data jsonb default '{}',
+  completed_at timestamptz,
+  updated_at timestamptz default now(),
+  unique(user_id, step_number)
+);
+
+create table budget_entries (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references profiles(id) on delete cascade,
+  period_month date not null,
+  currency text default 'USD',
+  income numeric default 0,
+  housing numeric default 0,
+  food numeric default 0,
+  transport numeric default 0,
+  utilities numeric default 0,
+  entertainment numeric default 0,
+  other_expenses numeric default 0,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create table financial_goals (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references profiles(id) on delete cascade,
+  title text not null,
+  goal_type text not null,
+  target_amount numeric default 0,
+  current_amount numeric default 0,
+  monthly_contribution numeric default 0,
+  target_date date,
+  currency text default 'USD',
+  status text default 'on_track',
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create table net_worth_snapshots (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references profiles(id) on delete cascade,
+  snapshot_date date default current_date,
+  total_savings numeric default 0,
+  total_investments numeric default 0,
+  total_debts numeric default 0,
+  created_at timestamptz default now()
+);
+
+create table health_scores (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references profiles(id) on delete cascade,
+  score_date date default current_date,
+  overall_score int default 0,
+  budget_score int default 0,
+  goals_score int default 0,
+  savings_score int default 0,
+  plan_score int default 0,
+  insight_1 text,
+  insight_2 text,
+  insight_3 text,
+  created_at timestamptz default now()
+);
+
+create table habit_checkins (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references profiles(id) on delete cascade,
+  checkin_date date default current_date,
+  current_streak int default 0,
+  created_at timestamptz default now()
+);
+
+alter table profiles enable row level security;
+create policy "own_profile" on profiles for all to authenticated using (id = auth.uid());
+
+alter table pathway_steps enable row level security;
+create policy "own_steps" on pathway_steps for all to authenticated using (user_id = auth.uid());
+
+alter table budget_entries enable row level security;
+create policy "own_budget" on budget_entries for all to authenticated using (user_id = auth.uid());
+
+alter table financial_goals enable row level security;
+create policy "own_goals" on financial_goals for all to authenticated using (user_id = auth.uid());
+
+alter table net_worth_snapshots enable row level security;
+create policy "own_nw" on net_worth_snapshots for all to authenticated using (user_id = auth.uid());
+
+alter table health_scores enable row level security;
+create policy "own_scores" on health_scores for all to authenticated using (user_id = auth.uid());
+
+alter table habit_checkins enable row level security;
+create policy "own_checkins" on habit_checkins for all to authenticated using (user_id = auth.uid());
+```
+
+---
+
+## FILE STRUCTURE
+
+Create this exact file structure:
+
+```
+src/
+  lib/
+    supabase.ts
+    schema.sql
+  hooks/
+    useAuth.ts
+    useProfile.ts
+    useBudget.ts
+    useGoals.ts
+    useHealthScore.ts
+    usePathway.ts
+  components/
+    ui/
+      Button.tsx
+      Input.tsx
+      Card.tsx
+      ProgressBar.tsx
+      BottomNav.tsx
+      CurrencyInput.tsx
+      HealthScoreRing.tsx
+      GoalCard.tsx
+      RewardReveal.tsx
+      SmartUpgradeCard.tsx
+      LoadingSkeleton.tsx
+      Toast.tsx
+    layout/
+      AppShell.tsx
+      AuthGuard.tsx
+  pages/
+    Landing.tsx
+    Login.tsx
+    Register.tsx
+    Welcome.tsx
+    Pathway.tsx
+    Dashboard.tsx
+    Budget.tsx
+    Goals.tsx
+    HealthScore.tsx
+    Settings.tsx
+  App.tsx
+  main.tsx
+```
+
+---
+
+## HOOKS
+
+### src/hooks/useAuth.ts
+```ts
+import { useEffect, useState } from 'react'
+import { supabase } from '../lib/supabase'
+import { Session } from '@supabase/supabase-js'
+
+export function useAuth() {
+  const [session, setSession] = useState<Session | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session)
+      setLoading(false)
+    })
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
+    })
+    return () => subscription.unsubscribe()
+  }, [])
+
+  return { session, loading }
+}
+```
+
+### src/hooks/useProfile.ts
+Fetch and update the current user's profile from the profiles table.
+Exposes: profile, loading, updateProfile(updates).
+Auto-fetches when session changes.
+
+### src/hooks/useBudget.ts
+Fetch current month budget_entries row for the current user.
+Exposes: budget, loading, saveBudget(data), currentMonth.
+Calculates savingsRate = ((income - total_expenses) / income) * 100.
+
+### src/hooks/useGoals.ts
+Fetch all financial_goals for current user.
+Exposes: goals, loading, createGoal(data), updateGoal(id, data), addContribution(goalId, amount).
+addContribution increments current_amount by amount and calls updateGoal.
+
+### src/hooks/useHealthScore.ts
+Fetch latest health_scores row for current user.
+Exposes: score, loading, calculateAndSave().
+calculateAndSave computes overall_score from:
+  - plan_score: (pathway_step / 6) * 25 — capped at 25
+  - savings_score: savingsRate > 20 = 25, 10-20 = 15, < 10 = 5
+  - goals_score: goals[0] exists with target_amount > 0 = 25, exists = 15, none = 0
+  - budget_score: budget exists with income > 0 = 25, else 0
+  overall_score = sum of all four
+Then inserts new row to health_scores.
+
+### src/hooks/usePathway.ts
+Fetch all pathway_steps for current user.
+Exposes: steps, currentStep, loading, saveStep(stepNumber, formData, status), completionPercent.
+completionPercent = (completed steps count / 6) * 100.
+saveStep does an upsert on (user_id, step_number).
+
+---
+
+## COMPONENTS
+
+### src/components/ui/Button.tsx
+Props: children, onClick, variant ('primary'|'outline'|'ghost'|'danger'), size ('sm'|'md'|'lg'), fullWidth, disabled, loading.
+Primary: bg-primary text-white rounded-xl.
+Outline: border-2 border-primary text-primary rounded-xl.
+Ghost: no border, text-muted.
+Loading state: shows spinner inside button, disables click.
+All: transition-all duration-150 active:scale-95.
+
+### src/components/ui/Input.tsx
+Props: label, placeholder, type, value, onChange, error, hint, icon.
+Style: border border-border rounded-xl px-4 py-3 w-full focus:ring-2 focus:ring-primary outline-none.
+Shows error in red below if error prop provided.
+Shows hint in muted gray if hint prop provided.
+
+### src/components/ui/Card.tsx
+Props: children, className, onClick, padding.
+Style: bg-white rounded-2xl border border-border.
+If onClick provided: cursor-pointer hover:border-primary transition-colors.
+
+### src/components/ui/ProgressBar.tsx
+Props: value (0-100), color ('primary'|'warning'|'danger'), height, showLabel.
+Animated fill using CSS transition width.
+Color mapping: primary=#1D9E75, warning=#F59E0B, danger=#EF4444.
+
+### src/components/ui/CurrencyInput.tsx
+Props: value, onChange, currency ('USD'|'VND'), label, placeholder.
+Shows $ or ₫ symbol on left.
+Large font (text-3xl) centered.
+Formats number with commas on blur.
+On focus: removes formatting so user can edit raw number.
+
+### src/components/ui/HealthScoreRing.tsx
+Props: score (0-100), size ('sm'|'md'|'lg'), animate.
+SVG circular progress ring.
+Score 0-39: stroke red. 40-69: stroke amber. 70-100: stroke #1D9E75.
+Shows score number in center.
+If animate=true: animates stroke-dashoffset from full circle to score value over 800ms on mount.
+Sizes: sm=56px, md=100px, lg=160px.
+
+### src/components/ui/GoalCard.tsx
+Props: goal, onContribute, onEdit.
+Shows: goal emoji icon (mapped from goal_type), title, progress bar, current/target amounts, status chip, two buttons.
+Status chip colors: on_track=green, at_risk=amber, off_track=red, achieved=teal.
+Goal type emoji map:
+  property='🏠', retirement='🌴', emergency_fund='🛡️',
+  fi='🚀', debt='💳', other='🎯'
+
+### src/components/ui/RewardReveal.tsx
+Props: rewardNumber (1|2|3), title, description, onDismiss.
+Full-screen overlay: fixed inset-0 bg-white/90 z-50 flex items-center justify-center.
+Center card: white, rounded-2xl, p-8, text-center, max-w-sm.
+Shows large emoji (reward 1=✨, reward 2=🎯, reward 3=🎉).
+Title (24px 600) + description (16px muted).
+Auto-dismisses after 2500ms. Tap anywhere to dismiss early.
+Entrance: framer-motion scale from 0.8 + opacity 0 to 1 over 300ms.
+
+### src/components/ui/SmartUpgradeCard.tsx
+Props: condition (boolean), insightText, ctaText, onDismiss.
+Renders null if condition=false.
+Style: border-l-4 border-amber-400 bg-amber-50 rounded-xl p-4.
+Shows: 💡 icon + insightText (14px) + ctaText link (primary color, 13px) + X dismiss button.
+On dismiss: calls onDismiss, stores dismissed flag in localStorage key 'upgrade_dismissed_[ctaType]'.
+Never re-renders after dismissed.
+
+### src/components/ui/LoadingSkeleton.tsx
+Props: lines (number), height.
+Renders N gray animate-pulse rounded bars.
+Use for loading states in all data-dependent sections.
+
+### src/components/ui/Toast.tsx
+Global toast notification system.
+Use a React context (ToastContext) with showToast(message, type) function.
+Types: success (green), error (red), info (teal).
+Toasts appear top-right on desktop, top-center on mobile.
+Auto-dismiss after 3000ms.
+Entrance: slide in from top + fade.
+
+### src/components/ui/BottomNav.tsx
+Fixed bottom navigation bar. Only visible on mobile (hidden md:hidden equivalent using Tailwind).
+4 tabs with icons from lucide-react:
+  Home (Home icon) → /app/dashboard
+  Budget (Wallet icon) → /app/budget
+  Goals (Target icon) → /app/goals
+  Score (Activity icon) → /app/health-score
+Active tab: text-primary icon filled style.
+Inactive: text-muted.
+Height: 64px. bg-white border-t border-border.
+Safe area padding bottom for iOS notch: pb-safe (add to Tailwind safelist).
+
+### src/components/layout/AppShell.tsx
+Wrapper for all authenticated /app/* pages.
+Shows: top bar (logo left, notification bell + avatar right) + BottomNav fixed bottom + children with padding-bottom: 80px (to avoid bottom nav overlap).
+Top bar: bg-white border-b border-border h-14 flex items-center justify-between px-4.
+Avatar: initials circle, bg-primary text-white, 32px, shows first letter of full_name.
+
+### src/components/layout/AuthGuard.tsx
+Wraps protected routes.
+If loading: show full-screen centered spinner.
+If no session: redirect to /login.
+If session but no profile: show loading.
+If session and profile: render children.
+
+---
+
+## PAGES
+
+### src/pages/Landing.tsx
+
+Full public landing page. No auth required.
+
+Sections in order:
+
+1. NAVBAR
+Fixed top. bg-white border-b. Logo "WEALTHAPP" text in text-primary font-bold. Right side: Login button (ghost) + "Start free" button (primary, small).
+
+2. HERO
+py-20 px-6 text-center max-w-lg mx-auto.
+h1: "Your financial future, planned with purpose" — text-4xl font-bold text-navy leading-tight.
+p: "Smart financial planning for expats and investors building wealth across Asia" — text-muted mt-4.
+Two buttons mt-8: "Start for free →" (primary, full width on mobile) + "Book a discovery call" (outline, full width on mobile).
+Below buttons: "No credit card required · 2 min setup" — text-xs text-muted mt-3 text-center.
+
+3. TOOLS PREVIEW
+Section title: "Try our free tools" — text-2xl font-semibold text-center mt-16 mb-8.
+6 cards in grid grid-cols-2 gap-3 px-4:
+Each card: Card component, p-4, emoji (text-3xl mb-2) + name (font-medium 14px) + description (text-muted 12px).
+Cards:
+  💰 "Budget Tracker" / "See where your money goes" → /tools/budget
+  🏖️ "Retirement Calc" / "When can you retire?" → /tools/retirement
+  📊 "Net Worth" / "Know your number" → /tools/networth
+  🚀 "FI Number" / "Path to independence" → /tools/fi
+  🧠 "Money Quiz" / "Your money personality" → /tools/quiz
+  🌏 "Expat Check" / "Are you financially ready?" → /tools/expat
+
+4. HOW IT WORKS
+Section title: "How it works" — centered, mt-16.
+3 steps in vertical list on mobile, horizontal on desktop:
+  Step 1: 🔧 "Try the free tools" — "No signup needed"
+  Step 2: 📋 "Build your plan" — "6-step guided pathway"
+  Step 3: 📈 "Track your progress" — "Monthly health score"
+
+5. CTA SECTION
+bg-navy text-white py-16 px-6 text-center mt-16.
+"Ready to build your financial plan?" — text-2xl font-semibold.
+"Start for free →" button (bg-primary text-white mt-6).
+
+6. FOOTER
+bg-surface py-8 px-6 text-center text-muted text-sm.
+"© 2025 WEALTHAPP · Privacy · Terms"
+
+### src/pages/Register.tsx
+
+Centered auth card. max-w-sm mx-auto pt-16 px-6.
+
+Logo centered: "WEALTHAPP" text-primary font-bold text-2xl mb-8.
+Card with padding:
+  h2: "Create your free account" — text-xl font-semibold.
+  p: "Your financial plan starts here" — text-muted text-sm mt-1 mb-6.
+  
+  Form fields (gap-4):
+    Input: Full name / text / "Your name"
+    Input: Email / email / "your@email.com"
+    Input: Password / password / "Create a password" with show/hide eye icon toggle
+
+  Button: "Create free account →" primary full-width mt-6 loading state while submitting.
+  
+  Error message: if Supabase returns error, show in red text below button.
+  
+  Link: "Already have an account? Sign in" → /login — text-center text-sm mt-4.
+
+On submit:
+  1. supabase.auth.signUp({ email, password, options: { data: { full_name } } })
+  2. On success: insert into profiles { id: user.id, email, full_name, role: 'free_user' }
+  3. Redirect to /app/welcome
+
+### src/pages/Login.tsx
+
+Same layout as Register.
+
+Fields: Email + Password.
+Button: "Sign in" primary full-width.
+Forgot password link below button.
+Link: "Don't have an account? Start free" → /register.
+
+On submit: supabase.auth.signInWithPassword({ email, password }).
+On success: check profile.role → redirect to correct portal (free_user → /app/dashboard).
+
+### src/pages/Welcome.tsx
+
+Full screen centered. Only shown once (redirect away if onboarding_complete=true).
+
+bg-white min-h-screen flex flex-col items-center justify-center px-6 text-center.
+
+Large green checkmark circle (80px, bg-primary, white check SVG inside). Animate scale-in on mount using framer-motion.
+
+h1: "Welcome to WEALTHAPP, [name]! 🎉" — text-2xl font-bold mt-6.
+p: "Let's build your financial plan in 6 quick steps. Skip anything you want and come back later." — text-muted mt-3.
+
+Row of 6 circle dots mt-8: all gray (empty, not started).
+
+Button: "Let's start →" primary full-width max-w-xs mt-8 — navigates to /app/pathway.
+Link: "Skip for now — go to dashboard" → /app/dashboard — text-muted text-sm mt-4.
+
+### src/pages/Pathway.tsx
+
+This is the card-swipe onboarding flow. Full screen on mobile.
+
+STATE:
+- currentStep: number (0-5, representing steps 1-6)
+- formData: object with all step data combined
+- isSaving: boolean
+- showReward: null | 1 | 2 | 3
+
+LAYOUT:
+- Fixed top bar: progress bar (thin, primary color, shows completion) + step counter "Step X of 6" right + back arrow left
+- Full height card area in center (overflow hidden for swipe transitions)
+- Skip link fixed at bottom center
+
+TRANSITION: Wrap step content in AnimatePresence + motion.div with:
+  initial: { x: 100, opacity: 0 }
+  animate: { x: 0, opacity: 1 }
+  exit: { x: -100, opacity: 0 }
+  transition: { duration: 0.2 }
+
+AUTO-SAVE: On every field change, debounce 800ms then call saveStep(currentStep+1, currentStepData, 'in_progress'). Show "Saving..." in top bar during save, "Saved ✓" after.
+
+SKIP HANDLER: Calls saveStep(currentStep+1, {}, 'skipped') then advances to next step.
+
+STEP 1 — About you:
+Content:
+  h2: "First, let's get to know you" font-semibold text-xl.
+  p: "This helps us personalise everything" text-muted text-sm mt-1.
+  
+  Age input: large centered number (text-5xl font-bold text-primary text-center) with - and + circle buttons either side. Min 18, max 80.
+  
+  Life stage: horizontal scroll row of chips mt-6. Each chip: rounded-full px-4 py-2 border. Selected: bg-primary text-white border-primary. Unselected: bg-white text-muted border-border.
+  Options: "Just starting" / "Building career" / "Growing family" / "Established" / "Pre-retirement"
+  
+  Expat question mt-6: "Are you living outside your home country?"
+  Two large tap cards side by side (each half width): "Yes 🌏" / "No 🏠". Selected card: border-2 border-primary bg-primary/5.
+  
+  Currency preference mt-4: "USD ($)" / "VND (₫)" pill toggle. Pill style: selected=bg-primary text-white, unselected=bg-surface text-muted.
+
+  "Next →" button primary full-width mt-8. Disabled until age and life_stage are set.
+  
+Save to profiles: { age, life_stage, is_expat, preferred_currency }.
+
+STEP 2 — Your income:
+Content:
+  h2: "How much do you earn each month?"
+  p: "Your after-tax take-home pay" text-muted.
+  
+  CurrencyInput component centered — large, prominent. currency from profile.preferred_currency.
+  
+  Income type chips mt-6 (multi-select, tap to toggle):
+  "Salary" / "Freelance" / "Business" / "Rental" / "Other"
+  Selected: bg-primary/10 text-primary border-primary.
+  
+  Stability cards mt-6 — 3 cards in a row:
+  "Very stable 🏢" / "Mostly stable ⚡" / "Variable 🌊"
+  Tap to select one. Selected: border-2 border-primary.
+
+  "Next →" button. Disabled until income > 0.
+
+On completing this step:
+  1. Save to budget_entries: { user_id, period_month: first day of current month, currency, income }
+  2. Set showReward to 1 → renders RewardReveal component.
+  3. After reward dismisses, advance to step 3.
+
+STEP 3 — Monthly expenses:
+Content:
+  h2: "Where does your money go?"
+  p: "Tap a category to enter your monthly spend" text-muted.
+  
+  6 expandable category rows. Each row:
+    Left: emoji + category name (font-medium).
+    Right: amount in primary color (shows 0 if not entered).
+    Full row tap: expands an inline number input below (slides down with framer-motion).
+    
+  Categories: 🏠 Housing / 🍜 Food / 🚗 Transport / 💡 Utilities / 🎮 Entertainment / 📦 Other
+  
+  Live savings rate bar fixed above the Next button:
+    "Savings rate: X%" with colored ProgressBar.
+    savingsRate = ((income - sum of all expenses) / income) * 100.
+    < 10%: danger color + "Below recommended".
+    10-20%: warning color + "Getting there".
+    > 20%: primary color + "You're on track 🎉".
+  
+  "Next →" button. Always enabled (expenses are optional).
+  
+  Save to budget_entries: update the row created in step 2 with all expense fields.
+
+STEP 4 — Your goal:
+Content:
+  h2: "What's your biggest financial goal?"
+  p: "Pick one — you can add more later" text-muted.
+  
+  6 goal type cards in a 2×3 grid. Each card: rounded-2xl border p-4 text-center.
+  emoji (text-3xl) + name (font-medium 14px mt-2) + description (text-muted text-xs mt-1).
+  Selected: border-2 border-primary bg-primary/5.
+  
+  Goal options:
+    🏠 "Buy property" / "Build your deposit"
+    🌴 "Retire comfortably" / "Build enough to stop working"
+    🛡️ "Emergency fund" / "3-6 months of expenses"
+    🚀 "Financial independence" / "Reach your FI number"
+    💳 "Pay off debt" / "Become debt-free"
+    🎯 "Other goal" / "Something personal"
+
+  After selecting a goal type, a second panel slides in (replace grid with AnimatePresence):
+    Input: Goal name (pre-filled, editable).
+    CurrencyInput: "Target amount".
+    Month/year picker: "Target date" — two selects (month + year), shows "in X years" text below.
+  
+  "Next →" button. Disabled until goal type selected.
+  
+  On completing: 
+    1. Insert to financial_goals.
+    2. showReward = 2 → render RewardReveal.
+
+STEP 5 — Savings and debts:
+Content:
+  h2: "Let's complete your picture"
+  p: "Approximate numbers are totally fine" text-muted.
+  
+  Three input sections, each:
+    Label (font-medium 14px) + optional toggle + CurrencyInput.
+  
+  Section 1: 💰 "Total current savings"
+  Section 2: 📈 "Investments" with toggle "I don't have investments yet" — if toggled, hides input and sets value to 0.
+  Section 3: 💸 "Total debts" with toggle "I'm debt-free" — if toggled, hides input and sets to 0.
+  
+  Net worth summary card mt-6:
+    "Your net worth" label (12px muted).
+    Large number (text-3xl font-bold): (savings + investments - debts).
+    Color: positive=text-primary, negative=text-red-500.
+    Simple 2-segment bar: green=assets portion, red=debts portion.
+  
+  "Next →" button. Always enabled.
+  
+  Save to net_worth_snapshots: { total_savings, total_investments, total_debts }.
+
+STEP 6 — Risk quiz:
+Content:
+  h2: "What kind of investor are you?"
+  p: "5 quick questions · no wrong answers" text-muted.
+  
+  Sub-step indicator: 5 dots showing current question (Q1–Q5).
+  
+  Each question on its own sub-card (same slide animation within step 6):
+  
+  Q1: "If your investments dropped 20%, you'd..."
+    A. Sell everything immediately (score: 1)
+    B. Feel anxious but hold on (score: 2)
+    C. Stay calm and wait it out (score: 3)
+    D. See it as a buying opportunity (score: 4)
+  
+  Q2: "Your main investment goal is..."
+    A. Never lose money (score: 1)
+    B. Steady growth, some security (score: 2)
+    C. Balance growth and risk (score: 3)
+    D. Maximum long-term growth (score: 4)
+  
+  Q3: "You plan to use this money in..."
+    A. Less than 3 years (score: 1)
+    B. 3 to 7 years (score: 2)
+    C. 7 to 15 years (score: 3)
+    D. 15+ years (score: 4)
+  
+  Q4: "Your investment experience is..."
+    A. None — just starting (score: 1)
+    B. Some — tried a few things (score: 2)
+    C. Moderate — invest regularly (score: 3)
+    D. High — very comfortable (score: 4)
+  
+  Q5: "Your financial personality is..."
+    A. Safety first, always (score: 1)
+    B. Careful but open to some risk (score: 2)
+    C. Balanced and thoughtful (score: 3)
+    D. Growth-focused, long-term (score: 4)
+  
+  Answers displayed as 4 vertical tap cards. Selected card: border-2 border-primary bg-primary/5. Tapping auto-advances to next question after 400ms delay.
+  
+  After Q5: calculate total score (5-8=Conservative, 9-12=Moderate, 13-16=Growth, 17-20=Aggressive).
+  
+  Result card slides in:
+    Risk profile name (text-2xl font-bold text-primary).
+    One-sentence description (text-muted).
+    3-bar allocation preview:
+      Equities X% (teal bar)
+      Bonds X% (blue bar)
+      Cash X% (gray bar)
+    Allocations: Conservative=40/40/20, Moderate=60/30/10, Growth=80/15/5, Aggressive=95/5/0.
+  
+  "Save my profile →" button primary.
+  
+  On save:
+    1. Save risk_profile to profiles.
+    2. Call calculateAndSave() from useHealthScore hook.
+    3. showReward = 3 → render RewardReveal with celebration content.
+    4. After dismissal: update profiles.pathway_complete = true, navigate to /app/dashboard.
+
+### src/pages/Dashboard.tsx
+
+Protected by AuthGuard. Uses AppShell.
+
+DATA: Load from useProfile, useBudget, useGoals, useHealthScore, usePathway hooks in parallel.
+
+LOADING STATE: While any hook is loading, show LoadingSkeleton for each section.
+
+SECTIONS IN ORDER:
+
+1. PATHWAY BANNER (conditional — only if pathway_complete = false)
+   Soft teal card: bg-emerald-50 border border-primary/20 rounded-2xl p-4 mx-4 mt-4.
+   "Your plan is X% complete" (font-medium 14px) with thin ProgressBar below.
+   "Continue setup →" outline button (small, right aligned).
+   X button top-right dismisses banner for the session (useState, not persisted).
+
+2. HEALTH SCORE RING
+   Card mx-4 mt-4 p-6 flex items-center gap-4.
+   HealthScoreRing size="md" score={score?.overall_score ?? 0} animate={true}.
+   Right of ring:
+     "Financial Health Score" (12px muted).
+     Score number (28px font-bold text-primary) "/" "100".
+     If previous score exists: "+X from last month" in green or red.
+   Full card is tappable → /app/health-score.
+   If no score yet: ring shows 0, text shows "Complete your plan to see your score".
+
+3. METRIC GRID
+   2×2 grid gap-3 mx-4 mt-4.
+   
+   Card 1 — Budget:
+     "Savings rate" (11px muted).
+     budget?.income > 0 ? `${savingsRate.toFixed(0)}%` : "--" (24px font-bold).
+     Sub: savingsRate > 20 ? "On track ✓" green : savingsRate > 10 ? "Almost there" amber : "Needs attention" red.
+     Tap → /app/budget.
+   
+   Card 2 — Net Worth:
+     "Net worth" (11px muted).
+     netWorth formatted as currency or "--" (24px font-bold).
+     Sub: positive = text-primary "↑ Growing", negative = text-red "↓ Check debts".
+     Tap → shows simple net worth breakdown modal.
+   
+   Card 3 — Top Goal:
+     "Top goal" (11px muted).
+     goals[0]?.title truncated 20 chars or "No goal set" muted (14px font-medium).
+     ProgressBar value={(goals[0]?.current_amount / goals[0]?.target_amount) * 100 ?? 0} height="sm".
+     Sub: goal exists ? `${pct}% complete` : "Set your first goal →".
+     Tap → /app/goals.
+   
+   Card 4 — Streak:
+     "Check-in streak" (11px muted).
+     `${streak} weeks 🔥` or "0 weeks" (24px font-bold).
+     Sub: "Tap to check in" (teal link).
+     Tap → opens WeeklyCheckinModal.
+
+4. SMART UPGRADE CARD
+   Compute conditions from data:
+   
+   condition1 = budget?.income > 0 && savingsRate < 15
+   insightText1 = `You're saving ${savingsRate.toFixed(0)}% — reaching 20% moves your retirement forward by 2+ years`
+   
+   condition2 = goals.length > 0 && !portfolioExists (check if any net worth investment > 0)
+   insightText2 = "Your goal needs an investment strategy — an advisor can build your roadmap"
+   
+   condition3 = profile?.is_expat && !expatCheckTaken (check localStorage key 'expat_check_taken')
+   insightText3 = "As an expat, you may be missing tax and pension optimisations worth thousands per year"
+   
+   Show the FIRST condition that is true. Do not show if all false.
+   SmartUpgradeCard component with ctaText="Book a free discovery call →" and href to /book.
+
+5. QUICK ACTIONS
+   "Quick actions" label (12px muted font-medium mx-4 mt-4).
+   Horizontal scroll row of action chips mx-4 gap-2:
+   Each chip: bg-surface rounded-full px-4 py-2 text-sm border border-border flex items-center gap-1.
+   "📊 Update budget" → /app/budget
+   "🎯 Add contribution" → opens ContributionModal
+   "🧮 Calculators" → /tools
+   "📞 Book a call" → /book
+   Add pb-20 at bottom for BottomNav clearance.
+
+WEEKLY CHECKIN MODAL:
+Bottom sheet (fixed bottom-0, slides up with framer-motion).
+Backdrop: fixed inset-0 bg-black/30 z-40 (tap backdrop to close).
+Modal: fixed bottom-0 left-0 right-0 bg-white rounded-t-2xl z-50 p-6 pb-10.
+Content:
+  "Weekly check-in 🔥" (text-xl font-semibold).
+  "Keeps your streak alive · 30 seconds" (text-muted text-sm).
+  Two buttons mt-6:
+    "Yes, I did ✓" → primary full-width → increments streak, saves to habit_checkins, shows "🔥 X week streak!" toast, closes modal.
+    "Skipped this week" → outline → closes modal.
+
+### src/pages/Budget.tsx
+
+Uses AppShell. Loads useBudget hook.
+
+HEADER: "Monthly Budget" (text-xl font-semibold) + month navigation (← Nov 2024 →). Changing month loads/creates that month's budget_entry.
+
+INCOME SECTION:
+Card mx-4 mt-4 p-4.
+"Monthly income" (12px muted).
+Income amount in text-3xl font-bold text-primary. Pencil icon to edit inline.
+If editing: shows CurrencyInput inline, save on blur.
+
+SAVINGS RATE SUMMARY:
+Row of 3 stat pills: Needs X% / Wants X% / Savings X%.
+Colors based on 50/30/20 proximity.
+
+EXPENSE CATEGORIES:
+Card mx-4 mt-4.
+Each category as a row with border-b:
+  Left: emoji + name. Right: editable amount (tap to edit, shows inline input).
+  Amount color: over budget = red, under = green, no target = muted.
+  
+Total row at bottom: "Total expenses: $X".
+
+SAVE BUTTON: "Save budget" primary full-width mx-4 mt-4. Calls saveBudget with all category values. Shows success toast on save.
+
+EMPTY STATE: If no budget data and income=0: card with 📊 emoji + "Set up your budget" + button → /app/pathway?step=2.
+
+### src/pages/Goals.tsx
+
+Uses AppShell. Loads useGoals hook.
+
+IF GOAL EXISTS:
+GoalCard component for goals[0] (the one free-tier goal).
+
+CONTRIBUTION MODAL:
+Bottom sheet.
+"Add contribution to [goal name]".
+CurrencyInput for amount.
+Date input (default today).
+Optional text note.
+"Save" button → calls addContribution(goal.id, amount) → shows success toast.
+
+LOCKED FEATURE:
+Dashed border card below the goal: border-2 border-dashed border-border rounded-2xl p-6 text-center.
+🔒 icon (text-2xl muted).
+"Add another goal" (text-muted font-medium).
+"Upgrade to Premium to unlock unlimited goals" (text-xs muted mt-1).
+
+EMPTY STATE:
+Centered: 🎯 emoji + "Set your first financial goal" + "Add a goal →" button → /app/pathway?step=3.
+
+### src/pages/HealthScore.tsx
+
+Uses AppShell. Loads useHealthScore hook.
+
+SCORE HERO:
+Full-width card bg-navy text-white rounded-2xl mx-4 mt-4 p-6 text-center.
+HealthScoreRing size="lg" score={score?.overall_score ?? 0} (white ring on dark bg — override stroke color to white when on dark bg via prop: darkMode=true).
+Score number below: text-4xl font-bold text-white.
+"Financial Health Score" text-sm text-blue-200.
+
+BREAKDOWN GRID:
+"Score breakdown" label (12px muted mx-4 mt-6).
+2×2 grid mx-4 gap-3.
+
+Each breakdown card (Card component):
+  Category name (12px muted).
+  Score: "{score}/25" (20px font-bold).
+  Thin ProgressBar value={(componentScore/25)*100}.
+  Descriptor label (11px muted).
+
+Cards:
+  Budget health → score.budget_score / "Based on savings rate".
+  Goals progress → score.goals_score / "Based on your goal".
+  Plan completion → score.plan_score / "Pathway steps complete".
+  Net worth → score.net_worth_score if added, else savings_score / "Your financial snapshot".
+
+INSIGHTS:
+"Your insights" label (12px muted mx-4 mt-6).
+Up to 3 insight cards mx-4 gap-3:
+  Each: left border (green/amber/red based on score), bg matching, p-4 rounded-xl.
+  Shows: insight text (14px) from score.insight_1, insight_2, insight_3.
+  If no insights yet: "Complete your financial plan to see personalised insights" muted text.
+
+SCORE HISTORY:
+"Score history" label (12px muted mx-4 mt-6).
+If only 1 data point: "Check back next month to see your trend" muted.
+If 2+ data points: Recharts LineChart (height 100, no axes, just a smooth line in primary color, dots at each point).
+
+### src/pages/Settings.tsx
+
+Uses AppShell.
+
+PROFILE SECTION:
+Avatar circle (48px, bg-primary, initials white).
+Full name + email below.
+"Edit name" inline edit (tap pencil → text becomes input, save on blur → updateProfile).
+
+PREFERENCES:
+"Currency" row: "USD ($)" / "VND (₫)" toggle — saves to profiles.preferred_currency.
+"Weekly reminder" row: toggle for email reminder (store in localStorage, no backend needed for now).
+
+PLAN STATUS:
+"Your plan" section header.
+"X of 6 steps complete" + ProgressBar.
+"Resume setup →" link → /app/pathway.
+
+ACCOUNT:
+"Sign out" button (outline, full width) → supabase.auth.signOut() → navigate to /.
+"Delete account" text link (red, small) → confirmation modal → delete profile then signOut.
+
+---
+
+## PUBLIC TOOL PAGES
+
+Create simple standalone tool pages (no auth required):
+
+### src/pages/tools/BudgetTool.tsx (/tools/budget)
+
+Layout: Tool title + input card left/top + result card right/bottom.
+
+Inputs:
+  Monthly income (CurrencyInput).
+  6 expense inputs: Housing, Food, Transport, Utilities, Entertainment, Other.
+
+Results (update live as user types):
+  Total expenses.
+  Monthly savings = income - expenses.
+  Savings rate % with colored badge.
+  Simple 3-segment bar: Needs/Wants/Savings %.
+
+Lead capture card below results:
+  "Save your result and track it monthly" (font-medium).
+  "Create a free account →" button (primary) → /register.
+
+### src/pages/tools/RetirementTool.tsx (/tools/retirement)
+
+Inputs:
+  Current age (slider 20-65, default 30).
+  Target retirement age (slider 45-80, default 65).
+  Current savings (CurrencyInput).
+  Monthly contribution (CurrencyInput).
+  Expected return % (slider 4-12, default 7, step 0.5).
+  Desired monthly income in retirement (CurrencyInput).
+
+Results:
+  Projected savings at retirement (large number, primary color).
+  Monthly income it sustains (4% rule = projected * 0.04 / 12).
+  Gap vs desired income (red if negative, green if positive).
+  Simple Recharts AreaChart showing savings growth curve.
+
+Lead capture card.
+
+### src/pages/tools/QuizTool.tsx (/tools/quiz) — Money Personality Quiz
+
+Multi-step: one question per screen. Same 8 questions from earlier spec.
+Progress bar at top.
+Answers as vertical tap cards.
+Advancing is automatic 400ms after tapping an answer.
+
+Result: archetype name + 2-sentence description + 3 strengths.
+
+Email gate: show archetype name, gate "3 blind spots + action steps" behind:
+  Input: email + "Unlock my full profile" button.
+  On submit: insert to leads table (if not exists) with source='money_quiz' and quiz_result=archetype.
+  Show full result after email entered.
+
+Archetypes (score = sum of option positions A=1,B=2,C=3,D=4,E=5 across 8 questions):
+  8-16: The Avoider — tends to put off financial decisions
+  17-24: The Protector — prioritises security above all
+  25-31: The Balancer — thoughtful, seeks stability with some growth
+  32-38: The Builder — growth-focused, disciplined
+  39-40: The Optimizer — maximises every financial opportunity
+
+---
+
+## ROUTING
+
+src/App.tsx:
+
+```tsx
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { useAuth } from './hooks/useAuth'
+import AuthGuard from './components/layout/AuthGuard'
+import Landing from './pages/Landing'
+import Login from './pages/Login'
+import Register from './pages/Register'
+import Welcome from './pages/Welcome'
+import Pathway from './pages/Pathway'
+import Dashboard from './pages/Dashboard'
+import Budget from './pages/Budget'
+import Goals from './pages/Goals'
+import HealthScore from './pages/HealthScore'
+import Settings from './pages/Settings'
+import BudgetTool from './pages/tools/BudgetTool'
+import RetirementTool from './pages/tools/RetirementTool'
+import QuizTool from './pages/tools/QuizTool'
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/tools/budget" element={<BudgetTool />} />
+        <Route path="/tools/retirement" element={<RetirementTool />} />
+        <Route path="/tools/quiz" element={<QuizTool />} />
+        <Route path="/app/welcome" element={
+          <AuthGuard><Welcome /></AuthGuard>
+        } />
+        <Route path="/app/pathway" element={
+          <AuthGuard><Pathway /></AuthGuard>
+        } />
+        <Route path="/app/dashboard" element={
+          <AuthGuard><Dashboard /></AuthGuard>
+        } />
+        <Route path="/app/budget" element={
+          <AuthGuard><Budget /></AuthGuard>
+        } />
+        <Route path="/app/goals" element={
+          <AuthGuard><Goals /></AuthGuard>
+        } />
+        <Route path="/app/health-score" element={
+          <AuthGuard><HealthScore /></AuthGuard>
+        } />
+        <Route path="/app/settings" element={
+          <AuthGuard><Settings /></AuthGuard>
+        } />
+        <Route path="*" element={<Navigate to="/" />} />
+      </Routes>
+    </BrowserRouter>
+  )
+}
+```
+
+---
+
+## REPLIT CONFIGURATION
+
+Create .replit file:
+```
+run = "npm run dev -- --host 0.0.0.0 --port 5000"
+```
+
+Create replit.nix or ensure Node 20 is used.
+
+In vite.config.ts set:
+```ts
+server: {
+  host: '0.0.0.0',
+  port: 5000
+}
+```
+
+---
+
+## BUILD ORDER
+
+Build components and pages in this exact order:
+
+1. package.json with all dependencies + vite.config.ts + tailwind.config.js + App.tsx routing skeleton
+2. src/lib/supabase.ts + schema.sql file with instructions
+3. useAuth hook + AuthGuard component
+4. All UI primitives: Button, Input, Card, ProgressBar, Toast (with ToastContext)
+5. Landing page (full, responsive)
+6. Register + Login pages with Supabase auth
+7. useProfile hook + Welcome page
+8. CurrencyInput + HealthScoreRing + LoadingSkeleton components
+9. Pathway page: shell with progress bar and step navigation
+10. Pathway Step 1 (About you) + Step 2 (Income) — with save to Supabase
+11. RewardReveal component + reward 1 trigger after step 2
+12. Pathway Step 3 (Expenses) with live savings rate
+13. GoalCard component + Pathway Step 4 (Goal picker) + reward 2
+14. Pathway Step 5 (Savings/debts) with net worth calculation
+15. Pathway Step 6 (Risk quiz) with sub-step animation + reward 3 + completion
+16. useHealthScore hook with calculateAndSave logic
+17. AppShell + BottomNav
+18. Dashboard page: all sections + SmartUpgradeCard + weekly checkin modal
+19. useBudget hook + Budget page
+20. useGoals hook + Goals page + contribution modal
+21. HealthScore page with breakdown + history chart
+22. Settings page
+23. BudgetTool + RetirementTool + QuizTool public pages
+24. Final: loading skeletons everywhere, error boundaries, empty states, mobile responsive check
