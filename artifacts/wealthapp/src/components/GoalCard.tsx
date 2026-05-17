@@ -1,7 +1,8 @@
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { PlusCircle, Pencil } from "lucide-react";
+import { PlusCircle, Pencil, TrendingUp } from "lucide-react";
+import type { ProjectionResult } from "@/lib/goalProjection";
 
 const GOAL_EMOJI: Record<string, string> = {
   property: "🏠", home_purchase: "🏠",
@@ -9,24 +10,17 @@ const GOAL_EMOJI: Record<string, string> = {
   emergency_fund: "🛡️",
   fi: "🚀", financial_independence: "🚀",
   debt: "💳", debt_payoff: "💳",
-  other: "🎯",
-  education: "🎓", travel: "✈️", vehicle: "🚗", business: "💼",
+  other: "🎯", education: "🎓",
+  travel: "✈️", vehicle: "🚗", business: "💼",
 };
 
-const STATUS_STYLES: Record<string, string> = {
-  on_track: "bg-green-100 text-green-700",
-  at_risk: "bg-amber-100 text-amber-700",
-  off_track: "bg-red-100 text-red-700",
-  achieved: "bg-primary/10 text-primary",
-  paused: "bg-muted text-muted-foreground",
-};
-
-interface Goal {
+export interface Goal {
   id: string;
   title: string;
   goalType: string;
   targetAmount: string | null;
   currentAmount: string | null;
+  monthlyContribution: string | null;
   currency: string;
   status: string;
   targetDate?: string | null;
@@ -34,72 +28,170 @@ interface Goal {
 
 interface Props {
   goal: Goal;
+  projection?: ProjectionResult;
   onContribute?: () => void;
   onEdit?: () => void;
 }
 
-function fmt(n: number, currency: string) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: currency === "VND" ? "VND" : "USD", maximumFractionDigits: 0 }).format(n);
+function fmt(n: number) {
+  if (Math.abs(n) >= 1_000_000) return (n < 0 ? "-$" : "$") + (Math.abs(n) / 1_000_000).toFixed(1) + "M";
+  if (Math.abs(n) >= 1000) return (n < 0 ? "-$" : "$") + Math.round(Math.abs(n) / 1000) + "k";
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
 }
 
-export default function GoalCard({ goal, onContribute, onEdit }: Props) {
+function GrowthChip({ amount, bgClass, textClass }: { amount: number; bgClass: string; textClass: string }) {
+  if (amount <= 0) return null;
+  return (
+    <div className={cn("flex items-center gap-1.5 text-xs rounded-full px-3 py-1.5 w-fit", bgClass, textClass)}>
+      <TrendingUp className="h-3.5 w-3.5 flex-shrink-0" />
+      <span>+{fmt(amount)}/month from savings interest &amp; investment returns</span>
+    </div>
+  );
+}
+
+function BreakdownCard({ projection, offTrack }: { projection: ProjectionResult; offTrack: boolean }) {
+  const pace = Math.max(0, projection.requiredMonthlySaving - projection.monthlyShortfall);
+  const rows = [
+    { label: "Amount still needed", value: fmt(projection.amountStillNeeded) },
+    { label: "Months remaining", value: `${projection.monthsRemaining} mo` },
+    { label: "Required monthly saving", value: fmt(projection.requiredMonthlySaving) },
+    { label: "Your current monthly pace", value: fmt(pace) },
+    { label: "Monthly shortfall", value: fmt(projection.monthlyShortfall), red: offTrack && projection.monthlyShortfall > 0 },
+    { label: "Projected at target date", value: fmt(projection.projectedAmount) },
+  ];
+  return (
+    <div className="bg-white rounded-xl p-4 border border-white/60 shadow-sm space-y-2.5">
+      {rows.map(r => (
+        <div key={r.label} className="flex items-center justify-between text-xs">
+          <span className="text-muted-foreground">{r.label}</span>
+          <span className={cn("font-semibold", r.red ? "text-red-600" : "text-foreground")}>{r.value}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function AdvisorCTA({ offTrack, shortfall }: { offTrack: boolean; shortfall: number }) {
+  return (
+    <div className="bg-[#042C53] rounded-xl p-4">
+      <p className="text-white text-sm font-medium mb-1">
+        {offTrack ? "This gap needs a professional strategy" : "Small optimisations could close this gap"}
+      </p>
+      {offTrack && shortfall > 0 ? (
+        <p className="text-blue-200 text-xs mb-3">
+          You're projected to fall <span className="text-red-300 font-semibold">{fmt(shortfall)}</span> short — an advisor can close this without requiring you to save more.
+        </p>
+      ) : (
+        <p className="text-blue-200 text-xs mb-3">An advisor can identify small adjustments to get you fully on track.</p>
+      )}
+      <a href="/book" className="inline-flex items-center gap-1.5 bg-primary hover:bg-primary/90 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors">
+        Book a free call
+      </a>
+    </div>
+  );
+}
+
+function ActionButtons({ onContribute, onEdit, btnClass }: { onContribute?: () => void; onEdit?: () => void; btnClass: string }) {
+  return (
+    <div className="flex gap-2">
+      {onContribute && (
+        <Button size="sm" className={cn("flex-1 gap-1.5", btnClass)} onClick={onContribute}>
+          <PlusCircle className="h-3.5 w-3.5" />Add contribution
+        </Button>
+      )}
+      {onEdit && (
+        <Button size="sm" variant="outline" onClick={onEdit}><Pencil className="h-3.5 w-3.5" /></Button>
+      )}
+    </div>
+  );
+}
+
+export default function GoalCard({ goal, projection, onContribute, onEdit }: Props) {
   const current = parseFloat(goal.currentAmount ?? "0");
   const target = parseFloat(goal.targetAmount ?? "0");
   const pct = target > 0 ? Math.min(100, Math.round((current / target) * 100)) : 0;
   const emoji = GOAL_EMOJI[goal.goalType] ?? "🎯";
+  const status: string = projection?.status ?? goal.status;
+  const isAchieved = status === "achieved" || (target > 0 && current >= target);
+  const growthAmount = projection?.monthlyGrowthFromReturns ?? 0;
+  const targetDateStr = goal.targetDate
+    ? new Date(goal.targetDate).toLocaleDateString("en-US", { month: "short", year: "numeric" })
+    : null;
 
-  return (
-    <div className="bg-card border border-card-border rounded-2xl p-5">
-      <div className="flex items-start justify-between mb-4">
+  function Header({ badge }: { badge: React.ReactNode }) {
+    return (
+      <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
-          <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center text-2xl">
+          <div className="h-12 w-12 rounded-xl flex items-center justify-center text-2xl bg-white/60">
             {emoji}
           </div>
           <div>
             <div className="font-semibold">{goal.title}</div>
-            {goal.targetDate && (
-              <div className="text-xs text-muted-foreground mt-0.5">
-                Target: {new Date(goal.targetDate).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
-              </div>
-            )}
+            {targetDateStr && <div className="text-xs text-muted-foreground mt-0.5">Target: {targetDateStr}</div>}
           </div>
         </div>
-        <span className={cn("text-xs px-2 py-1 rounded-full font-medium capitalize", STATUS_STYLES[goal.status] ?? STATUS_STYLES.on_track)}>
-          {goal.status.replace(/_/g, " ")}
-        </span>
+        {badge}
       </div>
+    );
+  }
 
-      <div className="mb-3">
-        <div className="flex justify-between text-sm mb-1.5">
-          <span className="text-muted-foreground">Progress</span>
-          <span className="font-medium text-primary">{pct}%</span>
+  function ProgressSection({ color }: { color: string }) {
+    return (
+      <div>
+        <div className="flex justify-between text-xs mb-1.5">
+          <span className="text-muted-foreground">{fmt(current)} saved</span>
+          <span className={cn("font-medium", color)}>{pct}%</span>
         </div>
-        <Progress value={pct} className="h-2" />
+        <div className="h-2 rounded-full bg-white/60 overflow-hidden">
+          <div className={cn("h-full rounded-full transition-all", color === "text-primary" ? "bg-primary" : color === "text-amber-700" ? "bg-amber-500" : "bg-red-500")} style={{ width: `${pct}%` }} />
+        </div>
+        <div className="text-xs text-muted-foreground mt-1 text-right">Target: {target > 0 ? fmt(target) : "—"}</div>
       </div>
+    );
+  }
 
-      <div className="flex justify-between text-sm mb-4">
-        <div>
-          <div className="text-xs text-muted-foreground">Saved</div>
-          <div className="font-semibold text-primary">{fmt(current, goal.currency)}</div>
-        </div>
-        <div className="text-right">
-          <div className="text-xs text-muted-foreground">Target</div>
-          <div className="font-semibold">{target > 0 ? fmt(target, goal.currency) : "—"}</div>
-        </div>
+  if (isAchieved) {
+    return (
+      <div className="bg-gradient-to-br from-primary/10 to-emerald-50 border border-primary/30 rounded-2xl p-5 space-y-4">
+        <Header badge={<span className="text-xs bg-primary text-white px-2.5 py-1 rounded-full font-semibold whitespace-nowrap">🎉 Achieved!</span>} />
+        <Progress value={100} className="h-2" />
+        <p className="text-sm text-primary font-medium text-center py-1">Goal reached — {fmt(current)} saved!</p>
       </div>
+    );
+  }
 
-      <div className="flex gap-2">
-        {onContribute && (
-          <Button size="sm" className="flex-1 gap-1.5" onClick={onContribute}>
-            <PlusCircle className="h-3.5 w-3.5" />Add contribution
-          </Button>
-        )}
-        {onEdit && (
-          <Button size="sm" variant="outline" onClick={onEdit}>
-            <Pencil className="h-3.5 w-3.5" />
-          </Button>
-        )}
+  if (status === "on_track") {
+    return (
+      <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 space-y-4">
+        <Header badge={<span className="text-xs bg-emerald-100 text-emerald-800 border border-emerald-200 px-2.5 py-1 rounded-full font-semibold whitespace-nowrap">✓ On track</span>} />
+        <ProgressSection color="text-primary" />
+        <GrowthChip amount={growthAmount} bgClass="bg-emerald-100" textClass="text-emerald-800" />
+        <ActionButtons onContribute={onContribute} onEdit={onEdit} btnClass="" />
       </div>
+    );
+  }
+
+  if (status === "almost") {
+    return (
+      <div className="bg-amber-50 border border-amber-300 rounded-2xl p-5 space-y-4">
+        <Header badge={<span className="text-xs bg-amber-100 text-amber-800 border border-amber-200 px-2.5 py-1 rounded-full font-semibold whitespace-nowrap">⚠ Almost there</span>} />
+        <ProgressSection color="text-amber-700" />
+        <GrowthChip amount={growthAmount} bgClass="bg-amber-100" textClass="text-amber-800" />
+        {projection && <BreakdownCard projection={projection} offTrack={false} />}
+        {projection && <AdvisorCTA offTrack={false} shortfall={projection.projectedShortfall} />}
+        <ActionButtons onContribute={onContribute} onEdit={onEdit} btnClass="bg-amber-600 hover:bg-amber-700" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-red-50 border border-red-300 rounded-2xl p-5 space-y-4">
+      <Header badge={<span className="text-xs bg-red-100 text-red-800 border border-red-200 px-2.5 py-1 rounded-full font-semibold whitespace-nowrap">✗ Off track</span>} />
+      <ProgressSection color="text-red-700" />
+      <GrowthChip amount={growthAmount} bgClass="bg-red-100" textClass="text-red-800" />
+      {projection && <BreakdownCard projection={projection} offTrack={true} />}
+      {projection && <AdvisorCTA offTrack={true} shortfall={projection.projectedShortfall} />}
+      <ActionButtons onContribute={onContribute} onEdit={onEdit} btnClass="bg-red-600 hover:bg-red-700" />
     </div>
   );
 }
