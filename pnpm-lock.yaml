@@ -172,6 +172,9 @@ importers:
       '@clerk/shared':
         specifier: ^4.10.0
         version: 4.10.0(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@types/pg':
+        specifier: ^8.18.0
+        version: 8.18.0
       '@workspace/api-zod':
         specifier: workspace:*
         version: link:../../lib/api-zod
@@ -187,12 +190,18 @@ importers:
       drizzle-orm:
         specifier: 'catalog:'
         version: 0.45.2(@types/pg@8.18.0)(pg@8.20.0)(postgres@3.4.9)
+      drizzle-zod:
+        specifier: ^0.8.3
+        version: 0.8.3(drizzle-orm@0.45.2(@types/pg@8.18.0)(pg@8.20.0)(postgres@3.4.9))(zod@4.3.6)
       express:
         specifier: ^5
         version: 5.2.1
       http-proxy-middleware:
         specifier: ^4.0.0
         version: 4.0.0
+      pg:
+        specifier: ^8.20.0
+        version: 8.20.0
       pino:
         specifier: ^9
         version: 9.14.0
@@ -4816,6 +4825,11 @@ snapshots:
     dependencies:
       drizzle-orm: 0.45.2(@types/pg@8.18.0)(pg@8.20.0)(postgres@3.4.9)
       zod: 3.25.76
+
+  drizzle-zod@0.8.3(drizzle-orm@0.45.2(@types/pg@8.18.0)(pg@8.20.0)(postgres@3.4.9))(zod@4.3.6):
+    dependencies:
+      drizzle-orm: 0.45.2(@types/pg@8.18.0)(pg@8.20.0)(postgres@3.4.9)
+      zod: 4.3.6
 
   dunder-proto@1.0.1:
     dependencies:
