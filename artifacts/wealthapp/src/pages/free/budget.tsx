@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
 import { toast } from "sonner";
-import { ChevronLeft, ChevronRight, Pencil, Check, Plus, Trash2, X, RefreshCw } from "lucide-react";
+import { ChevronLeft, ChevronRight, Pencil, Check, Plus, Trash2, X, RefreshCw, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useProfile } from "@/hooks/useProfile";
 import { Link } from "wouter";
@@ -41,10 +41,9 @@ type TxForm = { description: string; amount: string; type: string; category: str
 const now = new Date();
 function monthKey(d: Date) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; }
 function monthLabel(d: Date) { return d.toLocaleDateString("en-US", { month: "long", year: "numeric" }); }
-function prevMonthLabel(mk: string) {
+function prevMonthName(mk: string) {
   const [y, m] = mk.split("-").map(Number);
-  const d = new Date(y, m - 2, 1);
-  return d.toLocaleDateString("en-US", { month: "long" });
+  return new Date(y, m - 2, 1).toLocaleDateString("en-US", { month: "long" });
 }
 
 export default function BudgetPage() {
@@ -53,30 +52,35 @@ export default function BudgetPage() {
   const sym = currency === "VND" ? "₫" : "$";
 
   const [viewDate, setViewDate] = useState(now);
+  const [showTxForm, setShowTxForm] = useState(false);
+  const [txType, setTxType] = useState<"income" | "expense">("expense");
+  const [carryForwardDismissed, setCarryForwardDismissed] = useState(false);
+  const [showEstimates, setShowEstimates] = useState(false);
   const [editingIncome, setEditingIncome] = useState(false);
   const [editingCat, setEditingCat] = useState<string | null>(null);
   const [form, setForm] = useState<BudgetForm>({ income: 0, housing: 0, food: 0, transport: 0, utilities: 0, entertainment: 0, other: 0 });
-  const [showTxForm, setShowTxForm] = useState(false);
-  const [carryForwardDismissed, setCarryForwardDismissed] = useState(false);
+
+  const defaultTxDate = new Date().toISOString().slice(0, 10);
   const [txForm, setTxForm] = useState<TxForm>({
     description: "", amount: "", type: "expense", category: "other",
-    transactionDate: new Date().toISOString().slice(0, 10), isRecurring: false,
+    transactionDate: defaultTxDate, isRecurring: false,
   });
+
+  const mk = monthKey(viewDate);
 
   const { data: entries = [], isLoading } = useQuery<BudgetEntry[]>({
     queryKey: ["budget"],
     queryFn: () => apiFetch<BudgetEntry[]>("/budget"),
   });
 
-  const mk = monthKey(viewDate);
   const entry = entries.find(e => e.periodMonth.startsWith(mk));
 
-  const { data: transactions = [], refetch: refetchTx } = useQuery<BudgetTransaction[]>({
+  const { data: transactions = [] } = useQuery<BudgetTransaction[]>({
     queryKey: ["budget-transactions", mk],
     queryFn: () => apiFetch<BudgetTransaction[]>(`/budget/transactions?month=${mk}`),
   });
 
-  const { data: carryPending } = useQuery<{ pending: boolean; count: number; prevMonth: string; recurringItems: BudgetTransaction[] }>({
+  const { data: carryPending } = useQuery<{ pending: boolean; count: number }>({
     queryKey: ["budget-carry-pending", mk],
     queryFn: () => apiFetch(`/budget/transactions/carry-forward-pending?month=${mk}`),
     enabled: !carryForwardDismissed,
@@ -113,21 +117,19 @@ export default function BudgetPage() {
     }
   }, [entry?.id]);
 
-  const save = useMutation({
+  const saveEstimates = useMutation({
     mutationFn: () => {
       const body = JSON.stringify({ periodMonth: mk, currency, income: String(form.income), housing: String(form.housing), food: String(form.food), transport: String(form.transport), utilities: String(form.utilities), entertainment: String(form.entertainment), other: String(form.other) });
-      if (entry?.id) {
-        return apiFetch(`/budget/${entry.id}`, { method: "PUT", body });
-      }
+      if (entry?.id) return apiFetch(`/budget/${entry.id}`, { method: "PUT", body });
       return apiFetch("/budget", { method: "POST", body });
     },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["budget"] }); toast.success("Budget saved!"); },
-    onError: () => toast.error("Failed to save budget"),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["budget"] }); toast.success("Monthly estimates saved!"); },
+    onError: () => toast.error("Failed to save"),
   });
 
   const addTx = useMutation({
     mutationFn: () => {
-      const isIncome = txForm.type === "income" || txForm.category === "income";
+      const isIncome = txType === "income";
       return apiFetch("/budget/transactions", {
         method: "POST",
         body: JSON.stringify({
@@ -144,15 +146,15 @@ export default function BudgetPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["budget-transactions", mk] });
       setShowTxForm(false);
-      setTxForm({ description: "", amount: "", type: "expense", category: "other", transactionDate: new Date().toISOString().slice(0, 10), isRecurring: false });
-      toast.success("Transaction added");
+      setTxForm({ description: "", amount: "", type: txType, category: "other", transactionDate: defaultTxDate, isRecurring: false });
+      toast.success(txType === "income" ? "Income logged!" : "Expense logged!");
     },
-    onError: () => toast.error("Failed to add transaction"),
+    onError: () => toast.error("Failed to log transaction"),
   });
 
   const deleteTx = useMutation({
     mutationFn: (id: string) => apiFetch(`/budget/transactions/${id}`, { method: "DELETE" }),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["budget-transactions", mk] }); toast.success("Removed"); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["budget-transactions", mk] }); },
   });
 
   const carryForward = useMutation({
@@ -161,29 +163,33 @@ export default function BudgetPage() {
       queryClient.invalidateQueries({ queryKey: ["budget-transactions", mk] });
       queryClient.invalidateQueries({ queryKey: ["budget-carry-pending", mk] });
       setCarryForwardDismissed(true);
-      toast.success(`${data.copied} recurring items copied`);
+      toast.success(`${data.copied} recurring items copied from ${prevMonthName(mk)}`);
     },
   });
 
-  const income = form.income;
-  const totalExp = CATS.reduce((s, c) => s + form[c.key], 0);
-  const savings = income - totalExp;
-  const savingsRate = income > 0 ? (savings / income) * 100 : 0;
-  const needsPct = income > 0 ? ((form.housing + form.food + form.transport) / income * 100) : 0;
-  const wantsPct = income > 0 ? ((form.entertainment + form.other) / income * 100) : 0;
+  // Totals — from both transactions and estimates
+  const txIncome = transactions.filter(t => t.type === "income").reduce((s, t) => s + parseFloat(t.amount), 0);
+  const txExpenses = transactions.filter(t => t.type === "expense").reduce((s, t) => s + parseFloat(t.amount), 0);
+  const estIncome = form.income;
+  const estExpenses = CATS.reduce((s, c) => s + form[c.key], 0);
+
+  const totalIncome = txIncome > 0 ? txIncome : estIncome;
+  const totalExpenses = txExpenses > 0 ? txExpenses : estExpenses;
+  const saved = totalIncome - totalExpenses;
+  const savingsRate = totalIncome > 0 ? (saved / totalIncome) * 100 : 0;
 
   const prevMonth = () => { const d = new Date(viewDate); d.setMonth(d.getMonth() - 1); setViewDate(d); };
   const nextMonth = () => { const d = new Date(viewDate); d.setMonth(d.getMonth() + 1); if (d <= now) setViewDate(d); };
 
-  const fmt = (n: number) => n >= 0 ? `${sym}${n.toLocaleString()}` : `-${sym}${Math.abs(n).toLocaleString()}`;
-  const fmtAmt = (amount: string, type: string) => {
-    const n = parseFloat(amount);
-    const isInc = type === "income";
-    return `${isInc ? "+" : "-"}${sym}${Math.abs(n).toLocaleString()}`;
-  };
-
+  const fmt = (n: number) => `${sym}${Math.abs(n).toLocaleString()}`;
   const catEmoji = (cat: string) => TX_CATS.find(c => c.value === cat)?.emoji ?? "📦";
   const catLabel = (cat: string) => TX_CATS.find(c => c.value === cat)?.label ?? cat;
+
+  function openTxForm(type: "income" | "expense") {
+    setTxType(type);
+    setTxForm({ description: "", amount: "", type, category: type === "income" ? "income" : "other", transactionDate: defaultTxDate, isRecurring: false });
+    setShowTxForm(true);
+  }
 
   if (isLoading) return (
     <AppShell>
@@ -192,7 +198,8 @@ export default function BudgetPage() {
     </AppShell>
   );
 
-  if (!entry && income === 0 && !entries.length) {
+  const hasNoData = !entry && transactions.length === 0;
+  if (hasNoData && !entries.length) {
     return (
       <AppShell>
         <div className="pb-20 md:pb-0 flex flex-col items-center justify-center min-h-[60vh] text-center gap-4">
@@ -209,13 +216,14 @@ export default function BudgetPage() {
   return (
     <AppShell>
       <div className="pb-20 md:pb-0 space-y-4">
+
         {/* Header */}
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-bold">Monthly Budget</h1>
+          <h1 className="text-xl font-bold">Budget</h1>
           <div className="flex items-center gap-1">
             <button onClick={prevMonth} className="h-8 w-8 flex items-center justify-center rounded-full border border-border hover:border-primary transition-colors"><ChevronLeft className="h-4 w-4" /></button>
             <span className="text-sm font-medium px-2 min-w-[110px] text-center">{monthLabel(viewDate)}</span>
-            <button onClick={nextMonth} disabled={monthKey(viewDate) >= monthKey(now)} className="h-8 w-8 flex items-center justify-center rounded-full border border-border hover:border-primary transition-colors disabled:opacity-30"><ChevronRight className="h-4 w-4" /></button>
+            <button onClick={nextMonth} disabled={mk >= monthKey(now)} className="h-8 w-8 flex items-center justify-center rounded-full border border-border hover:border-primary transition-colors disabled:opacity-30"><ChevronRight className="h-4 w-4" /></button>
           </div>
         </div>
 
@@ -226,15 +234,15 @@ export default function BudgetPage() {
               initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, height: 0, marginTop: 0 }}
               className="bg-primary/5 border border-primary/30 rounded-2xl p-4 flex items-center justify-between gap-3"
             >
-              <div className="flex items-start gap-3 flex-1 min-w-0">
+              <div className="flex items-start gap-2.5 flex-1 min-w-0">
                 <RefreshCw className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                <p className="text-sm text-foreground">
-                  <span className="font-medium">{carryPending.count} recurring items</span> copied from {prevMonthLabel(mk)} — anything change?
+                <p className="text-sm font-medium">
+                  {carryPending.count} recurring items from {prevMonthName(mk)} — copy them over?
                 </p>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
                 <Button size="sm" className="h-7 text-xs px-3" onClick={() => carryForward.mutate()} disabled={carryForward.isPending}>
-                  {carryForward.isPending ? "…" : "Looks good"}
+                  {carryForward.isPending ? "…" : "Yes, copy"}
                 </Button>
                 <button onClick={() => setCarryForwardDismissed(true)} className="text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
               </div>
@@ -242,177 +250,232 @@ export default function BudgetPage() {
           )}
         </AnimatePresence>
 
-        {/* Mode 1 label */}
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Mode 1 — Quick monthly entry</p>
-
-        {/* Income card */}
-        <div className="bg-card border border-card-border rounded-2xl p-5">
-          <div className="flex items-center justify-between mb-1">
-            <p className="text-xs text-muted-foreground">Monthly income</p>
-            <button onClick={() => setEditingIncome(v => !v)} className="text-muted-foreground hover:text-primary transition-colors">
-              {editingIncome ? <Check className="h-4 w-4 text-primary" /> : <Pencil className="h-4 w-4" />}
-            </button>
+        {/* Monthly summary */}
+        <div className="bg-[#042C53] rounded-2xl p-4 text-white">
+          <div className="grid grid-cols-3 gap-3 mb-3">
+            <div>
+              <p className="text-blue-200 text-xs">Income</p>
+              <p className="text-white font-bold text-lg">{fmt(totalIncome)}</p>
+              {txIncome > 0 && estIncome > 0 && txIncome !== estIncome && <p className="text-blue-300 text-xs">est. {fmt(estIncome)}</p>}
+            </div>
+            <div>
+              <p className="text-blue-200 text-xs">Expenses</p>
+              <p className="text-white font-bold text-lg">{fmt(totalExpenses)}</p>
+            </div>
+            <div>
+              <p className="text-blue-200 text-xs">Saved</p>
+              <p className={cn("font-bold text-lg", saved >= 0 ? "text-emerald-300" : "text-red-300")}>{saved >= 0 ? fmt(saved) : `-${fmt(saved)}`}</p>
+            </div>
           </div>
-          {editingIncome
-            ? <CurrencyInput value={form.income} onChange={v => setForm(f => ({ ...f, income: v }))} currency={currency} />
-            : <p className="text-3xl font-bold text-primary">{fmt(form.income)}</p>}
+          {totalIncome > 0 && (
+            <div>
+              <div className="flex justify-between text-xs text-blue-200 mb-1">
+                <span>Savings rate</span>
+                <span className={savingsRate >= 20 ? "text-emerald-300 font-semibold" : savingsRate >= 10 ? "text-amber-300" : "text-red-300"}>{savingsRate.toFixed(0)}%</span>
+              </div>
+              <div className="h-1.5 bg-white/20 rounded-full overflow-hidden">
+                <div className={cn("h-full rounded-full transition-all", savingsRate >= 20 ? "bg-emerald-400" : savingsRate >= 10 ? "bg-amber-400" : "bg-red-400")} style={{ width: `${Math.max(0, Math.min(100, savingsRate))}%` }} />
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Rate pills */}
-        {income > 0 && (
-          <div className="grid grid-cols-3 gap-2">
-            {[
-              { label: "Needs", pct: needsPct, color: "text-blue-600 bg-blue-50" },
-              { label: "Wants", pct: wantsPct, color: "text-purple-600 bg-purple-50" },
-              { label: "Savings", pct: savingsRate, color: savingsRate > 20 ? "text-primary bg-primary/10" : savingsRate > 10 ? "text-amber-600 bg-amber-50" : "text-red-600 bg-red-50" },
-            ].map(p => (
-              <div key={p.label} className={cn("rounded-xl px-3 py-2.5 text-center", p.color)}>
-                <p className="text-lg font-bold">{p.pct.toFixed(0)}%</p>
-                <p className="text-xs font-medium">{p.label}</p>
+        {/* Primary actions */}
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={() => openTxForm("income")}
+            className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 text-left hover:border-emerald-400 transition-colors"
+          >
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-lg">💵</span>
+              <Plus className="h-3.5 w-3.5 text-emerald-600" />
+            </div>
+            <p className="text-sm font-semibold text-emerald-700">Log Income</p>
+            <p className="text-xs text-emerald-600 mt-0.5">Salary, freelance, etc.</p>
+          </button>
+          <button
+            onClick={() => openTxForm("expense")}
+            className="bg-red-50 border border-red-200 rounded-2xl p-4 text-left hover:border-red-400 transition-colors"
+          >
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-lg">🧾</span>
+              <Plus className="h-3.5 w-3.5 text-red-500" />
+            </div>
+            <p className="text-sm font-semibold text-red-600">Log Expense</p>
+            <p className="text-xs text-red-500 mt-0.5">Food, rent, bills, etc.</p>
+          </button>
+        </div>
+
+        {/* Add transaction form */}
+        <AnimatePresence>
+          {showTxForm && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+              className="bg-card border border-card-border rounded-2xl p-4 space-y-3"
+            >
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold">{txType === "income" ? "💵 Log Income" : "🧾 Log Expense"}</p>
+                <button onClick={() => setShowTxForm(false)}><X className="h-4 w-4 text-muted-foreground" /></button>
+              </div>
+
+              <input
+                placeholder={txType === "income" ? "e.g. Monthly salary" : "e.g. Grab lunch"}
+                value={txForm.description}
+                onChange={e => setTxForm(f => ({ ...f, description: e.target.value }))}
+                className="w-full border border-border rounded-xl px-4 py-2.5 text-sm bg-background outline-none focus:ring-2 focus:ring-primary"
+                autoFocus
+              />
+
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{sym}</span>
+                  <input
+                    type="number" placeholder="0"
+                    value={txForm.amount}
+                    onChange={e => setTxForm(f => ({ ...f, amount: e.target.value }))}
+                    className="w-full border border-border rounded-xl pl-8 pr-4 py-2.5 text-sm bg-background outline-none focus:ring-2 focus:ring-primary"
+                  />
+                </div>
+                <input
+                  type="date" value={txForm.transactionDate}
+                  onChange={e => setTxForm(f => ({ ...f, transactionDate: e.target.value }))}
+                  className="flex-1 border border-border rounded-xl px-3 py-2.5 text-sm bg-background outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              {txType === "expense" && (
+                <div className="flex flex-wrap gap-2">
+                  {TX_CATS.filter(c => c.value !== "income").map(c => (
+                    <button key={c.value} onClick={() => setTxForm(f => ({ ...f, category: c.value }))}
+                      className={cn("rounded-full px-3 py-1 text-xs border transition-colors flex items-center gap-1",
+                        txForm.category === c.value ? "bg-primary/10 border-primary text-primary" : "border-border text-muted-foreground hover:border-primary/50")}>
+                      {c.emoji} {c.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <label className="flex items-center gap-2.5 text-sm cursor-pointer select-none py-1">
+                <div
+                  onClick={() => setTxForm(f => ({ ...f, isRecurring: !f.isRecurring }))}
+                  className={cn("relative w-9 h-5 rounded-full transition-colors cursor-pointer flex-shrink-0",
+                    txForm.isRecurring ? "bg-primary" : "bg-muted-foreground/30")}
+                >
+                  <div className={cn("absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform",
+                    txForm.isRecurring ? "translate-x-4" : "translate-x-0.5")} />
+                </div>
+                <div>
+                  <span className="font-medium">Recurring</span>
+                  {txForm.isRecurring
+                    ? <span className="text-xs text-primary ml-2">↻ Copies automatically next month</span>
+                    : <span className="text-xs text-muted-foreground ml-2">One-off entry</span>}
+                </div>
+              </label>
+
+              <Button className="w-full" size="sm" onClick={() => addTx.mutate()}
+                disabled={!txForm.description || !txForm.amount || parseFloat(txForm.amount) <= 0 || addTx.isPending}>
+                {addTx.isPending ? "Saving…" : `Save ${txType === "income" ? "Income" : "Expense"}`}
+              </Button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Transaction log */}
+        {transactions.length > 0 ? (
+          <div className="bg-card border border-card-border rounded-2xl overflow-hidden">
+            <p className="text-xs font-medium text-muted-foreground px-4 pt-3 pb-1 uppercase tracking-wide">This month's log</p>
+            {transactions.map((tx) => (
+              <div key={tx.id} className="flex items-center gap-3 px-4 py-3 border-t border-border first:border-0">
+                <span className="text-lg flex-shrink-0">{catEmoji(tx.category)}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-sm font-medium truncate">{tx.description}</p>
+                    {tx.isRecurring && (
+                      <span className="flex-shrink-0 text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium">↻</span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {catLabel(tx.category)} · {new Date(tx.transactionDate + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                  </p>
+                </div>
+                <span className={cn("text-sm font-semibold flex-shrink-0", tx.type === "income" ? "text-emerald-600" : "text-red-500")}>
+                  {tx.type === "income" ? "+" : "-"}{sym}{parseFloat(tx.amount).toLocaleString()}
+                </span>
+                <button onClick={() => deleteTx.mutate(tx.id)} className="text-muted-foreground hover:text-red-500 transition-colors">
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
               </div>
             ))}
           </div>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-border p-5 text-center">
+            <p className="text-sm text-muted-foreground mb-1">No transactions logged for {monthLabel(viewDate)}</p>
+            <p className="text-xs text-muted-foreground">Use "Log Income" and "Log Expense" above to track your money.</p>
+          </div>
         )}
 
-        {/* Expense categories */}
+        {/* Monthly estimates (collapsible) */}
         <div className="bg-card border border-card-border rounded-2xl overflow-hidden">
-          {CATS.map((cat) => (
-            <div key={cat.key} className={cn("border-b border-border last:border-0", editingCat === cat.key && "bg-muted/30")}>
-              <button onClick={() => setEditingCat(editingCat === cat.key ? null : cat.key)} className="w-full flex items-center justify-between px-4 py-3.5 text-left">
-                <div className="flex items-center gap-3"><span className="text-lg">{cat.emoji}</span><span className="font-medium text-sm">{cat.label}</span></div>
-                <span className={cn("text-sm font-semibold transition-colors", form[cat.key] > 0 ? "text-primary" : "text-muted-foreground")}>
-                  {fmt(form[cat.key])}
-                </span>
-              </button>
-              <AnimatePresence>
-                {editingCat === cat.key && (
-                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                    <div className="px-4 pb-4">
-                      <CurrencyInput value={form[cat.key]} onChange={v => setForm(f => ({ ...f, [cat.key]: v }))} currency={currency} />
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          ))}
-          <div className="flex items-center justify-between px-4 py-3.5 bg-muted/30">
-            <span className="font-semibold text-sm">Total expenses</span>
-            <span className="font-bold text-sm">{fmt(totalExp)}</span>
-          </div>
-        </div>
-
-        {/* Net savings */}
-        {income > 0 && (
-          <div className={cn("rounded-2xl p-4 flex items-center justify-between", savings >= 0 ? "bg-primary/5 border border-primary/20" : "bg-red-50 border border-red-200")}>
+          <button
+            onClick={() => setShowEstimates(v => !v)}
+            className="w-full flex items-center justify-between px-4 py-3.5 text-left"
+          >
             <div>
-              <p className="text-xs text-muted-foreground">Saved this month</p>
-              <p className={cn("text-2xl font-bold", savings >= 0 ? "text-primary" : "text-red-500")}>{fmt(Math.abs(savings))}{savings < 0 ? " overspent" : ""}</p>
+              <p className="text-sm font-semibold">Monthly estimates</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Set category totals manually (used when no transactions logged)</p>
             </div>
-            <div className="text-right">
-              <p className="text-xs text-muted-foreground">Savings rate</p>
-              <p className={cn("text-2xl font-bold", savingsRate >= 20 ? "text-primary" : savingsRate >= 10 ? "text-amber-500" : "text-red-500")}>{savingsRate.toFixed(0)}%</p>
-            </div>
-          </div>
-        )}
+            {showEstimates ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+          </button>
 
-        <Button className="w-full" onClick={() => save.mutate()} disabled={save.isPending}>
-          {save.isPending ? "Saving…" : "Save budget"}
-        </Button>
-
-        {/* ── Mode 2: Transaction log ─────────────────────────────────────── */}
-        <div className="pt-2">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Mode 2 — Transaction log <span className="normal-case font-normal">(optional)</span></p>
-            <button onClick={() => setShowTxForm(v => !v)} className="flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors">
-              <Plus className="h-3.5 w-3.5" />Add
-            </button>
-          </div>
-
-          {/* Add transaction form */}
           <AnimatePresence>
-            {showTxForm && (
-              <motion.div
-                initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-                className="bg-card border border-card-border rounded-2xl p-4 mb-3 space-y-3"
-              >
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium">New transaction</p>
-                  <button onClick={() => setShowTxForm(false)}><X className="h-4 w-4 text-muted-foreground" /></button>
+            {showEstimates && (
+              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-t border-border">
+                {/* Income row */}
+                <div className={cn("border-b border-border", editingIncome && "bg-muted/30")}>
+                  <button onClick={() => setEditingIncome(v => !v)} className="w-full flex items-center justify-between px-4 py-3.5 text-left">
+                    <div className="flex items-center gap-3"><span className="text-lg">💵</span><span className="font-medium text-sm">Income</span></div>
+                    <div className="flex items-center gap-2">
+                      <span className={cn("text-sm font-semibold", form.income > 0 ? "text-emerald-600" : "text-muted-foreground")}>
+                        {form.income > 0 ? `${sym}${form.income.toLocaleString()}` : "Set amount"}
+                      </span>
+                      {editingIncome ? <Check className="h-4 w-4 text-primary" /> : <Pencil className="h-4 w-4 text-muted-foreground" />}
+                    </div>
+                  </button>
+                  <AnimatePresence>
+                    {editingIncome && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                        <div className="px-4 pb-4"><CurrencyInput value={form.income} onChange={v => setForm(f => ({ ...f, income: v }))} currency={currency} /></div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
-                <input
-                  placeholder="Description (e.g. Grab lunch)"
-                  value={txForm.description}
-                  onChange={e => setTxForm(f => ({ ...f, description: e.target.value }))}
-                  className="w-full border border-border rounded-xl px-4 py-2.5 text-sm bg-background outline-none focus:ring-2 focus:ring-primary"
-                />
-                <div className="flex gap-2">
-                  <div className="flex rounded-xl border border-border overflow-hidden flex-shrink-0">
-                    {[{ val: "expense", label: "−" }, { val: "income", label: "+" }].map(t => (
-                      <button key={t.val} onClick={() => setTxForm(f => ({ ...f, type: t.val, category: t.val === "income" ? "income" : "other" }))}
-                        className={cn("px-4 py-2.5 text-sm font-bold transition-colors", txForm.type === t.val ? (t.val === "income" ? "bg-primary text-white" : "bg-red-500 text-white") : "text-muted-foreground hover:bg-muted")}>
-                        {t.label}
-                      </button>
-                    ))}
+
+                {CATS.map((cat) => (
+                  <div key={cat.key} className={cn("border-b border-border last:border-0", editingCat === cat.key && "bg-muted/30")}>
+                    <button onClick={() => setEditingCat(editingCat === cat.key ? null : cat.key)} className="w-full flex items-center justify-between px-4 py-3.5 text-left">
+                      <div className="flex items-center gap-3"><span className="text-lg">{cat.emoji}</span><span className="font-medium text-sm">{cat.label}</span></div>
+                      <span className={cn("text-sm font-semibold", form[cat.key] > 0 ? "text-red-500" : "text-muted-foreground")}>
+                        {form[cat.key] > 0 ? `${sym}${form[cat.key].toLocaleString()}` : "—"}
+                      </span>
+                    </button>
+                    <AnimatePresence>
+                      {editingCat === cat.key && (
+                        <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                          <div className="px-4 pb-4"><CurrencyInput value={form[cat.key]} onChange={v => setForm(f => ({ ...f, [cat.key]: v }))} currency={currency} /></div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
-                  <input
-                    type="number" placeholder="Amount" value={txForm.amount}
-                    onChange={e => setTxForm(f => ({ ...f, amount: e.target.value }))}
-                    className="flex-1 border border-border rounded-xl px-4 py-2.5 text-sm bg-background outline-none focus:ring-2 focus:ring-primary"
-                  />
+                ))}
+
+                <div className="px-4 py-3.5">
+                  <Button className="w-full" size="sm" onClick={() => saveEstimates.mutate()} disabled={saveEstimates.isPending}>
+                    {saveEstimates.isPending ? "Saving…" : "Save estimates"}
+                  </Button>
                 </div>
-                {txForm.type === "expense" && (
-                  <select value={txForm.category} onChange={e => setTxForm(f => ({ ...f, category: e.target.value }))}
-                    className="w-full border border-border rounded-xl px-4 py-2.5 text-sm bg-background outline-none focus:ring-2 focus:ring-primary">
-                    {TX_CATS.filter(c => c.value !== "income").map(c => (
-                      <option key={c.value} value={c.value}>{c.emoji} {c.label}</option>
-                    ))}
-                  </select>
-                )}
-                <input type="date" value={txForm.transactionDate} onChange={e => setTxForm(f => ({ ...f, transactionDate: e.target.value }))}
-                  className="w-full border border-border rounded-xl px-4 py-2.5 text-sm bg-background outline-none focus:ring-2 focus:ring-primary" />
-                <label className="flex items-center gap-2 text-sm cursor-pointer">
-                  <input type="checkbox" checked={txForm.isRecurring} onChange={e => setTxForm(f => ({ ...f, isRecurring: e.target.checked }))} className="rounded" />
-                  <span className="text-muted-foreground">Recurring monthly</span>
-                  {txForm.isRecurring && <span className="text-xs text-primary font-medium">Auto-copies next month</span>}
-                </label>
-                <Button className="w-full" size="sm" onClick={() => addTx.mutate()} disabled={!txForm.description || !txForm.amount || addTx.isPending}>
-                  {addTx.isPending ? "Adding…" : "Add transaction"}
-                </Button>
               </motion.div>
             )}
           </AnimatePresence>
-
-          {/* Transaction list */}
-          {transactions.length > 0 ? (
-            <div className="bg-card border border-card-border rounded-2xl overflow-hidden">
-              {transactions.map((tx, i) => (
-                <div key={tx.id} className={cn("flex items-center gap-3 px-4 py-3 border-b border-border last:border-0", i % 2 === 0 ? "" : "bg-muted/10")}>
-                  <span className="text-lg flex-shrink-0">{catEmoji(tx.category)}</span>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <p className="text-sm font-medium truncate">{tx.description}</p>
-                      {tx.isRecurring && <span className="flex-shrink-0 text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">↻</span>}
-                    </div>
-                    <p className="text-xs text-muted-foreground">{catLabel(tx.category)} · {new Date(tx.transactionDate + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}</p>
-                  </div>
-                  <span className={cn("text-sm font-semibold flex-shrink-0", tx.type === "income" ? "text-primary" : "text-red-500")}>
-                    {fmtAmt(tx.amount, tx.type)}
-                  </span>
-                  <button onClick={() => deleteTx.mutate(tx.id)} className="text-muted-foreground hover:text-red-500 transition-colors ml-1">
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              ))}
-              <div className="px-4 py-2.5 bg-muted/20 text-xs text-muted-foreground">
-                Transactions auto-add to category totals above.
-              </div>
-            </div>
-          ) : (
-            <div className="rounded-2xl border border-dashed border-border p-5 text-center">
-              <p className="text-sm text-muted-foreground">No transactions logged yet</p>
-              <button onClick={() => setShowTxForm(true)} className="text-xs text-primary font-medium mt-1">Tap + Add to log one</button>
-            </div>
-          )}
         </div>
       </div>
       <BottomNav />

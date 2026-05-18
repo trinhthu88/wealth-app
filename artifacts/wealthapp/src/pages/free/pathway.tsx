@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useMemo } from "react";
+import { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
@@ -79,7 +79,9 @@ const slideVariants = {
 export default function PathwayPage() {
   const { profile, update } = useProfile();
   const [, navigate] = useLocation();
-  const [step, setStep] = useState(0);
+  const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : new URLSearchParams();
+  const initialStep = Math.max(0, Math.min(5, parseInt(searchParams.get("step") ?? "1") - 1));
+  const [step, setStep] = useState(initialStep);
   const [dir, setDir] = useState(1);
   const [showReward, setShowReward] = useState<null | 1 | 2 | 3>(null);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
@@ -103,6 +105,36 @@ export default function PathwayPage() {
     queryKey: ["pathway"],
     queryFn: () => apiFetch<Step[]>("/pathway"),
   });
+
+  // Pre-populate form from previously saved pathway progress
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => {
+    if (hydrated || !progress.length) return;
+    const merged = progress.reduce<Record<string, unknown>>((acc, p) => ({ ...acc, ...((p.formData as Record<string, unknown>) ?? {}) }), {});
+    setForm(f => ({
+      ...f,
+      age: (merged.age as number) ?? f.age,
+      lifeStage: (merged.lifeStage as string) ?? f.lifeStage,
+      isExpat: merged.isExpat !== undefined ? (merged.isExpat as boolean | null) : f.isExpat,
+      currency: (merged.currency as string) ?? f.currency,
+      income: (merged.income as number) ?? f.income,
+      housing: (merged.housing as number) ?? f.housing,
+      food: (merged.food as number) ?? f.food,
+      transport: (merged.transport as number) ?? f.transport,
+      utilities: (merged.utilities as number) ?? f.utilities,
+      entertainment: (merged.entertainment as number) ?? f.entertainment,
+      other: (merged.other as number) ?? f.other,
+      goalType: (merged.goalType as string) ?? f.goalType,
+      goalTitle: (merged.goalTitle as string) ?? f.goalTitle,
+      goalTarget: (merged.goalTarget as number) ?? f.goalTarget,
+      savings: (merged.savings as number) ?? f.savings,
+      investments: (merged.investments as number) ?? f.investments,
+      debts: (merged.debts as number) ?? f.debts,
+      savingsRatePercent: (merged.savingsRatePercent as number) ?? f.savingsRatePercent,
+      investmentRatePercent: (merged.investmentRatePercent as number) ?? f.investmentRatePercent,
+    }));
+    setHydrated(true);
+  }, [progress.length]);
 
   const saveStep = useMutation({
     mutationFn: ({ stepNumber, formData, status }: { stepNumber: number; formData: Record<string, unknown>; status: string }) =>
@@ -495,7 +527,7 @@ export default function PathwayPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="h-screen bg-background flex flex-col overflow-hidden">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background border-b border-border">
         <div className="max-w-lg mx-auto px-4 py-3 flex items-center gap-3">
@@ -521,8 +553,8 @@ export default function PathwayPage() {
       </div>
 
       {/* Step content */}
-      <div className="flex-1 overflow-x-hidden">
-        <div className="max-w-lg mx-auto px-4 py-6">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden">
+        <div className="max-w-lg mx-auto px-4 py-6 pb-28">
           <AnimatePresence mode="wait" custom={dir}>
             <motion.div
               key={step}
