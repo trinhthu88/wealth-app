@@ -77,6 +77,44 @@ router.post("/goals/auto-update", requireAuth, async (req, res): Promise<void> =
   res.json(updated);
 });
 
+// Upsert the single pathway goal: update first existing goal, or create if none.
+// Also de-duplicates: any extra goals beyond the first are deleted.
+router.post("/goals/upsert-from-pathway", requireAuth, async (req, res): Promise<void> => {
+  const userId = (req as any).userId;
+  const { title, goalType, targetAmount, targetDate, currency } = req.body;
+  if (!title || !goalType) { res.status(400).json({ error: "title and goalType required" }); return; }
+
+  const existing = await db.select().from(financialGoalsTable)
+    .where(eq(financialGoalsTable.userId, userId));
+
+  if (existing.length > 0) {
+    // Delete duplicates beyond the first
+    for (const dup of existing.slice(1)) {
+      await db.delete(financialGoalsTable).where(eq(financialGoalsTable.id, dup.id));
+    }
+    const [updated] = await db.update(financialGoalsTable).set({
+      title, goalType,
+      targetAmount: targetAmount?.toString() ?? null,
+      targetDate: targetDate ?? null,
+      currency: currency ?? "USD",
+      updatedAt: new Date(),
+    }).where(eq(financialGoalsTable.id, existing[0].id)).returning();
+    res.json(updated);
+  } else {
+    const [created] = await db.insert(financialGoalsTable).values({
+      userId, title, goalType,
+      targetAmount: targetAmount?.toString() ?? null,
+      currentAmount: "0",
+      monthlyContribution: "0",
+      targetDate: targetDate ?? null,
+      currency: currency ?? "USD",
+      priority: "medium",
+      status: "on_track",
+    }).returning();
+    res.status(201).json(created);
+  }
+});
+
 router.get("/advisor/clients/:id/goals", requireAuth, async (req, res): Promise<void> => {
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const goals = await db.select().from(financialGoalsTable).where(eq(financialGoalsTable.userId, rawId));
