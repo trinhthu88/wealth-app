@@ -107,10 +107,13 @@ export default function GoalsPage() {
   const monthlyReturns = savingsBalance * (savRatePct / 100 / 12) + investmentValue * (invRatePct / 100 / 12);
   const totalMonthlyGrowth = monthlyCashSaved + monthlyReturns;
 
+  // Effective current = what's already saved toward the goal + existing savings/investment balances
+  const effectiveCurrentAmount = parseFloat(topGoal?.currentAmount ?? "0") + savingsBalance + investmentValue;
+
   const projection = useMemo(() => {
     if (!topGoal?.targetDate || !topGoal.targetAmount) return undefined;
     return calculateProjection({
-      currentAmount: parseFloat(topGoal.currentAmount ?? "0"),
+      currentAmount: effectiveCurrentAmount,
       targetAmount: parseFloat(topGoal.targetAmount ?? "0"),
       targetDate: topGoal.targetDate,
       monthlyCashSaved,
@@ -119,7 +122,7 @@ export default function GoalsPage() {
       investmentValue,
       investmentRatePercent: invRatePct,
     });
-  }, [topGoal?.id, topGoal?.currentAmount, topGoal?.targetAmount, topGoal?.targetDate, monthlyCashSaved, savingsBalance, investmentValue, savRatePct, invRatePct]);
+  }, [topGoal?.id, topGoal?.currentAmount, topGoal?.targetAmount, topGoal?.targetDate, effectiveCurrentAmount, monthlyCashSaved, savingsBalance, investmentValue, savRatePct, invRatePct]);
 
   // ── Monthly auto-update: apply growth from savings + investments ─────────
   // Runs once per month on the 1st (or on first-ever visit with no record).
@@ -299,6 +302,7 @@ export default function GoalsPage() {
           <GoalCard
             goal={topGoal}
             projection={projection}
+            effectiveCurrentAmount={effectiveCurrentAmount}
             onContribute={() => setContributeOpen(true)}
             onEdit={() => openEdit(topGoal)}
           />

@@ -53,7 +53,7 @@ router.get("/health-score", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
   const [score] = await db.select().from(healthScoresTable)
     .where(eq(healthScoresTable.userId, userId))
-    .orderBy(desc(healthScoresTable.scoreDate))
+    .orderBy(desc(healthScoresTable.createdAt))
     .limit(1);
   if (!score) { res.status(404).json({ error: "No health score yet" }); return; }
   res.json(score);

@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Link } from "wouter";
 import AppShell from "@/components/AppShell";
 import HealthScoreRing from "@/components/HealthScoreRing";
+import BenchmarkCard from "@/components/BenchmarkCard";
 import BottomNav from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
@@ -82,6 +83,8 @@ export default function HealthScorePage() {
   const wealthGrowthScore = typeof insights_raw?.wealthGrowthScore === "number"
     ? insights_raw.wealthGrowthScore
     : Math.max(0, Math.min(20, overall - savingsScore - goalsScore - netWorthScore - planScore));
+
+  const effectiveSavingsRate = typeof insights_raw?.effectiveSavingsRate === "number" ? insights_raw.effectiveSavingsRate : 0;
 
   // Each card has a label, score, maxScore, description, edit link, and edit label
   const breakdown = [
@@ -209,11 +212,11 @@ export default function HealthScorePage() {
                         </div>
                       </div>
                       <p className="text-xs text-muted-foreground mb-1">{b.label}</p>
-                      <p className="text-xl font-bold">{b.score}<span className="text-sm font-normal text-muted-foreground">/{b.maxScore}</span></p>
+                      <p className="text-xl font-bold">{Math.min(b.score, b.maxScore)}<span className="text-sm font-normal text-muted-foreground">/{b.maxScore}</span></p>
                       <div className="h-1.5 rounded-full bg-muted overflow-hidden mt-2 mb-1.5">
                         <div
                           className={cn("h-full rounded-full transition-all", b.score / b.maxScore >= 0.8 ? "bg-primary" : b.score / b.maxScore >= 0.5 ? "bg-amber-500" : "bg-red-400")}
-                          style={{ width: `${(b.score / b.maxScore) * 100}%` }}
+                          style={{ width: `${Math.min(100, (b.score / b.maxScore) * 100)}%` }}
                         />
                       </div>
                       <p className="text-xs text-muted-foreground">{b.desc}</p>
@@ -263,6 +266,15 @@ export default function HealthScorePage() {
               ))}
             </div>
           </div>
+        )}
+
+        {/* Peer benchmark comparison */}
+        {score && (effectiveSavingsRate > 0 || overall > 0) && (
+          <BenchmarkCard
+            userSavingsRate={effectiveSavingsRate}
+            userHealthScore={overall}
+            age={null}
+          />
         )}
 
         {/* Score history */}

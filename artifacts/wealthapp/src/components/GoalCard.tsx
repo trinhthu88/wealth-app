@@ -30,6 +30,8 @@ interface Props {
   projection?: ProjectionResult;
   onContribute?: () => void;
   onEdit?: () => void;
+  /** Pass savings + investment balances so the progress bar reflects total working capital */
+  effectiveCurrentAmount?: number;
 }
 
 function fmt(n: number) {
@@ -104,8 +106,10 @@ function ActionButtons({ onContribute, onEdit, btnClass }: { onContribute?: () =
   );
 }
 
-export default function GoalCard({ goal, projection, onContribute, onEdit }: Props) {
-  const current = parseFloat(goal.currentAmount ?? "0");
+export default function GoalCard({ goal, projection, onContribute, onEdit, effectiveCurrentAmount }: Props) {
+  const storedCurrent = parseFloat(goal.currentAmount ?? "0");
+  // Use effectiveCurrentAmount (includes savings + investment balances) when provided
+  const current = effectiveCurrentAmount !== undefined ? effectiveCurrentAmount : storedCurrent;
   const target = parseFloat(goal.targetAmount ?? "0");
   const pct = target > 0 ? Math.min(100, Math.round((current / target) * 100)) : 0;
   const emoji = GOAL_EMOJI[goal.goalType] ?? "🎯";

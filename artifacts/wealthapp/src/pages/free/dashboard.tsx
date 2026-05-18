@@ -8,7 +8,6 @@ import SmartUpgradeCard from "@/components/SmartUpgradeCard";
 import GoalCard from "@/components/GoalCard";
 import WeeklyTipCard from "@/components/WeeklyTipCard";
 import MilestoneChips from "@/components/MilestoneChips";
-import BenchmarkCard from "@/components/BenchmarkCard";
 import BottomNav from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -78,15 +77,18 @@ export default function FreeDashboard() {
   const completedSteps = pathway.filter(s => s.status === "completed").length;
   const pathwayPct = (completedSteps / 6) * 100;
 
-  const totalAssets = assets.reduce((s, a) => s + parseFloat(a.valueUsd ?? "0"), 0);
+  const totalAssetsInDB = assets.reduce((s, a) => s + parseFloat(a.valueUsd ?? "0"), 0);
   const totalLiabilities = liabilities.reduce((s, l) => s + parseFloat(l.balanceUsd ?? "0"), 0);
-  const netWorth = (assets.length > 0 || liabilities.length > 0) ? totalAssets - totalLiabilities : null;
 
   // Prefer categorised asset rows; fall back to profile totals (set via pathway)
   const assetsSavings = assets.filter(a => a.category === "savings").reduce((s, a) => s + parseFloat(a.valueUsd ?? "0"), 0);
   const assetsInvestment = assets.filter(a => a.category === "investment").reduce((s, a) => s + parseFloat(a.valueUsd ?? "0"), 0);
   const savingsBalance = assetsSavings > 0 ? assetsSavings : parseFloat(profile?.totalSavings ?? "0");
   const investmentValue = assetsInvestment > 0 ? assetsInvestment : parseFloat(profile?.totalInvestments ?? "0");
+
+  // If no asset rows exist, fall back to profile totals (entered in pathway) for net worth
+  const effectiveTotalAssets = totalAssetsInDB > 0 ? totalAssetsInDB : (savingsBalance + investmentValue);
+  const netWorth = (effectiveTotalAssets > 0 || totalLiabilities > 0) ? effectiveTotalAssets - totalLiabilities : null;
   const { savingsRate: lsSavRate, investmentRate: lsInvRate } = getRatesFromStorage();
   const savRatePct = profile?.savingsRatePercent ? parseFloat(profile.savingsRatePercent) : lsSavRate;
   const invRatePct = profile?.investmentRatePercent ? parseFloat(profile.investmentRatePercent) : lsInvRate;
@@ -94,14 +96,16 @@ export default function FreeDashboard() {
   const effectiveSavingsRate = income > 0 ? ((monthlyCashSaved + monthlyReturns) / income) * 100 : 0;
 
   const topGoal = goals[0] ?? null;
+  // Effective current = goal's tracked progress + existing savings & investment balances
+  const effectiveCurrentAmount = parseFloat(topGoal?.currentAmount ?? "0") + savingsBalance + investmentValue;
   const goalPct = topGoal && parseFloat(topGoal.targetAmount ?? "0") > 0
-    ? Math.min(100, Math.round(parseFloat(topGoal.currentAmount ?? "0") / parseFloat(topGoal.targetAmount ?? "1") * 100))
+    ? Math.min(100, Math.round(effectiveCurrentAmount / parseFloat(topGoal.targetAmount ?? "1") * 100))
     : 0;
 
   const projection = useMemo(() => {
     if (!topGoal?.targetDate || !topGoal.targetAmount) return undefined;
     return calculateProjection({
-      currentAmount: parseFloat(topGoal.currentAmount ?? "0"),
+      currentAmount: effectiveCurrentAmount,
       targetAmount: parseFloat(topGoal.targetAmount ?? "0"),
       targetDate: topGoal.targetDate,
       monthlyCashSaved,
@@ -110,7 +114,7 @@ export default function FreeDashboard() {
       investmentValue,
       investmentRatePercent: invRatePct,
     });
-  }, [topGoal, monthlyCashSaved, savingsBalance, investmentValue, savRatePct, invRatePct]);
+  }, [topGoal, effectiveCurrentAmount, monthlyCashSaved, savingsBalance, investmentValue, savRatePct, invRatePct]);
 
   useEffect(() => {
     if (!goals.length && !pathway.length && !score) return;
@@ -215,9 +219,9 @@ export default function FreeDashboard() {
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-card border border-card-border rounded-2xl p-4">
             <p className="text-xs text-muted-foreground">Savings rate</p>
-            <p className="text-2xl font-bold mt-1">{savingsRate > 0 ? `${savingsRate.toFixed(0)}%` : "—"}</p>
-            <p className={`text-xs mt-1 font-medium ${savingsRate >= 20 ? "text-primary" : savingsRate >= 10 ? "text-amber-500" : "text-red-500"}`}>
-              {savingsRate > 0 ? `Target: 20%` : "Set up budget →"}
+            <p className="text-2xl font-bold mt-1">{effectiveSavingsRate > 0 ? `${effectiveSavingsRate.toFixed(0)}%` : "—"}</p>
+            <p className={`text-xs mt-1 font-medium ${effectiveSavingsRate >= 20 ? "text-primary" : effectiveSavingsRate >= 10 ? "text-amber-500" : "text-red-500"}`}>
+              {effectiveSavingsRate > 0 ? `Target: 20%` : "Set up budget →"}
             </p>
           </div>
 
@@ -258,19 +262,10 @@ export default function FreeDashboard() {
           <MilestoneChips earnedKeys={earnedMilestones} newlyEarned={newlyEarned} />
         </div>
 
-        {/* Benchmark */}
-        {(income > 0 || (score?.overallScore ?? 0) > 0) && (
-          <BenchmarkCard
-            userSavingsRate={effectiveSavingsRate}
-            userHealthScore={score?.overallScore ?? 0}
-            age={age}
-          />
-        )}
-
         {/* Smart Upgrade Cards */}
         <SmartUpgradeCard
-          condition={income > 0 && savingsRate < 15}
-          insightText={`You're saving ${savingsRate.toFixed(0)}% — reaching 20% could move your retirement forward by 2+ years`}
+          condition={income > 0 && effectiveSavingsRate < 15}
+          insightText={`You're saving ${effectiveSavingsRate.toFixed(0)}% — reaching 20% could move your retirement forward by 2+ years`}
           ctaText="Book a free discovery call"
           ctaType="savings_rate"
         />
@@ -294,6 +289,7 @@ export default function FreeDashboard() {
             <GoalCard
               goal={topGoal}
               projection={projection}
+              effectiveCurrentAmount={effectiveCurrentAmount}
               onContribute={() => window.location.href = "/free/goals"}
             />
           </div>
