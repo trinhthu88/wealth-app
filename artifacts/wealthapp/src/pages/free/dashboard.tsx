@@ -69,8 +69,15 @@ export default function FreeDashboard() {
   const pathwayStep2 = pathway.find(s => s.stepNumber === 2);
   const incomeFromPathway = parseFloat((pathwayStep2?.formData?.income as string | undefined) ?? "0");
   const income = incomeFromBudget > 0 ? incomeFromBudget : incomeFromPathway;
-  const expenses = (["housing", "food", "transport", "utilities", "entertainment", "other"] as const)
+  const budgetExpenses = (["housing", "food", "transport", "utilities", "entertainment", "other"] as const)
     .reduce((s, k) => s + parseFloat((budget as any)?.[k] ?? "0"), 0);
+  // Fallback: pathway step 3 stores housing/food/etc. in formData
+  const pathwayStep3 = pathway.find(s => s.stepNumber === 3);
+  const expensesFromPathway = pathwayStep3?.formData
+    ? (["housing", "food", "transport", "utilities", "entertainment", "other"] as const)
+        .reduce((s, k) => s + parseFloat(((pathwayStep3.formData as any)?.[k] as string | undefined) ?? "0"), 0)
+    : 0;
+  const expenses = budgetExpenses > 0 ? budgetExpenses : expensesFromPathway;
   const monthlyCashSaved = Math.max(0, income - expenses);
   const savingsRate = income > 0 ? (monthlyCashSaved / income) * 100 : 0;
 

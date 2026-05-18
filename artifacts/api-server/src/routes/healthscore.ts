@@ -97,9 +97,15 @@ router.post("/health-score", requireAuth, async (req, res): Promise<void> => {
   const incomeFromPathway = pathwayStep2?.formData ? parseFloat(((pathwayStep2.formData as Record<string, unknown>)?.income as string | undefined) ?? "0") : 0;
   const income = incomeFromBudget > 0 ? incomeFromBudget : incomeFromPathway;
   const expenseKeys = ["housing", "food", "transport", "utilities", "entertainment", "other"] as const;
-  const totalExpenses = lastBudget
+  const totalExpensesFromBudget = lastBudget
     ? expenseKeys.reduce((s, k) => s + parseFloat((lastBudget as any)[k] ?? "0"), 0)
     : 0;
+  // Fallback: pathway step 3 formData has expense breakdowns if the budget entry lacks them
+  const pathwayStep3 = steps.find(s => s.stepNumber === 3);
+  const totalExpensesFromPathway = pathwayStep3?.formData
+    ? expenseKeys.reduce((s, k) => s + parseFloat(((pathwayStep3.formData as Record<string, unknown>)?.[k] as string | undefined) ?? "0"), 0)
+    : 0;
+  const totalExpenses = totalExpensesFromBudget > 0 ? totalExpensesFromBudget : totalExpensesFromPathway;
   const monthlyCashSaved = Math.max(0, income - totalExpenses);
 
   const totalAssetsVal = assets.reduce((s, a) => s + parseFloat(a.valueUsd ?? "0"), 0);
