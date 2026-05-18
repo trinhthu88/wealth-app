@@ -86,12 +86,28 @@ export default function FreeDashboard() {
   const savingsBalance = assetsSavings > 0 ? assetsSavings : parseFloat(profile?.totalSavings ?? "0");
   const investmentValue = assetsInvestment > 0 ? assetsInvestment : parseFloat(profile?.totalInvestments ?? "0");
 
-  // If no asset rows exist, fall back to profile totals (entered in pathway) for net worth
-  const effectiveTotalAssets = totalAssetsInDB > 0 ? totalAssetsInDB : (savingsBalance + investmentValue);
-  const netWorth = (effectiveTotalAssets > 0 || totalLiabilities > 0) ? effectiveTotalAssets - totalLiabilities : null;
   const { savingsRate: lsSavRate, investmentRate: lsInvRate } = getRatesFromStorage();
   const savRatePct = profile?.savingsRatePercent ? parseFloat(profile.savingsRatePercent) : lsSavRate;
   const invRatePct = profile?.investmentRatePercent ? parseFloat(profile.investmentRatePercent) : lsInvRate;
+
+  // Net worth grows from the Step 5 base: savings + investment principal compound at their rates,
+  // plus new cash savings accumulated from the monthly budget since the profile was created.
+  const monthsElapsed = profile?.createdAt
+    ? Math.max(0, (() => {
+        const created = new Date(profile.createdAt);
+        const now = new Date();
+        return (now.getFullYear() - created.getFullYear()) * 12 + (now.getMonth() - created.getMonth());
+      })())
+    : 0;
+  const projectedSavings = savingsBalance * Math.pow(1 + savRatePct / 100 / 12, monthsElapsed);
+  const projectedInvestments = investmentValue * Math.pow(1 + invRatePct / 100 / 12, monthsElapsed);
+  const accumulatedCash = monthlyCashSaved * monthsElapsed;
+  // If assets are tracked in the DB use them directly; otherwise use growing profile totals
+  const effectiveTotalAssets = totalAssetsInDB > 0
+    ? totalAssetsInDB
+    : (projectedSavings + projectedInvestments + accumulatedCash);
+  const netWorth = (effectiveTotalAssets > 0 || totalLiabilities > 0) ? effectiveTotalAssets - totalLiabilities : null;
+
   const monthlyReturns = savingsBalance * (savRatePct / 100 / 12) + investmentValue * (invRatePct / 100 / 12);
   const effectiveSavingsRate = income > 0 ? ((monthlyCashSaved + monthlyReturns) / income) * 100 : 0;
 

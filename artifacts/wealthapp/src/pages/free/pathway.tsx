@@ -127,6 +127,8 @@ export default function PathwayPage() {
       goalType: (merged.goalType as string) ?? f.goalType,
       goalTitle: (merged.goalTitle as string) ?? f.goalTitle,
       goalTarget: (merged.goalTarget as number) ?? f.goalTarget,
+      goalMonth: (merged.goalMonth as string) ?? f.goalMonth,
+      goalYear: (merged.goalYear as string) ?? f.goalYear,
       savings: (merged.savings as number) ?? f.savings,
       investments: (merged.investments as number) ?? f.investments,
       debts: (merged.debts as number) ?? f.debts,
@@ -170,8 +172,9 @@ export default function PathwayPage() {
       await saveStep.mutateAsync({ stepNumber: 3, formData: { housing: form.housing, food: form.food, transport: form.transport, utilities: form.utilities, entertainment: form.entertainment, other: form.other }, status: "completed" });
       advance(3);
     } else if (s === 4) {
-      await saveStep.mutateAsync({ stepNumber: 4, formData: { goalType: form.goalType, goalTitle: form.goalTitle, goalTarget: form.goalTarget }, status: "completed" });
-      await apiFetch("/goals", { method: "POST", body: JSON.stringify({ title: form.goalTitle || GOAL_OPTIONS.find(g => g.type === form.goalType)?.name, goalType: form.goalType, targetAmount: String(form.goalTarget), currency: form.currency, status: "on_track" }) }).catch(() => {});
+      await saveStep.mutateAsync({ stepNumber: 4, formData: { goalType: form.goalType, goalTitle: form.goalTitle, goalTarget: form.goalTarget, goalMonth: form.goalMonth, goalYear: form.goalYear }, status: "completed" });
+      const goalTargetDate = `${form.goalYear}-${String(MONTHS.indexOf(form.goalMonth) + 1).padStart(2, "0")}-01`;
+      await apiFetch("/goals", { method: "POST", body: JSON.stringify({ title: form.goalTitle || GOAL_OPTIONS.find(g => g.type === form.goalType)?.name, goalType: form.goalType, targetAmount: String(form.goalTarget), targetDate: goalTargetDate, currency: form.currency, status: "on_track" }) }).catch(() => {});
       setShowReward(2);
     } else if (s === 5) {
       await saveStep.mutateAsync({ stepNumber: 5, formData: { savings: form.savings, investments: form.investments, debts: form.debts, savingsRatePercent: form.savingsRatePercent, investmentRatePercent: form.investmentRatePercent }, status: "completed" });

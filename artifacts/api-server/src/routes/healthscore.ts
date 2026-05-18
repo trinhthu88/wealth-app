@@ -131,7 +131,9 @@ router.post("/health-score", requireAuth, async (req, res): Promise<void> => {
   let goalsScore = 0;
   if (goals.length > 0) {
     const topGoal = goals[0];
-    const currentAmt = parseFloat(topGoal.currentAmount ?? "0");
+    // current_amount = goal progress + savings principal + investment principal (same as frontend)
+    const goalCurrentAmt = parseFloat(topGoal.currentAmount ?? "0");
+    const effectiveCurrentAmt = goalCurrentAmt + effectiveSavingsBal + effectiveInvestBal;
     const targetAmt = parseFloat(topGoal.targetAmount ?? "0");
 
     if (topGoal.targetDate && targetAmt > 0) {
@@ -141,11 +143,11 @@ router.post("/health-score", requireAuth, async (req, res): Promise<void> => {
         0,
         (target.getFullYear() - today.getFullYear()) * 12 + (target.getMonth() - today.getMonth()),
       );
-      // Spec formula: simple interest for savings, compound for investments
+      // Spec formula: compound interest for savings, compound for investments
       const projectedCash = monthlyCashSaved * monthsRemaining;
-      const projectedInterest = savingsBal * (savRatePct / 100 / 12) * monthsRemaining;
-      const projectedInvest = investBal * (Math.pow(1 + invRatePct / 100 / 12, monthsRemaining) - 1);
-      const projectedAtTarget = currentAmt + projectedCash + projectedInterest + projectedInvest;
+      const projectedInterest = effectiveSavingsBal * (Math.pow(1 + savRatePct / 100 / 12, monthsRemaining) - 1);
+      const projectedInvest = effectiveInvestBal * (Math.pow(1 + invRatePct / 100 / 12, monthsRemaining) - 1);
+      const projectedAtTarget = effectiveCurrentAmt + projectedCash + projectedInterest + projectedInvest;
       goalsScore = scoreGoalProjection(projectedAtTarget, targetAmt, true);
     } else {
       // No target date set — use stored status as fallback
