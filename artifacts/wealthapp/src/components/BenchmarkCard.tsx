@@ -43,7 +43,7 @@ export default function BenchmarkCard({ userSavingsRate, userHealthScore, age }:
 
   const rows: BenchmarkRow[] = [
     {
-      label: "Savings rate",
+      label: "Monthly savings rate",
       userValue: userSavingsRate,
       avgValue: bm.savings_rate.avg,
       p75Value: bm.savings_rate.p75,

@@ -108,10 +108,11 @@ function ActionButtons({ onContribute, onEdit, btnClass }: { onContribute?: () =
 
 export default function GoalCard({ goal, projection, onContribute, onEdit, accountsBalance }: Props) {
   const storedCurrent = parseFloat(goal.currentAmount ?? "0");
-  // Progress bar uses manual contributions only — accounts shown separately as context
+  // Progress bar includes accounts balance (savings + investments) toward goal
   const current = storedCurrent;
+  const totalTowardGoal = storedCurrent + (accountsBalance ?? 0);
   const target = parseFloat(goal.targetAmount ?? "0");
-  const pct = target > 0 ? Math.min(100, Math.round((current / target) * 100)) : 0;
+  const pct = target > 0 ? Math.min(100, Math.round((totalTowardGoal / target) * 100)) : 0;
   const emoji = GOAL_EMOJI[goal.goalType] ?? "🎯";
   const status: string = projection?.status ?? goal.status;
   const isAchieved = status === "achieved" || (target > 0 && current >= target);

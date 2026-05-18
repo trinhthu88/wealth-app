@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import AppShell from "@/components/AppShell";
@@ -9,11 +9,9 @@ import GoalCard from "@/components/GoalCard";
 import WeeklyTipCard from "@/components/WeeklyTipCard";
 import MilestoneChips from "@/components/MilestoneChips";
 import BottomNav from "@/components/BottomNav";
-import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { apiFetch } from "@/lib/api";
 import { useProfile } from "@/hooks/useProfile";
-import { queryClient } from "@/lib/queryClient";
 import { toast } from "sonner";
 import { X, Phone } from "lucide-react";
 import { generateWeeklyTip, getAgeBenchmarkSavingsRate } from "@/lib/tipEngine";
@@ -21,7 +19,6 @@ import {
   checkAndAwardMilestones,
   getEarnedMilestones,
   getStreak,
-  recordCheckin,
   getRatesFromStorage,
 } from "@/lib/milestones";
 import { calculateProjection } from "@/lib/goalProjection";
@@ -49,7 +46,6 @@ function getGreeting() {
 export default function FreeDashboard() {
   const { profile } = useProfile();
   const [pathwayDismissed, setPathwayDismissed] = useState(false);
-  const [checkinOpen, setCheckinOpen] = useState(false);
   const [streakWeeks, setStreakWeeks] = useState(0);
   const [earnedMilestones, setEarnedMilestones] = useState<string[]>([]);
   const [newlyEarned, setNewlyEarned] = useState<string | null>(null);
@@ -166,28 +162,6 @@ export default function FreeDashboard() {
     investmentRatePercent: invRatePct,
   }), [effectiveSavingsRate, score?.overallScore, topGoal, goalStatus, benchmarkSavingsRate, streakWeeks, profile?.isExpat, invRatePct]);
 
-  const checkin = useMutation({
-    mutationFn: () => apiFetch("/notifications", { method: "POST", body: JSON.stringify({ type: "checkin" }) }).catch(() => {}),
-    onSuccess: () => {
-      const newWeeks = recordCheckin();
-      setStreakWeeks(newWeeks);
-      toast.success(`🔥 ${newWeeks} week streak!`);
-      setCheckinOpen(false);
-      checkAndAwardMilestones({
-        goalsCount: goals.length, pathwayComplete: completedSteps >= 6,
-        streakWeeks: newWeeks, netWorth: netWorth ?? 0,
-        effectiveSavingsRate, goalOnTrack: projection?.status === "on_track" || topGoal?.status === "on_track",
-        healthScore: score?.overallScore ?? 0, budgetMonthsCount: budgets.length,
-      });
-      setEarnedMilestones(getEarnedMilestones());
-    },
-    onError: () => {
-      const newWeeks = recordCheckin();
-      setStreakWeeks(newWeeks);
-      toast.success(`🔥 ${newWeeks} week streak!`);
-      setCheckinOpen(false);
-    },
-  });
 
   return (
     <AppShell>
@@ -234,7 +208,7 @@ export default function FreeDashboard() {
         {/* 2×2 Metric Grid */}
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-card border border-card-border rounded-2xl p-4">
-            <p className="text-xs text-muted-foreground">Savings rate</p>
+            <p className="text-xs text-muted-foreground">Monthly savings rate</p>
             <p className="text-2xl font-bold mt-1">{effectiveSavingsRate > 0 ? `${effectiveSavingsRate.toFixed(0)}%` : "—"}</p>
             <p className={`text-xs mt-1 font-medium ${effectiveSavingsRate >= 20 ? "text-primary" : effectiveSavingsRate >= 10 ? "text-amber-500" : "text-red-500"}`}>
               {effectiveSavingsRate > 0 ? `Target: 20%` : "Set up budget →"}
@@ -249,7 +223,7 @@ export default function FreeDashboard() {
             </p>
           </div>
 
-          <Link href="/free/goals">
+          <Link href="/free/goals" className="col-span-2">
             <div className="bg-card border border-card-border rounded-2xl p-4 cursor-pointer hover:border-primary/30 transition-colors">
               <p className="text-xs text-muted-foreground">Top goal</p>
               <p className="text-sm font-semibold mt-1 truncate">{topGoal?.title ?? "No goal set"}</p>
@@ -258,12 +232,6 @@ export default function FreeDashboard() {
                 : <p className="text-xs text-primary mt-1 font-medium">Set your first goal →</p>}
             </div>
           </Link>
-
-          <div className="bg-card border border-card-border rounded-2xl p-4 cursor-pointer hover:border-primary/30 transition-colors" onClick={() => setCheckinOpen(true)}>
-            <p className="text-xs text-muted-foreground">Check-in streak</p>
-            <p className="text-2xl font-bold mt-1">{streakWeeks > 0 ? `${streakWeeks}` : "0"} {streakWeeks > 0 ? "🔥" : ""}</p>
-            <p className="text-xs text-primary mt-1 font-medium">Tap to check in</p>
-          </div>
         </div>
 
         {/* Weekly Tip */}
@@ -318,11 +286,8 @@ export default function FreeDashboard() {
             {[
               { icon: "📊", label: "Update budget", href: "/free/budget" },
               { icon: "🎯", label: "Add to goal", href: "/free/goals" },
-              { icon: "✅", label: "Check in", action: () => setCheckinOpen(true) },
             ].map((a, i) => (
-              a.action
-                ? <button key={i} onClick={a.action} className="flex items-center gap-1.5 whitespace-nowrap bg-muted hover:bg-muted/80 rounded-full px-4 py-2 text-sm border border-border transition-colors"><span>{a.icon}</span><span>{a.label}</span></button>
-                : <Link key={i} href={a.href!}><div className="flex items-center gap-1.5 whitespace-nowrap bg-muted hover:bg-muted/80 rounded-full px-4 py-2 text-sm border border-border cursor-pointer transition-colors"><span>{a.icon}</span><span>{a.label}</span></div></Link>
+              <Link key={i} href={a.href}><div className="flex items-center gap-1.5 whitespace-nowrap bg-muted hover:bg-muted/80 rounded-full px-4 py-2 text-sm border border-border cursor-pointer transition-colors"><span>{a.icon}</span><span>{a.label}</span></div></Link>
             ))}
             <a href="/book" className="flex items-center gap-1.5 whitespace-nowrap bg-muted hover:bg-muted/80 rounded-full px-4 py-2 text-sm border border-border transition-colors">
               <Phone className="h-3.5 w-3.5" /><span>Book a call</span>
@@ -330,30 +295,6 @@ export default function FreeDashboard() {
           </div>
         </div>
       </div>
-
-      {/* Weekly Check-in Modal */}
-      <AnimatePresence>
-        {checkinOpen && (
-          <>
-            <motion.div className="fixed inset-0 bg-black/30 z-40 md:hidden" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setCheckinOpen(false)} />
-            <motion.div
-              className="fixed bottom-0 left-0 right-0 bg-card rounded-t-2xl z-50 p-6 pb-10 md:hidden shadow-2xl"
-              initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            >
-              <h3 className="text-xl font-semibold">Weekly check-in 🔥</h3>
-              <p className="text-muted-foreground text-sm mt-1">Keeps your streak alive · 30 seconds</p>
-              <div className="space-y-3 mt-6">
-                <Button className="w-full" onClick={() => checkin.mutate()} disabled={checkin.isPending}>
-                  Yes, I stayed on track this week ✓
-                </Button>
-                <Button variant="outline" className="w-full" onClick={() => setCheckinOpen(false)}>
-                  Skipped this week
-                </Button>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
 
       <BottomNav />
     </AppShell>

@@ -121,8 +121,9 @@ router.post("/health-score", requireAuth, async (req, res): Promise<void> => {
 
   // ── Component 1: Effective Savings Rate (25 pts) ──────────────────────────
   // effective_monthly_gain = cash_saved + savings_interest + investment_gain
-  const monthlyInterest = savingsBal * (savRatePct / 100 / 12);
-  const monthlyInvestGain = investBal * (invRatePct / 100 / 12);
+  // Use effective balances (asset rows preferred, profile totals as fallback)
+  const monthlyInterest = effectiveSavingsBal * (savRatePct / 100 / 12);
+  const monthlyInvestGain = effectiveInvestBal * (invRatePct / 100 / 12);
   const effectiveMonthlyGain = monthlyCashSaved + monthlyInterest + monthlyInvestGain;
   const effectiveSavingsRate = income > 0 ? (effectiveMonthlyGain / income) * 100 : 0;
   const savingsScore = scoreEffectiveSavingsRate(effectiveSavingsRate);
