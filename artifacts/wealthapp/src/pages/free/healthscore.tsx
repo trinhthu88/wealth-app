@@ -1,5 +1,7 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { motion } from "framer-motion";
+import { Link } from "wouter";
 import AppShell from "@/components/AppShell";
 import HealthScoreRing from "@/components/HealthScoreRing";
 import BottomNav from "@/components/BottomNav";
@@ -7,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
 import { toast } from "sonner";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LineChart, Line, ResponsiveContainer, Tooltip } from "recharts";
 
@@ -60,6 +62,13 @@ export default function HealthScorePage() {
     onError: () => toast.error("Failed to calculate score"),
   });
 
+  // Auto-calculate if no score yet
+  useEffect(() => {
+    if (!isLoading && !score && !calculate.isPending) {
+      calculate.mutate();
+    }
+  }, [isLoading, score]);
+
   const overall = score?.overallScore ?? 0;
   const { label: scoreLabel, color: scoreColor } = ScoreLabel(overall);
   const completedSteps = pathway.filter(s => s.status === "completed").length;
@@ -70,6 +79,7 @@ export default function HealthScorePage() {
   const planScore = Math.round((completedSteps / 6) * 10);
   const wealthGrowthScore = Math.max(0, Math.min(20, overall - savingsScore - goalsScore - netWorthScore - planScore));
 
+  // Each card has a label, score, maxScore, description, edit link, and edit label
   const breakdown = [
     {
       label: "Effective savings rate",
@@ -77,6 +87,9 @@ export default function HealthScorePage() {
       score: savingsScore,
       maxScore: 25,
       desc: savingsScore >= 20 ? "Excellent savings discipline" : savingsScore >= 12 ? "Good — keep pushing to 20%" : "Focus on increasing savings rate",
+      editHref: "/free/budget",
+      editLabel: "Update budget",
+      tip: savingsScore < 25 ? "Log your income & expenses to improve this score" : undefined,
     },
     {
       label: "Goal on-track status",
@@ -84,6 +97,9 @@ export default function HealthScorePage() {
       score: goalsScore,
       maxScore: 25,
       desc: goalsScore >= 20 ? "Your goal is on track" : goalsScore >= 10 ? "Set a target date to boost this" : "Set a goal with a target date",
+      editHref: "/free/pathway?step=4",
+      editLabel: "Edit goal",
+      tip: goalsScore < 25 ? "Set a goal target date so we can calculate your pace" : undefined,
     },
     {
       label: "Net worth trend",
@@ -91,6 +107,9 @@ export default function HealthScorePage() {
       score: netWorthScore,
       maxScore: 20,
       desc: netWorthScore >= 15 ? "Net worth growing well" : netWorthScore >= 8 ? "Positive net worth" : "Focus on reducing debts",
+      editHref: "/free/pathway?step=5",
+      editLabel: "Update assets",
+      tip: netWorthScore < 20 ? "Add your savings, investments and debts in Step 5" : undefined,
     },
     {
       label: "Wealth growth rate",
@@ -98,6 +117,9 @@ export default function HealthScorePage() {
       score: wealthGrowthScore,
       maxScore: 20,
       desc: wealthGrowthScore >= 16 ? "Strong wealth growth" : wealthGrowthScore >= 10 ? "Moderate growth" : "Invest to grow faster",
+      editHref: "/free/pathway?step=5",
+      editLabel: "Update rates",
+      tip: wealthGrowthScore < 20 ? "Add your savings & investment interest rates in Step 5" : undefined,
     },
     {
       label: "Plan completion",
@@ -105,6 +127,9 @@ export default function HealthScorePage() {
       score: planScore,
       maxScore: 10,
       desc: completedSteps >= 6 ? "Plan complete!" : `${completedSteps} of 6 steps done`,
+      editHref: "/free/pathway",
+      editLabel: "Continue plan",
+      tip: completedSteps < 6 ? `${6 - completedSteps} step${6 - completedSteps !== 1 ? "s" : ""} remaining — each adds points` : undefined,
     },
   ];
 
@@ -125,9 +150,13 @@ export default function HealthScorePage() {
     ? history.map(h => ({ score: h.overallScore, date: h.scoreDate }))
     : null;
 
-  if (isLoading) return (
+  if (isLoading || (!score && calculate.isPending)) return (
     <AppShell>
-      <div className="space-y-4 pb-20">{Array.from({ length: 4 }).map((_, i) => <div key={i} className={cn("bg-muted animate-pulse rounded-2xl", i === 0 ? "h-48" : "h-24")} />)}</div>
+      <div className="space-y-4 pb-20">
+        <div className="h-52 bg-muted animate-pulse rounded-2xl" />
+        <div className="grid grid-cols-2 gap-3">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-32 bg-muted animate-pulse rounded-2xl" />)}</div>
+        <div className="h-32 bg-muted animate-pulse rounded-2xl" />
+      </div>
       <BottomNav />
     </AppShell>
   );
@@ -147,33 +176,70 @@ export default function HealthScorePage() {
             <RefreshCw className={cn("h-3.5 w-3.5", calculate.isPending && "animate-spin")} />
             {calculate.isPending ? "Calculating…" : "Recalculate"}
           </Button>
+          <p className="text-blue-300 text-[11px] mt-2">Updates when you edit your plan, budget, or asset data</p>
         </motion.div>
 
-        {/* 5-component breakdown */}
+        {/* 5-component breakdown with edit links */}
         {score && (
           <div>
-            <p className="text-xs font-medium text-muted-foreground mb-3">Score breakdown</p>
+            <p className="text-xs font-medium text-muted-foreground mb-3">Score breakdown — tap to improve each area</p>
             <div className="grid grid-cols-2 gap-3">
               {breakdown.map((b, i) => (
                 <motion.div
                   key={b.label}
-                  className={cn("bg-card border border-card-border rounded-2xl p-4", i === 4 && "col-span-2")}
+                  className={cn("col-span-1", i === 4 && "col-span-2")}
                   initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-base">{b.icon}</span>
-                    <span className="text-xs text-muted-foreground">{b.maxScore} pts max</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mb-1">{b.label}</p>
-                  <p className="text-xl font-bold">{b.score}<span className="text-sm font-normal text-muted-foreground">/{b.maxScore}</span></p>
-                  <div className="h-1.5 rounded-full bg-muted overflow-hidden mt-2 mb-1">
-                    <div
-                      className={cn("h-full rounded-full transition-all", b.score / b.maxScore >= 0.8 ? "bg-primary" : b.score / b.maxScore >= 0.5 ? "bg-amber-500" : "bg-red-400")}
-                      style={{ width: `${(b.score / b.maxScore) * 100}%` }}
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground">{b.desc}</p>
+                  <Link href={b.editHref}>
+                    <div className={cn(
+                      "bg-card border border-card-border rounded-2xl p-4 cursor-pointer transition-all hover:border-primary/40 hover:shadow-sm active:scale-[0.98]",
+                      b.score / b.maxScore >= 0.8 ? "" : b.score / b.maxScore >= 0.5 ? "" : "border-red-200/60",
+                    )}>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-base">{b.icon}</span>
+                        <div className="flex items-center gap-1">
+                          <span className="text-[10px] text-primary font-medium">{b.editLabel}</span>
+                          <ChevronRight className="h-3 w-3 text-primary" />
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground mb-1">{b.label}</p>
+                      <p className="text-xl font-bold">{b.score}<span className="text-sm font-normal text-muted-foreground">/{b.maxScore}</span></p>
+                      <div className="h-1.5 rounded-full bg-muted overflow-hidden mt-2 mb-1.5">
+                        <div
+                          className={cn("h-full rounded-full transition-all", b.score / b.maxScore >= 0.8 ? "bg-primary" : b.score / b.maxScore >= 0.5 ? "bg-amber-500" : "bg-red-400")}
+                          style={{ width: `${(b.score / b.maxScore) * 100}%` }}
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">{b.desc}</p>
+                      {b.tip && (
+                        <p className="text-[11px] text-primary mt-1.5 font-medium leading-tight">{b.tip}</p>
+                      )}
+                    </div>
+                  </Link>
                 </motion.div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* How to improve each area */}
+        {score && overall < 80 && (
+          <div className="bg-card border border-card-border rounded-2xl p-4">
+            <p className="text-sm font-semibold mb-3">How to boost your score</p>
+            <div className="space-y-2.5">
+              {breakdown.filter(b => b.score < b.maxScore).slice(0, 3).map(b => (
+                <Link key={b.label} href={b.editHref}>
+                  <div className="flex items-center justify-between py-2 border-b border-border last:border-0 cursor-pointer group">
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-base">{b.icon}</span>
+                      <div>
+                        <p className="text-xs font-medium">{b.editLabel}</p>
+                        <p className="text-[11px] text-muted-foreground">{b.label} · {b.maxScore - b.score} pts available</p>
+                      </div>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                  </div>
+                </Link>
               ))}
             </div>
           </div>
@@ -211,17 +277,6 @@ export default function HealthScorePage() {
             </div>
           )}
         </div>
-
-        {!score && (
-          <div className="bg-card border border-card-border rounded-2xl p-8 text-center">
-            <p className="text-4xl mb-3">📊</p>
-            <h3 className="font-semibold mb-2">No score yet</h3>
-            <p className="text-muted-foreground text-sm mb-4">Complete your financial pathway to generate your health score.</p>
-            <Button onClick={() => calculate.mutate()} disabled={calculate.isPending}>
-              {calculate.isPending ? "Calculating…" : "Calculate my score"}
-            </Button>
-          </div>
-        )}
       </div>
       <BottomNav />
     </AppShell>

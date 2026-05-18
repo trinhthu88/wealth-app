@@ -16,10 +16,14 @@ import { calculateProjection } from "@/lib/goalProjection";
 import { getRatesFromStorage } from "@/lib/milestones";
 
 interface BudgetEntry { income: string | null; housing: string | null; food: string | null; transport: string | null; utilities: string | null; entertainment: string | null; other: string | null; }
+interface BudgetTransaction { id: string; periodMonth: string; amount: string; type: string; category: string; }
 interface Asset { id: string; valueUsd: string; category: string; }
 
 const EXPENSE_KEYS = ["housing", "food", "transport", "utilities", "entertainment", "other"] as const;
 const AUTO_UPDATE_STORAGE_KEY = "goal_auto_update_month";
+
+function now() { return new Date(); }
+function monthKey(d: Date) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; }
 
 function getLastAutoUpdateMonth(goalId: string): string | null {
   try {
@@ -50,6 +54,8 @@ export default function GoalsPage() {
   const [editMonthly, setEditMonthly] = useState(0);
   const autoUpdateTriggered = useRef(false);
 
+  const currentMk = monthKey(now());
+
   const { data: goals = [], isLoading } = useQuery<Goal[]>({
     queryKey: ["goals"],
     queryFn: () => apiFetch<Goal[]>("/goals"),
@@ -58,6 +64,13 @@ export default function GoalsPage() {
   const { data: budgets = [] } = useQuery<BudgetEntry[]>({
     queryKey: ["budget"],
     queryFn: () => apiFetch<BudgetEntry[]>("/budget"),
+    retry: false,
+  });
+
+  // Fetch this month's actual transactions for accurate income/expense calculation
+  const { data: transactions = [] } = useQuery<BudgetTransaction[]>({
+    queryKey: ["budget-transactions", currentMk],
+    queryFn: () => apiFetch<BudgetTransaction[]>(`/budget/transactions?month=${currentMk}`),
     retry: false,
   });
 
@@ -73,15 +86,21 @@ export default function GoalsPage() {
   const savRatePct = profile?.savingsRatePercent ? parseFloat(profile.savingsRatePercent) : lsSavRate;
   const invRatePct = profile?.investmentRatePercent ? parseFloat(profile.investmentRatePercent) : lsInvRate;
 
+  // Income/expense: prefer real transactions, fall back to estimates
+  const txIncome = transactions.filter(t => t.type === "income").reduce((s, t) => s + parseFloat(t.amount), 0);
+  const txExpenses = transactions.filter(t => t.type === "expense").reduce((s, t) => s + parseFloat(t.amount), 0);
+
   const budget = budgets[budgets.length - 1];
-  const income = parseFloat(budget?.income ?? "0");
-  const totalExpenses = EXPENSE_KEYS.reduce((s, k) => s + parseFloat((budget as any)?.[k] ?? "0"), 0);
-  const monthlyCashSaved = Math.max(0, income - totalExpenses);
+  const estIncome = parseFloat(budget?.income ?? "0");
+  const estExpenses = EXPENSE_KEYS.reduce((s, k) => s + parseFloat((budget as any)?.[k] ?? "0"), 0);
+
+  const income = txIncome > 0 ? txIncome : estIncome;
+  const expenses = txExpenses > 0 ? txExpenses : estExpenses;
+  const monthlyCashSaved = Math.max(0, income - expenses);
 
   const savingsBalance = assets.filter(a => a.category === "savings").reduce((s, a) => s + parseFloat(a.valueUsd ?? "0"), 0);
   const investmentValue = assets.filter(a => a.category === "investment").reduce((s, a) => s + parseFloat(a.valueUsd ?? "0"), 0);
 
-  // Monthly returns from savings + investments
   const monthlyReturns = savingsBalance * (savRatePct / 100 / 12) + investmentValue * (invRatePct / 100 / 12);
   const totalMonthlyGrowth = monthlyCashSaved + monthlyReturns;
 
@@ -97,7 +116,7 @@ export default function GoalsPage() {
       investmentValue,
       investmentRatePercent: invRatePct,
     });
-  }, [topGoal, budgets, assets, savRatePct, invRatePct]);
+  }, [topGoal?.id, topGoal?.currentAmount, topGoal?.targetAmount, topGoal?.targetDate, monthlyCashSaved, savingsBalance, investmentValue, savRatePct, invRatePct]);
 
   // ── Monthly auto-update: apply growth from savings + investments ─────────
   const autoUpdateGoal = useMutation({
@@ -107,24 +126,21 @@ export default function GoalsPage() {
       queryClient.setQueryData(["goals"], (prev: Goal[] | undefined) =>
         (prev ?? []).map(g => g.id === updated.id ? { ...g, currentAmount: updated.currentAmount } : g),
       );
-      const growth = totalMonthlyGrowth;
-      toast.success(`Goal updated — +${sym}${Math.round(growth)}/month added from savings & returns 📈`, { duration: 4000 });
+      toast.success(`Goal updated — +${sym}${Math.round(totalMonthlyGrowth)}/month added from savings & returns 📈`, { duration: 4000 });
     },
   });
 
   useEffect(() => {
-    if (!topGoal || autoUpdateTriggered.current || !budgets.length || !assets.length) return;
-    const now = new Date();
-    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    if (!topGoal || autoUpdateTriggered.current) return;
+    if (!budgets.length && !transactions.length && !assets.length) return;
+    const todayDate = now();
+    const currentMonth = monthKey(todayDate);
     const lastMonth = getLastAutoUpdateMonth(topGoal.id);
     if (lastMonth === currentMonth) return;
 
-    // Calculate how many months of growth to apply
-    const lastUpdateDate = lastMonth
-      ? new Date(lastMonth + "-01")
-      : now;
-    const monthsDiff = (now.getFullYear() - lastUpdateDate.getFullYear()) * 12
-      + (now.getMonth() - lastUpdateDate.getMonth());
+    const lastUpdateDate = lastMonth ? new Date(lastMonth + "-01") : todayDate;
+    const monthsDiff = (todayDate.getFullYear() - lastUpdateDate.getFullYear()) * 12
+      + (todayDate.getMonth() - lastUpdateDate.getMonth());
     if (monthsDiff <= 0 || totalMonthlyGrowth <= 0) return;
 
     autoUpdateTriggered.current = true;
@@ -132,12 +148,10 @@ export default function GoalsPage() {
 
     const currentAmt = parseFloat(topGoal.currentAmount ?? "0");
     const growth = totalMonthlyGrowth * monthsDiff;
-    const newAmount = Math.min(
-      parseFloat(topGoal.targetAmount ?? "0") || Infinity,
-      currentAmt + growth,
-    );
+    const targetAmt = parseFloat(topGoal.targetAmount ?? "0");
+    const newAmount = targetAmt > 0 ? Math.min(targetAmt, currentAmt + growth) : currentAmt + growth;
     autoUpdateGoal.mutate({ goalId: topGoal.id, newCurrentAmount: newAmount });
-  }, [topGoal?.id, budgets.length, assets.length, totalMonthlyGrowth]);
+  }, [topGoal?.id, budgets.length, transactions.length, assets.length, totalMonthlyGrowth]);
 
   const addContribution = useMutation({
     mutationFn: (goal: Goal) => {
@@ -162,6 +176,7 @@ export default function GoalsPage() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["goals"] });
+      queryClient.invalidateQueries({ queryKey: ["health-score"] });
       toast.success("Goal updated!");
       setEditOpen(false);
     },
@@ -205,12 +220,12 @@ export default function GoalsPage() {
             <h1 className="text-xl font-bold">Financial Goals</h1>
             <p className="text-sm text-muted-foreground">Free plan · 1 goal</p>
           </div>
-          <Link href="/free/pathway?step=4">
-            <Button variant="outline" size="sm" className="text-xs h-7">Edit goal</Button>
-          </Link>
+          {topGoal && (
+            <Button variant="outline" size="sm" className="text-xs h-7" onClick={() => openEdit(topGoal)}>Edit goal</Button>
+          )}
         </div>
 
-        {/* Monthly growth link card */}
+        {/* Monthly growth chip */}
         {totalMonthlyGrowth > 0 && (
           <div className="bg-primary/5 border border-primary/20 rounded-2xl px-4 py-3 flex items-center gap-3">
             <TrendingUp className="h-4 w-4 text-primary flex-shrink-0" />
@@ -219,7 +234,7 @@ export default function GoalsPage() {
                 +{sym}{Math.round(totalMonthlyGrowth).toLocaleString()}/month growing toward this goal
               </p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                {monthlyCashSaved > 0 && `${sym}${Math.round(monthlyCashSaved).toLocaleString()} cash`}
+                {monthlyCashSaved > 0 && `${sym}${Math.round(monthlyCashSaved).toLocaleString()} cash saved`}
                 {monthlyCashSaved > 0 && monthlyReturns > 0 && " + "}
                 {monthlyReturns > 0 && `${sym}${Math.round(monthlyReturns).toLocaleString()} from returns`}
               </p>
@@ -227,6 +242,7 @@ export default function GoalsPage() {
           </div>
         )}
 
+        {/* Goal card with on-track / off-track projection */}
         {topGoal && (
           <GoalCard
             goal={topGoal}
@@ -234,6 +250,17 @@ export default function GoalsPage() {
             onContribute={() => setContributeOpen(true)}
             onEdit={() => openEdit(topGoal)}
           />
+        )}
+
+        {/* No budget/savings data notice */}
+        {topGoal && !projection && topGoal.targetDate && (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3">
+            <p className="text-sm font-medium text-amber-800">Add income & savings data to see on-track status</p>
+            <p className="text-xs text-amber-700 mt-1">
+              <Link href="/free/budget"><span className="underline">Log your income →</span></Link> then{" "}
+              <Link href="/free/pathway?step=5"><span className="underline">add your savings & investments →</span></Link>
+            </p>
+          </div>
         )}
 
         {/* 1-goal limit + upgrade CTA */}
@@ -298,7 +325,7 @@ export default function GoalsPage() {
                   <label className="text-sm font-medium block mb-1.5">Target date</label>
                   <input type="month" value={editDate ? editDate.slice(0, 7) : ""} onChange={e => setEditDate(e.target.value + "-01")} className="w-full border border-border rounded-xl px-4 py-2.5 text-sm bg-card outline-none focus:ring-2 focus:ring-primary" />
                 </div>
-                <CurrencyInput value={editMonthly} onChange={setEditMonthly} currency={currency} label="Monthly contribution" />
+                <CurrencyInput value={editMonthly} onChange={setEditMonthly} currency={currency} label="Monthly contribution (target)" />
               </div>
               <Button className="w-full mt-6" disabled={!editTitle || editGoal.isPending} onClick={() => editGoal.mutate(topGoal)}>
                 {editGoal.isPending ? "Saving…" : "Save changes"}

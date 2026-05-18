@@ -33,11 +33,11 @@ router.post("/budget", requireAuth, async (req, res): Promise<void> => {
   const { savings, savingsRate, needs, wants } = calcBudgetFields(income, housing, food, transport, utilities, entertainment, other);
   const [entry] = await db.insert(budgetEntriesTable).values({
     userId, periodMonth, currency: currency ?? "USD",
-    income: income?.toString(), housing: housing?.toString(), food: food?.toString(),
-    transport: transport?.toString(), utilities: utilities?.toString(),
-    entertainment: entertainment?.toString(), other: other?.toString(),
+    income: income?.toString() ?? null, housing: housing?.toString() ?? null, food: food?.toString() ?? null,
+    transport: transport?.toString() ?? null, utilities: utilities?.toString() ?? null,
+    entertainment: entertainment?.toString() ?? null, other: other?.toString() ?? null,
     needsActual: needs.toString(), wantsActual: wants.toString(),
-    savingsActual: savings.toString(), savingsRatePercent: savingsRate.toFixed(2), notes,
+    savingsActual: savings.toString(), savingsRatePercent: savingsRate.toFixed(2), notes: notes ?? null,
   }).returning();
   res.status(201).json(entry);
 });

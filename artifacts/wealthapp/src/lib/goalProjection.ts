@@ -20,6 +20,7 @@ export interface ProjectionResult {
   projectedShortfall: number;
   gapPercent: number;
   monthlyGrowthFromReturns: number;
+  currentMonthlyCash: number;
 }
 
 export function calculateProjection(input: ProjectionInput): ProjectionResult {
@@ -81,6 +82,7 @@ export function calculateProjection(input: ProjectionInput): ProjectionResult {
     projectedShortfall,
     gapPercent,
     monthlyGrowthFromReturns,
+    currentMonthlyCash: monthlyCashSaved,
   };
 }
 

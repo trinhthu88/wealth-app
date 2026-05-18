@@ -11,7 +11,6 @@ import { toast } from "sonner";
 import { ChevronLeft, ChevronRight, Pencil, Check, Plus, Trash2, X, RefreshCw, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useProfile } from "@/hooks/useProfile";
-import { Link } from "wouter";
 
 interface BudgetEntry { id?: string; periodMonth: string; currency: string; income: string | null; housing: string | null; food: string | null; transport: string | null; utilities: string | null; entertainment: string | null; other: string | null; }
 interface BudgetTransaction { id: string; periodMonth: string; description: string; amount: string; type: string; category: string; transactionDate: string; isRecurring: boolean; }
@@ -45,6 +44,22 @@ function prevMonthName(mk: string) {
   const [y, m] = mk.split("-").map(Number);
   return new Date(y, m - 2, 1).toLocaleDateString("en-US", { month: "long" });
 }
+function todayLabel(d: Date) {
+  const today = new Date();
+  if (d.toDateString() === today.toDateString()) return "Today";
+  const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
+  if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
+  return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+}
+function groupByDate(txs: BudgetTransaction[]) {
+  const groups: Record<string, BudgetTransaction[]> = {};
+  for (const tx of txs) {
+    const key = tx.transactionDate;
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(tx);
+  }
+  return Object.entries(groups).sort((a, b) => b[0].localeCompare(a[0]));
+}
 
 export default function BudgetPage() {
   const { profile } = useProfile();
@@ -58,6 +73,7 @@ export default function BudgetPage() {
   const [showEstimates, setShowEstimates] = useState(false);
   const [editingIncome, setEditingIncome] = useState(false);
   const [editingCat, setEditingCat] = useState<string | null>(null);
+  const [view, setView] = useState<"daily" | "monthly">("daily");
   const [form, setForm] = useState<BudgetForm>({ income: 0, housing: 0, food: 0, transport: 0, utilities: 0, entertainment: 0, other: 0 });
 
   const defaultTxDate = new Date().toISOString().slice(0, 10);
@@ -68,14 +84,14 @@ export default function BudgetPage() {
 
   const mk = monthKey(viewDate);
 
-  const { data: entries = [], isLoading } = useQuery<BudgetEntry[]>({
+  const { data: entries = [] } = useQuery<BudgetEntry[]>({
     queryKey: ["budget"],
     queryFn: () => apiFetch<BudgetEntry[]>("/budget"),
   });
 
   const entry = entries.find(e => e.periodMonth.startsWith(mk));
 
-  const { data: transactions = [] } = useQuery<BudgetTransaction[]>({
+  const { data: transactions = [], isLoading: txLoading } = useQuery<BudgetTransaction[]>({
     queryKey: ["budget-transactions", mk],
     queryFn: () => apiFetch<BudgetTransaction[]>(`/budget/transactions?month=${mk}`),
   });
@@ -145,6 +161,7 @@ export default function BudgetPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["budget-transactions", mk] });
+      queryClient.invalidateQueries({ queryKey: ["budget-transactions"] });
       setShowTxForm(false);
       setTxForm({ description: "", amount: "", type: txType, category: "other", transactionDate: defaultTxDate, isRecurring: false });
       toast.success(txType === "income" ? "Income logged!" : "Expense logged!");
@@ -167,7 +184,7 @@ export default function BudgetPage() {
     },
   });
 
-  // Totals — from both transactions and estimates
+  // Totals
   const txIncome = transactions.filter(t => t.type === "income").reduce((s, t) => s + parseFloat(t.amount), 0);
   const txExpenses = transactions.filter(t => t.type === "expense").reduce((s, t) => s + parseFloat(t.amount), 0);
   const estIncome = form.income;
@@ -177,6 +194,12 @@ export default function BudgetPage() {
   const totalExpenses = txExpenses > 0 ? txExpenses : estExpenses;
   const saved = totalIncome - totalExpenses;
   const savingsRate = totalIncome > 0 ? (saved / totalIncome) * 100 : 0;
+
+  // Monthly category breakdown from transactions
+  const catTotals = TX_CATS.map(c => ({
+    ...c,
+    total: transactions.filter(t => t.category === c.value).reduce((s, t) => s + parseFloat(t.amount), 0),
+  })).filter(c => c.total > 0);
 
   const prevMonth = () => { const d = new Date(viewDate); d.setMonth(d.getMonth() - 1); setViewDate(d); };
   const nextMonth = () => { const d = new Date(viewDate); d.setMonth(d.getMonth() + 1); if (d <= now) setViewDate(d); };
@@ -191,27 +214,7 @@ export default function BudgetPage() {
     setShowTxForm(true);
   }
 
-  if (isLoading) return (
-    <AppShell>
-      <div className="space-y-4">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-20 bg-muted animate-pulse rounded-2xl" />)}</div>
-      <BottomNav />
-    </AppShell>
-  );
-
-  const hasNoData = !entry && transactions.length === 0;
-  if (hasNoData && !entries.length) {
-    return (
-      <AppShell>
-        <div className="pb-20 md:pb-0 flex flex-col items-center justify-center min-h-[60vh] text-center gap-4">
-          <span className="text-5xl">📊</span>
-          <h2 className="text-xl font-semibold">Set up your budget</h2>
-          <p className="text-muted-foreground text-sm max-w-xs">Track your monthly income and expenses to understand your savings rate.</p>
-          <Link href="/free/pathway"><Button>Start budget setup →</Button></Link>
-        </div>
-        <BottomNav />
-      </AppShell>
-    );
-  }
+  const grouped = groupByDate(transactions);
 
   return (
     <AppShell>
@@ -219,10 +222,12 @@ export default function BudgetPage() {
 
         {/* Header */}
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-bold">Budget</h1>
+          <div>
+            <h1 className="text-xl font-bold">Budget</h1>
+            <p className="text-xs text-muted-foreground mt-0.5">{monthLabel(viewDate)}</p>
+          </div>
           <div className="flex items-center gap-1">
             <button onClick={prevMonth} className="h-8 w-8 flex items-center justify-center rounded-full border border-border hover:border-primary transition-colors"><ChevronLeft className="h-4 w-4" /></button>
-            <span className="text-sm font-medium px-2 min-w-[110px] text-center">{monthLabel(viewDate)}</span>
             <button onClick={nextMonth} disabled={mk >= monthKey(now)} className="h-8 w-8 flex items-center justify-center rounded-full border border-border hover:border-primary transition-colors disabled:opacity-30"><ChevronRight className="h-4 w-4" /></button>
           </div>
         </div>
@@ -250,21 +255,23 @@ export default function BudgetPage() {
           )}
         </AnimatePresence>
 
-        {/* Monthly summary */}
+        {/* Summary card */}
         <div className="bg-[#042C53] rounded-2xl p-4 text-white">
           <div className="grid grid-cols-3 gap-3 mb-3">
             <div>
               <p className="text-blue-200 text-xs">Income</p>
-              <p className="text-white font-bold text-lg">{fmt(totalIncome)}</p>
-              {txIncome > 0 && estIncome > 0 && txIncome !== estIncome && <p className="text-blue-300 text-xs">est. {fmt(estIncome)}</p>}
+              <p className="text-white font-bold text-lg">{totalIncome > 0 ? fmt(totalIncome) : "—"}</p>
+              {txIncome > 0 && estIncome > 0 && Math.abs(txIncome - estIncome) > 1 && <p className="text-blue-300 text-[10px]">est. {fmt(estIncome)}</p>}
             </div>
             <div>
               <p className="text-blue-200 text-xs">Expenses</p>
-              <p className="text-white font-bold text-lg">{fmt(totalExpenses)}</p>
+              <p className="text-white font-bold text-lg">{totalExpenses > 0 ? fmt(totalExpenses) : "—"}</p>
             </div>
             <div>
               <p className="text-blue-200 text-xs">Saved</p>
-              <p className={cn("font-bold text-lg", saved >= 0 ? "text-emerald-300" : "text-red-300")}>{saved >= 0 ? fmt(saved) : `-${fmt(saved)}`}</p>
+              <p className={cn("font-bold text-lg", totalIncome === 0 ? "text-blue-300" : saved >= 0 ? "text-emerald-300" : "text-red-300")}>
+                {totalIncome === 0 ? "—" : saved >= 0 ? fmt(saved) : `-${fmt(saved)}`}
+              </p>
             </div>
           </div>
           {totalIncome > 0 && (
@@ -278,13 +285,16 @@ export default function BudgetPage() {
               </div>
             </div>
           )}
+          {totalIncome === 0 && (
+            <p className="text-blue-300 text-xs mt-1">Log income and expenses to see your savings rate</p>
+          )}
         </div>
 
-        {/* Primary actions */}
+        {/* Primary action buttons */}
         <div className="grid grid-cols-2 gap-3">
           <button
             onClick={() => openTxForm("income")}
-            className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 text-left hover:border-emerald-400 transition-colors"
+            className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 text-left hover:border-emerald-400 transition-colors active:scale-95"
           >
             <div className="flex items-center gap-2 mb-1">
               <span className="text-lg">💵</span>
@@ -295,7 +305,7 @@ export default function BudgetPage() {
           </button>
           <button
             onClick={() => openTxForm("expense")}
-            className="bg-red-50 border border-red-200 rounded-2xl p-4 text-left hover:border-red-400 transition-colors"
+            className="bg-red-50 border border-red-200 rounded-2xl p-4 text-left hover:border-red-400 transition-colors active:scale-95"
           >
             <div className="flex items-center gap-2 mb-1">
               <span className="text-lg">🧾</span>
@@ -306,7 +316,7 @@ export default function BudgetPage() {
           </button>
         </div>
 
-        {/* Add transaction form */}
+        {/* Transaction form */}
         <AnimatePresence>
           {showTxForm && (
             <motion.div
@@ -380,103 +390,175 @@ export default function BudgetPage() {
           )}
         </AnimatePresence>
 
-        {/* Transaction log */}
-        {transactions.length > 0 ? (
-          <div className="bg-card border border-card-border rounded-2xl overflow-hidden">
-            <p className="text-xs font-medium text-muted-foreground px-4 pt-3 pb-1 uppercase tracking-wide">This month's log</p>
-            {transactions.map((tx) => (
-              <div key={tx.id} className="flex items-center gap-3 px-4 py-3 border-t border-border first:border-0">
-                <span className="text-lg flex-shrink-0">{catEmoji(tx.category)}</span>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <p className="text-sm font-medium truncate">{tx.description}</p>
-                    {tx.isRecurring && (
-                      <span className="flex-shrink-0 text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium">↻</span>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {catLabel(tx.category)} · {new Date(tx.transactionDate + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                  </p>
-                </div>
-                <span className={cn("text-sm font-semibold flex-shrink-0", tx.type === "income" ? "text-emerald-600" : "text-red-500")}>
-                  {tx.type === "income" ? "+" : "-"}{sym}{parseFloat(tx.amount).toLocaleString()}
-                </span>
-                <button onClick={() => deleteTx.mutate(tx.id)} className="text-muted-foreground hover:text-red-500 transition-colors">
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
+        {/* Daily / Monthly tab toggle */}
+        <div className="flex gap-1 bg-muted rounded-xl p-1">
+          {(["daily", "monthly"] as const).map(v => (
+            <button key={v} onClick={() => setView(v)}
+              className={cn("flex-1 py-1.5 text-xs font-medium rounded-lg transition-all capitalize",
+                view === v ? "bg-white shadow text-foreground" : "text-muted-foreground hover:text-foreground")}>
+              {v === "daily" ? "Daily transactions" : "Monthly breakdown"}
+            </button>
+          ))}
+        </div>
+
+        {/* DAILY VIEW */}
+        {view === "daily" && (
+          <>
+            {txLoading ? (
+              <div className="space-y-2">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-14 bg-muted animate-pulse rounded-xl" />)}</div>
+            ) : grouped.length > 0 ? (
+              <div className="space-y-3">
+                {grouped.map(([date, txs]) => {
+                  const dayIncome = txs.filter(t => t.type === "income").reduce((s, t) => s + parseFloat(t.amount), 0);
+                  const dayExpense = txs.filter(t => t.type === "expense").reduce((s, t) => s + parseFloat(t.amount), 0);
+                  const parsedDate = new Date(date + "T00:00:00");
+                  return (
+                    <div key={date} className="bg-card border border-card-border rounded-2xl overflow-hidden">
+                      <div className="flex items-center justify-between px-4 py-2.5 bg-muted/40 border-b border-border">
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{todayLabel(parsedDate)}</p>
+                        <div className="flex gap-3 text-xs">
+                          {dayIncome > 0 && <span className="text-emerald-600 font-medium">+{fmt(dayIncome)}</span>}
+                          {dayExpense > 0 && <span className="text-red-500 font-medium">-{fmt(dayExpense)}</span>}
+                        </div>
+                      </div>
+                      {txs.map((tx) => (
+                        <div key={tx.id} className="flex items-center gap-3 px-4 py-3 border-t border-border first:border-0">
+                          <span className="text-xl flex-shrink-0">{catEmoji(tx.category)}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <p className="text-sm font-medium truncate">{tx.description}</p>
+                              {tx.isRecurring && (
+                                <span className="flex-shrink-0 text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium">↻</span>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground">{catLabel(tx.category)}</p>
+                          </div>
+                          <span className={cn("text-sm font-semibold flex-shrink-0", tx.type === "income" ? "text-emerald-600" : "text-red-500")}>
+                            {tx.type === "income" ? "+" : "-"}{sym}{parseFloat(tx.amount).toLocaleString()}
+                          </span>
+                          <button onClick={() => deleteTx.mutate(tx.id)} className="text-muted-foreground hover:text-red-500 transition-colors">
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })}
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-2xl border border-dashed border-border p-5 text-center">
-            <p className="text-sm text-muted-foreground mb-1">No transactions logged for {monthLabel(viewDate)}</p>
-            <p className="text-xs text-muted-foreground">Use "Log Income" and "Log Expense" above to track your money.</p>
-          </div>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-border p-8 text-center">
+                <p className="text-2xl mb-2">📋</p>
+                <p className="text-sm font-medium mb-1">No transactions yet for {monthLabel(viewDate)}</p>
+                <p className="text-xs text-muted-foreground">Tap "Log Income" or "Log Expense" above to start tracking.</p>
+              </div>
+            )}
+          </>
         )}
 
-        {/* Monthly estimates (collapsible) */}
-        <div className="bg-card border border-card-border rounded-2xl overflow-hidden">
-          <button
-            onClick={() => setShowEstimates(v => !v)}
-            className="w-full flex items-center justify-between px-4 py-3.5 text-left"
-          >
-            <div>
-              <p className="text-sm font-semibold">Monthly estimates</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Set category totals manually (used when no transactions logged)</p>
-            </div>
-            {showEstimates ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
-          </button>
-
-          <AnimatePresence>
-            {showEstimates && (
-              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-t border-border">
-                {/* Income row */}
-                <div className={cn("border-b border-border", editingIncome && "bg-muted/30")}>
-                  <button onClick={() => setEditingIncome(v => !v)} className="w-full flex items-center justify-between px-4 py-3.5 text-left">
-                    <div className="flex items-center gap-3"><span className="text-lg">💵</span><span className="font-medium text-sm">Income</span></div>
-                    <div className="flex items-center gap-2">
-                      <span className={cn("text-sm font-semibold", form.income > 0 ? "text-emerald-600" : "text-muted-foreground")}>
-                        {form.income > 0 ? `${sym}${form.income.toLocaleString()}` : "Set amount"}
-                      </span>
-                      {editingIncome ? <Check className="h-4 w-4 text-primary" /> : <Pencil className="h-4 w-4 text-muted-foreground" />}
-                    </div>
-                  </button>
-                  <AnimatePresence>
-                    {editingIncome && (
-                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                        <div className="px-4 pb-4"><CurrencyInput value={form.income} onChange={v => setForm(f => ({ ...f, income: v }))} currency={currency} /></div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-
-                {CATS.map((cat) => (
-                  <div key={cat.key} className={cn("border-b border-border last:border-0", editingCat === cat.key && "bg-muted/30")}>
-                    <button onClick={() => setEditingCat(editingCat === cat.key ? null : cat.key)} className="w-full flex items-center justify-between px-4 py-3.5 text-left">
-                      <div className="flex items-center gap-3"><span className="text-lg">{cat.emoji}</span><span className="font-medium text-sm">{cat.label}</span></div>
-                      <span className={cn("text-sm font-semibold", form[cat.key] > 0 ? "text-red-500" : "text-muted-foreground")}>
-                        {form[cat.key] > 0 ? `${sym}${form[cat.key].toLocaleString()}` : "—"}
-                      </span>
-                    </button>
-                    <AnimatePresence>
-                      {editingCat === cat.key && (
-                        <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                          <div className="px-4 pb-4"><CurrencyInput value={form[cat.key]} onChange={v => setForm(f => ({ ...f, [cat.key]: v }))} currency={currency} /></div>
-                        </motion.div>
+        {/* MONTHLY VIEW */}
+        {view === "monthly" && (
+          <div className="space-y-3">
+            {/* Category breakdown from transactions */}
+            {catTotals.length > 0 ? (
+              <div className="bg-card border border-card-border rounded-2xl overflow-hidden">
+                <p className="text-xs font-medium text-muted-foreground px-4 pt-3 pb-1 uppercase tracking-wide">Spending by category</p>
+                {catTotals.map(c => {
+                  const isIncome = c.value === "income";
+                  const pct = totalExpenses > 0 && !isIncome ? (c.total / totalExpenses) * 100 : 0;
+                  return (
+                    <div key={c.value} className="px-4 py-3 border-t border-border">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-base">{c.emoji}</span>
+                          <span className="text-sm font-medium">{c.label}</span>
+                        </div>
+                        <span className={cn("text-sm font-semibold", isIncome ? "text-emerald-600" : "text-foreground")}>
+                          {isIncome ? "+" : ""}{sym}{c.total.toLocaleString()}
+                        </span>
+                      </div>
+                      {!isIncome && totalExpenses > 0 && (
+                        <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                          <div className="h-full rounded-full bg-primary/50 transition-all" style={{ width: `${Math.min(100, pct)}%` }} />
+                        </div>
                       )}
-                    </AnimatePresence>
-                  </div>
-                ))}
-
-                <div className="px-4 py-3.5">
-                  <Button className="w-full" size="sm" onClick={() => saveEstimates.mutate()} disabled={saveEstimates.isPending}>
-                    {saveEstimates.isPending ? "Saving…" : "Save estimates"}
-                  </Button>
-                </div>
-              </motion.div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-border p-5 text-center">
+                <p className="text-xs text-muted-foreground">Log transactions to see your monthly breakdown by category.</p>
+              </div>
             )}
-          </AnimatePresence>
-        </div>
+
+            {/* Monthly estimates (collapsible) */}
+            <div className="bg-card border border-card-border rounded-2xl overflow-hidden">
+              <button
+                onClick={() => setShowEstimates(v => !v)}
+                className="w-full flex items-center justify-between px-4 py-3.5 text-left"
+              >
+                <div>
+                  <p className="text-sm font-semibold">Monthly budget plan</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Set target amounts per category</p>
+                </div>
+                {showEstimates ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+              </button>
+
+              <AnimatePresence>
+                {showEstimates && (
+                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-t border-border">
+                    {/* Income */}
+                    <div className={cn("border-b border-border", editingIncome && "bg-muted/30")}>
+                      <button onClick={() => setEditingIncome(v => !v)} className="w-full flex items-center justify-between px-4 py-3.5 text-left">
+                        <div className="flex items-center gap-3"><span className="text-lg">💵</span><span className="font-medium text-sm">Income</span></div>
+                        <div className="flex items-center gap-2">
+                          <span className={cn("text-sm font-semibold", form.income > 0 ? "text-emerald-600" : "text-muted-foreground")}>
+                            {form.income > 0 ? `${sym}${form.income.toLocaleString()}` : "Set amount"}
+                          </span>
+                          {editingIncome ? <Check className="h-4 w-4 text-primary" /> : <Pencil className="h-4 w-4 text-muted-foreground" />}
+                        </div>
+                      </button>
+                      <AnimatePresence>
+                        {editingIncome && (
+                          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                            <div className="px-4 pb-4"><CurrencyInput value={form.income} onChange={v => setForm(f => ({ ...f, income: v }))} currency={currency} /></div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+
+                    {CATS.map((cat) => (
+                      <div key={cat.key} className={cn("border-b border-border last:border-0", editingCat === cat.key && "bg-muted/30")}>
+                        <button onClick={() => setEditingCat(editingCat === cat.key ? null : cat.key)} className="w-full flex items-center justify-between px-4 py-3.5 text-left">
+                          <div className="flex items-center gap-3"><span className="text-lg">{cat.emoji}</span><span className="font-medium text-sm">{cat.label}</span></div>
+                          <div className="flex items-center gap-2">
+                            <span className={cn("text-sm font-semibold", form[cat.key] > 0 ? "text-red-500" : "text-muted-foreground")}>
+                              {form[cat.key] > 0 ? `${sym}${form[cat.key].toLocaleString()}` : "—"}
+                            </span>
+                            {editingCat === cat.key ? <Check className="h-4 w-4 text-primary" /> : <Pencil className="h-4 w-4 text-muted-foreground" />}
+                          </div>
+                        </button>
+                        <AnimatePresence>
+                          {editingCat === cat.key && (
+                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                              <div className="px-4 pb-4"><CurrencyInput value={form[cat.key]} onChange={v => setForm(f => ({ ...f, [cat.key]: v }))} currency={currency} /></div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    ))}
+
+                    <div className="px-4 py-3.5">
+                      <Button className="w-full" size="sm" onClick={() => saveEstimates.mutate()} disabled={saveEstimates.isPending}>
+                        {saveEstimates.isPending ? "Saving…" : "Save budget plan"}
+                      </Button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+        )}
       </div>
       <BottomNav />
     </AppShell>

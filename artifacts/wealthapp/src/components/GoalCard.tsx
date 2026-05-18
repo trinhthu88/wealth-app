@@ -1,6 +1,5 @@
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { PlusCircle, Pencil, TrendingUp } from "lucide-react";
 import type { ProjectionResult } from "@/lib/goalProjection";
 
@@ -49,22 +48,21 @@ function GrowthChip({ amount, bgClass, textClass }: { amount: number; bgClass: s
   );
 }
 
-function BreakdownCard({ projection, offTrack }: { projection: ProjectionResult; offTrack: boolean }) {
-  const pace = Math.max(0, projection.requiredMonthlySaving - projection.monthlyShortfall);
+function BreakdownCard({ projection, currentMonthlyPace }: { projection: ProjectionResult; currentMonthlyPace: number }) {
+  const isOffTrack = !projection.onTrack;
   const rows = [
-    { label: "Amount still needed", value: fmt(projection.amountStillNeeded) },
     { label: "Months remaining", value: `${projection.monthsRemaining} mo` },
-    { label: "Required monthly saving", value: fmt(projection.requiredMonthlySaving) },
-    { label: "Your current monthly pace", value: fmt(pace) },
-    { label: "Monthly shortfall", value: fmt(projection.monthlyShortfall), red: offTrack && projection.monthlyShortfall > 0 },
-    { label: "Projected at target date", value: fmt(projection.projectedAmount) },
+    { label: "Required monthly", value: fmt(projection.requiredMonthlySaving) },
+    { label: "Your current pace", value: fmt(currentMonthlyPace), positive: true },
+    ...(isOffTrack && projection.monthlyShortfall > 0 ? [{ label: "Monthly shortfall", value: `-${fmt(projection.monthlyShortfall)}`, red: true }] : []),
+    { label: projection.onTrack ? "Projected at target date" : "Projected at target date", value: fmt(projection.projectedAmount) },
   ];
   return (
     <div className="bg-white rounded-xl p-4 border border-white/60 shadow-sm space-y-2.5">
       {rows.map(r => (
         <div key={r.label} className="flex items-center justify-between text-xs">
           <span className="text-muted-foreground">{r.label}</span>
-          <span className={cn("font-semibold", r.red ? "text-red-600" : "text-foreground")}>{r.value}</span>
+          <span className={cn("font-semibold", r.red ? "text-red-600" : r.positive ? "text-foreground" : "text-foreground")}>{r.value}</span>
         </div>
       ))}
     </div>
@@ -79,12 +77,12 @@ function AdvisorCTA({ offTrack, shortfall }: { offTrack: boolean; shortfall: num
       </p>
       {offTrack && shortfall > 0 ? (
         <p className="text-blue-200 text-xs mb-3">
-          You're projected to fall <span className="text-red-300 font-semibold">{fmt(shortfall)}</span> short — an advisor can close this without requiring you to save more.
+          A {fmt(shortfall)} shortfall over {Math.floor(shortfall / (shortfall / 12))} years is solvable with the right investment plan. Let's talk.
         </p>
       ) : (
         <p className="text-blue-200 text-xs mb-3">An advisor can identify small adjustments to get you fully on track.</p>
       )}
-      <a href="/book" className="inline-flex items-center gap-1.5 bg-primary hover:bg-primary/90 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-colors">
+      <a href="/book" className="inline-flex items-center gap-1.5 bg-white text-[#042C53] text-xs font-semibold px-4 py-2 rounded-lg transition-colors hover:bg-white/90">
         Book a free call
       </a>
     </div>
@@ -114,6 +112,10 @@ export default function GoalCard({ goal, projection, onContribute, onEdit }: Pro
   const status: string = projection?.status ?? goal.status;
   const isAchieved = status === "achieved" || (target > 0 && current >= target);
   const growthAmount = projection?.monthlyGrowthFromReturns ?? 0;
+
+  // Current monthly pace = actual cash saved + returns from savings/investments
+  const currentMonthlyPace = (projection?.currentMonthlyCash ?? 0) + (projection?.monthlyGrowthFromReturns ?? 0);
+
   const targetDateStr = goal.targetDate
     ? new Date(goal.targetDate).toLocaleDateString("en-US", { month: "short", year: "numeric" })
     : null;
@@ -127,7 +129,7 @@ export default function GoalCard({ goal, projection, onContribute, onEdit }: Pro
           </div>
           <div>
             <div className="font-semibold">{goal.title}</div>
-            {targetDateStr && <div className="text-xs text-muted-foreground mt-0.5">Target: {targetDateStr}</div>}
+            {targetDateStr && <div className="text-xs text-muted-foreground mt-0.5">by {targetDateStr}</div>}
           </div>
         </div>
         {badge}
@@ -135,17 +137,16 @@ export default function GoalCard({ goal, projection, onContribute, onEdit }: Pro
     );
   }
 
-  function ProgressSection({ color }: { color: string }) {
+  function ProgressSection({ barClass }: { barClass: string }) {
     return (
       <div>
         <div className="flex justify-between text-xs mb-1.5">
-          <span className="text-muted-foreground">{fmt(current)} saved</span>
-          <span className={cn("font-medium", color)}>{pct}%</span>
+          <span className="font-medium">{fmt(current)} saved</span>
+          <span className="text-muted-foreground">{target > 0 ? fmt(target) : "—"} by {targetDateStr ?? "target"}</span>
         </div>
         <div className="h-2 rounded-full bg-white/60 overflow-hidden">
-          <div className={cn("h-full rounded-full transition-all", color === "text-primary" ? "bg-primary" : color === "text-amber-700" ? "bg-amber-500" : "bg-red-500")} style={{ width: `${pct}%` }} />
+          <div className={cn("h-full rounded-full transition-all", barClass)} style={{ width: `${pct}%` }} />
         </div>
-        <div className="text-xs text-muted-foreground mt-1 text-right">Target: {target > 0 ? fmt(target) : "—"}</div>
       </div>
     );
   }
@@ -154,7 +155,7 @@ export default function GoalCard({ goal, projection, onContribute, onEdit }: Pro
     return (
       <div className="bg-gradient-to-br from-primary/10 to-emerald-50 border border-primary/30 rounded-2xl p-5 space-y-4">
         <Header badge={<span className="text-xs bg-primary text-white px-2.5 py-1 rounded-full font-semibold whitespace-nowrap">🎉 Achieved!</span>} />
-        <Progress value={100} className="h-2" />
+        <ProgressSection barClass="bg-primary" />
         <p className="text-sm text-primary font-medium text-center py-1">Goal reached — {fmt(current)} saved!</p>
       </div>
     );
@@ -164,8 +165,9 @@ export default function GoalCard({ goal, projection, onContribute, onEdit }: Pro
     return (
       <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 space-y-4">
         <Header badge={<span className="text-xs bg-emerald-100 text-emerald-800 border border-emerald-200 px-2.5 py-1 rounded-full font-semibold whitespace-nowrap">✓ On track</span>} />
-        <ProgressSection color="text-primary" />
+        <ProgressSection barClass="bg-emerald-500" />
         <GrowthChip amount={growthAmount} bgClass="bg-emerald-100" textClass="text-emerald-800" />
+        {projection && <BreakdownCard projection={projection} currentMonthlyPace={currentMonthlyPace} />}
         <ActionButtons onContribute={onContribute} onEdit={onEdit} btnClass="" />
       </div>
     );
@@ -175,21 +177,22 @@ export default function GoalCard({ goal, projection, onContribute, onEdit }: Pro
     return (
       <div className="bg-amber-50 border border-amber-300 rounded-2xl p-5 space-y-4">
         <Header badge={<span className="text-xs bg-amber-100 text-amber-800 border border-amber-200 px-2.5 py-1 rounded-full font-semibold whitespace-nowrap">⚠ Almost there</span>} />
-        <ProgressSection color="text-amber-700" />
+        <ProgressSection barClass="bg-amber-500" />
         <GrowthChip amount={growthAmount} bgClass="bg-amber-100" textClass="text-amber-800" />
-        {projection && <BreakdownCard projection={projection} offTrack={false} />}
+        {projection && <BreakdownCard projection={projection} currentMonthlyPace={currentMonthlyPace} />}
         {projection && <AdvisorCTA offTrack={false} shortfall={projection.projectedShortfall} />}
         <ActionButtons onContribute={onContribute} onEdit={onEdit} btnClass="bg-amber-600 hover:bg-amber-700" />
       </div>
     );
   }
 
+  // Off track
   return (
-    <div className="bg-red-50 border border-red-300 rounded-2xl p-5 space-y-4">
-      <Header badge={<span className="text-xs bg-red-100 text-red-800 border border-red-200 px-2.5 py-1 rounded-full font-semibold whitespace-nowrap">✗ Off track</span>} />
-      <ProgressSection color="text-red-700" />
+    <div className="bg-red-50 border border-red-200 rounded-2xl p-5 space-y-4">
+      <Header badge={<span className="text-xs bg-red-100 text-red-700 border border-red-200 px-2.5 py-1 rounded-full font-semibold whitespace-nowrap">Off track</span>} />
+      <ProgressSection barClass="bg-red-500" />
       <GrowthChip amount={growthAmount} bgClass="bg-red-100" textClass="text-red-800" />
-      {projection && <BreakdownCard projection={projection} offTrack={true} />}
+      {projection && <BreakdownCard projection={projection} currentMonthlyPace={currentMonthlyPace} />}
       {projection && <AdvisorCTA offTrack={true} shortfall={projection.projectedShortfall} />}
       <ActionButtons onContribute={onContribute} onEdit={onEdit} btnClass="bg-red-600 hover:bg-red-700" />
     </div>
