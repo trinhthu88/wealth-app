@@ -220,9 +220,9 @@ export default function FreeDashboard() {
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-card border border-card-border rounded-2xl p-4">
             <p className="text-xs text-muted-foreground">Monthly savings rate</p>
-            <p className="text-2xl font-bold mt-1">{effectiveSavingsRate > 0 ? `${effectiveSavingsRate.toFixed(0)}%` : "—"}</p>
-            <p className={`text-xs mt-1 font-medium ${effectiveSavingsRate >= 20 ? "text-primary" : effectiveSavingsRate >= 10 ? "text-amber-500" : "text-red-500"}`}>
-              {effectiveSavingsRate > 0 ? `Target: 20%` : "Set up budget →"}
+            <p className="text-2xl font-bold mt-1">{savingsRate > 0 ? `${savingsRate.toFixed(0)}%` : "—"}</p>
+            <p className={`text-xs mt-1 font-medium ${savingsRate >= 20 ? "text-primary" : savingsRate >= 10 ? "text-amber-500" : "text-red-500"}`}>
+              {savingsRate > 0 ? `Target: 20%` : "Set up budget →"}
             </p>
           </div>
 
