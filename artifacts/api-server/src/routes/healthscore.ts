@@ -100,13 +100,24 @@ router.post("/health-score", requireAuth, async (req, res): Promise<void> => {
 
   const totalAssetsVal = assets.reduce((s, a) => s + parseFloat(a.valueUsd ?? "0"), 0);
   const totalLiabVal = liabilities.reduce((s, l) => s + parseFloat(l.balanceUsd ?? "0"), 0);
-  const netWorth = totalAssetsVal - totalLiabVal;
-  const hasNetWorthData = totalAssetsVal > 0 || totalLiabVal > 0;
 
   const savingsBal = parseFloat(profile?.totalSavings ?? "0");
   const investBal = parseFloat(profile?.totalInvestments ?? "0");
   const savRatePct = parseFloat(profile?.savingsRatePercent ?? "4.0");
   const invRatePct = parseFloat(profile?.investmentRatePercent ?? "7.0");
+
+  // Net worth: prefer categorised asset rows; fall back to profile totals (pathway saves here)
+  const assetsSavingsVal = assets
+    .filter(a => (a as any).category === "savings")
+    .reduce((s, a) => s + parseFloat(a.valueUsd ?? "0"), 0);
+  const assetsInvestVal = assets
+    .filter(a => (a as any).category === "investment")
+    .reduce((s, a) => s + parseFloat(a.valueUsd ?? "0"), 0);
+  const effectiveSavingsBal = assetsSavingsVal > 0 ? assetsSavingsVal : savingsBal;
+  const effectiveInvestBal = assetsInvestVal > 0 ? assetsInvestVal : investBal;
+  const effectiveTotalAssets = totalAssetsVal > 0 ? totalAssetsVal : (effectiveSavingsBal + effectiveInvestBal);
+  const netWorth = effectiveTotalAssets - totalLiabVal;
+  const hasNetWorthData = effectiveTotalAssets > 0 || totalLiabVal > 0;
 
   // ── Component 1: Effective Savings Rate (25 pts) ──────────────────────────
   // effective_monthly_gain = cash_saved + savings_interest + investment_gain
