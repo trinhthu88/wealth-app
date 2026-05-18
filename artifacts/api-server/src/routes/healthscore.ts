@@ -91,7 +91,11 @@ router.post("/health-score", requireAuth, async (req, res): Promise<void> => {
   ]);
 
   // ── Shared values ──────────────────────────────────────────────────────────
-  const income = lastBudget ? parseFloat(lastBudget.income ?? "0") : 0;
+  // Income: prefer latest budget entry; fall back to pathway step 2 formData
+  const incomeFromBudget = lastBudget ? parseFloat(lastBudget.income ?? "0") : 0;
+  const pathwayStep2 = steps.find(s => s.stepNumber === 2);
+  const incomeFromPathway = pathwayStep2?.formData ? parseFloat(((pathwayStep2.formData as Record<string, unknown>)?.income as string | undefined) ?? "0") : 0;
+  const income = incomeFromBudget > 0 ? incomeFromBudget : incomeFromPathway;
   const expenseKeys = ["housing", "food", "transport", "utilities", "entertainment", "other"] as const;
   const totalExpenses = lastBudget
     ? expenseKeys.reduce((s, k) => s + parseFloat((lastBudget as any)[k] ?? "0"), 0)

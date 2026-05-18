@@ -166,10 +166,21 @@ export default function PathwayPage() {
       advance(1);
     } else if (s === 2) {
       await saveStep.mutateAsync({ stepNumber: 2, formData: { income: form.income }, status: "completed" });
-      await apiFetch("/budget", { method: "POST", body: JSON.stringify({ periodMonth: new Date().toISOString().slice(0, 7), currency: form.currency, income: String(form.income) }) }).catch(() => {});
       setShowReward(1);
     } else if (s === 3) {
       await saveStep.mutateAsync({ stepNumber: 3, formData: { housing: form.housing, food: form.food, transport: form.transport, utilities: form.utilities, entertainment: form.entertainment, other: form.other }, status: "completed" });
+      // Save complete budget entry with income + all expenses so savings rate calculations work
+      await apiFetch("/budget", { method: "POST", body: JSON.stringify({
+        periodMonth: new Date().toISOString().slice(0, 7),
+        currency: form.currency,
+        income: String(form.income),
+        housing: String(form.housing),
+        food: String(form.food),
+        transport: String(form.transport),
+        utilities: String(form.utilities),
+        entertainment: String(form.entertainment),
+        other: String(form.other),
+      }) }).catch(() => {});
       advance(3);
     } else if (s === 4) {
       await saveStep.mutateAsync({ stepNumber: 4, formData: { goalType: form.goalType, goalTitle: form.goalTitle, goalTarget: form.goalTarget, goalMonth: form.goalMonth, goalYear: form.goalYear }, status: "completed" });

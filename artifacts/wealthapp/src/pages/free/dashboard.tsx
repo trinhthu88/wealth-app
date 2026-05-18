@@ -28,7 +28,7 @@ interface Goal { id: string; title: string; goalType: string; status: string; ta
 interface BudgetEntry { income: string | null; housing: string | null; food: string | null; transport: string | null; utilities: string | null; entertainment: string | null; other: string | null; }
 interface Asset { id: string; valueUsd: string; category: string; }
 interface Liability { id: string; balanceUsd: string; }
-interface Pathway { stepNumber: number; status: string; }
+interface Pathway { stepNumber: number; status: string; formData?: Record<string, unknown> | null; }
 
 function fmt(n: number) {
   if (Math.abs(n) >= 1_000_000) return (n < 0 ? "-$" : "$") + (Math.abs(n) / 1_000_000).toFixed(1) + "M";
@@ -64,7 +64,11 @@ export default function FreeDashboard() {
   const { data: liabilities = [] } = useQuery<Liability[]>({ queryKey: ["liabilities"], queryFn: () => apiFetch<Liability[]>("/liabilities"), retry: false });
 
   const budget = budgets[budgets.length - 1];
-  const income = parseFloat(budget?.income ?? "0");
+  const incomeFromBudget = parseFloat(budget?.income ?? "0");
+  // Fallback: pathway step 2 stores income in formData if budget entry was never created
+  const pathwayStep2 = pathway.find(s => s.stepNumber === 2);
+  const incomeFromPathway = parseFloat((pathwayStep2?.formData?.income as string | undefined) ?? "0");
+  const income = incomeFromBudget > 0 ? incomeFromBudget : incomeFromPathway;
   const expenses = (["housing", "food", "transport", "utilities", "entertainment", "other"] as const)
     .reduce((s, k) => s + parseFloat((budget as any)?.[k] ?? "0"), 0);
   const monthlyCashSaved = Math.max(0, income - expenses);
