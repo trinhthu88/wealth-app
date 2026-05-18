@@ -32,9 +32,10 @@ function scoreGoalProjection(projected: number, target: number, hasGoal: boolean
 /** Component 3: Net worth → 20 pts max */
 function scoreNetWorth(netWorth: number, hasData: boolean): number {
   if (!hasData) return 0;
-  if (netWorth > 0) return 15;
-  if (netWorth === 0) return 8;
-  return 3;
+  if (netWorth > 100_000) return 20;
+  if (netWorth > 0) return 14;
+  if (netWorth === 0) return 7;
+  return 2;
 }
 
 /** Component 4: Wealth growth rate (annual growth / net worth) → 20 pts max */
@@ -159,25 +160,36 @@ router.post("/health-score", requireAuth, async (req, res): Promise<void> => {
   const completedSteps = steps.filter(s => s.status === "completed").length;
   const planScore = Math.min(10, Math.round((completedSteps / 6) * 10));
 
+  // ── Clamp each component to its maximum ───────────────────────────────────
+  const savingsScoreFinal  = Math.min(25, Math.max(0, savingsScore));
+  const goalsScoreFinal    = Math.min(25, Math.max(0, goalsScore));
+  const netWorthScoreFinal = Math.min(20, Math.max(0, netWorthScore));
+  const wealthScoreFinal   = Math.min(20, Math.max(0, wealthGrowthScore));
+  const planScoreFinal     = Math.min(10, Math.max(0, planScore));
+
   // ── Overall (hard cap 100) ─────────────────────────────────────────────────
   const overall = Math.min(100,
-    savingsScore + goalsScore + netWorthScore + wealthGrowthScore + planScore,
+    savingsScoreFinal + goalsScoreFinal + netWorthScoreFinal + wealthScoreFinal + planScoreFinal,
   );
+
+  const goalsOnTrack = goals.filter(g => g.status === "on_track" || g.status === "achieved").length;
 
   const today = new Date().toISOString().split("T")[0];
   const [score] = await db.insert(healthScoresTable).values({
     userId,
     scoreDate: today,
     overallScore: overall,
-    savingsScore,
-    budgetScore: savingsScore,
-    goalsScore,
-    netWorthScore,
+    savingsScore: savingsScoreFinal,
+    budgetScore: savingsScoreFinal,
+    goalsScore: goalsScoreFinal,
+    netWorthScore: netWorthScoreFinal,
     insights: {
       effectiveSavingsRate: Math.round(effectiveSavingsRate * 10) / 10,
       wealthGrowthRate: Math.round(wealthGrowthRate * 10) / 10,
+      wealthGrowthScore: wealthScoreFinal,
       completedSteps,
       netWorth: Math.round(netWorth),
+      goalsOnTrack,
     },
   }).returning();
   res.json(score);

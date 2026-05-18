@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { Lock, X, TrendingUp } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
 import { Link } from "wouter";
-import { calculateProjection } from "@/lib/goalProjection";
+import { calculateProjection, applyMonthlyGrowth } from "@/lib/goalProjection";
 import { getRatesFromStorage } from "@/lib/milestones";
 
 interface BudgetEntry { income: string | null; housing: string | null; food: string | null; transport: string | null; utilities: string | null; entertainment: string | null; other: string | null; }
@@ -119,37 +119,86 @@ export default function GoalsPage() {
   }, [topGoal?.id, topGoal?.currentAmount, topGoal?.targetAmount, topGoal?.targetDate, monthlyCashSaved, savingsBalance, investmentValue, savRatePct, invRatePct]);
 
   // ── Monthly auto-update: apply growth from savings + investments ─────────
+  // Runs once per month on the 1st (or on first-ever visit with no record).
   const autoUpdateGoal = useMutation({
     mutationFn: ({ goalId, newCurrentAmount }: { goalId: string; newCurrentAmount: number }) =>
-      apiFetch("/goals/auto-update", { method: "POST", body: JSON.stringify({ goalId, newCurrentAmount }) }),
-    onSuccess: (updated: any) => {
+      apiFetch<Goal>("/goals/auto-update", { method: "POST", body: JSON.stringify({ goalId, newCurrentAmount }) }),
+    onSuccess: (updated) => {
+      const prevProjection = projection;
       queryClient.setQueryData(["goals"], (prev: Goal[] | undefined) =>
         (prev ?? []).map(g => g.id === updated.id ? { ...g, currentAmount: updated.currentAmount } : g),
       );
-      toast.success(`Goal updated — +${sym}${Math.round(totalMonthlyGrowth)}/month added from savings & returns 📈`, { duration: 4000 });
+
+      // Recalculate projection with new amount to detect status change
+      if (topGoal?.targetDate && topGoal.targetAmount) {
+        const newProjection = calculateProjection({
+          currentAmount: parseFloat(updated.currentAmount ?? "0"),
+          targetAmount: parseFloat(topGoal.targetAmount ?? "0"),
+          targetDate: topGoal.targetDate,
+          monthlyCashSaved,
+          savingsBalance,
+          savingsRatePercent: savRatePct,
+          investmentValue,
+          investmentRatePercent: invRatePct,
+        });
+
+        if (prevProjection && prevProjection.status !== newProjection.status) {
+          const improved = newProjection.status === "on_track" ||
+            (newProjection.status === "almost" && prevProjection.status === "off_track");
+          apiFetch("/notifications", {
+            method: "POST",
+            body: JSON.stringify({
+              type: "goal_status_change",
+              title: improved ? "Goal back on track!" : "Goal status updated",
+              message: improved
+                ? `"${topGoal.title}" is now ${newProjection.status.replace("_", " ")} — your savings & investments are growing!`
+                : `"${topGoal.title}" has shifted to ${newProjection.status.replace("_", " ")} — consider boosting your contributions.`,
+              link: "/free/goals",
+            }),
+          }).catch(() => {});
+        }
+      }
+
+      toast.success(
+        `Monthly update applied — +${sym}${Math.round(totalMonthlyGrowth).toLocaleString()} added from savings & returns`,
+        { duration: 4000 },
+      );
     },
   });
 
   useEffect(() => {
     if (!topGoal || autoUpdateTriggered.current) return;
     if (!budgets.length && !transactions.length && !assets.length) return;
+
     const todayDate = now();
     const currentMonth = monthKey(todayDate);
     const lastMonth = getLastAutoUpdateMonth(topGoal.id);
+
+    // Skip if already updated this month
     if (lastMonth === currentMonth) return;
 
-    const lastUpdateDate = lastMonth ? new Date(lastMonth + "-01") : todayDate;
-    const monthsDiff = (todayDate.getFullYear() - lastUpdateDate.getFullYear()) * 12
-      + (todayDate.getMonth() - lastUpdateDate.getMonth());
-    if (monthsDiff <= 0 || totalMonthlyGrowth <= 0) return;
+    // Only run on the 1st of the month — unless this is the first-ever update (no record)
+    const isFirstOfMonth = todayDate.getDate() === 1;
+    if (!isFirstOfMonth && lastMonth !== null) return;
+
+    if (totalMonthlyGrowth <= 0) return;
 
     autoUpdateTriggered.current = true;
     setLastAutoUpdateMonth(topGoal.id, currentMonth);
 
     const currentAmt = parseFloat(topGoal.currentAmount ?? "0");
-    const growth = totalMonthlyGrowth * monthsDiff;
     const targetAmt = parseFloat(topGoal.targetAmount ?? "0");
-    const newAmount = targetAmt > 0 ? Math.min(targetAmt, currentAmt + growth) : currentAmt + growth;
+
+    // Exact formula: old + monthly_cash_saved + (savings_bal × rate%/12) + (invest_val × rate%/12)
+    const rawNew = applyMonthlyGrowth(
+      currentAmt,
+      monthlyCashSaved,
+      savingsBalance,
+      savRatePct,
+      investmentValue,
+      invRatePct,
+    );
+    const newAmount = targetAmt > 0 ? Math.min(targetAmt, rawNew) : rawNew;
     autoUpdateGoal.mutate({ goalId: topGoal.id, newCurrentAmount: newAmount });
   }, [topGoal?.id, budgets.length, transactions.length, assets.length, totalMonthlyGrowth]);
 

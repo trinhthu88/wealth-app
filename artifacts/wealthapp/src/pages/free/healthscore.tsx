@@ -76,8 +76,12 @@ export default function HealthScorePage() {
   const savingsScore = score?.savingsScore ?? 0;
   const goalsScore = score?.goalsScore ?? 0;
   const netWorthScore = score?.netWorthScore ?? 0;
-  const planScore = Math.round((completedSteps / 6) * 10);
-  const wealthGrowthScore = Math.max(0, Math.min(20, overall - savingsScore - goalsScore - netWorthScore - planScore));
+  const planScore = Math.min(10, Math.round((completedSteps / 6) * 10));
+  // Read wealthGrowthScore stored in insights by the API (avoids arithmetic reconstruction)
+  const insights_raw = score?.insights as Record<string, unknown> | null;
+  const wealthGrowthScore = typeof insights_raw?.wealthGrowthScore === "number"
+    ? insights_raw.wealthGrowthScore
+    : Math.max(0, Math.min(20, overall - savingsScore - goalsScore - netWorthScore - planScore));
 
   // Each card has a label, score, maxScore, description, edit link, and edit label
   const breakdown = [
@@ -137,12 +141,14 @@ export default function HealthScorePage() {
     if (!score?.insights) return [];
     const raw = score.insights as Record<string, unknown>;
     const out: string[] = [];
-    const sr = typeof raw.savingsRate === "number" ? raw.savingsRate : 0;
+    const sr = typeof raw.effectiveSavingsRate === "number" ? raw.effectiveSavingsRate : 0;
     const steps = typeof raw.completedSteps === "number" ? raw.completedSteps : 0;
     const onTrack = typeof raw.goalsOnTrack === "number" ? raw.goalsOnTrack : 0;
-    if (sr > 0) out.push(`Your savings rate is ${sr.toFixed(0)}% — ${sr >= 20 ? "excellent, you're in the top tier!" : sr >= 10 ? "consider pushing to 20% for maximum score" : "try reaching 10% as the first milestone"}`);
+    const wgr = typeof raw.wealthGrowthRate === "number" ? raw.wealthGrowthRate : 0;
+    if (sr > 0) out.push(`Your effective savings rate is ${sr.toFixed(0)}% — ${sr >= 20 ? "excellent, you're in the top tier!" : sr >= 10 ? "consider pushing to 20% for maximum score" : "try reaching 10% as the first milestone"}`);
     out.push(`You've completed ${steps} of 6 plan steps — ${steps >= 5 ? "almost there!" : steps >= 3 ? "keep going, each step boosts your score" : "complete more steps to improve your score"}`);
     out.push(`${onTrack} goal${onTrack !== 1 ? "s" : ""} on track — ${onTrack > 0 ? "great progress! Stay consistent." : "set a goal with a target date to unlock 25 more points"}`);
+    if (wgr > 0) out.push(`Wealth growing at ${wgr.toFixed(1)}%/year — ${wgr >= 10 ? "excellent growth rate!" : wgr >= 5 ? "solid, keep investing" : "consider increasing your investment allocation"}`);
     return out;
   })();
 
