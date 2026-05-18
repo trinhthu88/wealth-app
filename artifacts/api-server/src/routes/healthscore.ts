@@ -8,6 +8,46 @@ import { requireAuth } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
 
+// ── Scoring tier helpers ────────────────────────────────────────────────────
+
+/** Component 1: Effective Savings Rate → 25 pts max */
+function scoreEffectiveSavingsRate(pct: number): number {
+  if (pct >= 25) return 25;
+  if (pct >= 20) return 22;
+  if (pct >= 15) return 18;
+  if (pct >= 10) return 12;
+  if (pct >= 5)  return 6;
+  return 0;
+}
+
+/** Component 2: Goal projection → 25 pts max */
+function scoreGoalProjection(projected: number, target: number, hasGoal: boolean): number {
+  if (!hasGoal) return 0;
+  if (projected >= target) return 25;
+  const gap = (target - projected) / target * 100;
+  if (gap <= 20) return 15;
+  return 5;
+}
+
+/** Component 3: Net worth → 20 pts max */
+function scoreNetWorth(netWorth: number, hasData: boolean): number {
+  if (!hasData) return 0;
+  if (netWorth > 0) return 15;
+  if (netWorth === 0) return 8;
+  return 3;
+}
+
+/** Component 4: Wealth growth rate (annual growth / net worth) → 20 pts max */
+function scoreWealthGrowthRate(pct: number): number {
+  if (pct >= 10) return 20;
+  if (pct >= 7)  return 16;
+  if (pct >= 4)  return 10;
+  if (pct >= 1)  return 5;
+  return 0;
+}
+
+// ── Routes ──────────────────────────────────────────────────────────────────
+
 router.get("/health-score", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
   const [score] = await db.select().from(healthScoresTable)
@@ -30,85 +70,115 @@ router.get("/health-score/history", requireAuth, async (req, res): Promise<void>
 router.post("/health-score", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
 
-  const [lastBudget] = await db.select().from(budgetEntriesTable)
-    .where(eq(budgetEntriesTable.userId, userId))
-    .orderBy(desc(budgetEntriesTable.periodMonth)).limit(1);
+  // Fetch all needed data in parallel
+  const [
+    [lastBudget],
+    goals,
+    steps,
+    assets,
+    liabilities,
+    [profile],
+  ] = await Promise.all([
+    db.select().from(budgetEntriesTable)
+      .where(eq(budgetEntriesTable.userId, userId))
+      .orderBy(desc(budgetEntriesTable.periodMonth)).limit(1),
+    db.select().from(financialGoalsTable).where(eq(financialGoalsTable.userId, userId)),
+    db.select().from(pathwayProgressTable).where(eq(pathwayProgressTable.userId, userId)),
+    db.select().from(assetsTable).where(eq(assetsTable.userId, userId)),
+    db.select().from(liabilitiesTable).where(eq(liabilitiesTable.userId, userId)),
+    db.select().from(profilesTable).where(eq(profilesTable.id, userId)),
+  ]);
 
-  const goals = await db.select().from(financialGoalsTable).where(eq(financialGoalsTable.userId, userId));
-  const steps = await db.select().from(pathwayProgressTable).where(eq(pathwayProgressTable.userId, userId));
-  const assets = await db.select().from(assetsTable).where(eq(assetsTable.userId, userId));
-  const liabilities = await db.select().from(liabilitiesTable).where(eq(liabilitiesTable.userId, userId));
-  const [profile] = await db.select().from(profilesTable).where(eq(profilesTable.id, userId));
-
-  // ── Component 1: Savings rate (25 pts max) ──────────────────────────────────
+  // ── Shared values ──────────────────────────────────────────────────────────
   const income = lastBudget ? parseFloat(lastBudget.income ?? "0") : 0;
-  const expenses = lastBudget
-    ? ["housing", "food", "transport", "utilities", "entertainment", "other"]
-        .reduce((s, k) => s + parseFloat((lastBudget as any)[k] ?? "0"), 0)
+  const expenseKeys = ["housing", "food", "transport", "utilities", "entertainment", "other"] as const;
+  const totalExpenses = lastBudget
+    ? expenseKeys.reduce((s, k) => s + parseFloat((lastBudget as any)[k] ?? "0"), 0)
     : 0;
-  const savingsRate = income > 0 ? ((income - expenses) / income) * 100 : 0;
-  const savingsScore = Math.min(25, Math.round((savingsRate / 20) * 25));
+  const monthlyCashSaved = Math.max(0, income - totalExpenses);
 
-  // ── Component 2: Goal on-track status (25 pts max) ─────────────────────────
-  let goalsScore = 0;
-  if (goals.length > 0) {
-    const topGoal = goals[0];
-    if (topGoal.status === "on_track" || topGoal.status === "achieved") goalsScore = 25;
-    else if (topGoal.status === "almost") goalsScore = 15;
-    else goalsScore = 5;
-  }
-  goalsScore = Math.min(25, goalsScore);
-
-  // ── Component 3: Net worth trend (20 pts max) ─────────────────────────────
   const totalAssetsVal = assets.reduce((s, a) => s + parseFloat(a.valueUsd ?? "0"), 0);
   const totalLiabVal = liabilities.reduce((s, l) => s + parseFloat(l.balanceUsd ?? "0"), 0);
   const netWorth = totalAssetsVal - totalLiabVal;
-  let netWorthScore = 0;
-  if (totalAssetsVal > 0 || totalLiabVal > 0) {
-    if (netWorth > 0 && totalLiabVal === 0) netWorthScore = 20;
-    else if (netWorth > 0) netWorthScore = 15;
-    else if (netWorth === 0) netWorthScore = 8;
-    else netWorthScore = 3;
-  }
-  netWorthScore = Math.min(20, netWorthScore);
+  const hasNetWorthData = totalAssetsVal > 0 || totalLiabVal > 0;
 
-  // ── Component 4: Wealth growth rate (20 pts max) ──────────────────────────
-  const totalSavingsBal = parseFloat(profile?.totalSavings ?? "0");
-  const totalInvestBal = parseFloat(profile?.totalInvestments ?? "0");
+  const savingsBal = parseFloat(profile?.totalSavings ?? "0");
+  const investBal = parseFloat(profile?.totalInvestments ?? "0");
   const savRatePct = parseFloat(profile?.savingsRatePercent ?? "4.0");
   const invRatePct = parseFloat(profile?.investmentRatePercent ?? "7.0");
-  const monthlyGrowth = totalSavingsBal * (savRatePct / 100 / 12) + totalInvestBal * (invRatePct / 100 / 12);
-  let wealthGrowthScore = 0;
-  if (totalSavingsBal > 0 || totalInvestBal > 0) {
-    const growthPct = income > 0 ? (monthlyGrowth / income) * 100 : 0;
-    wealthGrowthScore = Math.min(20, Math.round((growthPct / 3) * 20));
-  }
-  wealthGrowthScore = Math.min(20, wealthGrowthScore);
 
-  // ── Component 5: Plan completion (10 pts max) ─────────────────────────────
+  // ── Component 1: Effective Savings Rate (25 pts) ──────────────────────────
+  // effective_monthly_gain = cash_saved + savings_interest + investment_gain
+  const monthlyInterest = savingsBal * (savRatePct / 100 / 12);
+  const monthlyInvestGain = investBal * (invRatePct / 100 / 12);
+  const effectiveMonthlyGain = monthlyCashSaved + monthlyInterest + monthlyInvestGain;
+  const effectiveSavingsRate = income > 0 ? (effectiveMonthlyGain / income) * 100 : 0;
+  const savingsScore = scoreEffectiveSavingsRate(effectiveSavingsRate);
+
+  // ── Component 2: Goal on-track via dynamic projection (25 pts) ────────────
+  let goalsScore = 0;
+  if (goals.length > 0) {
+    const topGoal = goals[0];
+    const currentAmt = parseFloat(topGoal.currentAmount ?? "0");
+    const targetAmt = parseFloat(topGoal.targetAmount ?? "0");
+
+    if (topGoal.targetDate && targetAmt > 0) {
+      const today = new Date();
+      const target = new Date(topGoal.targetDate);
+      const monthsRemaining = Math.max(
+        0,
+        (target.getFullYear() - today.getFullYear()) * 12 + (target.getMonth() - today.getMonth()),
+      );
+      // Spec formula: simple interest for savings, compound for investments
+      const projectedCash = monthlyCashSaved * monthsRemaining;
+      const projectedInterest = savingsBal * (savRatePct / 100 / 12) * monthsRemaining;
+      const projectedInvest = investBal * (Math.pow(1 + invRatePct / 100 / 12, monthsRemaining) - 1);
+      const projectedAtTarget = currentAmt + projectedCash + projectedInterest + projectedInvest;
+      goalsScore = scoreGoalProjection(projectedAtTarget, targetAmt, true);
+    } else {
+      // No target date set — use stored status as fallback
+      if (topGoal.status === "on_track" || topGoal.status === "achieved") goalsScore = 25;
+      else if (topGoal.status === "almost") goalsScore = 15;
+      else goalsScore = 5;
+    }
+  }
+
+  // ── Component 3: Net worth trend (20 pts) ─────────────────────────────────
+  const netWorthScore = scoreNetWorth(netWorth, hasNetWorthData);
+
+  // ── Component 4: Wealth growth rate (20 pts) ──────────────────────────────
+  // wealth_growth_rate = total_annual_wealth_growth / net_worth × 100
+  const annualCashSavings = monthlyCashSaved * 12;
+  const annualInterest = savingsBal * (savRatePct / 100);
+  const annualInvestGain = investBal * (invRatePct / 100);
+  const totalAnnualGrowth = annualCashSavings + annualInterest + annualInvestGain;
+  const wealthGrowthRate = netWorth > 0 ? (totalAnnualGrowth / netWorth) * 100 : 0;
+  const wealthGrowthScore = scoreWealthGrowthRate(wealthGrowthRate);
+
+  // ── Component 5: Plan completion (10 pts) ─────────────────────────────────
   const completedSteps = steps.filter(s => s.status === "completed").length;
   const planScore = Math.min(10, Math.round((completedSteps / 6) * 10));
 
-  // ── Overall (hard cap 100) ──────────────────────────────────────────────────
+  // ── Overall (hard cap 100) ─────────────────────────────────────────────────
   const overall = Math.min(100,
-    Math.min(25, savingsScore) +
-    Math.min(25, goalsScore) +
-    Math.min(20, netWorthScore) +
-    Math.min(20, wealthGrowthScore) +
-    Math.min(10, planScore),
+    savingsScore + goalsScore + netWorthScore + wealthGrowthScore + planScore,
   );
 
-  const goalsOnTrack = goals.filter(g => g.status === "on_track" || g.status === "achieved").length;
   const today = new Date().toISOString().split("T")[0];
   const [score] = await db.insert(healthScoresTable).values({
     userId,
     scoreDate: today,
     overallScore: overall,
+    savingsScore,
     budgetScore: savingsScore,
     goalsScore,
     netWorthScore,
-    savingsScore,
-    insights: { savingsRate, completedSteps, goalsOnTrack },
+    insights: {
+      effectiveSavingsRate: Math.round(effectiveSavingsRate * 10) / 10,
+      wealthGrowthRate: Math.round(wealthGrowthRate * 10) / 10,
+      completedSteps,
+      netWorth: Math.round(netWorth),
+    },
   }).returning();
   res.json(score);
 });
