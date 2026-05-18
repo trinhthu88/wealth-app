@@ -13,6 +13,10 @@ export interface Profile {
   isExpat: boolean | null;
   riskProfile: string | null;
   onboardingComplete: boolean | null;
+  totalSavings: string | null;
+  totalInvestments: string | null;
+  savingsRatePercent: string | null;
+  investmentRatePercent: string | null;
   createdAt: string;
 }
 

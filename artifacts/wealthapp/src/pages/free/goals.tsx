@@ -53,7 +53,9 @@ export default function GoalsPage() {
 
   const projection = useMemo(() => {
     if (!topGoal?.targetDate || !topGoal.targetAmount) return undefined;
-    const { savingsRate, investmentRate } = getRatesFromStorage();
+    const { savingsRate: lsSavRate, investmentRate: lsInvRate } = getRatesFromStorage();
+    const savingsRate = profile?.savingsRatePercent ? parseFloat(profile.savingsRatePercent) : lsSavRate;
+    const investmentRate = profile?.investmentRatePercent ? parseFloat(profile.investmentRatePercent) : lsInvRate;
     const budget = budgets[budgets.length - 1];
     const income = parseFloat(budget?.income ?? "0");
     const expenses = (["housing", "food", "transport", "utilities", "entertainment", "other"] as const)

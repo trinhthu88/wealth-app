@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
@@ -11,6 +11,7 @@ import RewardReveal from "@/components/RewardReveal";
 import BottomNav from "@/components/BottomNav";
 import { ArrowLeft, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { saveRatesToStorage } from "@/lib/milestones";
 
 interface Step { stepNumber: number; stepName: string; status: string; formData: Record<string, unknown>; }
 
@@ -20,6 +21,7 @@ type FormData = {
   housing: number; food: number; transport: number; utilities: number; entertainment: number; other: number;
   goalType: string; goalTitle: string; goalTarget: number; goalMonth: string; goalYear: string;
   savings: number; investments: number; noInvestments: boolean; debts: number; debtFree: boolean;
+  savingsRatePercent: number; investmentRatePercent: number;
   riskAnswers: (number | null)[];
 };
 
@@ -93,6 +95,7 @@ export default function PathwayPage() {
     housing: 0, food: 0, transport: 0, utilities: 0, entertainment: 0, other: 0,
     goalType: "", goalTitle: "", goalTarget: 0, goalMonth: MONTHS[0], goalYear: YEARS[4],
     savings: 0, investments: 0, noInvestments: false, debts: 0, debtFree: false,
+    savingsRatePercent: 4.0, investmentRatePercent: 7.0,
     riskAnswers: [null, null, null, null, null],
   });
 
@@ -139,10 +142,18 @@ export default function PathwayPage() {
       await apiFetch("/goals", { method: "POST", body: JSON.stringify({ title: form.goalTitle || GOAL_OPTIONS.find(g => g.type === form.goalType)?.name, goalType: form.goalType, targetAmount: String(form.goalTarget), currency: form.currency, status: "on_track" }) }).catch(() => {});
       setShowReward(2);
     } else if (s === 5) {
-      await saveStep.mutateAsync({ stepNumber: 5, formData: { savings: form.savings, investments: form.investments, debts: form.debts }, status: "completed" });
+      await saveStep.mutateAsync({ stepNumber: 5, formData: { savings: form.savings, investments: form.investments, debts: form.debts, savingsRatePercent: form.savingsRatePercent, investmentRatePercent: form.investmentRatePercent }, status: "completed" });
       if (form.savings > 0) await apiFetch("/assets", { method: "POST", body: JSON.stringify({ name: "Cash & Savings", category: "savings", valueUsd: String(form.savings), currencyOriginal: form.currency }) }).catch(() => {});
       if (form.investments > 0) await apiFetch("/assets", { method: "POST", body: JSON.stringify({ name: "Investments", category: "investment", valueUsd: String(form.investments), currencyOriginal: form.currency }) }).catch(() => {});
       if (form.debts > 0) await apiFetch("/liabilities", { method: "POST", body: JSON.stringify({ name: "Total Debts", category: "loan", balanceUsd: String(form.debts), currencyOriginal: form.currency }) }).catch(() => {});
+      // Save rates to profile AND localStorage so all pages get correct values
+      update.mutate({
+        totalSavings: String(form.savings) as any,
+        totalInvestments: String(form.investments) as any,
+        savingsRatePercent: String(form.savingsRatePercent) as any,
+        investmentRatePercent: String(form.investmentRatePercent) as any,
+      } as any);
+      saveRatesToStorage(form.savingsRatePercent, form.investmentRatePercent);
       advance(5);
     } else if (s === 6) {
       const rp = getRiskProfile(form.riskAnswers);
@@ -160,6 +171,11 @@ export default function PathwayPage() {
   const riskScore = form.riskAnswers.reduce<number>((s, a) => s + (a ?? 0), 0);
   const riskProfile = getRiskProfile(form.riskAnswers);
   const allAnswered = form.riskAnswers.every(a => a !== null);
+
+  // Live preview of monthly returns from Step 5 inputs
+  const monthlyReturnsPreview = useMemo(() => {
+    return (form.savings * form.savingsRatePercent / 100 / 12) + (form.investments * form.investmentRatePercent / 100 / 12);
+  }, [form.savings, form.investments, form.savingsRatePercent, form.investmentRatePercent]);
 
   const STEPS = [
     /* Step 1 */
@@ -342,6 +358,37 @@ export default function PathwayPage() {
         </div>
         {!form.debtFree && <CurrencyInput value={form.debts} onChange={v => setField("debts", v)} currency={form.currency} />}
       </div>
+
+      {/* Interest rate inputs */}
+      <div className="bg-card border border-card-border rounded-2xl p-4 space-y-4">
+        <p className="text-sm font-medium">💹 Your money growth rates</p>
+        <div>
+          <label className="text-xs text-muted-foreground block mb-1.5">Annual savings interest rate (%)</label>
+          <input
+            type="number" step="0.1" min="0" max="20"
+            value={form.savingsRatePercent}
+            onChange={e => setField("savingsRatePercent", parseFloat(e.target.value) || 0)}
+            className="w-full border border-border rounded-xl px-4 py-2.5 text-sm bg-card outline-none focus:ring-2 focus:ring-primary"
+          />
+          <p className="text-xs text-muted-foreground mt-1">e.g. bank deposit rate in Vietnam: 4–5%</p>
+        </div>
+        <div>
+          <label className="text-xs text-muted-foreground block mb-1.5">Average annual investment return (%)</label>
+          <input
+            type="number" step="0.1" min="0" max="25"
+            value={form.investmentRatePercent}
+            onChange={e => setField("investmentRatePercent", parseFloat(e.target.value) || 0)}
+            className="w-full border border-border rounded-xl px-4 py-2.5 text-sm bg-card outline-none focus:ring-2 focus:ring-primary"
+          />
+          <p className="text-xs text-muted-foreground mt-1">e.g. global equity ETF average: 7–9%</p>
+        </div>
+        {monthlyReturnsPreview > 0 && (
+          <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 text-sm text-emerald-800 font-medium">
+            💰 Your money will grow approx. ${monthlyReturnsPreview.toFixed(0)}/month from returns alone
+          </div>
+        )}
+      </div>
+
       <div className="bg-card border border-card-border rounded-2xl p-4">
         <p className="text-xs text-muted-foreground mb-1">Your net worth</p>
         {(() => {
@@ -380,99 +427,119 @@ export default function PathwayPage() {
               <button key={opt} onClick={() => {
                 const answers = [...form.riskAnswers];
                 answers[riskSubStep] = i + 1;
-                setField("riskAnswers", answers as FormData["riskAnswers"]);
-                if (riskSubStep < 4) {
-                  setTimeout(() => { setDir(1); setRiskSubStep(s => s + 1); }, 400);
+                setField("riskAnswers", answers as any);
+                setDir(1);
+                if (riskSubStep < RISK_QUESTIONS.length - 1) {
+                  setTimeout(() => setRiskSubStep(s => s + 1), 200);
+                } else {
+                  setTimeout(() => setRiskAnswered(true), 200);
                 }
               }}
-                className={cn("w-full text-left rounded-xl border-2 p-4 text-sm transition-colors", form.riskAnswers[riskSubStep] === i + 1 ? "border-primary bg-primary/5 font-medium" : "border-border hover:border-primary/40")}>
-                <span className="text-muted-foreground mr-2">{String.fromCharCode(65 + i)}.</span>{opt}
+                className={cn("w-full rounded-xl border-2 p-3.5 text-sm text-left transition-colors", form.riskAnswers[riskSubStep] === i + 1 ? "border-primary bg-primary/5" : "border-border hover:border-primary/50")}>
+                {opt}
               </button>
             ))}
           </motion.div>
         ) : (
-          <motion.div key="result" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+          <motion.div key="result" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="space-y-4">
             <div className="bg-primary/5 border border-primary/20 rounded-2xl p-5 text-center">
-              <p className="text-2xl font-bold text-primary">{RISK_PROFILES[riskProfile]?.name}</p>
-              <p className="text-muted-foreground text-sm mt-2">{RISK_PROFILES[riskProfile]?.desc}</p>
+              <p className="text-3xl font-bold text-primary mb-1">{riskProfile}</p>
+              <p className="text-muted-foreground text-sm">{RISK_PROFILES[riskProfile]?.desc}</p>
             </div>
-            <div className="bg-card border border-card-border rounded-2xl p-4 space-y-3">
-              <p className="text-xs font-medium text-muted-foreground">Suggested allocation</p>
-              {[
-                { label: "Equities", pct: RISK_PROFILES[riskProfile]?.eq, color: "bg-primary" },
-                { label: "Bonds", pct: RISK_PROFILES[riskProfile]?.bond, color: "bg-blue-400" },
-                { label: "Cash", pct: RISK_PROFILES[riskProfile]?.cash, color: "bg-muted-foreground" },
-              ].map(a => (
-                <div key={a.label}>
-                  <div className="flex justify-between text-sm mb-1"><span>{a.label}</span><span className="font-medium">{a.pct}%</span></div>
-                  <div className="h-2 bg-muted rounded-full"><div className={cn("h-full rounded-full", a.color)} style={{ width: `${a.pct}%` }} /></div>
-                </div>
-              ))}
+            <div className="bg-card border border-card-border rounded-2xl p-4">
+              <p className="text-xs font-medium text-muted-foreground mb-3">Suggested allocation</p>
+              <div className="space-y-2">
+                {[
+                  { label: "Equities", pct: RISK_PROFILES[riskProfile]?.eq ?? 0, color: "bg-primary" },
+                  { label: "Bonds", pct: RISK_PROFILES[riskProfile]?.bond ?? 0, color: "bg-blue-400" },
+                  { label: "Cash", pct: RISK_PROFILES[riskProfile]?.cash ?? 0, color: "bg-muted" },
+                ].map(a => (
+                  <div key={a.label}>
+                    <div className="flex justify-between text-xs mb-1"><span className="text-muted-foreground">{a.label}</span><span className="font-medium">{a.pct}%</span></div>
+                    <div className="h-1.5 bg-muted rounded-full overflow-hidden"><div className={cn("h-full rounded-full", a.color)} style={{ width: `${a.pct}%` }} /></div>
+                  </div>
+                ))}
+              </div>
             </div>
-            <Button className="w-full" onClick={() => finishStep(6)} disabled={saveStep.isPending}>
-              {saveStep.isPending ? "Saving…" : "Save my profile →"}
-            </Button>
+            <Button className="w-full" onClick={() => finishStep(6)}>Complete setup →</Button>
           </motion.div>
         )}
       </AnimatePresence>
+      {!allAnswered && riskSubStep > 0 && (
+        <button onClick={() => { setDir(-1); setRiskSubStep(s => Math.max(0, s - 1)); }} className="text-sm text-muted-foreground flex items-center gap-1 mx-auto">
+          <ArrowLeft className="h-3.5 w-3.5" />Back
+        </button>
+      )}
     </div>,
   ];
 
-  const rewardConfig = {
-    1: { title: "Income logged! ✨", description: "Great start — knowing your income is the foundation of every strong financial plan." },
-    2: { title: "Goal set! 🎯", description: "Having a clear goal makes you 42% more likely to achieve it. You're on your way." },
-    3: { title: "Plan complete! 🎉", description: "Your financial profile is ready. Check your personalised health score on the dashboard." },
-  } as const;
+  if (showReward) {
+    const messages = {
+      1: { title: "Income logged! 💰", desc: "Step 2 complete — let's track your expenses next", nextStep: 2 },
+      2: { title: "Goal set! 🎯", desc: "Step 4 complete — now let's see your full financial picture", nextStep: 4 },
+      3: { title: "You're all set! 🎉", desc: "Your financial plan is ready — explore your dashboard", nextStep: null },
+    };
+    const msg = messages[showReward];
+    return (
+      <RewardReveal
+        rewardNumber={showReward}
+        title={msg.title}
+        description={msg.desc}
+        onDismiss={() => {
+          setShowReward(null);
+          if (msg.nextStep !== null) advance(msg.nextStep);
+          else navigate("/free/dashboard");
+        }}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Top bar */}
-      <div className="sticky top-0 z-30 bg-background/95 backdrop-blur border-b border-border px-4 py-3">
-        <div className="flex items-center justify-between mb-2">
-          <button onClick={back} disabled={step === 0} className="h-8 w-8 flex items-center justify-center rounded-full border border-border disabled:opacity-30 hover:border-primary transition-colors">
-            <ArrowLeft className="h-4 w-4" />
-          </button>
-          <span className="text-sm text-muted-foreground">Step {step + 1} of 6</span>
-          <span className="text-xs text-muted-foreground w-16 text-right">
-            {saveStatus === "saving" ? "Saving…" : saveStatus === "saved" ? "Saved ✓" : ""}
-          </span>
-        </div>
-        <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-          <motion.div className="h-full bg-primary rounded-full" animate={{ width: `${((step + 1) / 6) * 100}%` }} transition={{ duration: 0.3 }} />
-        </div>
-        <div className="flex justify-between mt-1">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className={cn("h-1.5 w-1.5 rounded-full", i <= step ? "bg-primary" : "bg-transparent")} />
-          ))}
+      {/* Header */}
+      <div className="sticky top-0 z-10 bg-background border-b border-border">
+        <div className="max-w-lg mx-auto px-4 py-3 flex items-center gap-3">
+          {step > 0 && (
+            <button onClick={back} className="text-muted-foreground hover:text-foreground transition-colors mr-1">
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+          )}
+          <div className="flex-1">
+            <div className="flex gap-1.5">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className={cn("h-1 rounded-full flex-1 transition-all", i < step ? "bg-primary" : i === step ? "bg-primary/40" : "bg-muted")} />
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Step {step + 1} of 6</p>
+          </div>
+          {saveStatus !== "idle" && (
+            <span className="text-xs text-muted-foreground flex items-center gap-1">
+              {saveStatus === "saving" ? "Saving…" : <><Check className="h-3.5 w-3.5 text-primary" />Saved</>}
+            </span>
+          )}
         </div>
       </div>
 
       {/* Step content */}
-      <div className="flex-1 overflow-y-auto px-4 py-6">
-        <AnimatePresence custom={dir} mode="wait">
-          <motion.div key={step} custom={dir} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.2 }}>
-            {STEPS[step]}
-          </motion.div>
-        </AnimatePresence>
+      <div className="flex-1 overflow-x-hidden">
+        <div className="max-w-lg mx-auto px-4 py-6">
+          <AnimatePresence mode="wait" custom={dir}>
+            <motion.div
+              key={step}
+              custom={dir}
+              variants={slideVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.25, ease: "easeInOut" }}
+            >
+              {STEPS[step]}
+            </motion.div>
+          </AnimatePresence>
+        </div>
       </div>
 
-      {/* Skip */}
-      <div className="text-center pb-6 pt-2">
-        <button onClick={() => { saveStep.mutate({ stepNumber: step + 1, formData: {}, status: "skipped" }); if (step < 5) advance(step + 1); else navigate("/free/dashboard"); }} className="text-sm text-muted-foreground hover:text-foreground underline">
-          Skip this step
-        </button>
-      </div>
-
-      {/* Reward overlays */}
-      {showReward === 1 && (
-        <RewardReveal rewardNumber={1} title={rewardConfig[1].title} description={rewardConfig[1].description} onDismiss={() => { setShowReward(null); advance(2); }} />
-      )}
-      {showReward === 2 && (
-        <RewardReveal rewardNumber={2} title={rewardConfig[2].title} description={rewardConfig[2].description} onDismiss={() => { setShowReward(null); advance(4); }} />
-      )}
-      {showReward === 3 && (
-        <RewardReveal rewardNumber={3} title={rewardConfig[3].title} description={rewardConfig[3].description} onDismiss={() => { setShowReward(null); navigate("/free/dashboard"); }} />
-      )}
+      <BottomNav />
     </div>
   );
 }

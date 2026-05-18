@@ -1,4 +1,4 @@
-import { pgTable, text, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, boolean, timestamp, numeric } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -13,6 +13,10 @@ export const profilesTable = pgTable("profiles", {
   isExpat: boolean("is_expat").notNull().default(false),
   onboardingComplete: boolean("onboarding_complete").notNull().default(false),
   riskProfile: text("risk_profile"),
+  totalSavings: numeric("total_savings").notNull().default("0"),
+  totalInvestments: numeric("total_investments").notNull().default("0"),
+  savingsRatePercent: numeric("savings_rate_percent").notNull().default("4.0"),
+  investmentRatePercent: numeric("investment_rate_percent").notNull().default("7.0"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

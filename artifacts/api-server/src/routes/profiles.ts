@@ -46,9 +46,23 @@ router.get("/profiles/me", requireAuth, async (req, res): Promise<void> => {
 
 router.put("/profiles/me", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
-  const { fullName, preferredCurrency, countryCode, isExpat, onboardingComplete, riskProfile, avatarUrl } = req.body;
+  const {
+    fullName, preferredCurrency, countryCode, isExpat,
+    onboardingComplete, riskProfile, avatarUrl,
+    totalSavings, totalInvestments, savingsRatePercent, investmentRatePercent,
+  } = req.body;
+
+  const updates: Record<string, unknown> = {
+    fullName, preferredCurrency, countryCode, isExpat,
+    onboardingComplete, riskProfile, avatarUrl, updatedAt: new Date(),
+  };
+  if (totalSavings !== undefined) updates.totalSavings = String(totalSavings);
+  if (totalInvestments !== undefined) updates.totalInvestments = String(totalInvestments);
+  if (savingsRatePercent !== undefined) updates.savingsRatePercent = String(savingsRatePercent);
+  if (investmentRatePercent !== undefined) updates.investmentRatePercent = String(investmentRatePercent);
+
   const [updated] = await db.update(profilesTable)
-    .set({ fullName, preferredCurrency, countryCode, isExpat, onboardingComplete, riskProfile, avatarUrl, updatedAt: new Date() })
+    .set(updates as any)
     .where(eq(profilesTable.id, userId))
     .returning();
   if (!updated) {

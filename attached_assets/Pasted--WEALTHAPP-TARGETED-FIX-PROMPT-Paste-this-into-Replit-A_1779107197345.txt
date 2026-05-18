@@ -1,0 +1,319 @@
+# WEALTHAPP — TARGETED FIX PROMPT
+# Paste this into Replit Agent. These are surgical fixes to 4 broken areas.
+# Do NOT rebuild from scratch. Find and fix the specific files listed below.
+
+---
+
+## WHAT IS BROKEN (from screenshots)
+
+1. Health score breakdown shows impossible values (e.g. "100/25") — score cap not enforced per component
+2. Savings rate card on dashboard shows "—" even after pathway is complete
+3. Savings & investment interest rates collected in Pathway Step 5 are NOT flowing into goal projections or health score
+4. Budget page not linking to goal projections — monthlyCashSaved not passing into useGoals
+
+---
+
+## FIX 1 — src/lib/healthScore.ts
+# The goalsScore is not being capped. Fix the scoring function.
+
+Replace the goalsScore block with this exact code:
+
+```typescript
+// Component 2: Goal on-track status (25 pts MAX)
+let goalsScore = 0
+if (goalProjection) {
+  goalsScore = goalProjection.status === 'on_track' ? 25
+    : goalProjection.status === 'almost' ? 15 : 5
+} else if (goal) {
+  goalsScore = 10
+}
+goalsScore = Math.min(25, goalsScore) // HARD CAP at 25
+```
+
+Also ensure the overall score caps each component before summing:
+
+```typescript
+const overall = Math.min(100,
+  Math.min(25, savingsScore) +
+  Math.min(25, goalsScore) +
+  Math.min(20, netWorthScore) +
+  Math.min(20, wealthGrowthScore) +
+  Math.min(10, planScore)
+)
+```
+
+---
+
+## FIX 2 — src/hooks/useHealthScore.ts
+# calculateAndSave() must read savings_rate_percent and investment_rate_percent
+# from the profiles table (not hardcoded defaults).
+# Also must read total_savings and total_investments from profiles.
+
+In the calculateAndSave() function, make sure the input object is built like this:
+
+```typescript
+const input: HealthScoreInput = {
+  income: totalIncome,                                    // from useBudget or budget_transactions
+  totalExpenses: totalExpenses,                           // from useBudget or budget_transactions
+  savingsBalance: profile.total_savings ?? 0,             // from profiles table
+  savingsRatePercent: profile.savings_rate_percent ?? 4.0, // from profiles table
+  investmentValue: profile.total_investments ?? 0,        // from profiles table
+  investmentRatePercent: profile.investment_rate_percent ?? 7.0, // from profiles table
+  netWorth: latestSnapshot?.net_worth ?? 0,
+  prevMonthNetWorth: prevSnapshot?.net_worth ?? 0,
+  goal: primaryGoal ?? null,
+  goalProjection: primaryGoalProjection ?? null,
+  pathwayStepsCompleted: completedStepsCount,
+}
+```
+
+CRITICAL: profile.savings_rate_percent and profile.investment_rate_percent must be
+read from Supabase profiles table — these are set in Pathway Step 5 and Settings page.
+If the profiles table columns don't exist yet, add them in Supabase SQL editor:
+
+```sql
+alter table profiles add column if not exists savings_rate_percent numeric default 4.0;
+alter table profiles add column if not exists investment_rate_percent numeric default 7.0;
+```
+
+---
+
+## FIX 3 — src/hooks/useGoals.ts
+# recalculateProjections() must use rates from profiles, not hardcoded values.
+# It must also receive monthlyCashSaved from the current month's budget.
+
+The recalculateProjections function must accept current budget data and use profile rates:
+
+```typescript
+async function recalculateProjections(
+  goals: Goal[],
+  profile: Profile,
+  monthlyCashSaved: number
+) {
+  for (const goal of goals) {
+    if (!goal.target_date || !goal.target_amount) continue
+
+    const result = calculateProjection({
+      currentAmount: goal.current_amount ?? 0,
+      targetAmount: goal.target_amount,
+      targetDate: goal.target_date,
+      monthlyCashSaved: monthlyCashSaved,                          // FROM BUDGET, NOT ZERO
+      savingsBalance: profile.total_savings ?? 0,                  // FROM PROFILES
+      savingsRatePercent: profile.savings_rate_percent ?? 4.0,     // FROM PROFILES
+      investmentValue: profile.total_investments ?? 0,             // FROM PROFILES
+      investmentRatePercent: profile.investment_rate_percent ?? 7.0 // FROM PROFILES
+    })
+
+    await supabase.from('financial_goals').update({
+      status: result.status,
+      on_track: result.onTrack,
+      required_monthly_saving: result.requiredMonthlySaving,
+      projected_amount_at_target: result.projectedAmount,
+      monthly_shortfall: result.monthlyShortfall,
+      months_remaining: result.monthsRemaining,
+      gap_percent: result.gapPercent,
+      last_projection_update: new Date().toISOString(),
+    }).eq('id', goal.id)
+  }
+  // Re-fetch goals after update
+  fetchGoals()
+}
+```
+
+TRIGGER: Call recalculateProjections() whenever:
+- monthlyCashSaved changes (budget updated)
+- profile.savings_rate_percent changes (settings updated)
+- profile.investment_rate_percent changes (settings updated)
+- profile.total_savings changes (settings updated)
+- profile.total_investments changes (settings updated)
+
+---
+
+## FIX 4 — src/pages/Pathway.tsx — STEP 5
+# Step 5 must save savings_rate_percent and investment_rate_percent to profiles.
+# Currently it only saves total_savings and total_investments.
+
+In the Step 5 save handler, update profiles with ALL FOUR fields:
+
+```typescript
+await supabase.from('profiles').update({
+  total_savings: savingsAmount,
+  total_investments: investmentAmount,
+  savings_rate_percent: savingsRatePercent,    // e.g. 4.0 from user input
+  investment_rate_percent: investmentRatePercent, // e.g. 7.0 from user input
+}).eq('id', userId)
+```
+
+Step 5 UI must show TWO additional inputs below the savings/investment amounts:
+
+```
+"Annual savings interest rate"   [  4.0  ] %   (number input, step 0.1, min 0, max 20)
+helper: "e.g. bank deposit rate in Vietnam: 4–5%"
+
+"Average annual investment return"  [  7.0  ] %  (number input, step 0.1, min 0, max 25)
+helper: "e.g. global equity ETF average: 7–9%"
+```
+
+Pre-fill these from profile.savings_rate_percent and profile.investment_rate_percent.
+Show them AFTER the savings and investment amount inputs.
+Show a live preview: "Your money will grow approx. $X/month from returns alone"
+where X = (savingsAmount * savingsRatePercent/100/12) + (investmentAmount * investmentRatePercent/100/12)
+
+---
+
+## FIX 5 — src/pages/Settings.tsx
+# Settings financial rates section must save to profiles correctly.
+# After saving, trigger useGoals.recalculateProjections().
+
+The save handler in Settings:
+
+```typescript
+const handleSaveRates = async () => {
+  await updateProfile({
+    total_savings: savingsBalance,
+    total_investments: investmentValue,
+    savings_rate_percent: savingsInterestRate,
+    investment_rate_percent: investmentReturnRate,
+  })
+  // Then trigger goal recalculation with updated values
+  await recalculateProjections(goals, updatedProfile, monthlyCashSaved)
+  showToast('Rates saved — projections updated', 'success')
+}
+```
+
+---
+
+## FIX 6 — src/pages/Dashboard.tsx
+# Savings rate card shows "—" because it reads from budget_monthly_summaries
+# but that table may not be populated yet.
+# Fix: read directly from budget_transactions for current month instead.
+
+In Dashboard, the savings rate card must use this logic:
+
+```typescript
+// Do NOT rely on budget_monthly_summaries for display
+// Calculate directly from useBudget hook values
+const displaySavingsRate = totalIncome > 0
+  ? ((totalIncome - totalExpenses) / totalIncome * 100).toFixed(0) + '%'
+  : null
+
+// In the savings rate card:
+// If displaySavingsRate is null → show "Set up budget →" link to /app/pathway?step=2
+// If displaySavingsRate exists → show the percentage in large text
+//   Sub-label: "Target: 20%" in muted color
+//   Color: green if >20%, amber if 10-20%, red if <10%
+```
+
+Also: pass monthlyCashSaved from useBudget into useGoals so projections stay live:
+
+```typescript
+// In Dashboard component, after both hooks are loaded:
+useEffect(() => {
+  if (profile && goals.length > 0 && !budgetLoading) {
+    recalculateProjections(goals, profile, monthlyCashSaved)
+  }
+}, [monthlyCashSaved, profile?.savings_rate_percent, profile?.investment_rate_percent])
+```
+
+---
+
+## FIX 7 — src/pages/Budget.tsx
+# After any transaction is added/edited/deleted, recalculate summary AND trigger goal projection update.
+
+After confirmAllRecurring(), addTransaction(), deleteTransaction():
+
+```typescript
+await recalculateSummary()        // updates budget_monthly_summaries
+await recalculateProjections(...)  // updates goal projections with new monthlyCashSaved
+```
+
+The recalculateSummary() function in useBudget must correctly upsert:
+
+```typescript
+const recalculateSummary = async () => {
+  const income = transactions
+    .filter(t => t.category === 'income')
+    .reduce((sum, t) => sum + Math.abs(t.amount), 0)
+
+  const expenses = transactions
+    .filter(t => t.category !== 'income')
+    .reduce((sum, t) => sum + Math.abs(t.amount), 0)
+
+  const netSavings = income - expenses
+  const savingsRate = income > 0 ? (netSavings / income) * 100 : 0
+
+  await supabase.from('budget_monthly_summaries').upsert({
+    user_id: userId,
+    period_month: selectedMonth,   // format: 'YYYY-MM-01'
+    total_income: income,
+    total_expenses: expenses,
+    net_savings: netSavings,
+    savings_rate: savingsRate,
+    updated_at: new Date().toISOString(),
+  }, { onConflict: 'user_id,period_month' })
+}
+```
+
+---
+
+## FIX 8 — GoalCard monthly growth chip
+# The "↑ +$X/month from savings & investment returns" chip must display correctly.
+# It reads monthlyGrowthFromReturns from the goal projection result.
+# This will only show a real number once rates are flowing from profiles (fixes above).
+
+In GoalCard.tsx, the chip logic:
+
+```typescript
+const monthlyGrowth = goal.monthly_growth_from_returns // store this on the goal record
+// OR calculate inline:
+const monthlyGrowth =
+  (profile.total_savings * profile.savings_rate_percent / 100 / 12) +
+  (profile.total_investments * profile.investment_rate_percent / 100 / 12)
+
+// Show chip only if monthlyGrowth > 0:
+{monthlyGrowth > 0 && (
+  <div className="flex items-center gap-1 bg-emerald-50 text-emerald-700 text-xs px-3 py-1.5 rounded-full w-fit">
+    <span>↑ +${monthlyGrowth.toFixed(0)}/month from savings interest + investment returns</span>
+  </div>
+)}
+```
+
+Also add monthly_growth_from_returns column to financial_goals if not present:
+
+```sql
+alter table financial_goals add column if not exists monthly_growth_from_returns numeric default 0;
+```
+
+And save it in recalculateProjections():
+
+```typescript
+monthly_growth_from_returns: result.monthlyGrowthFromReturns,
+```
+
+---
+
+## VERIFICATION CHECKLIST
+
+After applying all fixes, test in this order:
+
+□ Go to Settings → enter savings balance $10,000, rate 4.5%, investments $5,000, return 7%
+  → Save → check Supabase profiles table: all 4 columns updated
+
+□ Go to Goals page → goal card should show:
+  "↑ +$66/month from savings interest + investment returns"
+  (10000 × 4.5%/12 = $37.50 + 5000 × 7%/12 = $29.17 = ~$67)
+
+□ Go to Budget → add income $5,000, add rent expense -$1,500
+  → Dashboard savings rate card should show "70%" in green (not "—")
+
+□ Health score page → "Effective savings rate" card should show non-zero value
+  matching (income - expenses + monthly investment returns) / income × 100
+
+□ Health score breakdown: no component score should ever exceed its maximum
+  (savings ≤25, goals ≤25, networth ≤20, wealthgrowth ≤20, plan ≤10)
+
+□ Goal card for a goal with $50k target / 5 years → if monthlyCashSaved = $3,500
+  and investment returns = $67/month → projected = on_track or almost → card state matches
+
+□ Change investment return rate in Settings from 7% to 3% → goal projection immediately
+  recalculates → goal card may flip from on_track to almost or off_track
