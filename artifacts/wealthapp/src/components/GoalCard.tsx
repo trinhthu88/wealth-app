@@ -30,8 +30,8 @@ interface Props {
   projection?: ProjectionResult;
   onContribute?: () => void;
   onEdit?: () => void;
-  /** Pass savings + investment balances so the progress bar reflects total working capital */
-  effectiveCurrentAmount?: number;
+  /** Savings + investment balances working toward this goal (shown as context, not as "saved") */
+  accountsBalance?: number;
 }
 
 function fmt(n: number) {
@@ -106,10 +106,10 @@ function ActionButtons({ onContribute, onEdit, btnClass }: { onContribute?: () =
   );
 }
 
-export default function GoalCard({ goal, projection, onContribute, onEdit, effectiveCurrentAmount }: Props) {
+export default function GoalCard({ goal, projection, onContribute, onEdit, accountsBalance }: Props) {
   const storedCurrent = parseFloat(goal.currentAmount ?? "0");
-  // Use effectiveCurrentAmount (includes savings + investment balances) when provided
-  const current = effectiveCurrentAmount !== undefined ? effectiveCurrentAmount : storedCurrent;
+  // Progress bar uses manual contributions only — accounts shown separately as context
+  const current = storedCurrent;
   const target = parseFloat(goal.targetAmount ?? "0");
   const pct = target > 0 ? Math.min(100, Math.round((current / target) * 100)) : 0;
   const emoji = GOAL_EMOJI[goal.goalType] ?? "🎯";
@@ -145,7 +145,12 @@ export default function GoalCard({ goal, projection, onContribute, onEdit, effec
     return (
       <div>
         <div className="flex justify-between text-xs mb-1.5">
-          <span className="font-medium">{fmt(current)} saved</span>
+          <div>
+            <span className="font-medium">{current > 0 ? `${fmt(current)} saved` : "Not started"}</span>
+            {accountsBalance && accountsBalance > 0 && (
+              <span className="text-muted-foreground ml-1.5">· {fmt(accountsBalance)} in accounts</span>
+            )}
+          </div>
           <span className="text-muted-foreground">{target > 0 ? fmt(target) : "—"} by {targetDateStr ?? "target"}</span>
         </div>
         <div className="h-2 rounded-full bg-white/60 overflow-hidden">

@@ -302,7 +302,7 @@ export default function GoalsPage() {
           <GoalCard
             goal={topGoal}
             projection={projection}
-            effectiveCurrentAmount={effectiveCurrentAmount}
+            accountsBalance={savingsBalance + investmentValue}
             onContribute={() => setContributeOpen(true)}
             onEdit={() => openEdit(topGoal)}
           />

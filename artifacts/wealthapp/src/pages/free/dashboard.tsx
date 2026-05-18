@@ -305,7 +305,7 @@ export default function FreeDashboard() {
             <GoalCard
               goal={topGoal}
               projection={projection}
-              effectiveCurrentAmount={effectiveCurrentAmount}
+              accountsBalance={savingsBalance + investmentValue}
               onContribute={() => window.location.href = "/free/goals"}
             />
           </div>
