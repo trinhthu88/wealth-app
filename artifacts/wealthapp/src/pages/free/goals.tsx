@@ -98,8 +98,11 @@ export default function GoalsPage() {
   const expenses = txExpenses > 0 ? txExpenses : estExpenses;
   const monthlyCashSaved = Math.max(0, income - expenses);
 
-  const savingsBalance = assets.filter(a => a.category === "savings").reduce((s, a) => s + parseFloat(a.valueUsd ?? "0"), 0);
-  const investmentValue = assets.filter(a => a.category === "investment").reduce((s, a) => s + parseFloat(a.valueUsd ?? "0"), 0);
+  // Prefer categorised asset rows; fall back to profile totals (set via pathway)
+  const assetsSavings = assets.filter(a => a.category === "savings").reduce((s, a) => s + parseFloat(a.valueUsd ?? "0"), 0);
+  const assetsInvestment = assets.filter(a => a.category === "investment").reduce((s, a) => s + parseFloat(a.valueUsd ?? "0"), 0);
+  const savingsBalance = assetsSavings > 0 ? assetsSavings : parseFloat(profile?.totalSavings ?? "0");
+  const investmentValue = assetsInvestment > 0 ? assetsInvestment : parseFloat(profile?.totalInvestments ?? "0");
 
   const monthlyReturns = savingsBalance * (savRatePct / 100 / 12) + investmentValue * (invRatePct / 100 / 12);
   const totalMonthlyGrowth = monthlyCashSaved + monthlyReturns;
