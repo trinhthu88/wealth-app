@@ -227,8 +227,8 @@ export default function InvestmentsPage() {
 
               return (
                 <motion.div key={pkg.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
-                  <Link href={`/client/packages/${pkg.id}`}>
-                    <a className="block bg-card border border-card-border rounded-2xl p-4 hover:shadow-md transition-shadow">
+                  <Link href={`/client/packages/${pkg.id}`}
+                    className="block bg-card border border-card-border rounded-2xl p-4 hover:shadow-md transition-shadow">
                       <div className="flex items-start justify-between mb-2">
                         <div>
                           <div className="flex items-center gap-2 mb-0.5">
@@ -275,7 +275,6 @@ export default function InvestmentsPage() {
                           {pkg.monthlyAmount && <span> · {fmtCurrency(parseFloat(pkg.monthlyAmount))}/month planned</span>}
                         </div>
                       )}
-                    </a>
                   </Link>
                 </motion.div>
               );

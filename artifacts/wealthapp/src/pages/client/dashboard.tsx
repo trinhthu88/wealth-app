@@ -160,8 +160,8 @@ function ActiveDashboard({ firstName, packages, goals, transactions, scenarios }
           </div>
           <div className="flex items-center justify-between text-xs text-slate-400">
             <span>Invested: {fmtCurrency(totalInvested)}</span>
-            <Link href="/client/portfolio">
-              <a className="text-white font-medium flex items-center gap-1 hover:opacity-80">View Portfolio <ArrowRight className="h-3.5 w-3.5" /></a>
+            <Link href="/client/portfolio" className="text-white font-medium flex items-center gap-1 hover:opacity-80">
+              View Portfolio <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
         </motion.div>
@@ -170,7 +170,7 @@ function ActiveDashboard({ firstName, packages, goals, transactions, scenarios }
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-semibold">Goals at a Glance</h3>
-              <Link href="/client/goals"><a className="text-xs text-primary">View all</a></Link>
+              <Link href="/client/goals" className="text-xs text-primary">View all</Link>
             </div>
             <div className="flex gap-3 overflow-x-auto pb-1 -mx-4 px-4">
               {goals.map((g) => {
@@ -198,11 +198,9 @@ function ActiveDashboard({ firstName, packages, goals, transactions, scenarios }
                   </div>
                 );
               })}
-              <Link href="/client/goals">
-                <a className="shrink-0 w-36 bg-card border border-dashed border-border rounded-xl p-3 flex flex-col items-center justify-center gap-1 text-muted-foreground hover:border-primary/40">
-                  <Plus className="h-5 w-5" />
-                  <span className="text-xs">Add goal</span>
-                </a>
+              <Link href="/client/goals" className="shrink-0 w-36 bg-card border border-dashed border-border rounded-xl p-3 flex flex-col items-center justify-center gap-1 text-muted-foreground hover:border-primary/40">
+                <Plus className="h-5 w-5" />
+                <span className="text-xs">Add goal</span>
               </Link>
             </div>
           </motion.div>
@@ -212,7 +210,7 @@ function ActiveDashboard({ firstName, packages, goals, transactions, scenarios }
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-semibold">My Packages</h3>
-              <Link href="/client/packages"><a className="text-xs text-primary">View all</a></Link>
+              <Link href="/client/portfolio" className="text-xs text-primary">View all</Link>
             </div>
             <div className="flex gap-3 overflow-x-auto pb-1 -mx-4 px-4">
               {packages.map((pkg) => {
@@ -221,27 +219,26 @@ function ActiveDashboard({ firstName, packages, goals, transactions, scenarios }
                 const ret = value - invested;
                 const retPct = invested > 0 ? (ret / invested) * 100 : 0;
                 return (
-                  <Link key={pkg.id} href={`/client/packages/${pkg.id}`}>
-                    <a className="shrink-0 w-52 bg-card border border-card-border rounded-xl p-4 block hover:shadow-sm transition-shadow">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-semibold truncate">{pkg.nickname}</span>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${pkg.status === "active" ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>
-                          {pkg.status === "active" ? "Active" : "Setting up"}
-                        </span>
-                      </div>
-                      <div className="text-xl font-bold text-navy">{fmtCurrency(value)}</div>
-                      <div className={`text-xs mt-1 ${ret >= 0 ? "text-emerald-600" : "text-red-500"}`}>
-                        {ret >= 0 ? "+" : ""}{fmtCurrency(ret)} ({retPct >= 0 ? "+" : ""}{retPct.toFixed(1)}%)
-                      </div>
-                      {pkg.monthlyAmount && <div className="text-xs text-muted-foreground mt-1">{fmtCurrency(parseFloat(pkg.monthlyAmount))}/month</div>}
-                    </a>
+                  <Link key={pkg.id} href={`/client/packages/${pkg.id}`}
+                    className="shrink-0 w-52 bg-card border border-card-border rounded-xl p-4 block hover:shadow-sm transition-shadow">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-semibold truncate">{pkg.nickname}</span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${pkg.status === "active" ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>
+                        {pkg.status === "active" ? "Active" : "Setting up"}
+                      </span>
+                    </div>
+                    <div className="text-xl font-bold text-navy">{fmtCurrency(value)}</div>
+                    <div className={`text-xs mt-1 ${ret >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+                      {ret >= 0 ? "+" : ""}{fmtCurrency(ret)} ({retPct >= 0 ? "+" : ""}{retPct.toFixed(1)}%)
+                    </div>
+                    {pkg.monthlyAmount && <div className="text-xs text-muted-foreground mt-1">{fmtCurrency(parseFloat(pkg.monthlyAmount))}/month</div>}
                   </Link>
                 );
               })}
-              <a className="shrink-0 w-40 bg-card border border-dashed border-border rounded-xl p-4 flex flex-col items-center justify-center gap-1 text-muted-foreground hover:border-primary/40 cursor-pointer">
+              <Link href="/client/portfolio" className="shrink-0 w-40 bg-card border border-dashed border-border rounded-xl p-4 flex flex-col items-center justify-center gap-1 text-muted-foreground hover:border-primary/40">
                 <Plus className="h-5 w-5" />
                 <span className="text-xs">Add package</span>
-              </a>
+              </Link>
             </div>
           </motion.div>
         )}
@@ -265,7 +262,7 @@ function ActiveDashboard({ firstName, packages, goals, transactions, scenarios }
             className="bg-card border border-card-border rounded-xl p-5">
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-semibold">Recent Activity</h3>
-              <Link href="/client/transactions"><a className="text-xs text-primary">View all</a></Link>
+              <Link href="/client/transactions" className="text-xs text-primary">View all</Link>
             </div>
             <div className="space-y-2.5">
               {transactions.slice(0, 5).map((tx) => (
@@ -292,10 +289,9 @@ function ActiveDashboard({ firstName, packages, goals, transactions, scenarios }
             ].map((a) => {
               const Icon = a.icon;
               return (
-                <Link key={a.label} href={a.href}>
-                  <a className="shrink-0 flex items-center gap-2 px-4 py-2 bg-card border border-card-border rounded-full text-sm font-medium hover:bg-primary/5 transition-colors">
-                    <Icon className="h-4 w-4 text-primary" /> {a.label}
-                  </a>
+                <Link key={a.label} href={a.href}
+                  className="shrink-0 flex items-center gap-2 px-4 py-2 bg-card border border-card-border rounded-full text-sm font-medium hover:bg-primary/5 transition-colors">
+                  <Icon className="h-4 w-4 text-primary" /> {a.label}
                 </Link>
               );
             })}
