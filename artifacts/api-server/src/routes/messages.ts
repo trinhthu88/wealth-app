@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, or } from "drizzle-orm";
+import { eq, or, and } from "drizzle-orm";
 import { db, conversationsTable, messagesTable } from "@workspace/db";
 import { requireAuth } from "../middlewares/requireAuth";
 
@@ -7,6 +7,19 @@ const router: IRouter = Router();
 
 router.get("/conversations", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
+  const { clientId, advisorId } = req.query;
+
+  // Lookup by clientId + advisorId (find or create pattern)
+  if (clientId && advisorId) {
+    const [existing] = await db.select().from(conversationsTable)
+      .where(and(eq(conversationsTable.clientId, clientId as string), eq(conversationsTable.advisorId, advisorId as string)));
+    if (existing) { res.json([existing]); return; }
+    // Auto-create
+    const [created] = await db.insert(conversationsTable).values({ clientId: clientId as string, advisorId: advisorId as string }).returning();
+    res.json([created]);
+    return;
+  }
+
   const convs = await db.select().from(conversationsTable)
     .where(or(eq(conversationsTable.clientId, userId), eq(conversationsTable.advisorId, userId)));
   res.json(convs);

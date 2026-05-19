@@ -45,6 +45,8 @@ import AdminDashboard from "@/pages/admin/dashboard";
 import AdminUsers from "@/pages/admin/users";
 import AdminBlog from "@/pages/admin/blog";
 import AdminFunds from "@/pages/admin/funds";
+import AdminClients from "@/pages/admin/clients";
+import AdminPrices from "@/pages/admin/prices";
 
 import NotFound from "@/pages/not-found";
 
@@ -235,6 +237,8 @@ function AppRoutes() {
 
       <Route path="/admin/dashboard" component={() => <ProtectedRoute component={AdminDashboard} role={["super_admin"]} />} />
       <Route path="/admin/users" component={() => <ProtectedRoute component={AdminUsers} role={["super_admin"]} />} />
+      <Route path="/admin/clients" component={() => <ProtectedRoute component={AdminClients} role={["super_admin"]} />} />
+      <Route path="/admin/prices" component={() => <ProtectedRoute component={AdminPrices} role={["super_admin"]} />} />
       <Route path="/admin/blog" component={() => <ProtectedRoute component={AdminBlog} role={["super_admin", "advisor"]} />} />
       <Route path="/admin/funds" component={() => <ProtectedRoute component={AdminFunds} role={["super_admin"]} />} />
 

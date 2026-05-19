@@ -451,4 +451,92 @@ router.get("/advisor/clients/:clientId/transactions", requireAuth, requireRole("
   res.json(txs);
 });
 
+// ── Fund Prices: all latest (no fundIds required) ────────────────────────────
+
+router.get("/fund-prices/latest", requireAuth, async (req, res): Promise<void> => {
+  const allFunds = await db.select().from(fundsTable).orderBy(fundsTable.name);
+  if (allFunds.length === 0) { res.json([]); return; }
+
+  const allPrices = await db.select().from(fundPricesTable)
+    .where(inArray(fundPricesTable.fundId, allFunds.map(f => f.id)))
+    .orderBy(desc(fundPricesTable.priceDate));
+
+  const latestMap: Record<string, typeof allPrices[0]> = {};
+  for (const p of allPrices) {
+    if (!latestMap[p.fundId]) latestMap[p.fundId] = p;
+  }
+
+  const result = allFunds.map(f => ({
+    ...f,
+    latestPrice: latestMap[f.id] ?? null,
+  }));
+
+  res.json(result);
+});
+
+// ── Fund Prices: refresh via Twelve Data API ──────────────────────────────────
+
+router.post("/prices/refresh", requireAuth, requireRole("advisor", "super_admin"), async (req, res): Promise<void> => {
+  const apiKey = process.env.TWELVE_DATA_API_KEY;
+  if (!apiKey) { res.status(500).json({ error: "TWELVE_DATA_API_KEY not configured" }); return; }
+
+  // Get funds that have a priceApiSymbol
+  const funds = await db.select().from(fundsTable)
+    .where(eq(fundsTable.isActive, true));
+
+  const fundIds = (req.body?.fundIds as string[] | undefined);
+  const toRefresh = fundIds
+    ? funds.filter(f => fundIds.includes(f.id) && f.priceApiSymbol)
+    : funds.filter(f => f.priceApiSymbol);
+
+  if (toRefresh.length === 0) {
+    res.json({ refreshed: 0, message: "No funds with priceApiSymbol configured" });
+    return;
+  }
+
+  const symbols = toRefresh.map(f => f.priceApiSymbol).join(",");
+  const url = `https://api.twelvedata.com/price?symbol=${encodeURIComponent(symbols)}&apikey=${apiKey}`;
+  const tdRes = await fetch(url);
+
+  if (!tdRes.ok) {
+    res.status(502).json({ error: "Twelve Data API request failed" });
+    return;
+  }
+
+  const data = await tdRes.json() as Record<string, any>;
+  const today = new Date().toISOString().split("T")[0];
+  let refreshed = 0;
+
+  for (const fund of toRefresh) {
+    if (!fund.priceApiSymbol) continue;
+    const raw = symbols.includes(",") ? data[fund.priceApiSymbol!] : data;
+    if (!raw || raw.status === "error" || !raw.price) continue;
+
+    const priceNative = parseFloat(raw.price);
+    if (isNaN(priceNative)) continue;
+
+    // Upsert price for today
+    const existing = await db.select().from(fundPricesTable)
+      .where(and(eq(fundPricesTable.fundId, fund.id), eq(fundPricesTable.priceDate, today)));
+
+    if (existing.length > 0) {
+      await db.update(fundPricesTable)
+        .set({ priceNative: String(priceNative), priceUsd: String(priceNative), source: "twelve_data" })
+        .where(eq(fundPricesTable.id, existing[0].id));
+    } else {
+      await db.insert(fundPricesTable).values({
+        fundId: fund.id,
+        priceDate: today,
+        priceNative: String(priceNative),
+        priceUsd: String(priceNative),
+        source: "twelve_data",
+      });
+    }
+    refreshed++;
+  }
+
+  res.json({ refreshed, total: toRefresh.length });
+});
+
 export default router;
+

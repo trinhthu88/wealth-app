@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { eq } from "drizzle-orm";
-import { db, clientProfilesTable, profilesTable } from "@workspace/db";
+import { eq, inArray, desc } from "drizzle-orm";
+import { db, clientProfilesTable, profilesTable, clientPackagesTable, portfolioSnapshotsTable } from "@workspace/db";
 import { requireAuth } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
@@ -40,8 +40,13 @@ router.put("/advisor/clients/:id/client-profile", requireAuth, async (req, res):
 });
 
 router.get("/advisor/clients", requireAuth, async (req, res): Promise<void> => {
-  const advisorId = (req as any).userId;
-  const clients = await db.select({
+  const callerId = (req as any).userId;
+
+  // Check if caller is super_admin (sees all) or advisor (sees assigned)
+  const [callerProfile] = await db.select({ role: profilesTable.role }).from(profilesTable).where(eq(profilesTable.id, callerId));
+  const isAdmin = callerProfile?.role === "super_admin";
+
+  const query = db.select({
     id: profilesTable.id,
     email: profilesTable.email,
     fullName: profilesTable.fullName,
@@ -49,12 +54,52 @@ router.get("/advisor/clients", requireAuth, async (req, res): Promise<void> => {
     createdAt: profilesTable.createdAt,
     kycStatus: clientProfilesTable.kycStatus,
     riskProfile: clientProfilesTable.riskProfile,
+    status: clientProfilesTable.status,
+    investmentStyle: clientProfilesTable.investmentStyle,
+    indicativeAmount: clientProfilesTable.indicativeAmount,
     onboardingStep: clientProfilesTable.onboardingStep,
     advisorId: clientProfilesTable.advisorId,
   }).from(profilesTable)
-    .innerJoin(clientProfilesTable, eq(clientProfilesTable.userId, profilesTable.id))
-    .where(eq(clientProfilesTable.advisorId, advisorId));
-  res.json(clients);
+    .innerJoin(clientProfilesTable, eq(clientProfilesTable.userId, profilesTable.id));
+
+  const clients = isAdmin
+    ? await query.where(eq(profilesTable.role, "investment_client")).orderBy(desc(profilesTable.createdAt))
+    : await query.where(eq(clientProfilesTable.advisorId, callerId)).orderBy(desc(profilesTable.createdAt));
+
+  // Enrich with portfolio value
+  const clientIds = clients.map(c => c.id);
+  if (clientIds.length === 0) { res.json([]); return; }
+
+  const packages = await db.select({
+    userId: clientPackagesTable.userId,
+    id: clientPackagesTable.id,
+    status: clientPackagesTable.status,
+  }).from(clientPackagesTable).where(inArray(clientPackagesTable.userId, clientIds));
+
+  const pkgIds = packages.map(p => p.id);
+  const snapshots = pkgIds.length > 0
+    ? await db.select({
+        clientPackageId: portfolioSnapshotsTable.clientPackageId,
+        totalValueUsd: portfolioSnapshotsTable.totalValueUsd,
+      }).from(portfolioSnapshotsTable)
+        .where(inArray(portfolioSnapshotsTable.clientPackageId, pkgIds))
+        .orderBy(desc(portfolioSnapshotsTable.snapshotDate))
+    : [];
+
+  const latestSnap: Record<string, number> = {};
+  for (const s of snapshots) {
+    if (!latestSnap[s.clientPackageId]) {
+      latestSnap[s.clientPackageId] = parseFloat(s.totalValueUsd as string);
+    }
+  }
+
+  const result = clients.map(c => {
+    const clientPkgs = packages.filter(p => p.userId === c.id);
+    const portfolioValue = clientPkgs.reduce((sum, p) => sum + (latestSnap[p.id] ?? 0), 0);
+    return { ...c, portfolioValue, packagesCount: clientPkgs.length };
+  });
+
+  res.json(result);
 });
 
 export default router;

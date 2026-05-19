@@ -1,0 +1,1546 @@
+# WEALTHAPP — ADVISOR & ADMIN PORTAL: REPLIT AGENT PROMPT
+# PURPOSE: Build the Advisor and Admin portals so you can create and test
+# investment packages for investment client users end-to-end.
+# This is a focused build prompt — client-facing portal comes separately.
+#
+# WHAT THIS BUILDS:
+#   - Advisor: create investment clients, create packages, set fund allocations,
+#     enter transactions, manage tasks, message clients
+#   - Admin: see ALL investment clients across all advisors, manage funds master list,
+#     manage fund prices, manage users + roles
+#   - Shared: fund prices via Twelve Data API + Supabase Edge Function
+#   - Test flow: Admin creates advisor + client → Advisor builds package → Client sees it
+
+---
+
+## CONTEXT: WHAT ALREADY EXISTS — DO NOT MODIFY
+
+The following is already built and working. Do not touch these files or tables:
+
+EXISTING TABLES (do not alter):
+  profiles, pathway_steps, budget_transactions, budget_monthly_summaries,
+  financial_goals, net_worth_snapshots, health_scores, habit_checkins,
+  user_milestones, user_tips, benchmarks
+
+EXISTING ROUTES:
+  / (landing), /login, /register, /app/* (free user portal)
+
+EXISTING DESIGN SYSTEM:
+  Primary: #1D9E75 | Primary-dark: #0F6E56 | Navy: #042C53
+  Surface: #F8FAFB | Border: #E2E8F0 | Muted: #64748B
+  Font: Inter | Tailwind CSS | Framer Motion | Recharts | Lucide React
+  Supabase (auth + DB) | React + TypeScript + Vite
+
+---
+
+## STEP 1 — RUN THIS SQL IN SUPABASE SQL EDITOR FIRST
+
+```sql
+-- ============================================================
+-- INVESTMENT SYSTEM TABLES
+-- Run this entire block in Supabase SQL editor before building
+-- ============================================================
+
+-- Fund master list (admin creates, advisors use)
+CREATE TABLE IF NOT EXISTS funds (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  ticker TEXT,
+  isin TEXT,
+  asset_class TEXT NOT NULL
+    CHECK (asset_class IN ('equity','bond','cash','real_estate','commodity','alternative')),
+  geography TEXT,         -- 'us'|'global'|'asia'|'vietnam'|'em'|'europe'
+  currency TEXT DEFAULT 'USD',
+  fund_manager TEXT,
+  fund_type TEXT CHECK (fund_type IN ('etf','mutual_fund','unit_trust','money_market')),
+  expense_ratio NUMERIC,
+  benchmark_index TEXT,
+  factsheet_url TEXT,
+  price_api_symbol TEXT,  -- symbol used by Twelve Data API e.g. 'IVV' or 'IWDA.L'
+  price_api_exchange TEXT,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Daily fund prices (from Twelve Data API or manual override)
+CREATE TABLE IF NOT EXISTS fund_prices (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  fund_id UUID REFERENCES funds(id),
+  price_date DATE NOT NULL,
+  price_native NUMERIC NOT NULL,
+  price_usd NUMERIC NOT NULL,
+  price_vnd NUMERIC,
+  change_1d NUMERIC DEFAULT 0,
+  change_1d_percent NUMERIC DEFAULT 0,
+  source TEXT DEFAULT 'api' CHECK (source IN ('api','manual')),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(fund_id, price_date)
+);
+
+-- Extended profile for investment clients (one row per investment_client user)
+CREATE TABLE IF NOT EXISTS client_profiles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE UNIQUE,
+  advisor_id UUID REFERENCES profiles(id),
+  status TEXT DEFAULT 'prospect'
+    CHECK (status IN ('prospect','active','active_prospect','paused','churned')),
+  risk_profile TEXT
+    CHECK (risk_profile IN ('conservative','moderately_conservative','moderate',
+                            'moderately_aggressive','aggressive')),
+  risk_score INT,
+  investment_style TEXT CHECK (investment_style IN ('rsp','lump_sum','combination','exploring')),
+  indicative_amount NUMERIC,
+  pre_call_notes TEXT,
+  preferred_contact_time TEXT,
+  kyc_status TEXT DEFAULT 'not_started'
+    CHECK (kyc_status IN ('not_started','submitted','under_review','approved','rejected')),
+  prospect_onboarding_complete BOOLEAN DEFAULT FALSE,
+  full_onboarding_complete BOOLEAN DEFAULT FALSE,
+  relationship_start_date DATE,
+  annual_review_date DATE,
+  advisor_internal_notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Prospect financial snapshot (collected during onboarding — ranges, not exact)
+CREATE TABLE IF NOT EXISTS client_financial_snapshots (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE UNIQUE,
+  monthly_income NUMERIC,
+  savings_range TEXT,
+  has_investments BOOLEAN DEFAULT FALSE,
+  investments_rough_value NUMERIC,
+  has_debts BOOLEAN DEFAULT FALSE,
+  debts_rough_value NUMERIC,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Investment packages (advisor creates, one client can have many)
+CREATE TABLE IF NOT EXISTS client_packages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  advisor_id UUID REFERENCES profiles(id),
+  goal_id UUID REFERENCES financial_goals(id),
+  nickname TEXT NOT NULL,
+  status TEXT DEFAULT 'pending_setup'
+    CHECK (status IN ('pending_setup','pending_kyc','active','paused','closed')),
+  type TEXT NOT NULL CHECK (type IN ('rsp','lump_sum','combination')),
+  monthly_amount NUMERIC DEFAULT 0,
+  lump_sum_amount NUMERIC DEFAULT 0,
+  start_date DATE,
+  end_date DATE,
+  currency TEXT DEFAULT 'USD',
+  expected_annual_return NUMERIC DEFAULT 7.0,
+  advisor_notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Fund allocations per package (advisor-set, must sum to 100% per package)
+CREATE TABLE IF NOT EXISTS package_allocations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_package_id UUID REFERENCES client_packages(id) ON DELETE CASCADE,
+  fund_id UUID REFERENCES funds(id),
+  weight_percent NUMERIC NOT NULL CHECK (weight_percent > 0 AND weight_percent <= 100),
+  units_held NUMERIC DEFAULT 0,
+  is_active BOOLEAN DEFAULT TRUE,
+  set_by UUID REFERENCES profiles(id),
+  effective_from DATE DEFAULT CURRENT_DATE,
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Package transactions (advisor-entered only — every investment event)
+CREATE TABLE IF NOT EXISTS package_transactions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_package_id UUID REFERENCES client_packages(id),
+  user_id UUID REFERENCES profiles(id),
+  fund_id UUID REFERENCES funds(id),
+  transaction_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  transaction_type TEXT NOT NULL
+    CHECK (transaction_type IN (
+      'initial_investment','monthly_contribution','top_up',
+      'withdrawal','dividend_reinvested','fee_charged',
+      'rebalance_buy','rebalance_sell','switch_in','switch_out'
+    )),
+  amount_usd NUMERIC NOT NULL,
+  units NUMERIC,
+  price_per_unit_usd NUMERIC,
+  notes TEXT,
+  created_by UUID REFERENCES profiles(id),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Portfolio value snapshots (recalculated after every transaction or price update)
+CREATE TABLE IF NOT EXISTS portfolio_snapshots (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_package_id UUID REFERENCES client_packages(id),
+  user_id UUID REFERENCES profiles(id),
+  snapshot_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  total_invested_usd NUMERIC NOT NULL DEFAULT 0,
+  total_value_usd NUMERIC NOT NULL DEFAULT 0,
+  total_return_usd NUMERIC GENERATED ALWAYS AS (total_value_usd - total_invested_usd) STORED,
+  total_return_percent NUMERIC DEFAULT 0,
+  fund_breakdown JSONB DEFAULT '[]',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(client_package_id, snapshot_date)
+);
+
+-- Advisor tasks (package setup, transaction requests, follow-ups)
+CREATE TABLE IF NOT EXISTS advisor_tasks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id UUID REFERENCES profiles(id),
+  advisor_id UUID REFERENCES profiles(id),
+  client_package_id UUID REFERENCES client_packages(id),
+  title TEXT NOT NULL,
+  description TEXT,
+  task_type TEXT DEFAULT 'general'
+    CHECK (task_type IN ('package_setup','top_up_request','pause_request',
+                         'increase_rsp','rebalance','kyc_review','general')),
+  due_date DATE,
+  priority TEXT DEFAULT 'medium' CHECK (priority IN ('low','medium','high','urgent')),
+  status TEXT DEFAULT 'todo' CHECK (status IN ('todo','in_progress','done')),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Advisor-client messaging
+CREATE TABLE IF NOT EXISTS conversations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id UUID REFERENCES profiles(id),
+  advisor_id UUID REFERENCES profiles(id),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(client_id, advisor_id)
+);
+
+CREATE TABLE IF NOT EXISTS messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  conversation_id UUID REFERENCES conversations(id) ON DELETE CASCADE,
+  sender_id UUID REFERENCES profiles(id),
+  sender_role TEXT CHECK (sender_role IN ('client','advisor','admin')),
+  content TEXT NOT NULL,
+  sent_at TIMESTAMPTZ DEFAULT NOW(),
+  read_at TIMESTAMPTZ
+);
+
+-- ============================================================
+-- SEED DATA — 8 real funds covering all asset classes
+-- ============================================================
+INSERT INTO funds (name, ticker, asset_class, geography, currency, fund_manager,
+                   fund_type, expense_ratio, benchmark_index, price_api_symbol, price_api_exchange)
+VALUES
+  ('iShares Core S&P 500 ETF','IVV','equity','us','USD','BlackRock','etf',
+   0.03,'S&P 500','IVV','NYSE'),
+  ('iShares MSCI World ETF','IWDA','equity','global','USD','BlackRock','etf',
+   0.20,'MSCI World','IWDA.L','LSE'),
+  ('Invesco QQQ Trust','QQQ','equity','us','USD','Invesco','etf',
+   0.20,'Nasdaq 100','QQQ','NYSE'),
+  ('iShares MSCI Emerging Markets ETF','EEM','equity','em','USD','BlackRock','etf',
+   0.68,'MSCI Emerging Markets','EEM','NYSE'),
+  ('iShares Core Global Aggregate Bond ETF','AGGG','bond','global','USD','BlackRock','etf',
+   0.10,'Bloomberg Global Aggregate','AGGG.L','LSE'),
+  ('iShares USD Treasury Bond 7-10yr ETF','IEF','bond','us','USD','BlackRock','etf',
+   0.15,'ICE US Treasury 7-10yr','IEF','NYSE'),
+  ('iShares Gold ETF','IGLN','commodity','global','USD','BlackRock','etf',
+   0.12,'LBMA Gold Price','IGLN.L','LSE'),
+  ('iShares USD Money Market ETF','CASH','cash','us','USD','BlackRock','money_market',
+   0.10,'US Federal Funds Rate','CSHI.L','LSE')
+ON CONFLICT DO NOTHING;
+
+-- ============================================================
+-- RLS POLICIES
+-- ============================================================
+
+-- funds: everyone authenticated can read, only super_admin can write
+ALTER TABLE funds ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "funds_read" ON funds;
+DROP POLICY IF EXISTS "funds_admin_write" ON funds;
+CREATE POLICY "funds_read" ON funds FOR SELECT TO authenticated USING (true);
+CREATE POLICY "funds_admin_write" ON funds FOR ALL TO authenticated
+  USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'super_admin'));
+
+-- fund_prices: everyone reads, advisor + admin write
+ALTER TABLE fund_prices ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "prices_read" ON fund_prices;
+DROP POLICY IF EXISTS "prices_write" ON fund_prices;
+CREATE POLICY "prices_read" ON fund_prices FOR SELECT TO authenticated USING (true);
+CREATE POLICY "prices_write" ON fund_prices FOR ALL TO authenticated
+  USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid()
+                 AND role IN ('advisor','super_admin')));
+
+-- client_profiles: own row, advisor sees assigned clients, admin sees all
+ALTER TABLE client_profiles ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "cp_own" ON client_profiles;
+DROP POLICY IF EXISTS "cp_advisor" ON client_profiles;
+DROP POLICY IF EXISTS "cp_admin" ON client_profiles;
+CREATE POLICY "cp_own" ON client_profiles FOR ALL TO authenticated
+  USING (user_id = auth.uid());
+CREATE POLICY "cp_advisor" ON client_profiles FOR ALL TO authenticated
+  USING (advisor_id = auth.uid());
+CREATE POLICY "cp_admin" ON client_profiles FOR ALL TO authenticated
+  USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'super_admin'));
+
+-- client_financial_snapshots: own only, advisor + admin read
+ALTER TABLE client_financial_snapshots ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "cfs_own" ON client_financial_snapshots;
+DROP POLICY IF EXISTS "cfs_advisor" ON client_financial_snapshots;
+CREATE POLICY "cfs_own" ON client_financial_snapshots FOR ALL TO authenticated
+  USING (user_id = auth.uid());
+CREATE POLICY "cfs_advisor" ON client_financial_snapshots FOR SELECT TO authenticated
+  USING (EXISTS (
+    SELECT 1 FROM client_profiles cp
+    JOIN profiles p ON p.id = auth.uid()
+    WHERE cp.user_id = client_financial_snapshots.user_id
+    AND (cp.advisor_id = auth.uid() OR p.role = 'super_admin')
+  ));
+
+-- client_packages: client reads own, advisor manages assigned, admin manages all
+ALTER TABLE client_packages ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "pkg_client_read" ON client_packages;
+DROP POLICY IF EXISTS "pkg_advisor" ON client_packages;
+DROP POLICY IF EXISTS "pkg_admin" ON client_packages;
+CREATE POLICY "pkg_client_read" ON client_packages FOR SELECT TO authenticated
+  USING (user_id = auth.uid());
+CREATE POLICY "pkg_advisor" ON client_packages FOR ALL TO authenticated
+  USING (advisor_id = auth.uid());
+CREATE POLICY "pkg_admin" ON client_packages FOR ALL TO authenticated
+  USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'super_admin'));
+
+-- package_allocations: client reads (via package), advisor + admin write
+ALTER TABLE package_allocations ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "alloc_client_read" ON package_allocations;
+DROP POLICY IF EXISTS "alloc_advisor_write" ON package_allocations;
+CREATE POLICY "alloc_client_read" ON package_allocations FOR SELECT TO authenticated
+  USING (EXISTS (
+    SELECT 1 FROM client_packages cp
+    WHERE cp.id = client_package_id AND cp.user_id = auth.uid()
+  ));
+CREATE POLICY "alloc_advisor_write" ON package_allocations FOR ALL TO authenticated
+  USING (EXISTS (
+    SELECT 1 FROM client_packages cp
+    JOIN profiles p ON p.id = auth.uid()
+    WHERE cp.id = client_package_id
+    AND (cp.advisor_id = auth.uid() OR p.role = 'super_admin')
+  ));
+
+-- package_transactions: client reads own, advisor enters all
+ALTER TABLE package_transactions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "tx_client_read" ON package_transactions;
+DROP POLICY IF EXISTS "tx_advisor_write" ON package_transactions;
+CREATE POLICY "tx_client_read" ON package_transactions FOR SELECT TO authenticated
+  USING (user_id = auth.uid());
+CREATE POLICY "tx_advisor_write" ON package_transactions FOR ALL TO authenticated
+  USING (
+    created_by = auth.uid() OR
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'super_admin')
+  );
+
+-- portfolio_snapshots: client reads own, advisor + admin write
+ALTER TABLE portfolio_snapshots ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "snap_client_read" ON portfolio_snapshots;
+DROP POLICY IF EXISTS "snap_advisor_write" ON portfolio_snapshots;
+CREATE POLICY "snap_client_read" ON portfolio_snapshots FOR SELECT TO authenticated
+  USING (user_id = auth.uid());
+CREATE POLICY "snap_advisor_write" ON portfolio_snapshots FOR ALL TO authenticated
+  USING (EXISTS (
+    SELECT 1 FROM profiles WHERE id = auth.uid()
+    AND role IN ('advisor','super_admin')
+  ));
+
+-- advisor_tasks: advisor sees own tasks, admin sees all
+ALTER TABLE advisor_tasks ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "tasks_advisor" ON advisor_tasks;
+DROP POLICY IF EXISTS "tasks_admin" ON advisor_tasks;
+CREATE POLICY "tasks_advisor" ON advisor_tasks FOR ALL TO authenticated
+  USING (advisor_id = auth.uid());
+CREATE POLICY "tasks_admin" ON advisor_tasks FOR ALL TO authenticated
+  USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'super_admin'));
+
+-- conversations + messages
+ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "conv_parties" ON conversations;
+CREATE POLICY "conv_parties" ON conversations FOR ALL TO authenticated
+  USING (client_id = auth.uid() OR advisor_id = auth.uid() OR
+         EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'super_admin'));
+
+ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "msg_members" ON messages;
+CREATE POLICY "msg_members" ON messages FOR ALL TO authenticated
+  USING (EXISTS (
+    SELECT 1 FROM conversations c WHERE c.id = conversation_id
+    AND (c.client_id = auth.uid() OR c.advisor_id = auth.uid() OR
+         EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'super_admin'))
+  ));
+```
+
+---
+
+## STEP 2 — ADD ENV VARIABLE
+
+In Replit Secrets (or .env):
+```
+VITE_TWELVE_DATA_API_KEY=your_twelve_data_api_key_here
+```
+
+Get a free key at: https://twelvedata.com (free tier: 800 calls/day — sufficient for testing)
+
+---
+
+## STEP 3 — NEW FILE STRUCTURE
+
+Add ONLY these new files. Do not modify existing files:
+
+```
+src/
+  lib/
+    portfolioCalculations.ts   ← snapshot + return math
+  hooks/
+    useAdvisorClients.ts       ← advisor: fetch all assigned clients
+    useAdvisorTasks.ts         ← advisor: task CRUD
+    useClientPackages.ts       ← advisor + client: packages with allocations
+    useFundPrices.ts           ← fetch latest prices from fund_prices table
+    useConversation.ts         ← messaging hook with realtime
+  components/
+    advisor/
+      FundAllocationEditor.tsx ← weight editor, must sum to 100%
+      TransactionForm.tsx      ← enter transactions for a package
+      ClientSummaryCard.tsx    ← compact client card for lists
+      PackageStatusBadge.tsx   ← colored status chip
+      TaskCard.tsx             ← single task with actions
+    admin/
+      UserRoleEditor.tsx       ← change user role + assign advisor
+      FundForm.tsx             ← add/edit fund form
+      PriceOverrideForm.tsx    ← manual price entry
+    shared/
+      SidebarNav.tsx           ← shared sidebar for advisor + admin
+      TopBar.tsx               ← shared top bar with avatar + role chip
+      ConfirmModal.tsx         ← reusable confirmation dialog
+      DataTable.tsx            ← sortable/filterable table shell
+  pages/
+    advisor/
+      AdvisorDashboard.tsx     ← overview: clients, tasks, metrics
+      AdvisorClientList.tsx    ← searchable client table
+      AdvisorClientDetail.tsx  ← 7-tab client management page
+      AdvisorTaskManager.tsx   ← all tasks across all clients
+    admin/
+      AdminDashboard.tsx       ← platform overview
+      AdminUserList.tsx        ← ALL users any role, role management
+      AdminClientList.tsx      ← ALL investment clients across all advisors
+      AdminFundManager.tsx     ← fund master list CRUD
+      AdminPriceManager.tsx    ← fund prices + manual override + API trigger
+  App.tsx                      ← add new routes (modify existing file)
+```
+
+---
+
+## STEP 4 — CORE LIBRARY: portfolioCalculations.ts
+
+```typescript
+// src/lib/portfolioCalculations.ts
+
+export function calculateTotalInvested(transactions: Array<{
+  transaction_type: string
+  amount_usd: number
+}>): number {
+  const INFLOWS = ['initial_investment','monthly_contribution','top_up','dividend_reinvested']
+  const OUTFLOWS = ['withdrawal','fee_charged']
+  return transactions.reduce((total, tx) => {
+    if (INFLOWS.includes(tx.transaction_type)) return total + tx.amount_usd
+    if (OUTFLOWS.includes(tx.transaction_type)) return total - tx.amount_usd
+    return total  // rebalance transactions don't change invested total
+  }, 0)
+}
+
+export function calculateCurrentValue(
+  allocations: Array<{ fund_id: string; units_held: number }>,
+  priceMap: Record<string, number>  // fund_id → price_usd
+): number {
+  return allocations.reduce((total, alloc) => {
+    return total + (alloc.units_held * (priceMap[alloc.fund_id] || 0))
+  }, 0)
+}
+
+export function buildFundBreakdown(
+  allocations: Array<{ fund_id: string; units_held: number; weight_percent: number }>,
+  fundDetails: Array<{ id: string; name: string; ticker: string; asset_class: string }>,
+  priceMap: Record<string, number>,
+  totalValue: number
+) {
+  return allocations.map(alloc => {
+    const fund = fundDetails.find(f => f.id === alloc.fund_id)
+    const price = priceMap[alloc.fund_id] || 0
+    const value = alloc.units_held * price
+    return {
+      fund_id: alloc.fund_id,
+      fund_name: fund?.name || 'Unknown Fund',
+      ticker: fund?.ticker || '',
+      asset_class: fund?.asset_class || '',
+      units: alloc.units_held,
+      price_usd: price,
+      value_usd: value,
+      weight_pct: totalValue > 0 ? (value / totalValue) * 100 : 0,
+      target_weight_pct: alloc.weight_percent
+    }
+  })
+}
+
+// Auto-calculate units from amount + price (for transaction form)
+export function unitsFromAmount(amountUsd: number, pricePerUnit: number): number {
+  if (pricePerUnit <= 0) return 0
+  return parseFloat((amountUsd / pricePerUnit).toFixed(6))
+}
+
+// Recalculate and upsert snapshot after a transaction is entered
+export async function recalculatePackageSnapshot(
+  supabase: any,
+  packageId: string,
+  userId: string,
+  priceMap: Record<string, number>,
+  today: string
+) {
+  // Fetch all transactions for this package
+  const { data: transactions } = await supabase
+    .from('package_transactions')
+    .select('transaction_type, amount_usd')
+    .eq('client_package_id', packageId)
+
+  // Fetch allocations with units
+  const { data: allocations } = await supabase
+    .from('package_allocations')
+    .select('fund_id, units_held, weight_percent')
+    .eq('client_package_id', packageId)
+    .eq('is_active', true)
+
+  const totalInvested = calculateTotalInvested(transactions || [])
+  const totalValue = calculateCurrentValue(allocations || [], priceMap)
+  const returnPercent = totalInvested > 0
+    ? ((totalValue - totalInvested) / totalInvested) * 100
+    : 0
+
+  await supabase.from('portfolio_snapshots').upsert({
+    client_package_id: packageId,
+    user_id: userId,
+    snapshot_date: today,
+    total_invested_usd: totalInvested,
+    total_value_usd: totalValue,
+    total_return_percent: returnPercent,
+    fund_breakdown: allocations || []
+  }, { onConflict: 'client_package_id,snapshot_date' })
+}
+```
+
+---
+
+## STEP 5 — ALL HOOKS
+
+### src/hooks/useAdvisorClients.ts
+```typescript
+// Fetch all clients where client_profiles.advisor_id = current user (or ALL if super_admin)
+// Each client joined with: profiles (name, email), client_profiles (status, risk_profile),
+//   latest portfolio_snapshot (total_value), client_packages count
+// Exposes: clients, loading, error
+// clients[i] shape:
+//   { id, email, full_name, status, risk_profile, kyc_status,
+//     portfolio_value, packages_count, created_at }
+// For super_admin: fetches ALL client_profiles regardless of advisor_id
+// Sort: most recently active first
+```
+
+### src/hooks/useAdvisorTasks.ts
+```typescript
+// Fetch advisor_tasks where advisor_id = current user (or ALL if super_admin)
+// Exposes: tasks, todaysTasks, urgentTasks, loading
+// createTask(data): inserts new advisor_task
+// updateTask(id, updates): updates row
+// completeTask(id): sets status='done', updated_at=now()
+// deleteTask(id): deletes row
+```
+
+### src/hooks/useClientPackages.ts
+```typescript
+// Fetch client_packages for a given userId (can be called by advisor or client)
+// Joined with: package_allocations (with fund details), latest portfolio_snapshot
+// Exposes: packages, totalPortfolioValue, totalInvested, loading
+// createPackage(data): inserts client_packages row, returns new id
+// updatePackage(id, updates): updates client_packages row
+// saveAllocations(packageId, allocations): deletes old + inserts new package_allocations rows
+//   Validates: weights must sum to 100 (±0.1 tolerance) — throws error if not
+// enterTransaction(data): inserts package_transactions row, then calls
+//   recalculatePackageSnapshot() from portfolioCalculations.ts
+// deleteAllocation(id): sets is_active=false on package_allocations row
+```
+
+### src/hooks/useFundPrices.ts
+```typescript
+// Fetch latest fund_prices row per fund (most recent price_date)
+// Exposes: prices (Record<fund_id, {price_usd, change_1d, change_1d_percent, price_date, source}>)
+//   latestDate: most recent price_date in the set
+//   loading, error
+// fetchFundHistory(fundId, days): returns array of {price_date, price_usd} for sparklines
+// overridePrice(fundId, priceUsd, date): inserts/upserts fund_prices with source='manual'
+//   Only callable by super_admin or advisor (RLS enforces)
+```
+
+### src/hooks/useConversation.ts
+```typescript
+// Get or create conversation between client + advisor
+// Exposes: messages, loading, sendMessage(content), markRead()
+// Supabase Realtime subscription: new messages appear instantly without refresh
+// sendMessage: inserts into messages with sender_id=auth.uid(), sender_role from profile
+// markRead: sets read_at=now() on all messages where sender_id != auth.uid()
+```
+
+---
+
+## STEP 6 — ADVISOR PAGES (full specifications)
+
+### ROUTING ADDITIONS (update src/App.tsx):
+```
+/advisor/dashboard       → AdvisorDashboard  (role: advisor, super_admin)
+/advisor/clients         → AdvisorClientList (role: advisor, super_admin)
+/advisor/clients/:id     → AdvisorClientDetail (role: advisor, super_admin)
+/advisor/tasks           → AdvisorTaskManager (role: advisor, super_admin)
+/admin/dashboard         → AdminDashboard (role: super_admin)
+/admin/users             → AdminUserList (role: super_admin)
+/admin/clients           → AdminClientList (role: super_admin)
+/admin/funds             → AdminFundManager (role: super_admin)
+/admin/prices            → AdminPriceManager (role: super_admin)
+```
+
+Post-login routing in AuthGuard (update existing):
+```
+free_user → /app/dashboard (unchanged)
+investment_client → /portal/dashboard (show "Coming soon" placeholder for now)
+advisor → /advisor/dashboard
+super_admin → /admin/dashboard
+```
+
+---
+
+### SHARED LAYOUT COMPONENTS
+
+#### SidebarNav.tsx
+Collapsible sidebar. Works for both advisor and admin (different nav items per role).
+Width: 256px open / 64px collapsed (icon only). Transition: smooth 200ms.
+Background: navy (#042C53). Text: white. Active: teal (#1D9E75) left border + bg-teal-900/30.
+
+ADVISOR nav items (icons from lucide-react):
+  LayoutDashboard → /advisor/dashboard  "Dashboard"
+  Users           → /advisor/clients    "My Clients"
+  CheckSquare     → /advisor/tasks      "Tasks"   + red badge if urgentTasks > 0
+  MessageSquare   → [future]            "Messages" (grayed, "coming soon")
+
+ADMIN nav items:
+  LayoutDashboard → /admin/dashboard    "Overview"
+  Users           → /admin/users        "All Users"
+  Briefcase       → /admin/clients      "Investment Clients"
+  TrendingUp      → /admin/funds        "Fund Manager"
+  BarChart2       → /admin/prices       "Prices"
+
+Bottom of sidebar: current user avatar + name + role chip + sign out button.
+
+#### TopBar.tsx
+64px height. White bg. Border-bottom. Sticky.
+Left: hamburger (toggles sidebar) + page title (passed as prop).
+Right: notification bell (placeholder, no action yet) + user avatar circle + user name.
+
+---
+
+### AdvisorDashboard (/advisor/dashboard)
+
+LAYOUT: SidebarNav + TopBar + main content area.
+
+HEADER: "Good morning/afternoon, [Name]" + today's date.
+
+SECTION 1 — KPI row (4 cards, 2×2 on mobile):
+  Total clients: count of client_profiles where advisor_id = me
+  Active packages: count of client_packages where status='active' and advisor_id = me
+  Tasks due today: count of advisor_tasks due today or overdue with status != 'done'
+  Total AUM: sum of latest portfolio_snapshot.total_value_usd across all my active packages
+    Label: "Assets under management" | Currency toggle USD/VND
+
+SECTION 2 — My Clients table (DataTable component):
+  Columns: Client name / Status chip / Risk profile / Portfolio value / Packages / KYC / Action
+  Status chip colors: prospect=blue / active=green / paused=amber / churned=red
+  Risk chip: conservative=blue / moderate=teal / aggressive=red (abbreviated label)
+  Portfolio value: from latest portfolio_snapshot sum across client's active packages
+  Action: [View] button → /advisor/clients/:id
+  Empty state: "No clients assigned yet. Ask your admin to assign clients to you."
+  Max 5 rows — [View all clients →] link to /advisor/clients
+
+SECTION 3 — Tasks due today (list, max 5):
+  Each task: priority badge / client name / task title / due date / [Done] checkbox
+  Clicking [Done] → calls completeTask() → row grays out + strikethrough
+  Empty state: "No tasks due today — you're clear! ✓"
+  [View all tasks →] link
+
+SECTION 4 — Recent activity (last 5 package_transactions across all my clients):
+  Date / client name / transaction type badge / package nickname / amount
+
+---
+
+### AdvisorClientList (/advisor/clients)
+
+HEADER: "My Clients" + [+ Add client] button (see below) + client count.
+
+SEARCH: text input (filters name + email client-side).
+
+FILTER CHIPS: All / Prospect / Active / Paused (filters by client_profiles.status)
+
+FULL DATA TABLE (DataTable component):
+  Columns: Name / Email / Status / Risk profile / KYC status / Portfolio value /
+           Packages / Last activity / Action
+  All columns sortable.
+  Name column: avatar circle (initials) + name + email below.
+  Status: colored chip.
+  KYC: chip (not_started=gray / submitted=blue / approved=green / rejected=red).
+  Portfolio value: sum of active package values. "--" if no packages.
+  Action: [View →] button.
+  Pagination: 20 rows per page.
+
+[+ Add client] MODAL:
+  This is how advisor creates a new investment_client user for testing.
+  Fields:
+    Full name (text, required)
+    Email (text, required)
+    Temporary password (text, required — advisor sets this, client changes on first login)
+    Risk profile (select — advisor pre-assesses during call)
+    Investment style (select: RSP / Lump Sum / Both / Exploring)
+    Indicative monthly/lump sum amount (CurrencyInput)
+    Pre-call notes (textarea — what was discussed)
+    Status (select: prospect / active — default prospect)
+  On save:
+    1. supabase.auth.admin.createUser({email, password, email_confirm: true})
+       Note: this requires service role key — use a Supabase Edge Function or
+       alternatively call supabase.auth.signUp and immediately update the profile.
+       SIMPLE APPROACH FOR TESTING: Call supabase.auth.signUp({email, password})
+       from a server-side function, then insert profiles row with role='investment_client',
+       then insert client_profiles row with advisor_id = current advisor's id.
+    2. Insert into profiles: {email, full_name, role: 'investment_client'}
+    3. Insert into client_profiles: {advisor_id: me, status, risk_profile,
+       investment_style, indicative_amount, pre_call_notes}
+    4. Show success toast: "Client [name] created — share these credentials: [email] / [password]"
+    5. Navigate to /advisor/clients/:newId
+
+  IMPORTANT FOR TESTING: The "Add client" flow must work so you can create test
+  investment_client accounts without needing to go through the public registration flow.
+
+---
+
+### AdvisorClientDetail (/advisor/clients/:id)
+
+Full client management page. 7 tabs.
+
+HEADER (always visible):
+  Client avatar (initials circle, large, teal bg).
+  Client name (h1) + email.
+  Status chip + Risk profile chip + KYC status chip.
+  Portfolio value (large teal number): sum of all active package values.
+  Row of 3 action buttons: [Send message] [Add task] [Create package]
+  "Last updated: [relative time]"
+
+TAB 1 — OVERVIEW:
+  4 metric cards:
+    Total portfolio value (from portfolio_snapshots)
+    Total invested (from package_transactions sum)
+    Total return ($ and %)
+    Goals: X on-track / Y off-track (from financial_goals if any)
+  
+  Client financial snapshot card (from client_financial_snapshots):
+    Monthly income / Savings range / Has investments / Has debts
+    "Self-reported during onboarding — ranges only"
+  
+  Advisor internal notes (textarea, auto-saves on blur):
+    Placeholder: "Private notes — never shown to client"
+    Saves to client_profiles.advisor_internal_notes
+  
+  Prospect info card (visible if status='prospect'):
+    Investment style / Indicative amount / Pre-call notes / Preferred contact time
+    [Mark as Active] button → updates client_profiles.status='active' with confirm modal
+
+TAB 2 — PACKAGES:
+  [+ Create new package] button → opens CreatePackageWizard (inline sliding panel, not modal).
+  
+  Package list: each package as an expanded card showing:
+    Header: nickname + type badge + status chip + expected return %
+    Body:
+      Type details: $X/month RSP | $X lump sum | or both
+      Linked goal: emoji + name (if linked), "No goal linked" (if not)
+      Allocation preview: horizontal segmented bar showing fund weights by color
+        Colors: equity=#1D9E75 / bond=#042C53 / cash=#94A3B8 / commodity=#F59E0B
+        Each segment labeled with fund ticker + weight %
+      Current value from latest portfolio_snapshot: $X | Invested: $X | Return: +$X (+X%)
+      Fund count: "X funds in portfolio"
+    Footer actions:
+      [Edit allocation] → opens FundAllocationEditor inline
+      [Add transaction] → opens TransactionForm inline
+      [Edit package] → opens edit form (status, amounts, linked goal, expected return)
+      [Activate] → sets status='active' (shows only if status='pending_setup')
+      [Pause] / [Close] → with confirmation modal
+  
+  Empty state: "No packages yet — create the first one."
+
+TAB 3 — FUND ALLOCATIONS (per-package drill-down):
+  Package selector dropdown at top (shows all packages for this client).
+  
+  FundAllocationEditor for selected package:
+    Current funds table:
+      Columns: Fund name / Ticker / Asset class / Weight % (editable) /
+               Units held (editable) / Current price / Current value / Remove
+      Weight % inputs: number inputs, 0.01 step.
+      Units held inputs: editable — advisor updates these as they process transactions.
+      Current price: from fund_prices latest row (shows "--" if no price).
+      Current value: units × price (calculated live).
+    
+    [+ Add fund] button → opens inline fund search:
+      Text search (fund name or ticker).
+      Results list: fund name / ticker / asset class chip / last price.
+      Click to add → new row appears in table with weight=0.
+    
+    Weight total indicator (always visible, prominent):
+      "Total allocated: XX.X% of 100%"
+      Color: red if < 99.5% or > 100.5% | green if ≈ 100%
+      Shows remaining: "+X% remaining" or "-X% over"
+    
+    [Save allocation] button:
+      Disabled until weights sum to 100% (±0.5% tolerance).
+      On save: deletes existing package_allocations rows for this package,
+        inserts new rows, calls recalculatePackageSnapshot().
+      Shows "Saved ✓" for 2 seconds.
+    
+    Notes textarea: "Strategy rationale (private)" → saves to package_allocations.notes
+      on the most recently saved allocation set.
+
+TAB 4 — TRANSACTIONS:
+  [+ Add transaction] button → TransactionForm expands inline.
+  
+  TransactionForm:
+    Package selector (client's packages).
+    Fund selector (loads funds from selected package's allocations).
+    Transaction type selector (styled select with type descriptions):
+      initial_investment — "First lump sum"
+      monthly_contribution — "Regular RSP"
+      top_up — "Extra lump sum"
+      withdrawal — "Partial or full exit"
+      dividend_reinvested — "Dividend reinvested"
+      fee_charged — "Management fee"
+      rebalance_buy / rebalance_sell — "Rebalancing"
+    Date picker (default today).
+    Amount USD (CurrencyInput).
+    Price per unit (number input with auto-fill: fetches from fund_prices for selected date+fund).
+    Units (number input — auto-calculates from amount ÷ price if blank; shows calculated value).
+    Notes (text input, optional).
+    [Save transaction] button.
+    
+    On save:
+      1. Insert into package_transactions (created_by = advisor id).
+      2. Update units_held on the relevant package_allocations row:
+         For buys (initial_investment, monthly_contribution, top_up, rebalance_buy,
+           dividend_reinvested): units_held += transaction.units
+         For sells (withdrawal, rebalance_sell): units_held -= transaction.units
+      3. Call recalculatePackageSnapshot() for this package.
+      4. Show toast: "Transaction saved. Portfolio updated."
+      5. Refresh transaction list below.
+  
+  Transactions table (all transactions for this client, all packages):
+    Filter: Package (dropdown) | Type (multi-select chips) | Date range.
+    Columns: Date / Package / Fund / Type badge / Amount / Units / Price / Notes / Delete.
+    Type badge colors:
+      initial_investment: navy | monthly_contribution: teal | top_up: green |
+      withdrawal: red | fee_charged: gray | dividend_reinvested: blue |
+      rebalance_buy/sell: amber
+    Delete: shows confirm dialog — "Delete this transaction? This will recalculate the portfolio."
+    On delete: removes row + updates units_held + recalculates snapshot.
+    Export CSV button (all filtered transactions).
+
+TAB 5 — GOALS:
+  Shows all financial_goals for this client.
+  
+  Each goal card:
+    Type emoji + name + target amount + target date.
+    Progress: current_amount / target_amount (% bar).
+    Status chip: on_track / almost / off_track (from financial_goals.status).
+    Linked packages: list of client_packages where goal_id = this goal. Each shows nickname + value.
+    [Link a package] button → dropdown of client's packages (sets goal_id on client_packages).
+    [Unlink] button next to each linked package → sets goal_id=null on client_packages.
+    [Edit goal] → inline form: title / target_amount / target_date / notes. Auto-saves.
+    [Add goal] button → inline goal creation form (type + name + amount + date).
+  
+  Empty state: "No goals added yet — add one for this client."
+
+TAB 6 — MESSAGES:
+  Full chat interface (uses useConversation hook).
+  Advisor messages: right, teal bubble.
+  Client messages: left, navy bubble.
+  Timestamps below each message.
+  Read receipts: "✓ Read [time]" when other party has read.
+  Text input at bottom with [Send] button.
+  If no conversation exists: auto-creates one on first message.
+  Empty state: "No messages yet — send the first message."
+
+TAB 7 — TASKS:
+  [+ Add task] button → inline task form:
+    Title (text, required).
+    Task type (select from task_type options).
+    Priority (Low / Medium / High / Urgent — tap cards).
+    Due date (date picker).
+    Description (textarea, optional).
+    [Save task].
+  
+  Tasks list:
+    Group by status: To Do / In Progress / Done (collapsible sections).
+    Each task: priority badge / title / type chip / due date / [In Progress] / [Done] / [Delete].
+    Overdue tasks: red left border.
+    Done tasks: grayed, strike-through title.
+  
+  Empty state: "No tasks for this client."
+
+---
+
+### AdvisorTaskManager (/advisor/tasks)
+
+All tasks across ALL clients in one view.
+
+HEADER: "Task Manager" + task count by status.
+
+FILTER BAR:
+  Status: All / To Do / In Progress / Done.
+  Priority: All / Urgent / High / Medium / Low.
+  Client: dropdown of all assigned clients.
+  Type: All / Package setup / Top-up / Rebalance / KYC / General.
+
+SORT: Due date (default) / Priority / Client / Created.
+
+TASKS TABLE:
+  Columns: Priority badge / Title / Client name (link → client detail) /
+           Type chip / Due date (red if overdue) / Status / Actions.
+  Actions per row: [Done ✓] [In Progress] [Delete].
+  Clicking client name → /advisor/clients/:id.
+
+QUICK ADD TASK (collapsible form at top):
+  Client selector / Title / Type / Priority / Due date / [Add].
+
+Empty state: "No tasks — you're all clear!"
+
+---
+
+## STEP 7 — ADMIN PAGES (full specifications)
+
+### AdminDashboard (/admin/dashboard)
+
+HEADER: "Admin Overview" + today's date.
+
+PLATFORM KPI ROW (6 cards, 2 rows on mobile):
+  Total users: count of all profiles
+  Free users: count where role='free_user'
+  Investment clients: count where role='investment_client'
+  Advisors: count where role='advisor'
+  Active packages: count of client_packages where status='active'
+  Total AUM: sum of latest portfolio_snapshot.total_value_usd across ALL active packages
+    Show in USD. Show in VND below (×25400).
+
+SECTION — Investment clients by status (horizontal bar chart — Recharts):
+  Bars: prospect / active / paused / churned counts.
+  Color coded: blue / green / amber / red.
+
+SECTION — Recent user registrations (last 10 profiles):
+  Table: name / email / role / created_at / Action [View].
+
+SECTION — Fund prices status:
+  Table of all funds: fund name / ticker / last price / last updated / source.
+  Warning row (red) for any fund with no price in last 3 days.
+  [Go to Price Manager →] link.
+
+SECTION — Advisor load (table):
+  Each advisor: name / assigned clients count / active packages count / total AUM.
+
+---
+
+### AdminUserList (/admin/users)
+
+ALL users of the app, any role.
+
+HEADER: "User Management" + total count.
+
+SEARCH: text input filters name + email.
+
+FILTER CHIPS: All / Free Users / Investment Clients / Advisors / Admins.
+
+FULL DATA TABLE:
+  Columns: Avatar / Name / Email / Role chip / Created / Last sign in / Status / Actions.
+  Role chip colors: free_user=gray / investment_client=teal / advisor=blue / super_admin=red.
+  Actions per row:
+    [Change role] → inline dropdown: select new role → confirm modal → updates profiles.role.
+      IMPORTANT: If changing TO investment_client:
+        Auto-creates client_profiles row if not exists (status='prospect').
+      If changing FROM investment_client:
+        Warn: "This will hide their investment portal. Their data is preserved."
+    [View] → links to correct portal/detail page based on role.
+    [Delete] → confirms + deletes auth user (cascades to profiles + all child tables).
+
+[+ Create user] BUTTON (at top right):
+  Modal form:
+    Full name / Email / Temporary password / Role (select).
+    If role=investment_client: also show advisor selector (assign advisor) + risk profile.
+    If role=advisor: no extra fields.
+    [Create user] → same logic as advisor "Add client" but from admin with any role.
+
+This is the PRIMARY way to create test accounts during development.
+
+---
+
+### AdminClientList (/admin/clients)
+
+ALL investment clients across ALL advisors. This is the admin's view of the entire
+investment business.
+
+HEADER: "Investment Clients" + count + total AUM.
+
+FILTER CHIPS: All statuses / By advisor (dropdown).
+
+DATA TABLE:
+  Columns: Client name / Email / Advisor assigned / Status / Risk profile /
+           KYC status / Portfolio value / Packages / Created / Actions.
+  Advisor column: shows advisor name + [Reassign advisor] button.
+  [Reassign advisor]: dropdown of all advisor-role users → updates client_profiles.advisor_id.
+  Actions: [View as advisor →] links to /advisor/clients/:id (admin has full access here too).
+
+BULK ACTIONS (checkbox select rows):
+  [Reassign selected to advisor] → advisor selector + confirm.
+
+EMPTY STATE: "No investment clients yet. Create one from User Management."
+
+---
+
+### AdminFundManager (/admin/funds)
+
+Master list of all investable funds. Admin creates, advisors use.
+
+HEADER: "Fund Manager" + fund count + [+ Add fund] button.
+
+SEARCH: filters by name or ticker.
+
+FILTER: Active / Inactive.
+
+FUNDS TABLE:
+  Columns: Name / Ticker / ISIN / Asset class / Geography / Manager / Expense ratio /
+           API symbol / Exchange / Active / Actions.
+  Asset class: colored chip.
+  Active: green/red pill toggle (click to deactivate/activate inline).
+  Actions: [Edit] [Deactivate].
+
+[+ Add fund] / [Edit fund] PANEL (slides in from right, not a modal — stays on page):
+  All fund fields with validation:
+    Name (text, required)
+    Ticker (text, uppercase, required)
+    ISIN (text, optional)
+    Asset class (select from CHECK constraint values, required)
+    Geography (select: us/global/asia/vietnam/em/europe, optional)
+    Currency (select: USD/VND/GBP/EUR/SGD, default USD)
+    Fund manager (text)
+    Fund type (select: etf/mutual_fund/unit_trust/money_market)
+    Expense ratio (number, % suffix, e.g. 0.03)
+    Benchmark index (text)
+    Factsheet URL (URL input with [Test link ↗])
+    Price API symbol (text, e.g. "IVV" or "IWDA.L" — the symbol used by Twelve Data)
+    Price API exchange (text, e.g. "NYSE" or "LSE")
+  [Save fund] → inserts or updates.
+  [Cancel] → closes panel.
+
+After adding a fund:
+  Show prompt: "Do you want to fetch the current price for [Fund name]?
+   [Fetch price] → calls price fetch for this single fund immediately."
+
+---
+
+### AdminPriceManager (/admin/prices)
+
+Fund price management. Both manual entry and API trigger.
+
+HEADER: "Fund Prices" + "Auto-update: Daily at 22:00 UTC" status line.
+
+STATUS CARD:
+  Last successful update: [datetime].
+  Funds with recent prices (today or yesterday): X of Y.
+  Funds with stale/missing prices: Z (highlighted red if > 0).
+  [Refresh all prices now] button → calls update-fund-prices Edge Function.
+  Shows loading spinner + "Fetching prices..." while running.
+  On complete: shows "Updated X funds · [datetime]" success message.
+
+PRICES TABLE:
+  Columns: Fund name / Ticker / Latest price (USD) / Day change / Day change % /
+           Last updated / Source chip / Actions.
+  Source chip: "API" (teal) or "Manual" (amber).
+  Stale warning: row highlighted amber if last price_date > 2 business days ago.
+  Missing: row highlighted red if no prices at all.
+  
+  Actions per row:
+    [Override price] → inline form slides open below the row:
+      Date (default today) / Price USD (CurrencyInput) / [Save as manual].
+      Saves with source='manual'. Closes form.
+    [Fetch price] (for individual fund) → calls price API for this one fund symbol only.
+      Shows loading state in that row.
+      On success: updates row inline. Shows "Updated ✓".
+
+PRICE HISTORY (per fund):
+  Click any fund row → expands to show last 30 days of fund_prices for that fund.
+  Table: date / price / change / source.
+  [Delete price] per row (in case of bad data).
+
+---
+
+## STEP 8 — SUPABASE EDGE FUNCTION
+
+Create this file: supabase/functions/update-fund-prices/index.ts
+
+```typescript
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+const TWELVE_DATA_KEY = Deno.env.get('TWELVE_DATA_API_KEY')!
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
+const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+
+const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
+
+Deno.serve(async (req: Request) => {
+  // Allow both cron trigger and manual HTTP call (from admin panel)
+  const { fundIds } = await req.json().catch(() => ({}))
+
+  try {
+    // 1. Fetch funds to update (all active, or specific ids if passed)
+    let query = supabase
+      .from('funds')
+      .select('id, name, ticker, price_api_symbol, currency')
+      .eq('is_active', true)
+      .not('price_api_symbol', 'is', null)
+
+    if (fundIds && fundIds.length > 0) {
+      query = query.in('id', fundIds)
+    }
+
+    const { data: funds, error: fundsError } = await query
+    if (fundsError) throw fundsError
+    if (!funds || funds.length === 0) {
+      return Response.json({ success: true, updated: 0, message: 'No funds to update' })
+    }
+
+    // 2. Batch call Twelve Data (comma-separated symbols, max 100 per request)
+    const symbols = funds.map((f: any) => f.price_api_symbol).join(',')
+    const apiResponse = await fetch(
+      `https://api.twelvedata.com/quote?symbol=${encodeURIComponent(symbols)}&apikey=${TWELVE_DATA_KEY}`
+    )
+
+    if (!apiResponse.ok) {
+      throw new Error(`Twelve Data API error: ${apiResponse.status} ${apiResponse.statusText}`)
+    }
+
+    const priceData = await apiResponse.json()
+    const today = new Date().toISOString().split('T')[0]
+    const upserts: any[] = []
+    const errors: string[] = []
+
+    for (const fund of funds as any[]) {
+      // Single symbol returns object directly; multiple symbols returns keyed object
+      const quote = funds.length === 1
+        ? priceData
+        : priceData[fund.price_api_symbol]
+
+      if (!quote || quote.status === 'error' || !quote.close) {
+        errors.push(`${fund.ticker}: ${quote?.message || 'No data returned'}`)
+        continue
+      }
+
+      const priceNative = parseFloat(quote.close)
+      // Twelve Data returns prices in the fund's native currency
+      // For simplicity: treat all as USD (extend for GBP/EUR funds if needed)
+      const priceUsd = priceNative
+
+      upserts.push({
+        fund_id: fund.id,
+        price_date: today,
+        price_native: priceNative,
+        price_usd: priceUsd,
+        price_vnd: priceUsd * 25400,
+        change_1d: parseFloat(quote.change || '0'),
+        change_1d_percent: parseFloat(quote.percent_change || '0'),
+        source: 'api'
+      })
+    }
+
+    if (upserts.length > 0) {
+      const { error: upsertError } = await supabase
+        .from('fund_prices')
+        .upsert(upserts, { onConflict: 'fund_id,price_date' })
+      if (upsertError) throw upsertError
+    }
+
+    // 3. After prices are updated, recalculate portfolio snapshots for all active packages
+    if (!fundIds) {
+      // Only do full recalc on the daily cron run (not single-fund manual refresh)
+      await recalculateAllActiveSnapshots(today)
+    }
+
+    return Response.json({
+      success: true,
+      updated: upserts.length,
+      errors: errors,
+      date: today
+    })
+
+  } catch (error: any) {
+    return Response.json(
+      { success: false, error: error.message },
+      { status: 500 }
+    )
+  }
+})
+
+async function recalculateAllActiveSnapshots(today: string) {
+  const { data: packages } = await supabase
+    .from('client_packages')
+    .select(`
+      id, user_id,
+      package_allocations (fund_id, units_held),
+      package_transactions (transaction_type, amount_usd)
+    `)
+    .eq('status', 'active')
+
+  if (!packages || packages.length === 0) return
+
+  // Get latest price for all funds
+  const { data: latestPrices } = await supabase
+    .from('fund_prices')
+    .select('fund_id, price_usd')
+    .eq('price_date', today)
+
+  const priceMap: Record<string, number> = {}
+  for (const p of latestPrices || []) {
+    priceMap[p.fund_id] = p.price_usd
+  }
+
+  const INFLOWS = ['initial_investment','monthly_contribution','top_up','dividend_reinvested']
+  const OUTFLOWS = ['withdrawal','fee_charged']
+  const snapshots = []
+
+  for (const pkg of packages as any[]) {
+    const totalInvested = (pkg.package_transactions || []).reduce((sum: number, tx: any) => {
+      if (INFLOWS.includes(tx.transaction_type)) return sum + tx.amount_usd
+      if (OUTFLOWS.includes(tx.transaction_type)) return sum - tx.amount_usd
+      return sum
+    }, 0)
+
+    const totalValue = (pkg.package_allocations || []).reduce((sum: number, alloc: any) => {
+      return sum + (alloc.units_held * (priceMap[alloc.fund_id] || 0))
+    }, 0)
+
+    const returnPct = totalInvested > 0
+      ? ((totalValue - totalInvested) / totalInvested) * 100
+      : 0
+
+    snapshots.push({
+      client_package_id: pkg.id,
+      user_id: pkg.user_id,
+      snapshot_date: today,
+      total_invested_usd: totalInvested,
+      total_value_usd: totalValue,
+      total_return_percent: returnPct,
+      fund_breakdown: pkg.package_allocations || []
+    })
+  }
+
+  if (snapshots.length > 0) {
+    await supabase.from('portfolio_snapshots')
+      .upsert(snapshots, { onConflict: 'client_package_id,snapshot_date' })
+  }
+}
+```
+
+Deploy this Edge Function:
+```bash
+supabase functions deploy update-fund-prices
+```
+
+The admin panel [Refresh all prices] button calls this function via:
+```typescript
+const response = await fetch(
+  `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/update-fund-prices`,
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${session.access_token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({})
+  }
+)
+```
+
+---
+
+## STEP 9 — KEY COMPONENT SPECIFICATIONS
+
+### FundAllocationEditor.tsx
+The most critical advisor UI component. Used in TAB 3 of client detail.
+
+STATE:
+  allocations: Array<{ fund_id, fund_name, ticker, asset_class, weight_percent, units_held }>
+  weightTotal: number (sum of weight_percent — recalculates on every change)
+  isDirty: boolean (true if unsaved changes exist)
+  isSaving: boolean
+
+UI:
+  Table with editable rows. Each row:
+    Fund name + ticker (read-only) | Asset class chip |
+    Weight % (number input, 0–100, 1 decimal) |
+    Units held (number input, 6 decimals) |
+    Current price (from useFundPrices, read-only) |
+    Value ($) (units × price, calculated live, read-only) |
+    [Remove] icon button (trash icon).
+
+  Below table:
+    Weight total bar: horizontal progress bar 0–100.
+      Fills green when ≈ 100%. Red when over or under.
+    Text: "Total: XX.X% / 100%" — red if not ≈ 100%.
+    Remaining: "+X.X% remaining" or "−X.X% over allocated".
+
+  [+ Add fund] button: opens FundSearchDropdown inline.
+  FundSearchDropdown: text input (debounced search, min 2 chars) → dropdown list.
+    Each result: fund name / ticker / asset class chip / last price.
+    Click → adds new row to table with weight=0 and units=0.
+
+  [Save allocation] button:
+    Disabled (grayed) if weightTotal is not within 99.5–100.5%.
+    Loading state while saving.
+    On success: "Saved ✓ [timestamp]" message for 3 seconds.
+
+  "Unsaved changes" pill (amber) visible if isDirty=true.
+
+### TransactionForm.tsx
+Inline form for entering a transaction. Can be used inside TAB 4 or as a standalone panel.
+
+FIELDS:
+  1. Package selector (select from client's active packages).
+     On change → loads that package's fund allocations.
+  2. Fund selector (select from loaded allocations).
+     Shows: fund name + ticker + current price.
+     On change → auto-fills price_per_unit from latest fund_prices for today.
+  3. Transaction type (styled select).
+  4. Date (date picker, default today).
+     On date change → refetches fund price for that date (from fund_prices table).
+  5. Amount USD (CurrencyInput).
+     On change → auto-calculates units: units = amount / price_per_unit.
+  6. Price per unit (number input, pre-filled from fund price).
+     User can override.
+     On change → recalculates units.
+  7. Units (number input, 6 decimal places).
+     Shows auto-calculated value. User can override (then amount becomes price × units).
+  8. Notes (text input, optional).
+
+Auto-calculation rules:
+  When amount changes AND price is set: units = amount / price.
+  When price changes AND amount is set: recalculate units.
+  When units are manually overridden: amount = units × price.
+
+[Save transaction] button → calls useClientPackages.enterTransaction() → shows success/error toast.
+
+### ClientSummaryCard.tsx
+Compact card for lists (used in advisor dashboard and admin lists).
+
+Shows: avatar circle (initials, teal bg) + name + email + status chip +
+       portfolio value + packages count + risk profile.
+Clickable → navigates to /advisor/clients/:id.
+
+### DataTable.tsx
+Reusable sortable table. Props: columns, data, onRowClick, loading, emptyState.
+Column config: { key, label, sortable, render (optional custom cell renderer) }
+Sorted client-side by default. Loading state: skeleton rows.
+Mobile: horizontal scroll wrapper.
+
+---
+
+## STEP 10 — COMPLETE TESTING WORKFLOW
+
+This sequence lets you test the full investment package flow end-to-end:
+
+### PHASE 1: Setup (Admin)
+
+1. Log in as super_admin.
+2. Go to /admin/funds — verify 8 seed funds are visible.
+3. Go to /admin/prices → [Refresh all prices] → verify prices fetch from Twelve Data API.
+   If API key not set: manually override price for each fund (enter any test values like $500).
+4. Go to /admin/users → [+ Create user]:
+   - Create an advisor user (role: advisor, email: advisor@test.com, password: Test1234!)
+   - Create an investment client (role: investment_client, email: client@test.com, password: Test1234!)
+5. Go to /admin/clients:
+   - Find client@test.com → [Reassign advisor] → assign to advisor@test.com.
+   - Verify advisor_id is set on client_profiles row.
+
+### PHASE 2: Advisor builds a package (Advisor)
+
+6. Log out. Log in as advisor@test.com.
+7. /advisor/dashboard — should show 1 client, 0 packages.
+8. /advisor/clients → click on client@test.com → AdvisorClientDetail.
+9. TAB 1 Overview: fill in advisor notes. Set status to 'active'.
+10. TAB 2 Packages → [+ Create new package]:
+    STEP 1: nickname="My Retirement Fund", type=RSP, monthly_amount=500, start_date=today,
+            expected_annual_return=8.0.
+    STEP 2: Add 3 funds:
+      IVV → 60%
+      IWDA → 25%
+      IEF → 15%
+      Total: 100% ✓
+    STEP 3: Review → [Create package].
+    → Package appears in list with status='pending_setup'.
+    → Click [Activate] → status='active'.
+11. TAB 3 Allocations → verify fund allocations saved correctly. Update units if desired.
+12. TAB 4 Transactions → [+ Add transaction]:
+    Package: My Retirement Fund | Fund: IVV | Type: initial_investment |
+    Date: today | Amount: $30,000 | Price per unit: [auto-filled from fund_prices] | Save.
+    Add another: Fund: IWDA | Type: initial_investment | Amount: $12,500. Save.
+    Add another: Fund: IEF | Type: initial_investment | Amount: $7,500. Save.
+    → Portfolio snapshot recalculates. TAB 1 should show portfolio value ≈ $50,000.
+
+### PHASE 3: Verify client sees it (Client)
+
+13. Log out. Log in as client@test.com.
+14. Client is routed to /portal/dashboard (or "coming soon" page for now).
+    VERIFY: The client's data exists in Supabase:
+      - client_packages row with status='active'
+      - 3 package_allocations rows
+      - 3 package_transactions rows
+      - 1 portfolio_snapshots row with total_value ≈ $50,000
+    This confirms the advisor flow works correctly before building the client portal.
+
+### PHASE 4: Further advisor testing
+
+15. TAB 4: Add a monthly_contribution transaction: $500 to IVV. Verify snapshot updates.
+16. TAB 3: Change fund weights. Save. Verify weight validation blocks save if ≠ 100%.
+17. TAB 5 Goals: Add a goal for the client. Link the package to the goal.
+18. TAB 7 Tasks: Add a task. Mark it done. Verify it moves to Done section.
+19. /admin/clients: verify client@test.com shows correct portfolio value in admin view.
+20. /admin/prices: verify [Override price] works — enter manual price for IVV. Check it saves.
+
+---
+
+## STEP 11 — BUILD ORDER
+
+Build in this exact sequence. Each step is testable before moving to the next.
+
+1.  SQL: run full schema block. Verify all 13 tables exist + RLS policies applied.
+    Test: go to Supabase table editor, confirm funds table has 8 rows.
+
+2.  src/lib/portfolioCalculations.ts — all 5 functions.
+
+3.  src/hooks/useAdvisorClients.ts — basic fetch, no joins yet. Test: console.log output.
+
+4.  Shared components: SidebarNav.tsx + TopBar.tsx + ConfirmModal.tsx + DataTable.tsx.
+    These are used on every page — build them first.
+
+5.  AdminDashboard (/admin/dashboard) — KPI cards with real counts from profiles table.
+    Add route + AuthGuard for super_admin role.
+    Test: log in as super_admin, verify dashboard loads without errors.
+
+6.  AdminUserList (/admin/users) — full table with role chips.
+    [+ Create user] flow must work (test creating advisor + investment_client accounts).
+    [Change role] must work (test changing free_user to investment_client).
+    Test: create advisor@test.com and client@test.com from this page.
+
+7.  AdminClientList (/admin/clients) — full table of all investment clients.
+    [Reassign advisor] must work.
+    Test: assign client to advisor. Verify client_profiles.advisor_id updated.
+
+8.  AdminFundManager (/admin/funds) — fund table + add/edit panel.
+    Test: add a new test fund. Edit it. Deactivate it. Reactivate it.
+
+9.  AdminPriceManager (/admin/prices) — price table + override form.
+    Edge Function: deploy update-fund-prices. Test manual trigger from admin panel.
+    Test: click [Refresh all prices]. Verify fund_prices table gets new rows.
+    Test: manually override one fund price. Verify source='manual' in table.
+
+10. src/hooks/useAdvisorClients.ts — complete with joins (portfolio value, package count).
+
+11. AdvisorDashboard (/advisor/dashboard) — all 4 sections. Add route.
+    Test: log in as advisor. Verify client list shows, KPIs are correct.
+
+12. AdvisorClientList (/advisor/clients) — full table with search + filter.
+    [+ Add client] flow — this is the critical flow for testing without full client portal.
+    Test: add a new client from this page. Verify they appear in admin client list.
+
+13. src/hooks/useClientPackages.ts — full implementation with all methods.
+
+14. FundAllocationEditor.tsx — full component. Test weight validation thoroughly.
+    Test: add 3 funds, set weights to 60/25/15. Save. Verify package_allocations rows.
+    Test: try to save with 80/25/15 = 120%. Confirm save is blocked.
+
+15. TransactionForm.tsx — full form with auto-calculation.
+    Test: select fund → price auto-fills → enter amount → units calculate → save.
+    Verify package_transactions row inserted + units_held updated on package_allocations.
+
+16. AdvisorClientDetail (/advisor/clients/:id) — all 7 tabs.
+    Build one tab at a time, test each:
+      TAB 1: verify all data loads. Test notes auto-save.
+      TAB 2: create package → verify 3-step wizard works end to end.
+      TAB 3: verify FundAllocationEditor loads correctly with existing allocations.
+      TAB 4: enter 3 transactions → verify portfolio snapshot updates.
+      TAB 5: add goal → link package → verify goal card shows linked package.
+      TAB 6: send message → verify in conversations + messages tables.
+      TAB 7: add task → complete it → verify status changes.
+
+17. AdvisorTaskManager (/advisor/tasks) — full task list with filters.
+    Test: filters work. Marking done works. Quick add works.
+
+18. src/hooks/useFundPrices.ts — fetch latest prices + sparkline data.
+    Test: verify prices load for all 8 seed funds.
+
+19. src/hooks/useConversation.ts — with Supabase Realtime.
+    Test: open advisor + client views side by side. Send message from advisor.
+    Verify client sees it in < 2 seconds without refresh.
+
+20. Final admin verification:
+    - /admin/clients: all investment clients visible with correct portfolio values.
+    - /admin/users: role change for investment_client → free_user removes client_profiles access.
+    - /admin/prices: price history visible per fund.
+
+21. Full end-to-end test using the TESTING WORKFLOW in Step 10 above.
+
+---
+
+## KEY BEHAVIOURS TO ENFORCE
+
+1. WEIGHT VALIDATION: FundAllocationEditor [Save] button must remain DISABLED
+   until weights sum to exactly 100% (±0.5 tolerance). No exceptions. Show clear
+   red error if user tries to click while disabled.
+
+2. SNAPSHOT ON EVERY TRANSACTION: After every package_transactions INSERT or DELETE,
+   immediately call recalculatePackageSnapshot(). Client-facing portfolio value must
+   always reflect the latest transactions. Never stale.
+
+3. UNITS AUTO-UPDATE: After entering a transaction, the package_allocations.units_held
+   must be updated immediately. Buy transactions ADD units. Sell/withdrawal SUBTRACTS.
+   Fee transactions do NOT change units.
+
+4. ADMIN SEES ALL: Every admin page bypasses advisor_id filtering. The RLS policies
+   enforce this — super_admin sees all client_profiles regardless of advisor_id.
+   Verify this in Supabase: a super_admin policy should be present on every table.
+
+5. ADVISOR SEES ONLY ASSIGNED: Advisor pages filter by advisor_id = current user.
+   An advisor should NEVER see another advisor's clients or packages.
+
+6. PRICE AUTO-FILL: In TransactionForm, when advisor selects a fund + date, immediately
+   query fund_prices for that fund_id and price_date. If found, auto-fill price_per_unit.
+   If not found (e.g. weekend/holiday): show "No price on record for this date —
+   enter manually" hint.
+
+7. TOAST NOTIFICATIONS: Every save action shows a toast:
+   success: green "Saved ✓" | error: red "Failed — [reason]" | 3 second auto-dismiss.
+
+8. LOADING SKELETONS: Every data-fetching section shows LoadingSkeleton while loading.
+   Never show blank white areas.
+
+9. EMPTY STATES: Every list/table has a designed empty state with icon + message + CTA.
+
+10. MOBILE RESPONSIVE: SidebarNav collapses to icon-only on tablet, hidden on mobile
+    (bottom tabs on mobile — 4 items for advisor: Dashboard/Clients/Tasks/+).
+    DataTable wraps in horizontal scroll on mobile.
