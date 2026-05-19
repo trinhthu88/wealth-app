@@ -27,9 +27,12 @@ import { calculateProjection } from "@/lib/goalProjection";
 interface HealthScore { overallScore: number; budgetScore: number; goalsScore: number; savingsScore: number; insights: Record<string, number> | null; }
 interface Goal { id: string; title: string; goalType: string; status: string; targetAmount: string | null; currentAmount: string | null; monthlyContribution: string | null; currency: string; targetDate?: string | null; }
 interface BudgetEntry { id?: string; periodMonth?: string; income: string | null; housing: string | null; food: string | null; transport: string | null; utilities: string | null; entertainment: string | null; other: string | null; }
+interface BudgetTransaction { id: string; amount: string; type: string; category: string; }
 interface Asset { id: string; valueUsd: string; category: string; }
 interface Liability { id: string; balanceUsd: string; }
 interface Pathway { stepNumber: number; status: string; formData?: Record<string, unknown> | null; }
+
+const currentMk = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
 
 function fmt(n: number) {
   if (Math.abs(n) >= 1_000_000) return (n < 0 ? "-$" : "$") + (Math.abs(n) / 1_000_000).toFixed(1) + "M";
@@ -63,13 +66,22 @@ export default function FreeDashboard() {
   const { data: pathway = [] } = useQuery<Pathway[]>({ queryKey: ["pathway"], queryFn: () => apiFetch<Pathway[]>("/pathway"), retry: false });
   const { data: assets = [] } = useQuery<Asset[]>({ queryKey: ["assets"], queryFn: () => apiFetch<Asset[]>("/assets"), retry: false });
   const { data: liabilities = [] } = useQuery<Liability[]>({ queryKey: ["liabilities"], queryFn: () => apiFetch<Liability[]>("/liabilities"), retry: false });
+  const { data: currentMonthTx = [] } = useQuery<BudgetTransaction[]>({
+    queryKey: ["budget-transactions", currentMk],
+    queryFn: () => apiFetch<BudgetTransaction[]>(`/budget/transactions?month=${currentMk}`),
+    retry: false,
+  });
+
+  // Transactions (actual) for the current month — same priority as budget page
+  const txIncome = currentMonthTx.filter(t => t.type === "income").reduce((s, t) => s + parseFloat(t.amount), 0);
+  const txExpenses = currentMonthTx.filter(t => t.type === "expense").reduce((s, t) => s + parseFloat(t.amount), 0);
 
   const budget = budgets[budgets.length - 1];
   const incomeFromBudget = parseFloat(budget?.income ?? "0");
   // Fallback: pathway step 2 stores income in formData if budget entry was never created
   const pathwayStep2 = pathway.find(s => s.stepNumber === 2);
   const incomeFromPathway = parseFloat((pathwayStep2?.formData?.income as string | undefined) ?? "0");
-  const income = incomeFromBudget > 0 ? incomeFromBudget : incomeFromPathway;
+  const estIncome = incomeFromBudget > 0 ? incomeFromBudget : incomeFromPathway;
   const budgetExpenses = (["housing", "food", "transport", "utilities", "entertainment", "other"] as const)
     .reduce((s, k) => s + parseFloat((budget as any)?.[k] ?? "0"), 0);
   // Fallback: pathway step 3 stores housing/food/etc. in formData
@@ -78,15 +90,18 @@ export default function FreeDashboard() {
     ? (["housing", "food", "transport", "utilities", "entertainment", "other"] as const)
         .reduce((s, k) => s + parseFloat(((pathwayStep3.formData as any)?.[k] as string | undefined) ?? "0"), 0)
     : 0;
-  // expenses used for effective-rate / SmartUpgrade card — allows step 3 as first-month fallback
-  const expenses = budgetExpenses > 0 ? budgetExpenses : expensesFromPathway;
+  const estExpenses = budgetExpenses > 0 ? budgetExpenses : expensesFromPathway;
+
+  // Transactions take priority; estimates are the fallback (mirrors budget page logic)
+  const totalIncome = txIncome > 0 ? txIncome : estIncome;
+  const totalExpenses = txExpenses > 0 ? txExpenses : estExpenses;
+  const income = totalIncome;
+
+  // expenses used for effective-rate / SmartUpgrade card
+  const expenses = totalExpenses;
   const monthlyCashSaved = Math.max(0, income - expenses);
-  // Home tile shows the plain savings rate from the budget entry only (no pathway fallback).
-  // Once the backfill useEffect runs, budgetExpenses will be populated from step 3,
-  // so both always stay in sync.
-  const savingsRate = income > 0 && budgetExpenses > 0
-    ? ((income - budgetExpenses) / income) * 100
-    : 0;
+  // Savings rate shown as long as we have any income signal
+  const savingsRate = totalIncome > 0 ? ((totalIncome - totalExpenses) / totalIncome) * 100 : 0;
 
   const completedSteps = pathway.filter(s => s.status === "completed").length;
   const pathwayPct = (completedSteps / 6) * 100;
