@@ -78,9 +78,15 @@ export default function FreeDashboard() {
     ? (["housing", "food", "transport", "utilities", "entertainment", "other"] as const)
         .reduce((s, k) => s + parseFloat(((pathwayStep3.formData as any)?.[k] as string | undefined) ?? "0"), 0)
     : 0;
+  // expenses used for effective-rate / SmartUpgrade card — allows step 3 as first-month fallback
   const expenses = budgetExpenses > 0 ? budgetExpenses : expensesFromPathway;
   const monthlyCashSaved = Math.max(0, income - expenses);
-  const savingsRate = income > 0 ? (monthlyCashSaved / income) * 100 : 0;
+  // Home tile shows the plain savings rate from the budget entry only (no pathway fallback).
+  // Once the backfill useEffect runs, budgetExpenses will be populated from step 3,
+  // so both always stay in sync.
+  const savingsRate = income > 0 && budgetExpenses > 0
+    ? ((income - budgetExpenses) / income) * 100
+    : 0;
 
   const completedSteps = pathway.filter(s => s.status === "completed").length;
   const pathwayPct = (completedSteps / 6) * 100;
