@@ -17,6 +17,7 @@ import leadsRouter from "./leads";
 import blogRouter from "./blog";
 import notificationsRouter from "./notifications";
 import adminRouter from "./admin";
+import investmentsRouter from "./investments";
 
 const router: IRouter = Router();
 
@@ -38,5 +39,6 @@ router.use(leadsRouter);
 router.use(blogRouter);
 router.use(notificationsRouter);
 router.use(adminRouter);
+router.use(investmentsRouter);
 
 export default router;

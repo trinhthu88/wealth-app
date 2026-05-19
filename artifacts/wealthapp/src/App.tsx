@@ -29,6 +29,11 @@ import ClientGoals from "@/pages/client/goals";
 import ClientNetWorth from "@/pages/client/networth";
 import ClientDocuments from "@/pages/client/documents";
 import ClientMessages from "@/pages/client/messages";
+import ClientOnboarding from "@/pages/client/onboarding";
+import ClientPackages from "@/pages/client/packages";
+import ClientPackageDetail from "@/pages/client/package-detail";
+import ClientTransactions from "@/pages/client/transactions";
+import ClientScenarios from "@/pages/client/scenarios";
 
 import AdvisorDashboard from "@/pages/advisor/dashboard";
 import AdvisorClients from "@/pages/advisor/clients";
@@ -39,6 +44,7 @@ import AdvisorLeads from "@/pages/advisor/leads";
 import AdminDashboard from "@/pages/admin/dashboard";
 import AdminUsers from "@/pages/admin/users";
 import AdminBlog from "@/pages/admin/blog";
+import AdminFunds from "@/pages/admin/funds";
 
 import NotFound from "@/pages/not-found";
 
@@ -208,8 +214,13 @@ function AppRoutes() {
       <Route path="/free/networth" component={() => <ProtectedRoute component={NetWorthPage} />} />
       <Route path="/free/health-score" component={() => <ProtectedRoute component={HealthScorePage} />} />
 
+      <Route path="/client/onboarding" component={() => <ProtectedRoute component={ClientOnboarding} role={["investment_client", "super_admin"]} />} />
       <Route path="/client/dashboard" component={() => <ProtectedRoute component={ClientDashboard} role={["investment_client", "super_admin"]} />} />
       <Route path="/client/portfolio" component={() => <ProtectedRoute component={ClientPortfolio} role={["investment_client", "super_admin"]} />} />
+      <Route path="/client/packages/:id" component={() => <ProtectedRoute component={ClientPackageDetail} role={["investment_client", "super_admin"]} />} />
+      <Route path="/client/packages" component={() => <ProtectedRoute component={ClientPackages} role={["investment_client", "super_admin"]} />} />
+      <Route path="/client/transactions" component={() => <ProtectedRoute component={ClientTransactions} role={["investment_client", "super_admin"]} />} />
+      <Route path="/client/scenarios" component={() => <ProtectedRoute component={ClientScenarios} role={["investment_client", "super_admin"]} />} />
       <Route path="/client/plan" component={() => <ProtectedRoute component={ClientPlan} role={["investment_client", "super_admin"]} />} />
       <Route path="/client/goals" component={() => <ProtectedRoute component={ClientGoals} role={["investment_client", "super_admin"]} />} />
       <Route path="/client/networth" component={() => <ProtectedRoute component={ClientNetWorth} role={["investment_client", "super_admin"]} />} />
@@ -225,6 +236,7 @@ function AppRoutes() {
       <Route path="/admin/dashboard" component={() => <ProtectedRoute component={AdminDashboard} role={["super_admin"]} />} />
       <Route path="/admin/users" component={() => <ProtectedRoute component={AdminUsers} role={["super_admin"]} />} />
       <Route path="/admin/blog" component={() => <ProtectedRoute component={AdminBlog} role={["super_admin", "advisor"]} />} />
+      <Route path="/admin/funds" component={() => <ProtectedRoute component={AdminFunds} role={["super_admin"]} />} />
 
       <Route component={NotFound} />
     </Switch>

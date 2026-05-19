@@ -1,4 +1,4 @@
-import { pgTable, text, integer, timestamp, uuid, date } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, numeric, timestamp, uuid, date, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -6,12 +6,21 @@ export const clientProfilesTable = pgTable("client_profiles", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: text("user_id").notNull().unique(),
   advisorId: text("advisor_id"),
+  status: text("status").notNull().default("prospect"),
   kycStatus: text("kyc_status").notNull().default("not_started"),
   riskProfile: text("risk_profile"),
+  riskScore: integer("risk_score"),
+  investmentStyle: text("investment_style"),
+  indicativeAmount: numeric("indicative_amount"),
+  preCallNotes: text("pre_call_notes"),
+  preferredContactTime: text("preferred_contact_time"),
   onboardingStep: integer("onboarding_step").notNull().default(1),
+  prospectOnboardingComplete: boolean("prospect_onboarding_complete").notNull().default(false),
+  fullOnboardingComplete: boolean("full_onboarding_complete").notNull().default(false),
   relationshipStartDate: date("relationship_start_date"),
   annualReviewDate: date("annual_review_date"),
   internalNotes: text("internal_notes"),
+  advisorInternalNotes: text("advisor_internal_notes"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

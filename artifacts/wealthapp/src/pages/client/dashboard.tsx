@@ -1,111 +1,400 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
+import { motion } from "framer-motion";
 import AppShell from "@/components/AppShell";
-import StatCard from "@/components/StatCard";
-import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
 import { useProfile } from "@/hooks/useProfile";
-import { BarChart3, Target, FileText, MessageSquare, ArrowRight, TrendingUp, ClipboardList } from "lucide-react";
+import { TrendingUp, Target, ArrowRight, MessageSquare, Play, ChevronRight, Plus, RefreshCw } from "lucide-react";
+import { fmtCurrency } from "@/lib/portfolioCalculations";
 
-interface Holding { id: string; assetName: string; assetClass: string; currentValueUsd: string; weightPercent: string | null; }
-interface Goal { id: string; title: string; status: string; targetAmount: string | null; currentAmount: string | null; }
-interface Plan { id: string; title: string; status: string; nextReviewDate: string | null; }
+interface ClientProfile {
+  id: string;
+  status: string;
+  prospectOnboardingComplete: boolean;
+  onboardingStep: number;
+  indicativeAmount: string | null;
+  investmentStyle: string | null;
+  riskProfile: string | null;
+}
+
+interface PackageSummary {
+  id: string;
+  nickname: string;
+  type: string;
+  status: string;
+  monthlyAmount: string | null;
+  latestSnapshot: { totalValueUsd: string; totalInvestedUsd: string; totalReturnPercent: string } | null;
+}
+
+interface Goal {
+  id: string;
+  title: string;
+  goalType: string;
+  targetAmount: string | null;
+  currentAmount: string | null;
+  targetDate: string | null;
+  status: string;
+}
+
+interface Transaction {
+  id: string;
+  transactionDate: string;
+  transactionType: string;
+  amountUsd: string;
+  package?: { nickname: string; type: string };
+  fund?: { name: string };
+}
+
+interface Scenario {
+  id: string;
+  isAdvisorPushed: boolean;
+  advisorNote: string | null;
+  status: string;
+  createdAt: string;
+}
+
+const TX_TYPE_LABELS: Record<string, string> = {
+  initial_investment: "Initial investment",
+  monthly_contribution: "Monthly contribution",
+  top_up: "Top up",
+  withdrawal: "Withdrawal",
+  dividend_reinvested: "Dividend reinvested",
+  fee_charged: "Fee charged",
+  rebalance: "Rebalance",
+};
+
+const GOAL_EMOJIS: Record<string, string> = {
+  retire: "🌴", property: "🏠", education: "📚", fire: "🚀",
+  business: "💼", emigrate: "🌍", wealth: "💰", early_retire: "🎓",
+};
 
 export default function ClientDashboard() {
   const { profile } = useProfile();
+  const [, navigate] = useLocation();
   const firstName = profile?.fullName?.split(" ")[0] ?? "there";
 
-  const { data: holdings = [] } = useQuery<Holding[]>({ queryKey: ["portfolio"], queryFn: () => apiFetch<Holding[]>("/portfolio") });
-  const { data: goals = [] } = useQuery<Goal[]>({ queryKey: ["goals"], queryFn: () => apiFetch<Goal[]>("/goals") });
-  const { data: plans = [] } = useQuery<Plan[]>({ queryKey: ["plans"], queryFn: () => apiFetch<Plan[]>("/plans") });
+  const { data: clientProfile, isLoading } = useQuery<ClientProfile>({
+    queryKey: ["client-profile-me"],
+    queryFn: () => apiFetch("/client-profile/me"),
+  });
 
-  const portfolioValue = holdings.reduce((s, h) => s + parseFloat(h.currentValueUsd), 0);
-  const currentPlan = plans[0];
-  const onTrackGoals = goals.filter(g => g.status === "on_track" || g.status === "achieved").length;
+  const { data: packages = [] } = useQuery<PackageSummary[]>({
+    queryKey: ["my-packages"],
+    queryFn: () => apiFetch("/packages"),
+    enabled: clientProfile?.status === "active" || clientProfile?.status === "active_prospect",
+  });
 
+  const { data: goals = [] } = useQuery<Goal[]>({
+    queryKey: ["goals"],
+    queryFn: () => apiFetch("/goals"),
+  });
+
+  const { data: transactions = [] } = useQuery<Transaction[]>({
+    queryKey: ["transactions-all"],
+    queryFn: () => apiFetch("/transactions/all"),
+    enabled: clientProfile?.status === "active" || clientProfile?.status === "active_prospect",
+  });
+
+  const { data: scenarios = [] } = useQuery<Scenario[]>({
+    queryKey: ["scenarios"],
+    queryFn: () => apiFetch("/scenarios"),
+    enabled: clientProfile?.status === "active" || clientProfile?.status === "active_prospect",
+  });
+
+  if (isLoading) {
+    return (
+      <AppShell>
+        <div className="flex items-center justify-center min-h-48">
+          <div className="animate-pulse text-muted-foreground text-sm">Loading your portal…</div>
+        </div>
+      </AppShell>
+    );
+  }
+
+  if (!clientProfile?.prospectOnboardingComplete) {
+    return (
+      <AppShell>
+        <div className="max-w-md mx-auto py-8 text-center space-y-6">
+          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+            <TrendingUp className="h-8 w-8 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-navy mb-2">Welcome, {firstName}!</h1>
+            <p className="text-muted-foreground">Let's set up your investment profile so your advisor can personalise everything for you.</p>
+          </div>
+          <Button onClick={() => navigate("/client/onboarding")} size="lg" className="w-full">
+            Get started →
+          </Button>
+        </div>
+      </AppShell>
+    );
+  }
+
+  const isProspect = clientProfile.status === "prospect" || clientProfile.status === "pending";
+  const isActive = clientProfile.status === "active" || clientProfile.status === "active_prospect";
+
+  if (isProspect) {
+    return <ProspectDashboard firstName={firstName} clientProfile={clientProfile} goals={goals} />;
+  }
+
+  return <ActiveDashboard firstName={firstName} packages={packages} goals={goals} transactions={transactions} scenarios={scenarios} />;
+}
+
+function ProspectDashboard({ firstName, clientProfile, goals }: { firstName: string; clientProfile: ClientProfile; goals: Goal[] }) {
+  const [, navigate] = useLocation();
   return (
     <AppShell>
-      <PageHeader title={`Welcome back, ${firstName}!`} subtitle="Your investment portfolio at a glance." />
+      <div className="space-y-5">
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+          <h1 className="text-2xl font-bold text-navy">Welcome, {firstName}!</h1>
+          <p className="text-muted-foreground text-sm mt-1">Your advisor will be in touch soon.</p>
+        </motion.div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <StatCard label="Portfolio Value" value={`$${portfolioValue.toLocaleString()}`} sub={`${holdings.length} holdings`} icon={BarChart3} color="teal" />
-        <StatCard label="Active Goals" value={goals.length} sub={`${onTrackGoals} on track`} icon={Target} color="navy" />
-        <StatCard label="Financial Plan" value={currentPlan?.status ?? "No plan"} sub={currentPlan?.title ?? "Contact advisor"} icon={ClipboardList} color="teal" />
-        <StatCard label="Documents" value="—" sub="View all files" icon={FileText} color="amber" />
-      </div>
-
-      <div className="grid md:grid-cols-2 gap-6 mb-6">
-        <div className="bg-card border border-card-border rounded-xl p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold">Portfolio Holdings</h3>
-            <Link href="/client/portfolio"><Button variant="ghost" size="sm" className="text-primary">View <ArrowRight className="ml-1 h-3.5 w-3.5" /></Button></Link>
-          </div>
-          {holdings.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-6 text-center">No holdings yet. Your advisor will add your portfolio.</p>
-          ) : (
-            <div className="space-y-2">
-              {holdings.slice(0, 4).map(h => (
-                <div key={h.id} className="flex items-center justify-between text-sm">
-                  <div>
-                    <div className="font-medium">{h.assetName}</div>
-                    <div className="text-xs text-muted-foreground">{h.assetClass}</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-semibold">${parseFloat(h.currentValueUsd).toLocaleString()}</div>
-                    {h.weightPercent && <div className="text-xs text-muted-foreground">{h.weightPercent}%</div>}
-                  </div>
-                </div>
-              ))}
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+          className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+          <div className="flex items-start gap-3">
+            <div className="text-2xl">⏳</div>
+            <div className="flex-1">
+              <div className="font-semibold text-amber-900">Waiting for your advisor call</div>
+              <div className="text-sm text-amber-700 mt-0.5">Your profile is complete. Your advisor will reach out within 24 hours.</div>
             </div>
-          )}
-        </div>
-
-        <div className="bg-card border border-card-border rounded-xl p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold">My Goals</h3>
-            <Link href="/client/goals"><Button variant="ghost" size="sm" className="text-primary">View <ArrowRight className="ml-1 h-3.5 w-3.5" /></Button></Link>
           </div>
-          {goals.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-6 text-center">No goals set yet.</p>
-          ) : (
+        </motion.div>
+
+        {goals.length > 0 && (
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+            className="bg-card border border-card-border rounded-xl p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold">Your Goals</h3>
+              <span className="text-xs text-muted-foreground">Illustration only</span>
+            </div>
             <div className="space-y-3">
-              {goals.slice(0, 3).map(g => {
-                const prog = g.targetAmount && g.currentAmount ? (parseFloat(g.currentAmount) / parseFloat(g.targetAmount)) * 100 : 0;
+              {goals.map((g) => {
+                const rateMap: Record<string, number> = { Conservative: 4, "Moderately Conservative": 5, Moderate: 7, "Moderately Aggressive": 9, Aggressive: 11 };
+                const rate = rateMap[clientProfile.riskProfile ?? "Moderate"] ?? 7;
+                const emoji = GOAL_EMOJIS[g.goalType ?? ""] ?? "🎯";
+                const target = parseFloat(g.targetAmount ?? "0");
+                const current = parseFloat(g.currentAmount ?? "0");
+                const pct = target > 0 ? Math.min(100, (current / target) * 100) : 0;
                 return (
-                  <div key={g.id}>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className="font-medium">{g.title}</span>
-                      <span className="text-muted-foreground">{Math.round(prog)}%</span>
-                    </div>
-                    <div className="h-1.5 bg-muted rounded-full">
-                      <div className="h-1.5 bg-primary rounded-full" style={{ width: `${Math.min(100, prog)}%` }} />
+                  <div key={g.id} className="flex items-center gap-3">
+                    <span className="text-xl">{emoji}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium truncate">{g.title}</div>
+                      <div className="text-xs text-muted-foreground">Target: {fmtCurrency(target)} · {g.targetDate ?? "No date"}</div>
+                      <div className="mt-1 h-1.5 bg-muted rounded-full">
+                        <div className="h-1.5 bg-primary rounded-full" style={{ width: `${pct}%` }} />
+                      </div>
                     </div>
                   </div>
                 );
               })}
             </div>
-          )}
-        </div>
-      </div>
+            <p className="text-xs text-muted-foreground mt-3">Assumes {clientProfile.riskProfile ?? "Moderate"} risk profile return rate. Actual returns vary.</p>
+          </motion.div>
+        )}
 
-      <div className="grid md:grid-cols-3 gap-4">
-        {[
-          { label: "View Portfolio", href: "/client/portfolio", icon: BarChart3, sub: "Full allocation" },
-          { label: "My Plan", href: "/client/plan", icon: ClipboardList, sub: currentPlan?.title ?? "See your roadmap" },
-          { label: "Messages", href: "/client/messages", icon: MessageSquare, sub: "Chat with advisor" },
-        ].map(a => {
-          const Icon = a.icon;
-          return (
-            <Link key={a.label} href={a.href}>
-              <a className="bg-card border border-card-border rounded-xl p-4 flex items-center gap-3 hover:shadow-sm transition-shadow">
-                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0"><Icon className="h-5 w-5 text-primary" /></div>
-                <div><div className="font-medium text-sm">{a.label}</div><div className="text-xs text-muted-foreground">{a.sub}</div></div>
-                <ArrowRight className="h-4 w-4 text-muted-foreground ml-auto" />
-              </a>
+        {clientProfile.indicativeAmount && parseFloat(clientProfile.indicativeAmount) > 0 && (
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+            className="bg-card border border-card-border rounded-xl p-5">
+            <h3 className="font-semibold mb-2">See What Your Money Could Become</h3>
+            <p className="text-sm text-muted-foreground mb-3">
+              If you invested {fmtCurrency(parseFloat(clientProfile.indicativeAmount))} {clientProfile.investmentStyle === "rsp" || clientProfile.investmentStyle === "combination" ? "per month" : "as a lump sum"}…
+            </p>
+            <Button variant="outline" size="sm" onClick={() => { }}>
+              <Play className="h-4 w-4 mr-1" /> Run this scenario
+            </Button>
+          </motion.div>
+        )}
+
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
+          className="bg-card border border-card-border rounded-xl p-5">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center text-2xl shrink-0">👤</div>
+            <div className="flex-1">
+              <div className="font-semibold">Your Advisor</div>
+              <div className="text-xs text-muted-foreground">Wealth Advisor · Boutique Advisory</div>
+            </div>
+            <Link href="/client/messages">
+              <Button variant="outline" size="sm">
+                <MessageSquare className="h-4 w-4 mr-1" /> Message
+              </Button>
             </Link>
-          );
-        })}
+          </div>
+        </motion.div>
+      </div>
+    </AppShell>
+  );
+}
+
+function ActiveDashboard({ firstName, packages, goals, transactions, scenarios }: { firstName: string; packages: PackageSummary[]; goals: Goal[]; transactions: Transaction[]; scenarios: Scenario[] }) {
+  const [, navigate] = useLocation();
+
+  const totalValue = packages.reduce((s, p) => s + parseFloat(p.latestSnapshot?.totalValueUsd ?? "0"), 0);
+  const totalInvested = packages.reduce((s, p) => s + parseFloat(p.latestSnapshot?.totalInvestedUsd ?? "0"), 0);
+  const totalReturn = totalValue - totalInvested;
+  const totalReturnPct = totalInvested > 0 ? (totalReturn / totalInvested) * 100 : 0;
+
+  const advisorPushed = scenarios.find((s) => s.isAdvisorPushed && s.status === "viewed");
+
+  return (
+    <AppShell>
+      <div className="space-y-5">
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+          <h1 className="text-xl font-bold text-navy">Welcome back, {firstName}!</h1>
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
+          className="rounded-2xl p-5 text-white" style={{ background: "linear-gradient(135deg,#042C53 0%,#0a4a8a 100%)" }}>
+          <div className="text-xs text-slate-300 mb-1">Total Portfolio Value</div>
+          <div className="text-3xl font-bold mb-1">{fmtCurrency(totalValue)}</div>
+          <div className={`text-sm mb-3 ${totalReturn >= 0 ? "text-emerald-300" : "text-red-300"}`}>
+            {totalReturn >= 0 ? "▲" : "▼"} {fmtCurrency(Math.abs(totalReturn))} ({totalReturnPct >= 0 ? "+" : ""}{totalReturnPct.toFixed(1)}%) total return
+          </div>
+          <div className="flex items-center justify-between text-xs text-slate-400">
+            <span>Invested: {fmtCurrency(totalInvested)}</span>
+            <Link href="/client/portfolio">
+              <a className="text-white font-medium flex items-center gap-1 hover:opacity-80">View Portfolio <ArrowRight className="h-3.5 w-3.5" /></a>
+            </Link>
+          </div>
+        </motion.div>
+
+        {goals.length > 0 && (
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold">Goals at a Glance</h3>
+              <Link href="/client/goals"><a className="text-xs text-primary">View all</a></Link>
+            </div>
+            <div className="flex gap-3 overflow-x-auto pb-1 -mx-4 px-4">
+              {goals.map((g) => {
+                const target = parseFloat(g.targetAmount ?? "0");
+                const current = parseFloat(g.currentAmount ?? "0");
+                const pct = target > 0 ? Math.min(100, (current / target) * 100) : 0;
+                const emoji = GOAL_EMOJIS[g.goalType ?? ""] ?? "🎯";
+                const onTrack = g.status === "on_track" || pct >= 50;
+                return (
+                  <div key={g.id} className="shrink-0 w-44 bg-card border border-card-border rounded-xl p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-lg">{emoji}</span>
+                      <span className="text-xs font-medium truncate">{g.title}</span>
+                    </div>
+                    <div className="text-base font-bold">{Math.round(pct)}%</div>
+                    <div className="h-1.5 bg-muted rounded-full mt-1 mb-1">
+                      <div className="h-1.5 bg-primary rounded-full" style={{ width: `${pct}%` }} />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className={`text-xs px-1.5 py-0.5 rounded-full ${onTrack ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                        {onTrack ? "On track" : "Behind"}
+                      </span>
+                      {g.targetDate && <span className="text-xs text-muted-foreground">{g.targetDate.slice(0, 7)}</span>}
+                    </div>
+                  </div>
+                );
+              })}
+              <Link href="/client/goals">
+                <a className="shrink-0 w-36 bg-card border border-dashed border-border rounded-xl p-3 flex flex-col items-center justify-center gap-1 text-muted-foreground hover:border-primary/40">
+                  <Plus className="h-5 w-5" />
+                  <span className="text-xs">Add goal</span>
+                </a>
+              </Link>
+            </div>
+          </motion.div>
+        )}
+
+        {packages.length > 0 && (
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold">My Packages</h3>
+              <Link href="/client/packages"><a className="text-xs text-primary">View all</a></Link>
+            </div>
+            <div className="flex gap-3 overflow-x-auto pb-1 -mx-4 px-4">
+              {packages.map((pkg) => {
+                const value = parseFloat(pkg.latestSnapshot?.totalValueUsd ?? "0");
+                const invested = parseFloat(pkg.latestSnapshot?.totalInvestedUsd ?? "0");
+                const ret = value - invested;
+                const retPct = invested > 0 ? (ret / invested) * 100 : 0;
+                return (
+                  <Link key={pkg.id} href={`/client/packages/${pkg.id}`}>
+                    <a className="shrink-0 w-52 bg-card border border-card-border rounded-xl p-4 block hover:shadow-sm transition-shadow">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-semibold truncate">{pkg.nickname}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${pkg.status === "active" ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>
+                          {pkg.status === "active" ? "Active" : "Setting up"}
+                        </span>
+                      </div>
+                      <div className="text-xl font-bold text-navy">{fmtCurrency(value)}</div>
+                      <div className={`text-xs mt-1 ${ret >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+                        {ret >= 0 ? "+" : ""}{fmtCurrency(ret)} ({retPct >= 0 ? "+" : ""}{retPct.toFixed(1)}%)
+                      </div>
+                      {pkg.monthlyAmount && <div className="text-xs text-muted-foreground mt-1">{fmtCurrency(parseFloat(pkg.monthlyAmount))}/month</div>}
+                    </a>
+                  </Link>
+                );
+              })}
+              <a className="shrink-0 w-40 bg-card border border-dashed border-border rounded-xl p-4 flex flex-col items-center justify-center gap-1 text-muted-foreground hover:border-primary/40 cursor-pointer">
+                <Plus className="h-5 w-5" />
+                <span className="text-xs">Add package</span>
+              </a>
+            </div>
+          </motion.div>
+        )}
+
+        {advisorPushed && (
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+            className="bg-primary/5 border border-primary/20 rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-sm font-semibold text-primary">Your advisor ran a scenario for you</span>
+              <span className="bg-primary text-white text-xs px-2 py-0.5 rounded-full">New</span>
+            </div>
+            {advisorPushed.advisorNote && <p className="text-xs text-muted-foreground mb-2 line-clamp-2">{advisorPushed.advisorNote}</p>}
+            <Link href="/client/scenarios">
+              <Button size="sm" variant="outline">View scenario <ChevronRight className="h-4 w-4 ml-1" /></Button>
+            </Link>
+          </motion.div>
+        )}
+
+        {transactions.length > 0 && (
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
+            className="bg-card border border-card-border rounded-xl p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold">Recent Activity</h3>
+              <Link href="/client/transactions"><a className="text-xs text-primary">View all</a></Link>
+            </div>
+            <div className="space-y-2.5">
+              {transactions.slice(0, 5).map((tx) => (
+                <div key={tx.id} className="flex items-center gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium">{TX_TYPE_LABELS[tx.transactionType] ?? tx.transactionType}</div>
+                    <div className="text-xs text-muted-foreground">{tx.package?.nickname} · {tx.transactionDate}</div>
+                  </div>
+                  <div className={`text-sm font-semibold ${["withdrawal", "fee_charged"].includes(tx.transactionType) ? "text-red-500" : "text-emerald-600"}`}>
+                    {["withdrawal", "fee_charged"].includes(tx.transactionType) ? "-" : "+"}{fmtCurrency(parseFloat(tx.amountUsd))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+          <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4">
+            {[
+              { label: "View portfolio", href: "/client/portfolio", icon: TrendingUp },
+              { label: "Run a scenario", href: "/client/scenarios", icon: Play },
+              { label: "Message advisor", href: "/client/messages", icon: MessageSquare },
+            ].map((a) => {
+              const Icon = a.icon;
+              return (
+                <Link key={a.label} href={a.href}>
+                  <a className="shrink-0 flex items-center gap-2 px-4 py-2 bg-card border border-card-border rounded-full text-sm font-medium hover:bg-primary/5 transition-colors">
+                    <Icon className="h-4 w-4 text-primary" /> {a.label}
+                  </a>
+                </Link>
+              );
+            })}
+          </div>
+        </motion.div>
       </div>
     </AppShell>
   );

@@ -1,0 +1,1724 @@
+# WEALTHAPP — INVESTMENT CLIENT PORTAL: COMPLETE REPLIT AGENT PROMPT
+# Paste entirely into Replit Agent.
+# This prompt builds the investment_client role portal on top of the existing
+# free user app (auth, Supabase, design system already in place).
+# Covers: two-state portal (prospect + active), 6-step onboarding, advisor-managed
+# packages with custom allocations, live fund prices via Twelve Data API,
+# goal-portfolio linking, portfolio history, scenario planner, advisor tools.
+
+---
+
+## CONTEXT: WHAT ALREADY EXISTS
+
+The free user portal (auth, profiles, budget, goals, health score, pathway) is already
+built. Do not modify any existing tables, components, or routes unless explicitly told to.
+This prompt adds the investment_client role portal as a parallel system.
+
+The existing design system uses:
+  Primary: #1D9E75 | Navy: #042C53 | Surface: #F8FAFB | Border: #E2E8F0
+  Font: Inter | Tailwind CSS | Framer Motion | Recharts | Lucide React
+  Supabase for auth + database | React + TypeScript + Vite
+
+---
+
+## TECH ADDITIONS NEEDED
+
+Add to existing package.json (only if not already installed):
+```json
+{
+  "dependencies": {
+    "date-fns": "^3",
+    "react-beautiful-dnd": "^13"
+  }
+}
+```
+
+Add to .env:
+```
+VITE_TWELVE_DATA_API_KEY=your_key_here
+```
+
+---
+
+## NEW DATABASE SCHEMA — Run in Supabase SQL Editor
+
+```sql
+-- Fund master list (admin-managed)
+CREATE TABLE funds (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  ticker TEXT,
+  isin TEXT,
+  asset_class TEXT NOT NULL
+    CHECK (asset_class IN ('equity','bond','cash','real_estate','commodity','alternative')),
+  geography TEXT,
+  currency TEXT DEFAULT 'USD',
+  fund_manager TEXT,
+  fund_type TEXT CHECK (fund_type IN ('etf','mutual_fund','unit_trust','money_market')),
+  expense_ratio NUMERIC,
+  benchmark_index TEXT,
+  factsheet_url TEXT,
+  price_api_symbol TEXT,
+  price_api_exchange TEXT,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Live fund prices (updated daily via Twelve Data API)
+CREATE TABLE fund_prices (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  fund_id UUID REFERENCES funds(id),
+  price_date DATE NOT NULL,
+  price_native NUMERIC NOT NULL,
+  price_usd NUMERIC NOT NULL,
+  price_vnd NUMERIC,
+  change_1d NUMERIC,
+  change_1d_percent NUMERIC,
+  source TEXT DEFAULT 'api',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(fund_id, price_date)
+);
+
+-- Extended client profile (for investment_client role)
+CREATE TABLE client_profiles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE UNIQUE,
+  advisor_id UUID REFERENCES profiles(id),
+  status TEXT DEFAULT 'prospect'
+    CHECK (status IN ('prospect','active','active_prospect','paused','churned')),
+  risk_profile TEXT
+    CHECK (risk_profile IN ('conservative','moderately_conservative','moderate',
+                            'moderately_aggressive','aggressive')),
+  risk_score INT,
+  investment_style TEXT CHECK (investment_style IN ('rsp','lump_sum','combination','exploring')),
+  indicative_amount NUMERIC,
+  pre_call_notes TEXT,
+  preferred_contact_time TEXT,
+  kyc_status TEXT DEFAULT 'not_started'
+    CHECK (kyc_status IN ('not_started','submitted','under_review','approved','rejected')),
+  onboarding_step INT DEFAULT 1,
+  prospect_onboarding_complete BOOLEAN DEFAULT FALSE,
+  full_onboarding_complete BOOLEAN DEFAULT FALSE,
+  relationship_start_date DATE,
+  annual_review_date DATE,
+  advisor_internal_notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Prospect financial snapshot (ranges, not exact — filled during prospect onboarding)
+CREATE TABLE client_financial_snapshots (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE UNIQUE,
+  monthly_income NUMERIC,
+  savings_range TEXT,
+  has_investments BOOLEAN DEFAULT FALSE,
+  investments_rough_value NUMERIC,
+  has_debts BOOLEAN DEFAULT FALSE,
+  debts_rough_value NUMERIC,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Client investment packages (advisor creates + manages)
+CREATE TABLE client_packages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  advisor_id UUID REFERENCES profiles(id),
+  goal_id UUID REFERENCES financial_goals(id),
+  nickname TEXT NOT NULL,
+  status TEXT DEFAULT 'pending_setup'
+    CHECK (status IN ('pending_setup','pending_kyc','active','paused','closed')),
+  type TEXT NOT NULL CHECK (type IN ('rsp','lump_sum','combination')),
+  monthly_amount NUMERIC,
+  lump_sum_amount NUMERIC,
+  start_date DATE,
+  end_date DATE,
+  currency TEXT DEFAULT 'USD',
+  expected_annual_return NUMERIC DEFAULT 7.0,
+  advisor_notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Fund allocations per package (advisor-set, custom per client — no templates)
+CREATE TABLE package_allocations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_package_id UUID REFERENCES client_packages(id) ON DELETE CASCADE,
+  fund_id UUID REFERENCES funds(id),
+  weight_percent NUMERIC NOT NULL CHECK (weight_percent > 0 AND weight_percent <= 100),
+  units_held NUMERIC DEFAULT 0,
+  is_active BOOLEAN DEFAULT TRUE,
+  set_by UUID REFERENCES profiles(id),
+  effective_from DATE DEFAULT CURRENT_DATE,
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Package transactions (advisor-entered only)
+CREATE TABLE package_transactions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_package_id UUID REFERENCES client_packages(id),
+  user_id UUID REFERENCES profiles(id),
+  fund_id UUID REFERENCES funds(id),
+  transaction_date DATE NOT NULL,
+  transaction_type TEXT NOT NULL
+    CHECK (transaction_type IN (
+      'initial_investment','monthly_contribution','top_up',
+      'withdrawal','dividend_reinvested','fee_charged',
+      'rebalance_buy','rebalance_sell','switch_in','switch_out'
+    )),
+  amount_usd NUMERIC NOT NULL,
+  units NUMERIC,
+  price_per_unit_usd NUMERIC,
+  notes TEXT,
+  created_by UUID REFERENCES profiles(id),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Portfolio snapshots (auto-calculated after daily price update)
+CREATE TABLE portfolio_snapshots (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_package_id UUID REFERENCES client_packages(id),
+  user_id UUID REFERENCES profiles(id),
+  snapshot_date DATE NOT NULL,
+  total_invested_usd NUMERIC NOT NULL,
+  total_value_usd NUMERIC NOT NULL,
+  total_return_usd NUMERIC GENERATED ALWAYS AS (total_value_usd - total_invested_usd) STORED,
+  total_return_percent NUMERIC,
+  fund_breakdown JSONB,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(client_package_id, snapshot_date)
+);
+
+-- Scenarios (prospect hypotheticals + active client what-ifs)
+CREATE TABLE scenarios (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES profiles(id),
+  scenario_type TEXT NOT NULL
+    CHECK (scenario_type IN (
+      'increase_monthly','add_lump_sum','market_drop',
+      'earlier_goal','pause_contributions','custom'
+    )),
+  linked_goal_id UUID REFERENCES financial_goals(id),
+  linked_package_id UUID REFERENCES client_packages(id),
+  input_data JSONB NOT NULL,
+  output_data JSONB NOT NULL,
+  is_advisor_pushed BOOLEAN DEFAULT FALSE,
+  advisor_note TEXT,
+  status TEXT DEFAULT 'viewed'
+    CHECK (status IN ('viewed','applied','dismissed')),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- KYC documents
+CREATE TABLE kyc_documents (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  document_type TEXT NOT NULL
+    CHECK (document_type IN ('passport','national_id','proof_of_address','source_of_funds','other')),
+  file_url TEXT NOT NULL,
+  file_name TEXT,
+  status TEXT DEFAULT 'pending'
+    CHECK (status IN ('pending','verified','rejected')),
+  rejection_reason TEXT,
+  uploaded_at TIMESTAMPTZ DEFAULT NOW(),
+  verified_by UUID REFERENCES profiles(id),
+  verified_at TIMESTAMPTZ
+);
+
+-- Advisor tasks (for package setup, client requests, follow-ups)
+CREATE TABLE advisor_tasks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id UUID REFERENCES profiles(id),
+  advisor_id UUID REFERENCES profiles(id),
+  client_package_id UUID REFERENCES client_packages(id),
+  linked_scenario_id UUID REFERENCES scenarios(id),
+  title TEXT NOT NULL,
+  description TEXT,
+  task_type TEXT
+    CHECK (task_type IN ('package_setup','top_up_request','pause_request',
+                         'increase_rsp','rebalance','kyc_review','general','scenario_applied')),
+  due_date DATE,
+  priority TEXT DEFAULT 'medium' CHECK (priority IN ('low','medium','high','urgent')),
+  status TEXT DEFAULT 'todo' CHECK (status IN ('todo','in_progress','done')),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Advisor-client conversations
+CREATE TABLE conversations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id UUID REFERENCES profiles(id),
+  advisor_id UUID REFERENCES profiles(id),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  conversation_id UUID REFERENCES conversations(id) ON DELETE CASCADE,
+  sender_id UUID REFERENCES profiles(id),
+  sender_role TEXT CHECK (sender_role IN ('client','advisor')),
+  content TEXT NOT NULL,
+  attachment_url TEXT,
+  is_scenario_ref BOOLEAN DEFAULT FALSE,
+  scenario_id UUID REFERENCES scenarios(id),
+  sent_at TIMESTAMPTZ DEFAULT NOW(),
+  read_at TIMESTAMPTZ
+);
+
+-- Insert sample funds (admin can add more via admin panel)
+INSERT INTO funds (name, ticker, asset_class, geography, currency, fund_manager, fund_type,
+                   expense_ratio, benchmark_index, price_api_symbol, price_api_exchange) VALUES
+('iShares Core S&P 500 ETF', 'IVV', 'equity', 'us', 'USD', 'BlackRock', 'etf',
+ 0.03, 'S&P 500', 'IVV', 'NYSE'),
+('iShares MSCI World ETF', 'IWDA', 'equity', 'global', 'USD', 'BlackRock', 'etf',
+ 0.20, 'MSCI World', 'IWDA.L', 'LSE'),
+('iShares Core Global Aggregate Bond ETF', 'AGGG', 'bond', 'global', 'USD', 'BlackRock', 'etf',
+ 0.10, 'Bloomberg Global Aggregate', 'AGGG.L', 'LSE'),
+('iShares MSCI Emerging Markets ETF', 'EEM', 'equity', 'em', 'USD', 'BlackRock', 'etf',
+ 0.68, 'MSCI Emerging Markets', 'EEM', 'NYSE'),
+('Invesco QQQ Trust', 'QQQ', 'equity', 'us', 'USD', 'Invesco', 'etf',
+ 0.20, 'Nasdaq 100', 'QQQ', 'NYSE');
+
+-- RLS Policies
+ALTER TABLE client_profiles ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "own_client_profile" ON client_profiles FOR ALL TO authenticated
+  USING (user_id = auth.uid());
+CREATE POLICY "advisor_sees_client_profiles" ON client_profiles FOR ALL TO authenticated
+  USING (advisor_id = auth.uid() OR
+         EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'super_admin'));
+
+ALTER TABLE client_financial_snapshots ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "own_snapshot" ON client_financial_snapshots FOR ALL TO authenticated
+  USING (user_id = auth.uid());
+
+ALTER TABLE client_packages ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "own_packages" ON client_packages FOR SELECT TO authenticated
+  USING (user_id = auth.uid());
+CREATE POLICY "advisor_manages_packages" ON client_packages FOR ALL TO authenticated
+  USING (advisor_id = auth.uid() OR
+         EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'super_admin'));
+
+ALTER TABLE package_allocations ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "client_sees_allocations" ON package_allocations FOR SELECT TO authenticated
+  USING (EXISTS (SELECT 1 FROM client_packages cp WHERE cp.id = client_package_id
+                 AND cp.user_id = auth.uid()));
+CREATE POLICY "advisor_manages_allocations" ON package_allocations FOR ALL TO authenticated
+  USING (EXISTS (SELECT 1 FROM client_packages cp
+                 JOIN profiles p ON p.id = auth.uid()
+                 WHERE cp.id = client_package_id
+                 AND (cp.advisor_id = auth.uid() OR p.role = 'super_admin')));
+
+ALTER TABLE package_transactions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "client_sees_transactions" ON package_transactions FOR SELECT TO authenticated
+  USING (user_id = auth.uid());
+CREATE POLICY "advisor_enters_transactions" ON package_transactions FOR ALL TO authenticated
+  USING (created_by = auth.uid() OR
+         EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'super_admin'));
+
+ALTER TABLE portfolio_snapshots ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "client_sees_snapshots" ON portfolio_snapshots FOR SELECT TO authenticated
+  USING (user_id = auth.uid());
+CREATE POLICY "system_writes_snapshots" ON portfolio_snapshots FOR ALL TO authenticated
+  USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid()
+                 AND role IN ('advisor','super_admin')));
+
+ALTER TABLE funds ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "all_authenticated_see_funds" ON funds FOR SELECT TO authenticated USING (true);
+CREATE POLICY "admin_manages_funds" ON funds FOR ALL TO authenticated
+  USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'super_admin'));
+
+ALTER TABLE fund_prices ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "all_see_prices" ON fund_prices FOR SELECT TO authenticated USING (true);
+CREATE POLICY "system_writes_prices" ON fund_prices FOR ALL TO authenticated
+  USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid()
+                 AND role IN ('advisor','super_admin')));
+
+ALTER TABLE scenarios ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "own_scenarios" ON scenarios FOR ALL TO authenticated
+  USING (user_id = auth.uid());
+CREATE POLICY "advisor_pushes_scenarios" ON scenarios FOR INSERT TO authenticated
+  WITH CHECK (is_advisor_pushed = TRUE AND
+              EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid()
+                      AND role IN ('advisor','super_admin')));
+
+ALTER TABLE kyc_documents ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "own_kyc_docs" ON kyc_documents FOR ALL TO authenticated
+  USING (user_id = auth.uid());
+CREATE POLICY "advisor_sees_kyc" ON kyc_documents FOR SELECT TO authenticated
+  USING (EXISTS (SELECT 1 FROM client_profiles cp
+                 JOIN profiles p ON p.id = auth.uid()
+                 WHERE cp.user_id = kyc_documents.user_id
+                 AND (cp.advisor_id = auth.uid() OR p.role = 'super_admin')));
+
+ALTER TABLE advisor_tasks ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "advisor_own_tasks" ON advisor_tasks FOR ALL TO authenticated
+  USING (advisor_id = auth.uid() OR
+         EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'super_admin'));
+
+ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "conversation_parties" ON conversations FOR ALL TO authenticated
+  USING (client_id = auth.uid() OR advisor_id = auth.uid());
+
+ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "conversation_members" ON messages FOR ALL TO authenticated
+  USING (EXISTS (SELECT 1 FROM conversations c WHERE c.id = conversation_id
+                 AND (c.client_id = auth.uid() OR c.advisor_id = auth.uid())));
+```
+
+---
+
+## NEW FILE STRUCTURE
+
+Add these files alongside the existing free user structure:
+
+```
+src/
+  lib/
+    investmentGoalProjection.ts    ← NEW: projection calc using real portfolio values
+    priceService.ts                ← NEW: Twelve Data API integration
+    portfolioCalculations.ts       ← NEW: snapshot + return calculations
+  hooks/
+    useClientProfile.ts            ← NEW: client_profiles row + status
+    useClientPackages.ts           ← NEW: all packages for current client
+    useFundPrices.ts               ← NEW: latest prices from fund_prices table
+    usePortfolioSnapshots.ts       ← NEW: history data per package
+    useScenarios.ts                ← NEW: scenarios CRUD + advisor push
+    useConversation.ts             ← NEW: messages with realtime subscription
+  components/
+    investment/
+      PackageCard.tsx              ← NEW: package summary card (2 states: prospect/active)
+      PackageDetailTabs.tsx        ← NEW: Overview / Performance / Funds / Transactions / Settings
+      FundCard.tsx                 ← NEW: fund with live price + sparkline
+      FundAllocationEditor.tsx     ← NEW: advisor weight editor (must sum to 100%)
+      TransactionForm.tsx          ← NEW: advisor transaction entry
+      InvestmentGoalCard.tsx       ← NEW: goal card with linked packages shown
+      ScenarioCard.tsx             ← NEW: scenario result display
+      ScenarioPlannerShell.tsx     ← NEW: 5-tab scenario planner
+      PortfolioChart.tsx           ← NEW: invested vs value AreaChart
+      AllocationPieChart.tsx       ← NEW: fund allocation PieChart
+      FundSparkline.tsx            ← NEW: mini 180-day price LineChart
+      AdvisorCard.tsx              ← NEW: advisor photo + bio + contact
+      KYCUploadZone.tsx            ← NEW: drag-drop file upload for KYC
+      ProspectBanner.tsx           ← NEW: "You're exploring" mode indicator
+  pages/
+    portal/                        ← NEW: all investment client pages
+      ProspectOnboarding.tsx       ← NEW: 6-step prospect onboarding
+      ActiveOnboarding.tsx         ← NEW: 3-section full onboarding (post-call)
+      PortalDashboard.tsx          ← NEW: two-state dashboard
+      PortfolioOverview.tsx        ← NEW: all packages combined
+      MyPackages.tsx               ← NEW: list of packages
+      PackageDetail.tsx            ← NEW: single package drill-down
+      TransactionHistory.tsx       ← NEW: all transactions across packages
+      InvestmentGoals.tsx          ← NEW: goals with linked packages
+      ScenarioPlanner.tsx          ← NEW: 5 scenarios
+      FinancialPlan.tsx            ← NEW: advisor-written plan (read only)
+      PortalNetWorth.tsx           ← NEW: net worth with investment value
+      PortalDocuments.tsx          ← NEW: documents vault
+      PortalMessages.tsx           ← NEW: real-time chat
+      PortalReports.tsx            ← NEW: quarterly reports
+      PortalSettings.tsx           ← NEW: profile + preferences
+    advisor/                       ← NEW: advisor portal pages
+      AdvisorDashboard.tsx
+      AdvisorClientList.tsx
+      AdvisorClientDetail.tsx      ← NEW: 8-tab client detail
+      AdvisorTaskManager.tsx
+      AdvisorCreatePackage.tsx     ← NEW: package setup flow
+      AdvisorTransactionEntry.tsx  ← NEW: transaction entry form
+      AdvisorScenarioPush.tsx      ← NEW: push scenario to client
+      AdvisorFundPriceOverride.tsx ← NEW: manual price override
+    admin/
+      AdminDashboard.tsx
+      AdminUserList.tsx
+      AdminFundManager.tsx         ← NEW: add/edit funds master list
+      AdminPriceManager.tsx        ← NEW: view + manual override prices
+```
+
+---
+
+## CORE LOGIC LIBRARIES
+
+### src/lib/investmentGoalProjection.ts
+
+```typescript
+export interface PackageInput {
+  currentValueUsd: number
+  monthlyContribution: number  // 0 if lump sum only
+  expectedAnnualReturn: number // advisor-set on the package
+  type: 'rsp' | 'lump_sum' | 'combination'
+}
+
+export interface InvestmentGoalProjectionResult {
+  status: 'on_track' | 'almost' | 'off_track'
+  onTrack: boolean
+  monthsRemaining: number
+  totalCurrentValue: number
+  totalProjectedValue: number
+  totalMonthlyContribution: number
+  projectedShortfall: number
+  gapPercent: number
+  amountStillNeeded: number
+  monthlyShortfall: number
+  additionalMonthlyNeeded: number  // extra RSP to get on track
+  lumpSumNeededToday: number       // lump sum to get on track
+}
+
+export function calculateInvestmentGoalProjection(
+  targetAmount: number,
+  targetDate: string,
+  packages: PackageInput[]
+): InvestmentGoalProjectionResult {
+  const today = new Date()
+  const target = new Date(targetDate)
+  const monthsRemaining = Math.max(0,
+    (target.getFullYear() - today.getFullYear()) * 12 +
+    (target.getMonth() - today.getMonth())
+  )
+
+  let totalCurrentValue = 0
+  let totalProjectedValue = 0
+  let totalMonthlyContribution = 0
+
+  for (const pkg of packages) {
+    totalCurrentValue += pkg.currentValueUsd
+    totalMonthlyContribution += pkg.monthlyContribution
+    const monthlyRate = pkg.expectedAnnualReturn / 100 / 12
+
+    // Future value of current balance
+    const fvBalance = pkg.currentValueUsd * Math.pow(1 + monthlyRate, monthsRemaining)
+    // Future value of regular monthly contributions (annuity formula)
+    const fvContributions = (pkg.monthlyContribution > 0 && monthlyRate > 0)
+      ? pkg.monthlyContribution * ((Math.pow(1 + monthlyRate, monthsRemaining) - 1) / monthlyRate)
+      : pkg.monthlyContribution * monthsRemaining
+
+    totalProjectedValue += fvBalance + fvContributions
+  }
+
+  const projectedShortfall = Math.max(0, targetAmount - totalProjectedValue)
+  const gapPercent = targetAmount > 0 ? (projectedShortfall / targetAmount) * 100 : 0
+  const amountStillNeeded = Math.max(0, targetAmount - totalCurrentValue)
+  const requiredMonthly = monthsRemaining > 0 ? amountStillNeeded / monthsRemaining : 0
+  const monthlyShortfall = Math.max(0, requiredMonthly - totalMonthlyContribution)
+
+  // Average return rate across packages for gap calculations
+  const avgAnnualReturn = packages.length > 0
+    ? packages.reduce((sum, p) => sum + p.expectedAnnualReturn, 0) / packages.length
+    : 7.0
+  const avgMonthlyRate = avgAnnualReturn / 100 / 12
+
+  // How much extra monthly RSP closes the gap?
+  const additionalMonthlyNeeded = projectedShortfall > 0 && monthsRemaining > 0 && avgMonthlyRate > 0
+    ? projectedShortfall * avgMonthlyRate / (Math.pow(1 + avgMonthlyRate, monthsRemaining) - 1)
+    : projectedShortfall / Math.max(monthsRemaining, 1)
+
+  // What lump sum today closes the gap?
+  const lumpSumNeededToday = projectedShortfall > 0 && monthsRemaining > 0
+    ? projectedShortfall / Math.pow(1 + avgMonthlyRate, monthsRemaining)
+    : projectedShortfall
+
+  const onTrack = totalProjectedValue >= targetAmount
+  const status = onTrack ? 'on_track' : gapPercent <= 15 ? 'almost' : 'off_track'
+
+  return {
+    status, onTrack, monthsRemaining,
+    totalCurrentValue, totalProjectedValue, totalMonthlyContribution,
+    projectedShortfall, gapPercent, amountStillNeeded,
+    monthlyShortfall, additionalMonthlyNeeded, lumpSumNeededToday
+  }
+}
+
+// Scenario calculations
+
+export function scenarioIncreaseMonthly(
+  currentPackages: PackageInput[],
+  additionalMonthly: number,
+  targetAmount: number,
+  targetDate: string,
+  monthsRemaining: number
+) {
+  const enhanced = currentPackages.map((pkg, i) =>
+    i === 0 // apply increase to first RSP package (or all if preference)
+      ? { ...pkg, monthlyContribution: pkg.monthlyContribution + additionalMonthly }
+      : pkg
+  )
+  return calculateInvestmentGoalProjection(targetAmount, targetDate, enhanced)
+}
+
+export function scenarioAddLumpSum(
+  currentPackages: PackageInput[],
+  lumpSumAmount: number,
+  targetAmount: number,
+  targetDate: string
+) {
+  const enhanced = currentPackages.map((pkg, i) =>
+    i === 0
+      ? { ...pkg, currentValueUsd: pkg.currentValueUsd + lumpSumAmount }
+      : pkg
+  )
+  return calculateInvestmentGoalProjection(targetAmount, targetDate, enhanced)
+}
+
+export function scenarioMarketDrop(
+  currentPackages: PackageInput[],
+  dropPercent: number,  // e.g. 20 for a 20% drop
+  targetAmount: number,
+  targetDate: string
+) {
+  const factor = 1 - (dropPercent / 100)
+  const dropped = currentPackages.map(pkg => ({
+    ...pkg,
+    currentValueUsd: pkg.currentValueUsd * factor
+  }))
+  const result = calculateInvestmentGoalProjection(targetAmount, targetDate, dropped)
+
+  // Recovery estimate: months to recover at expected return
+  const totalCurrentLost = currentPackages.reduce((sum, p) => sum + p.currentValueUsd, 0)
+    * (dropPercent / 100)
+  const avgMonthlyRate = (currentPackages.reduce((sum, p) => sum + p.expectedAnnualReturn, 0)
+    / currentPackages.length) / 100 / 12
+  const recoveryMonths = avgMonthlyRate > 0
+    ? Math.log(1 + (dropPercent / 100)) / Math.log(1 + avgMonthlyRate)
+    : 0
+
+  return { ...result, recoveryMonths: Math.ceil(recoveryMonths), dollarLost: totalCurrentLost }
+}
+
+export function scenarioPauseContributions(
+  currentPackages: PackageInput[],
+  pauseMonths: number,
+  targetAmount: number,
+  targetDate: string
+) {
+  // Calculate cost of pausing = what compounding you miss
+  const paused = currentPackages.map(pkg => ({
+    ...pkg,
+    monthlyContribution: 0  // zero during pause
+  }))
+  const pausedResult = calculateInvestmentGoalProjection(targetAmount, targetDate, paused)
+  const normalResult = calculateInvestmentGoalProjection(targetAmount, targetDate, currentPackages)
+
+  const pauseCost = normalResult.totalProjectedValue - pausedResult.totalProjectedValue
+  const goalDelayMonths = pausedResult.onTrack ? 0
+    : Math.ceil(pausedResult.projectedShortfall / (normalResult.totalMonthlyContribution || 1))
+
+  return { ...pausedResult, pauseCost, goalDelayMonths }
+}
+```
+
+### src/lib/priceService.ts
+
+```typescript
+// Fetches fund prices from Twelve Data API
+// Called by: Supabase Edge Function (daily cron) AND admin manual trigger
+
+const TWELVE_DATA_BASE = 'https://api.twelvedata.com'
+
+export async function fetchFundPrices(apiKey: string, symbols: string[]) {
+  const symbolStr = symbols.join(',')
+  const response = await fetch(
+    `${TWELVE_DATA_BASE}/quote?symbol=${symbolStr}&apikey=${apiKey}`
+  )
+  if (!response.ok) throw new Error(`Price API error: ${response.status}`)
+  return response.json()
+}
+
+// For single fund sparkline (180 days of history)
+export async function fetchFundHistory(apiKey: string, symbol: string, days: number = 180) {
+  const response = await fetch(
+    `${TWELVE_DATA_BASE}/time_series?symbol=${symbol}&interval=1day&outputsize=${days}&apikey=${apiKey}`
+  )
+  if (!response.ok) throw new Error(`History API error: ${response.status}`)
+  return response.json()
+}
+
+// Parse Twelve Data quote response → our fund_prices shape
+export function parseTwelveDataQuote(rawQuote: any, fundId: string) {
+  return {
+    fund_id: fundId,
+    price_date: new Date().toISOString().split('T')[0],
+    price_native: parseFloat(rawQuote.close || rawQuote.price || 0),
+    price_usd: parseFloat(rawQuote.close || rawQuote.price || 0), // handle non-USD separately
+    change_1d: parseFloat(rawQuote.change || 0),
+    change_1d_percent: parseFloat(rawQuote.percent_change || 0),
+    source: 'api' as const
+  }
+}
+```
+
+### src/lib/portfolioCalculations.ts
+
+```typescript
+// Calculates portfolio snapshot values from units held × current prices
+
+export function calculatePackageCurrentValue(
+  allocations: Array<{
+    fund_id: string
+    units_held: number
+  }>,
+  latestPrices: Record<string, number>  // fund_id → price_usd
+): number {
+  return allocations.reduce((total, alloc) => {
+    const price = latestPrices[alloc.fund_id] || 0
+    return total + (alloc.units_held * price)
+  }, 0)
+}
+
+export function calculateTotalInvested(
+  transactions: Array<{
+    transaction_type: string
+    amount_usd: number
+  }>
+): number {
+  return transactions.reduce((total, tx) => {
+    const inflows = ['initial_investment','monthly_contribution','top_up','dividend_reinvested']
+    const outflows = ['withdrawal','fee_charged']
+    if (inflows.includes(tx.transaction_type)) return total + tx.amount_usd
+    if (outflows.includes(tx.transaction_type)) return total - tx.amount_usd
+    return total  // rebalance transactions don't change invested total
+  }, 0)
+}
+
+export function buildFundBreakdown(
+  allocations: Array<{ fund_id: string; units_held: number; weight_percent: number }>,
+  funds: Array<{ id: string; name: string; ticker: string; asset_class: string }>,
+  latestPrices: Record<string, number>,
+  totalValue: number
+) {
+  return allocations.map(alloc => {
+    const fund = funds.find(f => f.id === alloc.fund_id)
+    const priceUsd = latestPrices[alloc.fund_id] || 0
+    const valueUsd = alloc.units_held * priceUsd
+    return {
+      fund_id: alloc.fund_id,
+      fund_name: fund?.name || 'Unknown',
+      ticker: fund?.ticker || '',
+      asset_class: fund?.asset_class || '',
+      units: alloc.units_held,
+      price_usd: priceUsd,
+      value_usd: valueUsd,
+      weight_pct: totalValue > 0 ? (valueUsd / totalValue) * 100 : 0
+    }
+  })
+}
+```
+
+---
+
+## ALL HOOKS
+
+### src/hooks/useClientProfile.ts
+Fetches client_profiles row for current user (investment_client role only).
+Exposes: clientProfile, loading, updateClientProfile(updates).
+Key field: clientProfile.status — drives entire portal state.
+
+### src/hooks/useClientPackages.ts
+Fetches all client_packages for current user with:
+  - package_allocations (with fund details joined)
+  - Latest portfolio_snapshot for each package
+  - Goal details if goal_id is set
+Exposes: packages, totalPortfolioValue, totalInvested, totalReturn, loading.
+totalPortfolioValue = sum of latest snapshot.total_value_usd across all active packages.
+
+### src/hooks/useFundPrices.ts
+Fetches fund_prices for a given array of fund_ids.
+Returns: latestPrices (Record<fund_id, {price_usd, change_1d, change_1d_percent, price_date}>).
+Also fetches 180-day history per fund for sparklines.
+lastUpdated: most recent price_date in the set.
+
+### src/hooks/usePortfolioSnapshots.ts
+Fetches portfolio_snapshots for a given client_package_id.
+Exposes: snapshots (array sorted by date), loading.
+Used for performance charts — "invested vs value" over time.
+
+### src/hooks/useScenarios.ts
+Fetches scenarios for current user. Exposes:
+  scenarios, advisorPushedPending (is_advisor_pushed=true, status='viewed'), loading.
+  runScenario(type, inputData, linkedGoalId?, linkedPackageId?): runs calculation
+    using investmentGoalProjection functions, saves to scenarios table.
+  dismissScenario(id): updates status to 'dismissed'.
+  markApplied(id): updates status to 'applied'.
+
+### src/hooks/useConversation.ts
+Fetches or creates conversation between client and their advisor.
+Exposes: messages, loading, sendMessage(content, attachmentUrl?).
+Uses Supabase Realtime to subscribe to new messages.
+Shows read receipts (read_at timestamp).
+
+### src/hooks/useAdvisorClients.ts (advisor-side)
+Fetches all client_profiles where advisor_id = current user.
+With joined profiles + client_packages + latest portfolio_snapshot per client.
+Exposes: clients, loading. Sorted by last activity (most recent first).
+
+### src/hooks/useAdvisorTasks.ts (advisor-side)
+Fetches advisor_tasks where advisor_id = current user.
+Exposes: tasks, todaysTasks, urgentTasks, loading, createTask, updateTask, completeTask.
+
+---
+
+## ALL PAGES — INVESTMENT CLIENT PORTAL
+
+### ProspectOnboarding (/portal/onboarding/prospect)
+
+Full-screen card-swipe (same as free user pathway — use same Framer Motion pattern).
+Only shown when client_profiles.prospect_onboarding_complete = false.
+
+Progress bar top + step counter. Auto-save on field change (debounced 800ms).
+
+STEP 1 — About You:
+  Full name (text input, large, centered).
+  Age (number input with +/- buttons).
+  Nationality (country select dropdown, searchable).
+  Country of residence (country select).
+  Are you an expat? (YES / NO large tap cards — highlight selected).
+  Preferred currency (USD / VND pill toggle).
+  → Save to: profiles (full_name, age via age field or DOB, country_code, is_expat, preferred_currency).
+
+STEP 2 — Your Financial Picture:
+  "These ranges help us understand your situation — exact numbers come later."
+  Monthly take-home income (CurrencyInput, exact).
+  Total savings (horizontal chip row — single select):
+    Less than $10k / $10k–$50k / $50k–$100k / $100k–$500k / Over $500k
+  Do you have investments? (toggle). If yes: rough value (CurrencyInput).
+  Any significant debts? (toggle). If yes: rough total (CurrencyInput).
+  → Save to: client_financial_snapshots.
+
+STEP 3 — Your Goals:
+  "Add up to 5 financial goals. Drag to rank by priority."
+  [+ Add a goal] button opens inline form:
+    Goal type (2×4 visual card grid — icons + labels):
+      🌴 Retire comfortably / 🏠 Buy property / 📚 Children's education /
+      🚀 Financial independence / 💼 Business / 🌍 Emigrate / 💰 Wealth / 🎓 Retire early
+    Name (text input, pre-filled from type, editable).
+    Target amount (CurrencyInput).
+    Target date (month + year picker).
+  Goals list below: draggable cards showing name + target + date. Drag to reorder.
+  Priority labels update automatically: "Priority 1", "Priority 2", etc.
+  → Save to: financial_goals (with priority as sort order).
+
+STEP 4 — Your Risk Profile:
+  5 questions, auto-advance 400ms after tap.
+  Show risk profile result card: name + 1-paragraph description.
+  Also show a simple illustrative allocation bar (NOT binding — labelled
+  "Illustrative only — your advisor will create your personal allocation").
+  Result cards:
+    Conservative (score 5–10): "Capital preservation above all else"
+    Moderately Conservative (11–15): "Growth with significant protection"
+    Moderate (16–20): "Balanced growth and security"
+    Moderately Aggressive (21–25): "Growth-focused with manageable risk"
+    Aggressive (score 25): "Maximum long-term growth"
+  → Save to: client_profiles.risk_profile + risk_score.
+
+STEP 5 — Investment Style:
+  "How do you want to invest?" (large tap cards, single select):
+    💸 Regular monthly savings → "I'll commit a set amount each month"
+       Subtext: "Great for building a habit, cost-averaging over time"
+    💼 Lump sum → "I have a specific amount I want to invest now"
+       Subtext: "Put your money to work immediately"
+    🔄 Both → "Monthly savings plus a lump sum to start"
+       Subtext: "The most powerful combination"
+    🤔 Still exploring → "I want to see my options first"
+       Subtext: "Browse illustrations before committing"
+  After selection, show amount input:
+    If RSP: "How much per month?" (CurrencyInput)
+    If lump sum: "How much to start with?" (CurrencyInput)
+    If both: two inputs
+    If exploring: skip amount
+  → Save to: client_profiles.investment_style + indicative_amount.
+
+STEP 6 — Meet Your Advisor:
+  Show advisor card: name + photo placeholder + role + bio (2 sentences).
+  "Before we set up your investment, [Name] will have a short call with you to
+   personalise everything."
+  Any questions for your call? (textarea, optional, placeholder: "e.g. How are my
+   funds protected? What happens if I need access to my money?").
+  Best time to reach you (time of day selector: morning / afternoon / evening, with
+   timezone shown).
+  → Save to: client_profiles.pre_call_notes + preferred_contact_time.
+  → Set: client_profiles.prospect_onboarding_complete = true.
+  → Trigger: create advisor_task type='package_setup' with full prospect summary.
+  → Show celebration: "You're all set! [Advisor] will reach out within 24 hours."
+  → Navigate to: /portal/dashboard (prospect mode).
+
+---
+
+### ActiveOnboarding (/portal/onboarding/active)
+
+Shown when advisor marks client as 'ready_for_full_onboarding' (new flag on client_profiles).
+Has 3 sections with a section tab navigator at top.
+
+SECTION A — Full Financial Picture (tabs within section):
+  Step A1: Personal details confirmation + update (from prospect Step 1 — pre-filled, editable).
+  Step A2: Income + employment (exact annual/monthly income, employer, income type).
+  Step A3: Full assets (repeatable groups: bank accounts / investments / properties / pensions).
+  Step A4: Liabilities (repeatable: mortgages / loans / credit cards).
+  Step A5: Insurance inventory (life / income / health — yes/no toggles + values).
+  → Saves to: assets, liabilities tables (existing schema).
+
+SECTION B — Compliance:
+  Step B1: Passport upload (drag-drop zone → uploads to Supabase Storage bucket 'kyc-documents').
+  Step B2: Proof of address upload (utility bill or bank statement).
+  Step B3: Source of funds (select: salary / savings / business sale / inheritance / other + text).
+  Step B4: Tax residency (country select + tax ID — repeatable for multi-country).
+  Step B5: Declarations (PEP yes/no + risk warning checkbox + terms checkbox + privacy checkbox).
+  → Saves to: kyc_documents. Sets client_profiles.kyc_status = 'submitted'.
+  → Triggers: advisor notification for KYC review.
+
+SECTION C — First Package Setup:
+  Step C1: Package name/nickname (text input, suggestions: "My Retirement Fund",
+    "Kids Education", "Wealth Builder").
+  Step C2: Investment type (RSP / Lump Sum / Both — pre-filled from prospect Step 5).
+  Step C3: Amounts (monthly amount + start date for RSP, lump sum amount for lump sum).
+  Step C4: Link to a goal (shows their financial_goals as tap cards — optional).
+  Step C5: Summary + "Submit setup request".
+  → Save to: client_packages (status = 'pending_setup').
+  → Set: client_profiles.full_onboarding_complete = true.
+  → Trigger: advisor_task type='package_setup' — advisor must now set fund allocation.
+  → Show: "Your package is being set up by [Advisor]. You'll be notified when it's live."
+
+---
+
+### PortalDashboard (/portal/dashboard)
+
+TWO STATES based on client_profiles.status:
+
+=== PROSPECT STATE (status = 'prospect') ===
+
+SECTION 1 — Welcome header:
+  "Welcome, [Name]!" + advisor card chip ("Your advisor: [Name]").
+
+SECTION 2 — Complete your profile banner:
+  Progress: "Step X of 6 complete" + thin progress bar.
+  If prospect_onboarding_complete: "Waiting for your advisor call."
+    Shows advisor expected contact time.
+  If NOT complete: "Continue your profile →" button.
+
+SECTION 3 — Your Goals (from Step 3, with projected illustrations):
+  Each goal shows:
+    Name + type emoji + target + target date.
+    Projected achievement based on risk profile assumed return rate (labelled "illustration").
+    "Illustration assumes X% annual return. Actual returns vary."
+  Empty state if no goals: "Add your goals in Step 3 →".
+
+SECTION 4 — Explore Scenarios (teaser):
+  "See what your money could become" card.
+  Pre-fill: "If I invested [indicative_amount] per month..."
+  → [Run this scenario] → navigates to ScenarioPlanner with pre-filled inputs.
+
+SECTION 5 — Advisor card:
+  Full advisor card: photo + name + bio + "Send a message" button.
+
+=== ACTIVE STATE (status = 'active' or 'active_prospect') ===
+
+SECTION 1 — Portfolio hero card (navy bg, premium):
+  "Total Portfolio Value" (large number, white)
+  $XXX,XXX   ▲ +$1,240 (+0.8%) this month
+  Total invested: $XXX,XXX  ·  Total return: +$XX,XXX (+XX.X%)
+  [View Portfolio →]
+  "Prices updated: [date] · Source: Twelve Data"
+
+SECTION 2 — Goals at a glance (horizontal scroll):
+  One card per goal:
+    Goal name + emoji + % funded + on-track badge + target date.
+    Mini progress bar.
+    "Funded by: [package nicknames]" (up to 2, then "+X more").
+  [+ Add a goal] card at end (tap → opens goal creation modal).
+
+SECTION 3 — My Packages (horizontal scroll):
+  One card per package:
+    Nickname + status badge.
+    Current value (large).
+    Return: +$X (+X%).
+    Monthly: $X/month OR "Lump sum".
+  [+ Add a package] card at end → triggers advisor notification.
+
+SECTION 4 — Advisor-pushed scenario (if any, status='viewed'):
+  "[Advisor name] has run a scenario for you →"
+  Short preview of advisor's note.
+  [View scenario] button.
+
+SECTION 5 — Recent activity (last 5 transactions across all packages):
+  Date / type badge / package name / amount.
+
+SECTION 6 — Quick actions (horizontal chip scroll):
+  "View portfolio" / "Run a scenario" / "Message advisor" / "Add to a package".
+
+---
+
+### PortfolioOverview (/portal/portfolio)
+
+Total portfolio view across all packages.
+
+HEADER CARD (navy bg):
+  Total value + total invested + total return ($ and %).
+  Time filter: 3M / 6M / 1Y / All.
+
+COMBINED CHART (ComposedChart — Recharts):
+  Area: total portfolio value across all packages (teal).
+  Line: total invested cumulative (gray dashed).
+  Data: aggregate of portfolio_snapshots by date.
+  X-axis: dates. Y-axis: USD. Tooltip on hover.
+
+ALLOCATION PIE CHART:
+  Segments by asset class (equity / bond / cash / etc.) aggregated across all packages.
+  Color map: equity=#1D9E75 / bond=#042C53 / cash=#94A3B8 / real_estate=#F59E0B /
+             commodity=#8B5CF6 / alternative=#EC4899.
+  Centre: total value.
+  Below: legend with % per class.
+
+PACKAGES SUMMARY TABLE:
+  Columns: Package name / Type / Value / Invested / Return % / Goal linked / Status.
+  Each row tappable → navigates to /portal/packages/:id.
+
+---
+
+### MyPackages (/portal/packages)
+
+List of all client_packages for this user.
+
+SECTION HEADER: "My Investment Packages" + "[X] active packages" + total value.
+
+PACKAGE CARDS (full width, stacked):
+  For each package — PackageCard component:
+    ACTIVE state:
+      Nickname + type badge (RSP/Lump Sum/Both) + status chip.
+      Current value (large, teal).
+      Return: +$X (+X.X%) since inception.
+      Monthly: $X/month (if RSP).
+      Linked goal: emoji + name (if linked).
+      [View package →] button.
+
+    PENDING SETUP state (gray, muted):
+      Nickname + "Being set up by [advisor]" message.
+      Expected start date (if set).
+
+  [+ Request a new package] card (dashed border):
+    Tap → opens mini-form:
+      What type? (RSP / Lump Sum / Both)
+      Rough amount
+      Link to a goal?
+      Note for advisor
+    → Creates advisor_task type='package_setup'.
+
+---
+
+### PackageDetail (/portal/packages/:id)
+
+Single package deep-dive with 5 tabs.
+
+HEADER:
+  Nickname + type badge + status chip.
+  Current value (large) + return since inception.
+
+TAB 1 — Overview:
+  3 metric cards: Total invested / Current value / Total return %.
+  PortfolioChart (AreaChart): invested vs value for this package over time.
+  Time filter: 3M / 6M / 1Y / All.
+  Linked goal card (if linked): shows goal progress attributed to this package.
+    Goal name + % funded + projected status.
+  Next contribution date (if RSP): "Next: June 1, 2026 — $500".
+
+TAB 2 — Performance:
+  Return breakdown table:
+    Total contributions: +$X
+    Investment returns: +$X
+    Fees paid: -$X
+    Net return: +$X (+X.X%)
+  Monthly return table (last 12 months): Month / Contribution / Market Return / End Value.
+  Benchmark note: "Target return for this package: X% p.a. (set by your advisor)."
+
+TAB 3 — Funds:
+  For each fund in package_allocations:
+    FundCard component (full implementation):
+      Fund name + ticker + manager + asset class badge.
+      Current price (from fund_prices, latest row): $XXX.XX.
+      Day change: ▲ +$X.XX (+X.XX%) or ▼ -$X.XX (-X.XX%).
+      Your units: XX.XXXX → Your value: $XX,XXX.
+      Target weight: XX% | Actual weight: XX%.
+      FundSparkline: 180-day price history (from fund_prices table — NO API call).
+      [View factsheet ↗] link (if factsheet_url set).
+    "Prices updated: [date] · [source]" at bottom.
+
+TAB 4 — Transactions:
+  Full transaction history for this package only.
+  Filter chips: All / Contributions / Withdrawals / Rebalances / Dividends / Fees.
+  Table columns: Date / Type badge / Fund / Amount / Units / Price / Running total.
+  Export CSV button (downloads all transactions as CSV).
+  Empty state: "No transactions yet — your advisor will enter these when your package is active."
+
+TAB 5 — Settings:
+  ACTIVE package: editable fields (all require advisor approval):
+    Monthly amount (if RSP): CurrencyInput + "Request change" button.
+    Link to goal: goal selector + "Update" button.
+    "Pause contributions" button (opens confirmation modal → creates advisor task).
+    "Close this package" link (opens confirmation + reason modal → creates advisor task).
+  PENDING SETUP: "Your advisor is setting this up. You'll be notified when it's live."
+
+---
+
+### TransactionHistory (/portal/transactions)
+
+All transactions across all packages in one view.
+
+Filter bar: Package (multi-select) / Type / Date range / Fund.
+Sort: newest first (default) / oldest first.
+Export CSV: all filtered transactions.
+
+Table (mobile: cards, desktop: full table):
+  Date / Package name / Fund / Type badge / Amount / Units / Note.
+  Type badge colors:
+    Contribution: teal / Top-up: green / Withdrawal: red / Dividend: blue /
+    Fee: gray / Rebalance: amber.
+
+Summary at top when filtered: "Showing X transactions · Total in: $X · Total out: $X".
+
+---
+
+### InvestmentGoals (/portal/goals)
+
+All client goals with investment package integration.
+
+HEADER: "Your Financial Goals" + [+ Add goal] button.
+
+For each goal, show InvestmentGoalCard:
+
+Linked packages (goal has package with goal_id = this goal):
+  Card shows goal metrics from calculateInvestmentGoalProjection() using real package data.
+  Funded-by section shows each linked package: nickname + current value + monthly.
+  ON TRACK: emerald border/bg + projection + surplus.
+  ALMOST (gap ≤ 15%): amber border/bg + breakdown + options.
+  OFF TRACK (gap > 15%): red border/bg + full breakdown showing:
+    - Amount still needed
+    - Projected shortfall
+    - Option A: "+$X/month more" (exactly calculated)
+    - Option B: "Lump sum of $Y today" (exactly calculated)
+    - Option C: "Extend target by ~Z months"
+    [Run scenarios →] button (navigates to ScenarioPlanner pre-filled with this goal).
+    [Talk to your advisor] button → opens message with pre-filled text.
+
+Unlinked goals (no package funding them):
+  Gray border, muted.
+  "No investment linked yet."
+  [Link a package] button → opens package selector.
+  [Talk to advisor about funding this] → opens message.
+
+Empty state: "No goals yet — add your first goal to start tracking."
+Goal creation modal: same form as prospect Step 3.
+
+---
+
+### ScenarioPlanner (/portal/scenarios)
+
+5-tab scenario interface. Reads real portfolio data for active clients.
+Reads indicative data + assumed return rates for prospects.
+
+PROSPECT MODE BANNER (if status = 'prospect'):
+  "You're exploring — these are illustrations based on your risk profile.
+   Actual results depend on your personalised fund allocation."
+
+RECENT SCENARIOS sidebar / section:
+  Last 5 scenarios run. Each: type label / date / linked goal / status chip.
+
+TAB 1 — Increase Monthly:
+  Goal selector (pick a goal, or "overall portfolio").
+  Package to increase (select from RSP packages, or "new RSP package").
+  Amount slider: +$100 to +$2,000 (or manual input).
+  → Live results update as slider moves:
+    Side-by-side chart (2-line LineChart): "Current path" vs "With increase".
+    Key stats: New projected value / Goal status change / "This extra $X/month = $Y more by [date]".
+  CTA (active): "Request this RSP increase from my advisor" → creates advisor_task.
+  CTA (prospect): "I'm interested in this amount — connect me with my advisor".
+
+TAB 2 — Add a Lump Sum:
+  Goal selector.
+  Amount: CurrencyInput.
+  → Live results: New projected value / Goal status change / Equivalent monthly.
+  CTA (active): "Request a top-up" → creates advisor_task.
+  CTA (prospect): "I want to start with this amount".
+
+TAB 3 — Market Drop:
+  Goal selector (or "all goals").
+  Preset buttons: -10% / -20% / -30% OR slider.
+  → Results:
+    "Your portfolio today: $X → After [Y]% drop: $X"
+    Dollar amount lost (not just %).
+    Goal impact: "Your [goal] is [still on track / delayed by ~Z months]."
+    Recovery estimate: "At your target return, recovery expected in ~X months."
+    If still on track: large reassurance card (green): "Despite this drop, you remain on track."
+  CTA: "Discuss this with my advisor" → opens message.
+  Advisor can push this tab pre-filled during market volatility.
+
+TAB 4 — Earlier Goal Date:
+  Goal selector (must have target_date).
+  New target date picker (must be before current target).
+  → Results:
+    "Moving [goal] from [date] to [new date] requires:"
+    Option A: "+$X/month more" (exact calculation).
+    Option B: "Lump sum of $Y today".
+    Side-by-side: original timeline vs accelerated.
+  CTA: "Discuss with my advisor whether this is achievable".
+
+TAB 5 — Pause Contributions:
+  Package selector (RSP packages only).
+  Pause duration: 1–24 months slider.
+  → Results:
+    Missed contributions total: $X.
+    Compounding cost: "Pausing [N] months costs ~$Y in final value (at X% return)."
+    Goal impact: "Your [goal] delayed by ~Z months."
+    Alternative: "Instead: reduce to $X/month (half your RSP) and lose only $Y."
+  CTA (active): "Request a pause from my advisor" → creates advisor_task type='pause_request'.
+
+Save scenario to scenarios table after each calculation (auto-save, no button needed).
+
+ADVISOR-PUSHED SCENARIO (if scenarios with is_advisor_pushed=true and status='viewed'):
+  Shown as priority card at top with navy bg:
+  "[Advisor Name] ran this scenario for you:"
+  Advisor's note in teal card.
+  Pre-filled scenario (user can adjust inputs).
+  [This looks good — let's do it] → marks applied + creates advisor_task.
+  [I have questions] → opens conversation with scenario context.
+  [Not right now] → marks dismissed.
+
+---
+
+### PortalMessages (/portal/messages)
+
+Full-height chat interface. Supabase Realtime subscription on messages table.
+
+Advisor messages: left, navy bubble.
+Client messages: right, teal bubble.
+Timestamps below each message.
+Read receipt: "✓ Read" when advisor has read (read_at set).
+
+Scenario reference cards: when a message has is_scenario_ref=true, show scenario
+preview card inline (type + key result).
+
+Input: text area + send button + attachment (file upload to Supabase Storage).
+"[Advisor] is online" / "[Advisor] last seen X" (from a simple presence system).
+
+---
+
+### PortalSettings (/portal/settings)
+
+PROFILE SECTION:
+  Avatar (upload to Supabase Storage).
+  Name (inline edit).
+  Email (display only — change via Supabase auth).
+  Country + expat status (editable).
+
+CURRENCY PREFERENCE:
+  USD / VND pill toggle.
+  "All values display in [currency]" confirmation.
+
+YOUR ADVISOR:
+  Advisor card (name + photo + bio).
+  "Message [advisor]" button.
+
+FINANCIAL RATES (read-only for clients — set by advisor on the package):
+  "Your investment return rates are set by your advisor per package."
+  List of packages with their expected_annual_return shown.
+
+KYC STATUS:
+  Status badge: Not started / Submitted / Under review / Approved / Rejected.
+  If rejected: reason shown + "Re-upload documents" button.
+  If approved: "✓ Verified investor" chip.
+
+NOTIFICATIONS:
+  Toggle: Email when new message / Email when portfolio updated / Email monthly report.
+
+ACCOUNT:
+  "Sign out" button.
+  "Delete account" link (with confirmation modal — requires advisor notification).
+
+---
+
+## ADVISOR PORTAL PAGES (additions to existing spec)
+
+### AdvisorClientDetail (/advisor/clients/:id)
+
+8-tab page for managing a single investment client.
+
+HEADER: Client name + photo + status chip + "Last active: X days ago".
+Sub-header: "Advisor: [you]" + portfolio value + health score ring.
+
+TAB 1 — Overview:
+  4 metric cards: Portfolio value / Net worth / Goals on-track / KYC status.
+  Quick actions: Send message / Create task / Push scenario / Upload document.
+  Private advisor notes (textarea, never shown to client).
+  Prospect summary (if status='prospect'): investment style + indicative amount + pre-call notes.
+
+TAB 2 — Packages:
+  List of all client_packages.
+  [Create new package] button → opens AdvisorCreatePackage modal.
+  For each package:
+    Package card showing: nickname / type / status / current value / linked goal.
+    [Edit allocation] button → opens FundAllocationEditor.
+    [Add transaction] button → opens TransactionForm.
+    [Push scenario] button → opens AdvisorScenarioPush.
+
+TAB 3 — Fund Allocations (per-package):
+  Package selector at top.
+  FundAllocationEditor for selected package:
+    Table rows: Fund name / Weight % input / Units held / Current value / Edit/Remove.
+    [+ Add fund] → fund search/select dropdown from funds table.
+    Weight validation: running total shown. Must = 100% to save.
+    "Weights: 60% + 25% + 15% = 100% ✓" indicator.
+    [Save allocation] button.
+    Notes field (private, not shown to client).
+
+TAB 4 — Transactions:
+  [Add transaction] button → TransactionForm inline.
+  TransactionForm fields:
+    Package (select from client's packages).
+    Fund (select from that package's allocated funds).
+    Type (select from transaction_type options).
+    Date (date picker).
+    Amount USD (CurrencyInput).
+    Units (number input — auto-calculates from price if left blank).
+    Price per unit (auto-fills from fund_prices for selected date and fund).
+    Notes.
+  All transactions for this client below (same table as client-facing, all packages).
+
+TAB 5 — Goals:
+  All client goals with full detail.
+  Each goal shows linked packages (if any).
+  [Link package to goal] — dropdown of client's packages.
+  [Edit goal] — editable fields: title / target_amount / target_date.
+  [Add goal for client] button.
+
+TAB 6 — KYC:
+  Documents listed: type / file preview link / status badge / action buttons.
+  [Approve] button → sets kyc_documents.status = 'verified'.
+  [Reject] button → opens rejection reason text field + sets status = 'rejected'.
+  Overall KYC status selector (not_started / submitted / under_review / approved / rejected).
+  "Mark as Approved" button → sets client_profiles.kyc_status = 'approved' +
+    if first approval → sets client_profiles.status = 'active' + sends client notification.
+
+TAB 7 — Messages:
+  Same chat interface as client sees (same conversation, shared).
+
+TAB 8 — Tasks:
+  Task list for this client.
+  [+ Add task] form: title / type / due date / priority / description.
+  Each task: title / type badge / priority badge / due date / status dropdown / [Done] button.
+
+---
+
+### AdvisorCreatePackage (/advisor/clients/:id/packages/new) — Modal or full page
+
+3-step wizard:
+
+STEP 1 — Package basics:
+  Nickname (text input).
+  Type: RSP / Lump Sum / Both (large tap cards).
+  Monthly amount (CurrencyInput, shown if RSP or Both).
+  Lump sum amount (CurrencyInput, shown if Lump Sum or Both).
+  Start date (date picker).
+  Link to goal (select from client's financial_goals — optional).
+  Expected annual return (number input with % suffix — advisor's target for this package).
+  Advisor notes (textarea — private, strategy rationale).
+
+STEP 2 — Fund allocation (the core of this flow):
+  [+ Add fund] → opens fund selector:
+    Search bar (searches funds.name + ticker).
+    Fund list with: name / ticker / asset class chip / manager / expense ratio.
+    Select → adds to allocation table.
+  Allocation table:
+    Each row: Fund name | Weight % (editable number input) | [Remove].
+    Live weight total shown below: "Total: X% of 100%".
+    Visual: mini horizontal bar showing each fund's weight proportion.
+    Error state if total ≠ 100%: "Weights must total 100% before saving."
+  Save validation: blocks save if weights don't sum to 100%.
+
+STEP 3 — Review + create:
+  Summary: nickname / type / amounts / start date / linked goal / expected return.
+  Fund allocation summary: fund names + weights.
+  [Create package] button.
+  → Inserts client_packages row + package_allocations rows.
+  → Sends client notification: "Your advisor has set up [nickname]."
+  → Creates initial portfolio_snapshot with total_value = 0 (no transactions yet).
+
+---
+
+### AdvisorScenarioPush
+
+Modal (triggered from client detail or from scenario planner).
+
+Select scenario type (5 options — radio buttons).
+Pre-fill inputs (shown inline based on type selection).
+Advisor note (textarea, max 300 chars, required).
+  Placeholder: "Based on our call, I ran this scenario for you..."
+[Preview result] → runs the scenario calculation + shows output summary.
+[Send to client] → inserts scenarios row (is_advisor_pushed=true, status='viewed').
+  → Sends client notification: "[Advisor] has run a scenario for you."
+
+---
+
+## ADMIN PAGES (additions)
+
+### AdminFundManager (/admin/funds)
+
+Table of all funds in the funds table.
+Columns: Name / Ticker / Asset class / Manager / Exchange / API symbol / Active / Actions.
+
+[+ Add fund] button → form:
+  All fund fields (name, ticker, ISIN, asset class, geography, currency,
+  fund manager, fund type, expense ratio, benchmark index, factsheet URL,
+  price API symbol, price API exchange).
+  [Save] → inserts into funds.
+
+[Edit] per row → inline edit.
+[Deactivate] → sets is_active = false (doesn't delete — preserves history).
+
+### AdminPriceManager (/admin/prices)
+
+Shows latest price per fund in a table.
+Columns: Fund name / Ticker / Last price / Day change % / Last updated / Source / Override.
+
+[Refresh all prices] button → calls the price update Edge Function manually.
+[Override price] per fund → opens modal:
+  Date (defaults to today) + Price (CurrencyInput) + source set to 'manual'.
+  → Upserts into fund_prices.
+
+"Auto-update: Daily at 22:00 UTC · Next run: [time]" status line.
+Last 5 price update logs (date + how many funds updated + any errors).
+
+---
+
+## SUPABASE EDGE FUNCTION: update-fund-prices
+
+Create: supabase/functions/update-fund-prices/index.ts
+
+```typescript
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+const TWELVE_DATA_KEY = Deno.env.get('TWELVE_DATA_API_KEY')!
+const supabase = createClient(
+  Deno.env.get('SUPABASE_URL')!,
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+)
+
+Deno.serve(async (req) => {
+  try {
+    // 1. Get all active funds with API symbols
+    const { data: funds, error: fundsError } = await supabase
+      .from('funds')
+      .select('id, name, ticker, price_api_symbol, price_api_exchange, currency')
+      .eq('is_active', true)
+      .not('price_api_symbol', 'is', null)
+
+    if (fundsError) throw fundsError
+
+    // 2. Batch fetch from Twelve Data (max 100 symbols per request)
+    const symbols = funds.map(f => f.price_api_symbol).join(',')
+    const apiUrl = `https://api.twelvedata.com/quote?symbol=${symbols}&apikey=${TWELVE_DATA_KEY}`
+    const response = await fetch(apiUrl)
+    if (!response.ok) throw new Error(`Twelve Data API error: ${response.status}`)
+    const priceData = await response.json()
+
+    // 3. Upsert prices
+    const today = new Date().toISOString().split('T')[0]
+    const upserts = []
+
+    for (const fund of funds) {
+      // Twelve Data returns single object if 1 symbol, keyed object if multiple
+      const quote = funds.length === 1
+        ? priceData
+        : priceData[fund.price_api_symbol]
+
+      if (!quote || quote.status === 'error') continue
+
+      const priceNative = parseFloat(quote.close || quote.price || '0')
+      const priceUsd = fund.currency === 'USD' ? priceNative : priceNative // extend for GBP/EUR
+
+      upserts.push({
+        fund_id: fund.id,
+        price_date: today,
+        price_native: priceNative,
+        price_usd: priceUsd,
+        price_vnd: priceUsd * 25400,
+        change_1d: parseFloat(quote.change || '0'),
+        change_1d_percent: parseFloat(quote.percent_change || '0'),
+        source: 'api'
+      })
+    }
+
+    const { error: upsertError } = await supabase
+      .from('fund_prices')
+      .upsert(upserts, { onConflict: 'fund_id,price_date' })
+
+    if (upsertError) throw upsertError
+
+    // 4. Recalculate portfolio snapshots for all active packages
+    await recalculatePortfolioSnapshots(supabase, today)
+
+    return new Response(
+      JSON.stringify({ success: true, updated: upserts.length, date: today }),
+      { headers: { 'Content-Type': 'application/json' } }
+    )
+  } catch (error) {
+    return new Response(
+      JSON.stringify({ success: false, error: error.message }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    )
+  }
+})
+
+async function recalculatePortfolioSnapshots(supabase: any, today: string) {
+  // Fetch all active packages with their allocations
+  const { data: packages } = await supabase
+    .from('client_packages')
+    .select(`
+      id, user_id,
+      package_allocations (fund_id, units_held),
+      package_transactions (transaction_type, amount_usd)
+    `)
+    .eq('status', 'active')
+
+  // Fetch latest prices
+  const { data: latestPrices } = await supabase
+    .from('fund_prices')
+    .select('fund_id, price_usd')
+    .eq('price_date', today)
+
+  const priceMap: Record<string, number> = {}
+  for (const p of latestPrices || []) {
+    priceMap[p.fund_id] = p.price_usd
+  }
+
+  const snapshots = []
+  for (const pkg of packages || []) {
+    // Calculate current value: sum(units × price)
+    const totalValue = (pkg.package_allocations || []).reduce((sum: number, alloc: any) => {
+      return sum + (alloc.units_held * (priceMap[alloc.fund_id] || 0))
+    }, 0)
+
+    // Calculate total invested from transactions
+    const inflowTypes = ['initial_investment','monthly_contribution','top_up','dividend_reinvested']
+    const outflowTypes = ['withdrawal','fee_charged']
+    const totalInvested = (pkg.package_transactions || []).reduce((sum: number, tx: any) => {
+      if (inflowTypes.includes(tx.transaction_type)) return sum + tx.amount_usd
+      if (outflowTypes.includes(tx.transaction_type)) return sum - tx.amount_usd
+      return sum
+    }, 0)
+
+    const returnPct = totalInvested > 0
+      ? ((totalValue - totalInvested) / totalInvested) * 100
+      : 0
+
+    snapshots.push({
+      client_package_id: pkg.id,
+      user_id: pkg.user_id,
+      snapshot_date: today,
+      total_invested_usd: totalInvested,
+      total_value_usd: totalValue,
+      total_return_percent: returnPct,
+      fund_breakdown: JSON.stringify(pkg.package_allocations?.map((alloc: any) => ({
+        fund_id: alloc.fund_id,
+        units: alloc.units_held,
+        price_usd: priceMap[alloc.fund_id] || 0,
+        value_usd: alloc.units_held * (priceMap[alloc.fund_id] || 0)
+      })))
+    })
+  }
+
+  if (snapshots.length > 0) {
+    await supabase
+      .from('portfolio_snapshots')
+      .upsert(snapshots, { onConflict: 'client_package_id,snapshot_date' })
+  }
+}
+```
+
+Schedule this Edge Function via Supabase cron:
+  Schedule: `0 22 * * 1-5` (22:00 UTC weekdays — after US market close)
+  Also expose as HTTP endpoint for manual trigger from admin panel.
+
+---
+
+## ROUTING ADDITIONS (src/App.tsx)
+
+Add to existing routes:
+
+```
+/portal/onboarding/prospect → ProspectOnboarding (auth: investment_client)
+/portal/onboarding/active → ActiveOnboarding (auth: investment_client)
+/portal/dashboard → PortalDashboard (auth: investment_client)
+/portal/portfolio → PortfolioOverview (auth: investment_client)
+/portal/packages → MyPackages (auth: investment_client)
+/portal/packages/:id → PackageDetail (auth: investment_client)
+/portal/transactions → TransactionHistory (auth: investment_client)
+/portal/goals → InvestmentGoals (auth: investment_client)
+/portal/scenarios → ScenarioPlanner (auth: investment_client)
+/portal/plan → FinancialPlan (auth: investment_client)
+/portal/net-worth → PortalNetWorth (auth: investment_client)
+/portal/documents → PortalDocuments (auth: investment_client)
+/portal/messages → PortalMessages (auth: investment_client)
+/portal/reports → PortalReports (auth: investment_client)
+/portal/settings → PortalSettings (auth: investment_client)
+
+/advisor/dashboard → AdvisorDashboard (auth: advisor, super_admin)
+/advisor/clients → AdvisorClientList (auth: advisor, super_admin)
+/advisor/clients/:id → AdvisorClientDetail (auth: advisor, super_admin)
+/advisor/tasks → AdvisorTaskManager (auth: advisor, super_admin)
+
+/admin/funds → AdminFundManager (auth: super_admin)
+/admin/prices → AdminPriceManager (auth: super_admin)
+/admin/users → AdminUserList (auth: super_admin)
+```
+
+AuthGuard routing after login:
+  investment_client + prospect_onboarding_complete=false → /portal/onboarding/prospect
+  investment_client + prospect_onboarding_complete=true + full_onboarding_complete=false
+    AND advisor has marked ready → /portal/onboarding/active
+  investment_client + full_onboarding_complete=true → /portal/dashboard
+  advisor → /advisor/dashboard
+  super_admin → /admin/dashboard
+
+---
+
+## NAVIGATION — INVESTMENT CLIENT PORTAL
+
+BOTTOM NAV (mobile, 5 tabs):
+  Home → /portal/dashboard
+  Portfolio → /portal/portfolio (hidden if status='prospect', show grayed with lock)
+  Goals → /portal/goals
+  Scenarios → /portal/scenarios
+  Messages → /portal/messages
+
+SIDEBAR (desktop — navy bg, white text):
+  WEALTHAPP logo (top)
+  ─── MY INVESTMENTS ─────────
+  📊 Portfolio Overview
+  📦 My Packages
+  📋 Transactions
+  ─── MY PLAN ────────────────
+  🎯 Goals
+  💡 Scenarios
+  📄 Financial Plan
+  ─── MY WEALTH ──────────────
+  💰 Net Worth
+  📁 Documents
+  📈 Reports
+  ─── ACCOUNT ────────────────
+  💬 Messages  [unread badge]
+  ⚙️ Settings
+  [Sign out]
+
+Bottom of sidebar: advisor card chip (photo + name + "Online" status).
+
+PROSPECT MODE: "Portfolio", "Transactions", "Reports" show with lock icon.
+  On hover/tap: "Available once your investment is live."
+
+---
+
+## BOTTOM NAV — ADVISOR PORTAL
+
+SIDEBAR (desktop — white bg, navy accents):
+  🏠 Dashboard
+  👥 My Clients
+  ✅ Tasks  [count badge]
+  💬 Messages [count badge]
+
+Mobile: bottom tab bar with 4 items matching sidebar.
+
+---
+
+## KEY BEHAVIOURS
+
+1. PORTAL STATE GATE: On every portal page load, check client_profiles.status.
+   If 'prospect': show ProspectBanner at top of every page + lock portfolio pages.
+   If 'active': full access.
+
+2. PRICE FRESHNESS: Show "Prices updated: [date]" on every page showing fund prices.
+   If last price_date is >2 business days ago: show amber warning
+   "Price data may be delayed — contact your advisor."
+
+3. REAL-TIME MESSAGES: Supabase Realtime subscription in useConversation hook.
+   Message notification badge on nav updates without refresh.
+
+4. SNAPSHOT AUTO-CALCULATION: After advisor enters any package_transaction, trigger
+   a snapshot recalculation for that package immediately (not waiting for cron).
+   Show "Portfolio updated" toast to client.
+
+5. GOAL PROJECTION RECALC: Runs whenever:
+   - New portfolio_snapshot is created for a linked package
+   - Goal fields (target_amount, target_date) are changed
+   - Package expected_annual_return is changed by advisor
+   Updates financial_goals.status field automatically.
+
+6. SCENARIO AUTOSAVE: Every scenario calculation automatically saves to scenarios table.
+   No "save" button needed — just run it and it's in history.
+
+7. ADVISOR TASK NOTIFICATIONS: When client requests anything (top-up, pause, scenario apply),
+   advisor gets in-app notification AND email. Client sees "Pending — advisor notified" chip.
+
+8. ALLOCATION WEIGHT VALIDATION: FundAllocationEditor blocks saving if sum ≠ 100%.
+   Shows running total prominently. Prevents bad data entering the system.
+
+9. PROSPECT ILLUSTRATIONS: All projections shown to prospects include the disclaimer:
+   "Illustration assumes [X]% annual return based on your risk profile.
+    Actual returns vary and are not guaranteed."
+   X = Conservative 4.5% / Moderate Conservative 5.5% / Moderate 7% /
+       Moderate Aggressive 9% / Aggressive 11%
+
+10. CURRENCY TOGGLE: USD/VND toggle in settings applies globally.
+    VND = value_usd × 25,400 (fixed rate). Show "₫" prefix.
+    Show FX disclaimer: "VND values use a fixed rate of ₫25,400/USD for illustration."
+
+---
+
+## BUILD ORDER
+
+Build in this exact sequence:
+
+1.  Run schema SQL — verify all tables + RLS work in Supabase dashboard.
+2.  src/lib/investmentGoalProjection.ts — all 5 scenario functions.
+3.  src/lib/priceService.ts + src/lib/portfolioCalculations.ts.
+4.  Hooks: useClientProfile, useClientPackages (basic — no price data yet).
+5.  Components/investment: AdvisorCard, ProspectBanner, PackageCard (prospect state only).
+6.  Pages/portal: ProspectOnboarding — all 6 steps with auto-save. Test full flow.
+7.  PortalDashboard — prospect state only. Test after onboarding completion.
+8.  AdminFundManager — add sample funds. Verify funds table populated.
+9.  AdminPriceManager — manual price entry. Add sample prices for all 5 seed funds.
+10. Hook: useFundPrices — fetch latest prices + sparkline history.
+11. Components: FundCard + FundSparkline + AllocationPieChart.
+12. Edge Function: update-fund-prices — deploy + test manually from admin panel.
+13. AdvisorClientDetail — tabs 1 (overview) + 2 (packages) + 3 (allocations).
+14. AdvisorCreatePackage — full 3-step wizard with FundAllocationEditor.
+    Test: create a package with 3 funds summing to 100%.
+15. Hook: usePortfolioSnapshots. Test: snapshot appears after package creation.
+16. Components: PortfolioChart + FundAllocationEditor fully complete.
+17. PackageDetail — all 5 tabs including Transactions tab.
+18. AdvisorTransactionEntry — test: enter transaction → snapshot recalculates → client sees update.
+19. Hook: useClientPackages — now with real price data + snapshot values.
+20. PortalDashboard — active state. Test with real package data.
+21. PortfolioOverview + MyPackages — full implementation.
+22. InvestmentGoals — with linked packages + calculateInvestmentGoalProjection().
+    Test: link package to goal → goal card shows real portfolio value.
+23. TransactionHistory — all packages combined, CSV export.
+24. Hook: useScenarios. ScenarioPlanner — all 5 tabs.
+    Test: run scenario → saves to table → shows in history.
+25. AdvisorScenarioPush — test: push to client → client sees notification.
+26. Hook: useConversation + Realtime. PortalMessages — both client + advisor side.
+27. ActiveOnboarding — sections A + B + C including KYC upload.
+    Test: KYC upload → advisor sees in TAB 6 → advisor approves → status updates.
+28. PortalSettings + PortalNetWorth + PortalDocuments + PortalReports.
+29. AdvisorTaskManager + AdvisorDashboard — all sections.
+30. All empty states + loading skeletons + error handling.
+31. Mobile responsive check: portfolio charts scroll on small screens, fund cards readable.
+32. Test checklist:
+    □ Prospect completes 6-step onboarding → advisor notified → portal unlocks in prospect mode
+    □ Advisor creates package with 3 funds (60/25/15%) → allocation weights validate to 100%
+    □ Admin adds fund → price API fetches price → fund appears in advisor allocation selector
+    □ Advisor enters transaction → portfolio snapshot recalculates → client portfolio value updates
+    □ Fund prices update via Edge Function → sparklines update → portfolio values refresh
+    □ Goal linked to package → goal card shows real portfolio value → projection runs
+    □ Off-track goal → shows exact additional monthly + lump sum needed
+    □ Scenario: increase monthly by $200 → side-by-side chart shows goal flipping to on-track
+    □ Advisor pushes scenario → client sees notification badge → opens pre-filled scenario
+    □ KYC approval → client status flips to 'active' → portfolio pages unlock
+    □ Message sent by client → advisor sees in real-time (< 2 seconds) → read receipt shows
+    □ Currency toggle: all portfolio values switch to VND simultaneously
+    □ Price freshness warning: if prices > 2 days old, amber warning shows
+    □ Mobile: bottom nav 5 tabs work, package detail tabs scroll horizontally, charts readable

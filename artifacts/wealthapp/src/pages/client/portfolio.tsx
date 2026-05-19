@@ -1,97 +1,174 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "wouter";
+import { useState } from "react";
+import { motion } from "framer-motion";
 import AppShell from "@/components/AppShell";
 import PageHeader from "@/components/PageHeader";
 import { apiFetch } from "@/lib/api";
-import { BarChart3 } from "lucide-react";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
+import { fmtCurrency, ASSET_CLASS_COLORS } from "@/lib/portfolioCalculations";
+import { ArrowRight } from "lucide-react";
+import { ComposedChart, Area, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 
-interface Holding { id: string; assetName: string; assetClass: string; currentValueUsd: string; weightPercent: string | null; tickerSymbol: string | null; isAdvisorManaged: boolean; }
+interface PackageSummary {
+  id: string;
+  nickname: string;
+  type: string;
+  status: string;
+  monthlyAmount: string | null;
+  latestSnapshot: { totalValueUsd: string; totalInvestedUsd: string; totalReturnPercent: string | null } | null;
+  allocations: Array<{ fundId: string; weightPercent: string; fund: { name: string; assetClass: string } | null }>;
+}
 
-const COLORS = ["#1D9E75", "#042C53", "#f59e0b", "#6366f1", "#ef4444", "#64748b", "#14b8a6", "#f97316"];
+const TIME_FILTERS = ["3M", "6M", "1Y", "All"] as const;
 
-export default function ClientPortfolio() {
-  const { data: holdings = [], isLoading } = useQuery<Holding[]>({ queryKey: ["portfolio"], queryFn: () => apiFetch<Holding[]>("/portfolio") });
+export default function PortfolioOverview() {
+  const [timeFilter, setTimeFilter] = useState<typeof TIME_FILTERS[number]>("All");
 
-  const total = holdings.reduce((s, h) => s + parseFloat(h.currentValueUsd), 0);
-  const byClass = holdings.reduce<Record<string, number>>((acc, h) => {
-    acc[h.assetClass] = (acc[h.assetClass] ?? 0) + parseFloat(h.currentValueUsd);
-    return acc;
-  }, {});
-  const pieData = Object.entries(byClass).map(([name, value]) => ({ name, value }));
+  const { data: packages = [], isLoading } = useQuery<PackageSummary[]>({
+    queryKey: ["my-packages"],
+    queryFn: () => apiFetch("/packages"),
+  });
 
-  if (isLoading) return <AppShell><div className="animate-pulse space-y-4"><div className="h-64 bg-muted rounded-xl" /></div></AppShell>;
+  const totalValue = packages.reduce((s, p) => s + parseFloat(p.latestSnapshot?.totalValueUsd ?? "0"), 0);
+  const totalInvested = packages.reduce((s, p) => s + parseFloat(p.latestSnapshot?.totalInvestedUsd ?? "0"), 0);
+  const totalReturn = totalValue - totalInvested;
+  const totalReturnPct = totalInvested > 0 ? (totalReturn / totalInvested) * 100 : 0;
+
+  const assetClassAgg: Record<string, number> = {};
+  for (const pkg of packages) {
+    for (const alloc of pkg.allocations) {
+      const cls = alloc.fund?.assetClass ?? "equity";
+      const wt = parseFloat(alloc.weightPercent) / 100;
+      const pkgValue = parseFloat(pkg.latestSnapshot?.totalValueUsd ?? "0");
+      assetClassAgg[cls] = (assetClassAgg[cls] ?? 0) + wt * pkgValue;
+    }
+  }
+  const pieData = Object.entries(assetClassAgg).map(([cls, val]) => ({
+    name: cls.replace(/_/g, " "),
+    value: Math.round(val),
+    pct: totalValue > 0 ? (val / totalValue) * 100 : 0,
+    color: ASSET_CLASS_COLORS[cls] ?? "#94A3B8",
+  }));
+
+  const chartData = [
+    { date: "Start", value: totalInvested, invested: totalInvested },
+    { date: "Now", value: totalValue, invested: totalInvested },
+  ];
 
   return (
     <AppShell>
-      <PageHeader title="My Portfolio" subtitle={`Total value: $${total.toLocaleString()} USD`} />
+      <PageHeader title="Portfolio Overview" subtitle="Your complete investment picture." />
 
-      {holdings.length === 0 ? (
-        <div className="bg-card border border-card-border rounded-xl p-16 text-center">
-          <BarChart3 className="h-14 w-14 text-muted-foreground/30 mx-auto mb-4" />
-          <h3 className="font-semibold text-lg mb-2">No Holdings Yet</h3>
-          <p className="text-muted-foreground text-sm">Your advisor will populate your portfolio holdings.</p>
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+        className="rounded-2xl p-5 mb-5 text-white" style={{ background: "linear-gradient(135deg,#042C53 0%,#0a4a8a 100%)" }}>
+        <div className="text-slate-300 text-xs mb-1">Total Portfolio Value</div>
+        <div className="text-3xl font-bold mb-1">{fmtCurrency(totalValue)}</div>
+        <div className={`text-sm mb-4 ${totalReturn >= 0 ? "text-emerald-300" : "text-red-300"}`}>
+          {totalReturn >= 0 ? "▲" : "▼"} {fmtCurrency(Math.abs(totalReturn))} ({totalReturn >= 0 ? "+" : ""}{totalReturnPct.toFixed(2)}%) total return
         </div>
-      ) : (
-        <>
-          <div className="grid md:grid-cols-2 gap-6 mb-6">
-            <div className="bg-card border border-card-border rounded-xl p-5">
-              <h3 className="font-semibold mb-4">Allocation by Asset Class</h3>
-              <ResponsiveContainer width="100%" height={220}>
-                <PieChart>
-                  <Pie data={pieData} cx="50%" cy="50%" outerRadius={90} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
-                    {pieData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                  </Pie>
-                  <Tooltip formatter={(v: number) => `$${v.toLocaleString()}`} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="bg-card border border-card-border rounded-xl p-5">
-              <h3 className="font-semibold mb-4">Asset Class Summary</h3>
-              <div className="space-y-3">
-                {pieData.map((d, i) => (
-                  <div key={d.name} className="flex items-center gap-3">
-                    <div className="h-3 w-3 rounded-full shrink-0" style={{ background: COLORS[i % COLORS.length] }} />
-                    <span className="text-sm flex-1 capitalize">{d.name}</span>
-                    <span className="text-sm font-semibold">${d.value.toLocaleString()}</span>
-                    <span className="text-xs text-muted-foreground w-10 text-right">{((d.value / total) * 100).toFixed(0)}%</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+        <div className="flex gap-4 text-xs text-slate-400">
+          <span>Total invested: {fmtCurrency(totalInvested)}</span>
+          <span>{packages.filter(p => p.status === "active").length} active package(s)</span>
+        </div>
+      </motion.div>
 
-          <div className="bg-card border border-card-border rounded-xl p-5">
-            <h3 className="font-semibold mb-4">All Holdings</h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border">
-                    <th className="text-left py-2 text-muted-foreground font-medium">Asset</th>
-                    <th className="text-left py-2 text-muted-foreground font-medium">Class</th>
-                    <th className="text-right py-2 text-muted-foreground font-medium">Value (USD)</th>
-                    <th className="text-right py-2 text-muted-foreground font-medium">Weight</th>
-                    <th className="text-right py-2 text-muted-foreground font-medium">Managed</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {holdings.map(h => (
-                    <tr key={h.id} className="border-b border-border last:border-0">
-                      <td className="py-2.5">
-                        <div className="font-medium">{h.assetName}</div>
-                        {h.tickerSymbol && <div className="text-xs text-muted-foreground">{h.tickerSymbol}</div>}
-                      </td>
-                      <td className="py-2.5 text-muted-foreground capitalize">{h.assetClass}</td>
-                      <td className="py-2.5 text-right font-semibold">${parseFloat(h.currentValueUsd).toLocaleString()}</td>
-                      <td className="py-2.5 text-right text-muted-foreground">{h.weightPercent ? `${h.weightPercent}%` : "—"}</td>
-                      <td className="py-2.5 text-right">{h.isAdvisorManaged ? <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">Advisor</span> : "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+      {totalValue > 0 && (
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+          className="bg-card border border-card-border rounded-2xl p-4 mb-5">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold text-sm">Performance</h3>
+            <div className="flex gap-1">
+              {TIME_FILTERS.map((f) => (
+                <button key={f} onClick={() => setTimeFilter(f)}
+                  className={`text-xs px-2.5 py-1 rounded-lg transition-colors ${timeFilter === f ? "bg-primary text-white" : "text-muted-foreground hover:bg-muted"}`}>
+                  {f}
+                </button>
+              ))}
             </div>
           </div>
-        </>
+          <ResponsiveContainer width="100%" height={160}>
+            <ComposedChart data={chartData}>
+              <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+              <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} width={55} />
+              <Tooltip formatter={(v: any) => fmtCurrency(v)} />
+              <Area type="monotone" dataKey="value" fill="#1D9E7520" stroke="#1D9E75" strokeWidth={2} name="Portfolio value" />
+              <Line type="monotone" dataKey="invested" stroke="#94A3B8" strokeWidth={1.5} strokeDasharray="4 4" dot={false} name="Total invested" />
+            </ComposedChart>
+          </ResponsiveContainer>
+          <p className="text-xs text-muted-foreground text-center mt-1">Full history chart grows as your portfolio ages.</p>
+        </motion.div>
       )}
+
+      {pieData.length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+          className="bg-card border border-card-border rounded-2xl p-4 mb-5">
+          <h3 className="font-semibold text-sm mb-3">Allocation by Asset Class</h3>
+          <div className="flex flex-col items-center">
+            <PieChart width={220} height={160}>
+              <Pie data={pieData} cx={110} cy={80} innerRadius={50} outerRadius={75} dataKey="value" paddingAngle={2}>
+                {pieData.map((entry) => <Cell key={entry.name} fill={entry.color} />)}
+              </Pie>
+              <Tooltip formatter={(v: any) => fmtCurrency(v)} />
+            </PieChart>
+            <div className="flex flex-wrap justify-center gap-x-4 gap-y-1.5 mt-1">
+              {pieData.map((d) => (
+                <span key={d.name} className="text-xs flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: d.color }} />
+                  <span className="capitalize">{d.name}</span>
+                  <span className="font-medium">{d.pct.toFixed(1)}%</span>
+                </span>
+              ))}
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+        <h3 className="font-semibold mb-3">Packages Summary</h3>
+        <div className="bg-card border border-card-border rounded-2xl overflow-hidden">
+          {isLoading ? (
+            <div className="p-6 text-center text-sm text-muted-foreground animate-pulse">Loading…</div>
+          ) : packages.length === 0 ? (
+            <div className="py-10 text-center text-sm text-muted-foreground">No packages yet. Your advisor will set these up.</div>
+          ) : (
+            <table className="w-full text-sm">
+              <thead className="border-b border-border bg-muted/40">
+                <tr>
+                  <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">Package</th>
+                  <th className="text-right px-4 py-2.5 font-medium text-muted-foreground">Value</th>
+                  <th className="text-right px-4 py-2.5 font-medium text-muted-foreground">Return</th>
+                  <th className="px-2 py-2.5" />
+                </tr>
+              </thead>
+              <tbody>
+                {packages.map((pkg) => {
+                  const val = parseFloat(pkg.latestSnapshot?.totalValueUsd ?? "0");
+                  const inv = parseFloat(pkg.latestSnapshot?.totalInvestedUsd ?? "0");
+                  const ret = val - inv;
+                  const retPct = inv > 0 ? (ret / inv) * 100 : 0;
+                  return (
+                    <tr key={pkg.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="font-medium">{pkg.nickname}</div>
+                        <div className="text-xs text-muted-foreground capitalize">{pkg.type.replace(/_/g, " ")}</div>
+                      </td>
+                      <td className="px-4 py-3 text-right font-semibold">{fmtCurrency(val)}</td>
+                      <td className={`px-4 py-3 text-right text-xs font-medium ${ret >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+                        {ret >= 0 ? "+" : ""}{retPct.toFixed(1)}%
+                      </td>
+                      <td className="px-2 py-3">
+                        <Link href={`/client/packages/${pkg.id}`}>
+                          <a><ArrowRight className="h-4 w-4 text-muted-foreground" /></a>
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </motion.div>
     </AppShell>
   );
 }

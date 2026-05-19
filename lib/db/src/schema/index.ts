@@ -12,3 +12,4 @@ export * from "./tasks";
 export * from "./leads";
 export * from "./blog";
 export * from "./notifications";
+export * from "./investments";
