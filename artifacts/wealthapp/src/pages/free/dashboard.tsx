@@ -12,6 +12,7 @@ import BottomNav from "@/components/BottomNav";
 import { Progress } from "@/components/ui/progress";
 import { apiFetch } from "@/lib/api";
 import { useProfile } from "@/hooks/useProfile";
+import { queryClient } from "@/lib/queryClient";
 import { toast } from "sonner";
 import { X, Phone } from "lucide-react";
 import { generateWeeklyTip, getAgeBenchmarkSavingsRate } from "@/lib/tipEngine";
@@ -25,7 +26,7 @@ import { calculateProjection } from "@/lib/goalProjection";
 
 interface HealthScore { overallScore: number; budgetScore: number; goalsScore: number; savingsScore: number; insights: Record<string, number> | null; }
 interface Goal { id: string; title: string; goalType: string; status: string; targetAmount: string | null; currentAmount: string | null; monthlyContribution: string | null; currency: string; targetDate?: string | null; }
-interface BudgetEntry { income: string | null; housing: string | null; food: string | null; transport: string | null; utilities: string | null; entertainment: string | null; other: string | null; }
+interface BudgetEntry { id?: string; periodMonth?: string; income: string | null; housing: string | null; food: string | null; transport: string | null; utilities: string | null; entertainment: string | null; other: string | null; }
 interface Asset { id: string; valueUsd: string; category: string; }
 interface Liability { id: string; balanceUsd: string; }
 interface Pathway { stepNumber: number; status: string; formData?: Record<string, unknown> | null; }
@@ -157,6 +158,33 @@ export default function FreeDashboard() {
       setNewlyEarned(newly[0]);
     }
   }, [goals.length, completedSteps, score?.overallScore, budgets.length]);
+
+  // One-time backfill: if the budget entry has income but no expenses and pathway step 3
+  // has expense data, silently patch the entry so all pages read consistent numbers.
+  const budgetEntryId = budget?.id;
+  useEffect(() => {
+    if (!budgetEntryId) return;
+    if (budgetExpenses > 0) return;
+    if (expensesFromPathway <= 0) return;
+    const fd = pathwayStep3?.formData as Record<string, unknown> | null | undefined;
+    if (!fd) return;
+    apiFetch(`/budget/${budgetEntryId}`, {
+      method: "PUT",
+      body: JSON.stringify({
+        periodMonth: budget?.periodMonth,
+        income: budget?.income ?? "0",
+        housing: String(fd.housing ?? 0),
+        food: String(fd.food ?? 0),
+        transport: String(fd.transport ?? 0),
+        utilities: String(fd.utilities ?? 0),
+        entertainment: String(fd.entertainment ?? 0),
+        other: String(fd.other ?? 0),
+      }),
+    }).then(() => {
+      queryClient.invalidateQueries({ queryKey: ["budget"] });
+    }).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [budgetEntryId]);
 
   const age = null as number | null;
   const benchmarkSavingsRate = getAgeBenchmarkSavingsRate(age);
