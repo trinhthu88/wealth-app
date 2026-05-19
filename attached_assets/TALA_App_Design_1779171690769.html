@@ -1,0 +1,1002 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>TALA — App Design · iOS Hi-Fi</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ── Reset ─────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100vh}
+
+/* ── Canvas ─────────────────────────────────── */
+body{
+  background:#151210;
+  font-family:'Plus Jakarta Sans',sans-serif;
+  padding:56px 48px 120px;
+  display:flex;
+  flex-direction:column;
+  gap:72px;
+}
+
+.canvas-header{display:flex;flex-direction:column;gap:6px}
+.canvas-title{font-family:'Sora',sans-serif;font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.85)}
+.canvas-meta{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.08em;color:rgba(255,255,255,.3)}
+
+.section{display:flex;flex-direction:column;gap:28px}
+.section-label{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.28);padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,.07)}
+.phones-row{display:flex;gap:36px;align-items:flex-start;overflow-x:auto;padding-bottom:8px}
+.phones-row::-webkit-scrollbar{height:4px}
+.phones-row::-webkit-scrollbar-track{background:rgba(255,255,255,.05);border-radius:4px}
+.phones-row::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:4px}
+
+.phone-wrap{display:flex;flex-direction:column;align-items:center;gap:16px;flex-shrink:0}
+.phone-label{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.35)}
+
+/* ── iPhone Frame ──────────────────────────── */
+.iphone{
+  width:393px;height:852px;
+  border-radius:52px;
+  background:#FAF8F5;
+  overflow:hidden;
+  position:relative;
+  flex-shrink:0;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.08),
+    0 0 0 11px #1C1C1E,
+    0 0 0 12.5px rgba(255,255,255,.06),
+    0 32px 80px rgba(0,0,0,.65);
+}
+.pill{position:absolute;top:12px;left:50%;transform:translateX(-50%);width:120px;height:37px;background:#1C1C1E;border-radius:20px;z-index:100}
+.status{position:absolute;top:0;left:0;right:0;height:59px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 28px 10px;z-index:60;font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700}
+.status-icons{display:flex;gap:6px;align-items:center}
+.home-bar{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;z-index:100;opacity:.2}
+.screen{position:absolute;top:59px;left:0;right:0;bottom:34px;overflow:hidden}
+.scroll{height:100%;overflow-y:auto;scrollbar-width:none}
+.scroll::-webkit-scrollbar{display:none}
+
+/* ── Bottom Nav ────────────────────────────── */
+.bnav{
+  position:absolute;bottom:0;left:0;right:0;height:80px;
+  background:rgba(250,248,245,.94);
+  backdrop-filter:blur(20px);
+  border-top:1px solid rgba(0,0,0,.07);
+  display:flex;align-items:flex-start;padding-top:8px;
+  z-index:50;
+}
+.ntab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px}
+.ntab svg{width:26px;height:26px}
+.nlabel{font-size:10px;font-weight:500;color:#A8A095}
+.ntab.on .nlabel{color:#1D9E75}
+
+/* ── Shared screen components ──────────────── */
+.eyebrow{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#1D9E75}
+.card{background:#fff;border-radius:20px;box-shadow:0 4px 14px rgba(15,23,42,.06)}
+.pbar{height:6px;background:#E6F5EE;border-radius:999px;overflow:hidden}
+.pfill{height:100%;background:#1D9E75;border-radius:999px}
+.btn-p{display:block;width:100%;padding:17px;background:#1D9E75;color:#fff;font-family:'Plus Jakarta Sans',sans-serif;font-size:16px;font-weight:700;text-align:center;border-radius:999px;border:none;cursor:pointer;letter-spacing:-.01em}
+.btn-o{display:block;width:100%;padding:15px;background:transparent;color:#1D9E75;font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;font-weight:600;text-align:center;border-radius:999px;border:2px solid #1D9E75;cursor:pointer}
+.step-dots{display:flex;gap:8px;margin-bottom:28px}
+.dot{height:4px;flex:1;border-radius:999px}
+.dot.on{background:#1D9E75}
+.dot.off{background:#E6E1D8}
+
+/* ── Sol SVG reusables (inline) ─────────────── */
+
+/* ── Score ring explorations ─────────────────── */
+.rings-row{display:flex;gap:24px;flex-wrap:wrap}
+.ring-card{
+  background:#FAF8F5;
+  border-radius:28px;
+  padding:40px 36px;
+  display:flex;flex-direction:column;align-items:center;gap:20px;
+  min-width:280px;flex:1;
+}
+.ring-tag{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:#A8A095}
+.ring-name{font-family:'Sora',sans-serif;font-size:15px;font-weight:700;color:#042C53;margin-bottom:4px}
+.ring-desc{font-size:12px;color:#6B6459;line-height:1.55;max-width:220px;text-align:center}
+
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════
+     CANVAS HEADER
+════════════════════════════════════════════ -->
+<div class="canvas-header">
+  <div class="canvas-title">TALA · App Design · iOS</div>
+  <div class="canvas-meta">393 × 852 pt · USD market · Hi-fi · May 2026</div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════
+     SECTION 01 — ONBOARDING
+════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label">01 — Onboarding flow · 4 screens</div>
+  <div class="phones-row">
+
+    <!-- ─── WELCOME ─────────────────────── -->
+    <div class="phone-wrap">
+      <div class="iphone">
+        <div class="pill"></div>
+        <div class="status" style="color:rgba(255,255,255,.7)">
+          <span>9:41</span>
+          <div class="status-icons">
+            <svg viewBox="0 0 17 12" width="17" height="12"><rect x="0" y="8" width="3" height="4" rx="1" fill="currentColor" opacity=".35"/><rect x="4.5" y="5" width="3" height="7" rx="1" fill="currentColor" opacity=".5"/><rect x="9" y="2.5" width="3" height="9.5" rx="1" fill="currentColor" opacity=".7"/><rect x="13.5" y="0" width="3" height="12" rx="1" fill="currentColor"/></svg>
+            <svg viewBox="0 0 16 12" width="16" height="12"><path d="M8 9.5l1.2 1.2L8 12l-1.2-1.3z" fill="currentColor"/><path d="M3.8 6.8Q8 2.8 12.2 6.8" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/><path d="M1.2 4.2Q8-1.2 14.8 4.2" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" opacity=".5"/></svg>
+            <svg viewBox="0 0 25 12" width="25" height="12"><rect x="0" y="1" width="21" height="10" rx="2.5" stroke="currentColor" stroke-width="1.3" fill="none" opacity=".4"/><rect x="22" y="4" width="3" height="4" rx="1" fill="currentColor" opacity=".4"/><rect x="1.3" y="2.3" width="16" height="7.4" rx="1.5" fill="currentColor"/></svg>
+          </div>
+        </div>
+        <div class="screen" style="background:#042C53">
+          <div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:44px 32px 36px">
+            <!-- Wordmark -->
+            <div style="display:flex;align-items:center;gap:10px">
+              <svg width="32" height="32" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="20" fill="#1D9E75"/>
+                <g stroke="#1D9E75" stroke-width="6" stroke-linecap="round">
+                  <line x1="50" y1="6" x2="50" y2="16"/><line x1="50" y1="84" x2="50" y2="94"/>
+                  <line x1="6" y1="50" x2="16" y2="50"/><line x1="84" y1="50" x2="94" y2="50"/>
+                  <line x1="19" y1="19" x2="26" y2="26"/><line x1="74" y1="74" x2="81" y2="81"/>
+                  <line x1="81" y1="19" x2="74" y2="26"/><line x1="26" y1="74" x2="19" y2="81"/>
+                </g>
+              </svg>
+              <span style="font-family:'Sora',sans-serif;font-size:34px;font-weight:800;color:#fff;letter-spacing:-.04em">tala</span>
+            </div>
+            <!-- Sol celebrating -->
+            <div style="text-align:center">
+              <svg width="220" height="220" viewBox="0 0 220 220">
+                <!-- confetti -->
+                <circle cx="24" cy="32" r="3.5" fill="#F5B947"/><circle cx="198" cy="48" r="2.5" fill="#1D9E75"/>
+                <rect x="186" y="26" width="7" height="7" fill="#D86B5A" transform="rotate(35 189 29)"/>
+                <circle cx="18" cy="178" r="3" fill="#4A7CB8"/><circle cx="196" cy="180" r="2.5" fill="#F5B947"/>
+                <!-- rays - solar gold -->
+                <g stroke="#F5B947" stroke-width="4.5" stroke-linecap="round">
+                  <line x1="110" y1="38" x2="110" y2="14"/><line x1="110" y1="184" x2="110" y2="208"/>
+                  <line x1="38" y1="110" x2="14" y2="110"/><line x1="182" y1="110" x2="206" y2="110"/>
+                  <line x1="57" y1="57" x2="41" y2="41"/><line x1="163" y1="57" x2="179" y2="41"/>
+                  <line x1="57" y1="163" x2="41" y2="179"/><line x1="163" y1="163" x2="179" y2="179"/>
+                </g>
+                <circle cx="110" cy="110" r="58" fill="#F5B947"/>
+                <!-- cheeks -->
+                <circle cx="84" cy="122" r="9" fill="#D86B5A" opacity=".55"/>
+                <circle cx="136" cy="122" r="9" fill="#D86B5A" opacity=".55"/>
+                <!-- closed-joy eyes -->
+                <path d="M88 100Q96 91 104 100" stroke="#042C53" stroke-width="3.8" fill="none" stroke-linecap="round"/>
+                <path d="M116 100Q124 91 132 100" stroke="#042C53" stroke-width="3.8" fill="none" stroke-linecap="round"/>
+                <!-- open O mouth -->
+                <ellipse cx="110" cy="128" rx="9" ry="10" fill="#042C53"/>
+                <!-- arms up -->
+                <line x1="52" y1="88" x2="30" y2="62" stroke="#042C53" stroke-width="4" stroke-linecap="round"/>
+                <line x1="168" y1="88" x2="190" y2="62" stroke="#042C53" stroke-width="4" stroke-linecap="round"/>
+                <circle cx="30" cy="62" r="6" fill="#042C53"/><circle cx="190" cy="62" r="6" fill="#042C53"/>
+              </svg>
+              <div style="margin-top:10px">
+                <div style="font-family:'Sora',sans-serif;font-size:26px;font-weight:700;color:#fff;letter-spacing:-.03em;line-height:1.2">A warm, clever friend<br>who gets finance.</div>
+                <div style="font-size:14px;color:rgba(255,255,255,.5);margin-top:10px;line-height:1.55">For professionals building wealth<br>across Southeast Asia.</div>
+              </div>
+            </div>
+            <!-- CTAs -->
+            <div style="width:100%">
+              <button class="btn-p" style="margin-bottom:14px;background:#1D9E75">Get started — it's free</button>
+              <div style="text-align:center;font-size:14px;color:rgba(255,255,255,.4)">Already have an account? <span style="color:#1D9E75;font-weight:700">Sign in</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="home-bar" style="background:#fff"></div>
+      </div>
+      <div class="phone-label">Welcome</div>
+    </div>
+
+    <!-- ─── STEP 1 — INCOME ──────────────── -->
+    <div class="phone-wrap">
+      <div class="iphone">
+        <div class="pill"></div>
+        <div class="status" style="color:#042C53">
+          <span>9:41</span>
+          <div class="status-icons">
+            <svg viewBox="0 0 17 12" width="17" height="12"><rect x="0" y="8" width="3" height="4" rx="1" fill="currentColor" opacity=".35"/><rect x="4.5" y="5" width="3" height="7" rx="1" fill="currentColor" opacity=".5"/><rect x="9" y="2.5" width="3" height="9.5" rx="1" fill="currentColor" opacity=".7"/><rect x="13.5" y="0" width="3" height="12" rx="1" fill="currentColor"/></svg>
+            <svg viewBox="0 0 16 12" width="16" height="12"><path d="M8 9.5l1.2 1.2L8 12l-1.2-1.3z" fill="currentColor"/><path d="M3.8 6.8Q8 2.8 12.2 6.8" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/><path d="M1.2 4.2Q8-1.2 14.8 4.2" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" opacity=".5"/></svg>
+            <svg viewBox="0 0 25 12" width="25" height="12"><rect x="0" y="1" width="21" height="10" rx="2.5" stroke="currentColor" stroke-width="1.3" fill="none" opacity=".4"/><rect x="22" y="4" width="3" height="4" rx="1" fill="currentColor" opacity=".4"/><rect x="1.3" y="2.3" width="16" height="7.4" rx="1.5" fill="currentColor"/></svg>
+          </div>
+        </div>
+        <div class="screen">
+          <div class="scroll">
+            <div style="padding:20px 28px 40px;display:flex;flex-direction:column;min-height:100%">
+              <div class="step-dots"><div class="dot on"></div><div class="dot off"></div><div class="dot off"></div></div>
+              <!-- Sol + heading -->
+              <div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:28px">
+                <svg width="52" height="52" viewBox="0 0 100 100" style="flex-shrink:0;margin-top:2px">
+                  <g stroke="#1D9E75" stroke-width="7" stroke-linecap="round">
+                    <line x1="50" y1="7" x2="50" y2="17"/><line x1="50" y1="83" x2="50" y2="93"/>
+                    <line x1="7" y1="50" x2="17" y2="50"/><line x1="83" y1="50" x2="93" y2="50"/>
+                    <line x1="19" y1="19" x2="26" y2="26"/><line x1="81" y1="19" x2="74" y2="26"/>
+                    <line x1="19" y1="81" x2="26" y2="74"/><line x1="81" y1="81" x2="74" y2="74"/>
+                  </g>
+                  <circle cx="50" cy="50" r="24" fill="#1D9E75"/>
+                  <circle cx="42" cy="47" r="3.5" fill="#042C53"/><circle cx="58" cy="47" r="3.5" fill="#042C53"/>
+                  <circle cx="39" cy="55" r="5" fill="#F5896B" opacity=".5"/><circle cx="61" cy="55" r="5" fill="#F5896B" opacity=".5"/>
+                  <path d="M43 62Q50 67 57 62" stroke="#042C53" stroke-width="3.2" fill="none" stroke-linecap="round"/>
+                </svg>
+                <div>
+                  <div class="eyebrow" style="margin-bottom:6px">Step 1 of 3</div>
+                  <div style="font-family:'Sora',sans-serif;font-size:24px;font-weight:700;color:#042C53;line-height:1.25;letter-spacing:-.02em">What do you bring home each month?</div>
+                </div>
+              </div>
+              <!-- Big input -->
+              <div style="margin-bottom:10px">
+                <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#A8A095;margin-bottom:8px">MONTHLY INCOME (AFTER TAX)</div>
+                <div style="background:#fff;border:2px solid #1D9E75;border-radius:16px;padding:18px 22px;display:flex;align-items:center;gap:6px;box-shadow:0 0 0 4px rgba(29,158,117,.1)">
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:600;color:#A8A095">$</span>
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:36px;font-weight:700;color:#042C53;letter-spacing:-.03em">5,200</span>
+                  <span style="display:inline-block;width:2px;height:36px;background:#1D9E75;border-radius:1px;margin-left:3px"></span>
+                </div>
+              </div>
+              <div style="font-size:13px;color:#A8A095;line-height:1.55;margin-bottom:24px">After tax, all sources. A ballpark is fine — you can always update this.</div>
+              <!-- Sol speech bubble -->
+              <div style="background:#E6F5EE;border-radius:16px;padding:14px 18px;margin-bottom:28px">
+                <div style="font-size:13px;color:#0F6E56;line-height:1.55;font-weight:500">"Most users start with their base salary. Bonuses? Add them when they land."</div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#1D9E75;margin-top:6px">— Sol</div>
+              </div>
+              <div style="flex:1"></div>
+              <button class="btn-p">That's my number →</button>
+            </div>
+          </div>
+        </div>
+        <div class="home-bar" style="background:#042C53"></div>
+      </div>
+      <div class="phone-label">Income entry · 1/3</div>
+    </div>
+
+    <!-- ─── STEP 2 — GOAL ────────────────── -->
+    <div class="phone-wrap">
+      <div class="iphone">
+        <div class="pill"></div>
+        <div class="status" style="color:#042C53">
+          <span>9:41</span>
+          <div class="status-icons">
+            <svg viewBox="0 0 17 12" width="17" height="12"><rect x="0" y="8" width="3" height="4" rx="1" fill="currentColor" opacity=".35"/><rect x="4.5" y="5" width="3" height="7" rx="1" fill="currentColor" opacity=".5"/><rect x="9" y="2.5" width="3" height="9.5" rx="1" fill="currentColor" opacity=".7"/><rect x="13.5" y="0" width="3" height="12" rx="1" fill="currentColor"/></svg>
+            <svg viewBox="0 0 16 12" width="16" height="12"><path d="M8 9.5l1.2 1.2L8 12l-1.2-1.3z" fill="currentColor"/><path d="M3.8 6.8Q8 2.8 12.2 6.8" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/><path d="M1.2 4.2Q8-1.2 14.8 4.2" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" opacity=".5"/></svg>
+            <svg viewBox="0 0 25 12" width="25" height="12"><rect x="0" y="1" width="21" height="10" rx="2.5" stroke="currentColor" stroke-width="1.3" fill="none" opacity=".4"/><rect x="22" y="4" width="3" height="4" rx="1" fill="currentColor" opacity=".4"/><rect x="1.3" y="2.3" width="16" height="7.4" rx="1.5" fill="currentColor"/></svg>
+          </div>
+        </div>
+        <div class="screen">
+          <div class="scroll">
+            <div style="padding:20px 28px 40px;display:flex;flex-direction:column;min-height:100%">
+              <div class="step-dots"><div class="dot on"></div><div class="dot on"></div><div class="dot off"></div></div>
+              <div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:24px">
+                <!-- Sol encouraging — wave arm -->
+                <svg width="52" height="52" viewBox="0 0 100 100" style="flex-shrink:0;margin-top:2px">
+                  <g stroke="#1D9E75" stroke-width="7" stroke-linecap="round" opacity=".7">
+                    <line x1="50" y1="7" x2="50" y2="17"/><line x1="7" y1="50" x2="17" y2="50"/>
+                    <line x1="19" y1="19" x2="26" y2="26"/><line x1="19" y1="81" x2="26" y2="74"/>
+                  </g>
+                  <circle cx="50" cy="50" r="24" fill="#1D9E75"/>
+                  <circle cx="42" cy="47" r="3.5" fill="#042C53"/><circle cx="58" cy="47" r="3.5" fill="#042C53"/>
+                  <circle cx="39" cy="55" r="5" fill="#F5896B" opacity=".5"/><circle cx="61" cy="55" r="5" fill="#F5896B" opacity=".5"/>
+                  <path d="M44 62Q50 66 56 62" stroke="#042C53" stroke-width="3" fill="none" stroke-linecap="round"/>
+                  <line x1="74" y1="48" x2="92" y2="34" stroke="#042C53" stroke-width="3.5" stroke-linecap="round"/>
+                  <circle cx="92" cy="34" r="5" fill="#042C53"/>
+                </svg>
+                <div>
+                  <div class="eyebrow" style="margin-bottom:6px">Step 2 of 3</div>
+                  <div style="font-family:'Sora',sans-serif;font-size:24px;font-weight:700;color:#042C53;line-height:1.25;letter-spacing:-.02em">What are we saving toward?</div>
+                </div>
+              </div>
+              <!-- Goal type grid -->
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px">
+                <!-- selected -->
+                <div style="background:#042C53;border-radius:16px;padding:16px;cursor:pointer">
+                  <div style="font-size:22px;margin-bottom:6px">🛡️</div>
+                  <div style="font-family:'Sora',sans-serif;font-size:14px;font-weight:700;color:#fff">Emergency fund</div>
+                  <div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:3px">3–6 months expenses</div>
+                </div>
+                <div style="background:#fff;border:1.5px solid #E6E1D8;border-radius:16px;padding:16px;cursor:pointer">
+                  <div style="font-size:22px;margin-bottom:6px">✈️</div>
+                  <div style="font-family:'Sora',sans-serif;font-size:14px;font-weight:700;color:#042C53">Trip</div>
+                  <div style="font-size:12px;color:#A8A095;margin-top:3px">Vacation, adventure</div>
+                </div>
+                <div style="background:#fff;border:1.5px solid #E6E1D8;border-radius:16px;padding:16px;cursor:pointer">
+                  <div style="font-size:22px;margin-bottom:6px">🏠</div>
+                  <div style="font-family:'Sora',sans-serif;font-size:14px;font-weight:700;color:#042C53">House deposit</div>
+                  <div style="font-size:12px;color:#A8A095;margin-top:3px">Down payment</div>
+                </div>
+                <div style="background:#fff;border:1.5px solid #E6E1D8;border-radius:16px;padding:16px;cursor:pointer">
+                  <div style="font-size:22px;margin-bottom:6px">⭐</div>
+                  <div style="font-family:'Sora',sans-serif;font-size:14px;font-weight:700;color:#042C53">Something else</div>
+                  <div style="font-size:12px;color:#A8A095;margin-top:3px">You name it</div>
+                </div>
+              </div>
+              <!-- amount -->
+              <div style="margin-bottom:8px">
+                <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#A8A095;margin-bottom:8px">TARGET AMOUNT</div>
+                <div style="background:#fff;border:2px solid #1D9E75;border-radius:14px;padding:16px 20px;display:flex;align-items:center;gap:6px;box-shadow:0 0 0 4px rgba(29,158,117,.1)">
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:600;color:#A8A095">$</span>
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:30px;font-weight:700;color:#042C53;letter-spacing:-.02em">10,000</span>
+                </div>
+              </div>
+              <div style="font-size:13px;color:#A8A095;line-height:1.5;margin-bottom:24px">An emergency fund of $10k covers ~3 months at your income level. Smart first move.</div>
+              <div style="flex:1"></div>
+              <button class="btn-p">Set my goal →</button>
+            </div>
+          </div>
+        </div>
+        <div class="home-bar" style="background:#042C53"></div>
+      </div>
+      <div class="phone-label">First goal · 2/3</div>
+    </div>
+
+    <!-- ─── STEP 3 — SCORE REVEAL ─────────── -->
+    <div class="phone-wrap">
+      <div class="iphone">
+        <div class="pill" style="background:#1D9E75"></div>
+        <div class="status" style="color:#042C53">
+          <span>9:41</span>
+          <div class="status-icons">
+            <svg viewBox="0 0 17 12" width="17" height="12"><rect x="0" y="8" width="3" height="4" rx="1" fill="currentColor" opacity=".35"/><rect x="4.5" y="5" width="3" height="7" rx="1" fill="currentColor" opacity=".5"/><rect x="9" y="2.5" width="3" height="9.5" rx="1" fill="currentColor" opacity=".7"/><rect x="13.5" y="0" width="3" height="12" rx="1" fill="currentColor"/></svg>
+            <svg viewBox="0 0 16 12" width="16" height="12"><path d="M8 9.5l1.2 1.2L8 12l-1.2-1.3z" fill="currentColor"/><path d="M3.8 6.8Q8 2.8 12.2 6.8" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/><path d="M1.2 4.2Q8-1.2 14.8 4.2" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" opacity=".5"/></svg>
+            <svg viewBox="0 0 25 12" width="25" height="12"><rect x="0" y="1" width="21" height="10" rx="2.5" stroke="currentColor" stroke-width="1.3" fill="none" opacity=".4"/><rect x="22" y="4" width="3" height="4" rx="1" fill="currentColor" opacity=".4"/><rect x="1.3" y="2.3" width="16" height="7.4" rx="1.5" fill="currentColor"/></svg>
+          </div>
+        </div>
+        <div class="screen">
+          <div class="scroll">
+            <div style="padding:20px 28px 40px;display:flex;flex-direction:column;align-items:center;min-height:100%;text-align:center">
+              <div class="step-dots" style="align-self:stretch"><div class="dot on"></div><div class="dot on"></div><div class="dot on"></div></div>
+              <!-- confetti scatter -->
+              <div style="position:relative;width:100%;display:flex;justify-content:center">
+                <svg style="position:absolute;top:-10px;left:0;right:0;width:100%;height:260px;pointer-events:none" viewBox="0 0 340 240">
+                  <circle cx="30" cy="30" r="4" fill="#F5B947"/><circle cx="310" cy="40" r="3" fill="#1D9E75"/>
+                  <rect x="280" y="15" width="7" height="7" fill="#D86B5A" transform="rotate(30 283 18)"/>
+                  <circle cx="320" cy="200" r="3" fill="#F5B947"/><circle cx="18" cy="190" r="3" fill="#4A7CB8"/>
+                  <rect x="50" y="10" width="6" height="6" fill="#1D9E75" transform="rotate(45 53 13)"/>
+                </svg>
+                <!-- Score ring -->
+                <svg width="220" height="220" viewBox="0 0 220 220" style="position:relative;z-index:1">
+                  <!-- track -->
+                  <circle cx="110" cy="110" r="90" fill="none" stroke="#E6F5EE" stroke-width="14"/>
+                  <!-- fill 72% · circ=565.5 · offset=565.5×0.28=158.3 -->
+                  <circle cx="110" cy="110" r="90" fill="none" stroke="#1D9E75" stroke-width="14" stroke-linecap="round"
+                    stroke-dasharray="565.5" stroke-dashoffset="158" transform="rotate(-90 110 110)"/>
+                  <!-- center: Sol smiling mini -->
+                  <circle cx="110" cy="110" r="56" fill="#FAF8F5"/>
+                  <!-- sol face -->
+                  <g transform="translate(110 110)">
+                    <g stroke="#F5B947" stroke-width="4" stroke-linecap="round">
+                      <line x1="0" y1="-34" x2="0" y2="-42"/><line x1="0" y1="34" x2="0" y2="42"/>
+                      <line x1="-34" y1="0" x2="-42" y2="0"/><line x1="34" y1="0" x2="42" y2="0"/>
+                    </g>
+                    <circle r="22" fill="#F5B947"/>
+                    <path d="M-9 97Q0 102 9 97" stroke="#042C53" stroke-width="2.5" fill="none" stroke-linecap="round" transform="translate(0 7)"/>
+                    <circle cx="-7" cy="-3" r="2.8" fill="#042C53"/><circle cx="7" cy="-3" r="2.8" fill="#042C53"/>
+                    <path d="M-7 8Q0 13 7 8" stroke="#042C53" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                  </g>
+                  <!-- score number -->
+                  <text x="110" y="78" text-anchor="middle" font-family="Sora" font-weight="800" font-size="46" fill="#042C53" letter-spacing="-2">72</text>
+                  <text x="110" y="95" text-anchor="middle" font-family="JetBrains Mono" font-size="9.5" fill="#A8A095" letter-spacing="2">TALA SCORE</text>
+                </svg>
+              </div>
+              <div style="font-family:'Sora',sans-serif;font-size:24px;font-weight:700;color:#042C53;letter-spacing:-.02em;line-height:1.25;margin-top:4px;margin-bottom:8px">You're already<br>in a good place.</div>
+              <div style="font-size:14px;color:#6B6459;line-height:1.6;max-width:26ch;margin-bottom:22px">Score 72 puts you in the top third for your income range. There's room to push it higher.</div>
+              <!-- breakdown card -->
+              <div class="card" style="width:100%;padding:18px;text-align:left;margin-bottom:24px">
+                <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#A8A095;margin-bottom:14px">WHAT MAKES YOUR SCORE</div>
+                <div style="display:flex;flex-direction:column;gap:12px">
+                  <div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+                      <span style="font-size:13px;font-weight:500;color:#2D2A24">Savings rate</span>
+                      <span style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:#1D9E75">26% ✓</span>
+                    </div>
+                    <div class="pbar"><div class="pfill" style="width:85%"></div></div>
+                  </div>
+                  <div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+                      <span style="font-size:13px;font-weight:500;color:#2D2A24">Goal progress</span>
+                      <span style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:#1D9E75">64% ✓</span>
+                    </div>
+                    <div class="pbar"><div class="pfill" style="width:64%"></div></div>
+                  </div>
+                  <div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+                      <span style="font-size:13px;font-weight:500;color:#2D2A24">Spend ratio</span>
+                      <span style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:#E8A53C">74% ~</span>
+                    </div>
+                    <div class="pbar" style="background:#FEF3D6"><div class="pfill" style="width:60%;background:#E8A53C"></div></div>
+                  </div>
+                </div>
+              </div>
+              <div style="flex:1"></div>
+              <button class="btn-p" style="width:100%">Take me to my dashboard →</button>
+            </div>
+          </div>
+        </div>
+        <div class="home-bar" style="background:#042C53"></div>
+      </div>
+      <div class="phone-label">Score reveal · 3/3</div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════
+     SECTION 02 — SCORE RING EXPLORATIONS
+════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label">02 — Score ring · Three visual approaches</div>
+  <div class="rings-row">
+
+    <!-- Option A: Classic arc -->
+    <div class="ring-card">
+      <div class="ring-tag">Option A · Recommended</div>
+      <svg width="200" height="200" viewBox="0 0 200 200">
+        <circle cx="100" cy="100" r="80" fill="none" stroke="#E6F5EE" stroke-width="16"/>
+        <!-- 72% · circ=502.65 · offset=140.7 -->
+        <circle cx="100" cy="100" r="80" fill="none" stroke="#1D9E75" stroke-width="16" stroke-linecap="round"
+          stroke-dasharray="502.65" stroke-dashoffset="140.7" transform="rotate(-90 100 100)"/>
+        <circle cx="100" cy="100" r="54" fill="#FAF8F5"/>
+        <text x="100" y="88" text-anchor="middle" font-family="Sora" font-weight="800" font-size="46" fill="#042C53" letter-spacing="-2">72</text>
+        <text x="100" y="106" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#A8A095" letter-spacing="2.5">OUT OF 100</text>
+        <text x="100" y="124" text-anchor="middle" font-family="Plus Jakarta Sans" font-size="13" fill="#1D9E75" font-weight="600">Good shape</text>
+      </svg>
+      <div style="text-align:center">
+        <div class="ring-name">Classic arc</div>
+        <div class="ring-desc">One number, one ring. Zero cognitive load. Scales from 24px app icon to full-screen. Works across all score ranges. Our recommendation.</div>
+      </div>
+    </div>
+
+    <!-- Option B: Segmented pillars -->
+    <div class="ring-card">
+      <div class="ring-tag">Option B · Informative</div>
+      <svg width="200" height="200" viewBox="0 0 200 200">
+        <!-- 5 arcs for 5 pillars. r=80, circ=502.65 -->
+        <!-- Each segment ≈78° = 78/360×502.65=108.9, gap≈6° each = 8.4 -->
+        <!-- savings (teal) -->
+        <circle cx="100" cy="100" r="80" fill="none" stroke="#1D9E75" stroke-width="14" stroke-linecap="round"
+          stroke-dasharray="91 411.65" stroke-dashoffset="0" transform="rotate(-90 100 100)"/>
+        <!-- spending (coral) -->
+        <circle cx="100" cy="100" r="80" fill="none" stroke="#D86B5A" stroke-width="14" stroke-linecap="round"
+          stroke-dasharray="81 421.65" stroke-dashoffset="-100" transform="rotate(-90 100 100)"/>
+        <!-- goals (gold) -->
+        <circle cx="100" cy="100" r="80" fill="none" stroke="#F5B947" stroke-width="14" stroke-linecap="round"
+          stroke-dasharray="88 414.65" stroke-dashoffset="-190" transform="rotate(-90 100 100)"/>
+        <!-- streak (navy) -->
+        <circle cx="100" cy="100" r="80" fill="none" stroke="#4A7CB8" stroke-width="14" stroke-linecap="round"
+          stroke-dasharray="86 416.65" stroke-dashoffset="-287" transform="rotate(-90 100 100)"/>
+        <!-- net worth (dark teal) -->
+        <circle cx="100" cy="100" r="80" fill="none" stroke="#0F6E56" stroke-width="14" stroke-linecap="round"
+          stroke-dasharray="84 418.65" stroke-dashoffset="-382" transform="rotate(-90 100 100)"/>
+        <circle cx="100" cy="100" r="54" fill="#FAF8F5"/>
+        <text x="100" y="88" text-anchor="middle" font-family="Sora" font-weight="800" font-size="46" fill="#042C53" letter-spacing="-2">72</text>
+        <text x="100" y="106" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#A8A095" letter-spacing="1.5">5 PILLARS</text>
+      </svg>
+      <!-- legend -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px 18px;width:100%;max-width:200px">
+        <div style="display:flex;align-items:center;gap:7px;font-size:11px;color:#6B6459"><span style="width:9px;height:9px;border-radius:50%;background:#1D9E75;flex-shrink:0"></span>Savings</div>
+        <div style="display:flex;align-items:center;gap:7px;font-size:11px;color:#6B6459"><span style="width:9px;height:9px;border-radius:50%;background:#D86B5A;flex-shrink:0"></span>Spending</div>
+        <div style="display:flex;align-items:center;gap:7px;font-size:11px;color:#6B6459"><span style="width:9px;height:9px;border-radius:50%;background:#F5B947;flex-shrink:0"></span>Goals</div>
+        <div style="display:flex;align-items:center;gap:7px;font-size:11px;color:#6B6459"><span style="width:9px;height:9px;border-radius:50%;background:#4A7CB8;flex-shrink:0"></span>Streak</div>
+        <div style="display:flex;align-items:center;gap:7px;font-size:11px;color:#6B6459"><span style="width:9px;height:9px;border-radius:50%;background:#0F6E56;flex-shrink:0"></span>Net worth</div>
+      </div>
+      <div style="text-align:center">
+        <div class="ring-name">Five pillars</div>
+        <div class="ring-desc">Each arc = one score component. Shows where to improve at a glance, but higher cognitive load. Good for a detail / expanded state.</div>
+      </div>
+    </div>
+
+    <!-- Option C: Sunrise gradient -->
+    <div class="ring-card">
+      <div class="ring-tag">Option C · Expressive</div>
+      <svg width="200" height="200" viewBox="0 0 200 200">
+        <defs>
+          <linearGradient id="sg" x1="0" y1="1" x2="1" y2="0">
+            <stop offset="0%" stop-color="#F5B947"/>
+            <stop offset="48%" stop-color="#F5896B"/>
+            <stop offset="100%" stop-color="#1D9E75"/>
+          </linearGradient>
+        </defs>
+        <circle cx="100" cy="100" r="80" fill="none" stroke="#F2EFE9" stroke-width="16"/>
+        <circle cx="100" cy="100" r="80" fill="none" stroke="url(#sg)" stroke-width="16" stroke-linecap="round"
+          stroke-dasharray="502.65" stroke-dashoffset="140.7" transform="rotate(-90 100 100)"/>
+        <circle cx="100" cy="100" r="54" fill="#fff"/>
+        <text x="100" y="88" text-anchor="middle" font-family="Sora" font-weight="800" font-size="46" fill="#042C53" letter-spacing="-2">72</text>
+        <text x="100" y="106" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#A8A095" letter-spacing="2">OUT OF 100</text>
+        <text x="100" y="124" text-anchor="middle" font-family="Plus Jakarta Sans" font-size="13" fill="#F5896B" font-weight="600">Rising ↑</text>
+      </svg>
+      <div style="text-align:center">
+        <div class="ring-name">Sunrise gradient</div>
+        <div class="ring-desc">Uses the brand celebration gradient. Emotionally warm, implies momentum. Best for scores 65+. Pairs with the "score improved" celebration moment.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════
+     SECTION 03 — CORE SCREENS
+════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label">03 — Core screens</div>
+  <div class="phones-row">
+
+    <!-- ─── HOME / DASHBOARD ─────────────── -->
+    <div class="phone-wrap">
+      <div class="iphone">
+        <div class="pill"></div>
+        <div class="status" style="color:#042C53"><span>9:41</span><div class="status-icons"><svg viewBox="0 0 17 12" width="17" height="12"><rect x="0" y="8" width="3" height="4" rx="1" fill="currentColor" opacity=".35"/><rect x="4.5" y="5" width="3" height="7" rx="1" fill="currentColor" opacity=".5"/><rect x="9" y="2.5" width="3" height="9.5" rx="1" fill="currentColor" opacity=".7"/><rect x="13.5" y="0" width="3" height="12" rx="1" fill="currentColor"/></svg><svg viewBox="0 0 16 12" width="16" height="12"><path d="M8 9.5l1.2 1.2L8 12l-1.2-1.3z" fill="currentColor"/><path d="M3.8 6.8Q8 2.8 12.2 6.8" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/><path d="M1.2 4.2Q8-1.2 14.8 4.2" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" opacity=".5"/></svg><svg viewBox="0 0 25 12" width="25" height="12"><rect x="0" y="1" width="21" height="10" rx="2.5" stroke="currentColor" stroke-width="1.3" fill="none" opacity=".4"/><rect x="22" y="4" width="3" height="4" rx="1" fill="currentColor" opacity=".4"/><rect x="1.3" y="2.3" width="16" height="7.4" rx="1.5" fill="currentColor"/></svg></div></div>
+        <div class="screen">
+          <div class="scroll">
+            <div style="padding:14px 22px 96px">
+
+              <!-- Greeting -->
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px">
+                <div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#A8A095;margin-bottom:3px">MON · MAY 19</div>
+                  <div style="font-family:'Sora',sans-serif;font-size:22px;font-weight:700;color:#042C53;letter-spacing:-.02em">Good morning, Alex.</div>
+                </div>
+                <!-- Sol calm -->
+                <svg width="44" height="44" viewBox="0 0 100 100">
+                  <g stroke="#1D9E75" stroke-width="8" stroke-linecap="round"><line x1="50" y1="7" x2="50" y2="17"/><line x1="50" y1="83" x2="50" y2="93"/><line x1="7" y1="50" x2="17" y2="50"/><line x1="83" y1="50" x2="93" y2="50"/><line x1="19" y1="19" x2="26" y2="26"/><line x1="81" y1="19" x2="74" y2="26"/><line x1="19" y1="81" x2="26" y2="74"/><line x1="81" y1="81" x2="74" y2="74"/></g>
+                  <circle cx="50" cy="50" r="24" fill="#1D9E75"/>
+                  <circle cx="42" cy="47" r="3" fill="#042C53"/><circle cx="58" cy="47" r="3" fill="#042C53"/>
+                  <circle cx="39" cy="54" r="4" fill="#F5896B" opacity=".5"/><circle cx="61" cy="54" r="4" fill="#F5896B" opacity=".5"/>
+                  <path d="M43 61Q50 66 57 61" stroke="#042C53" stroke-width="3" fill="none" stroke-linecap="round"/>
+                </svg>
+              </div>
+
+              <!-- Score card -->
+              <div class="card" style="padding:22px;text-align:center;margin-bottom:14px">
+                <svg width="170" height="170" viewBox="0 0 170 170" style="display:block;margin:0 auto">
+                  <circle cx="85" cy="85" r="68" fill="none" stroke="#E6F5EE" stroke-width="12"/>
+                  <!-- 72% · circ=427.3 · offset=427.3×0.28=119.6 -->
+                  <circle cx="85" cy="85" r="68" fill="none" stroke="#1D9E75" stroke-width="12" stroke-linecap="round"
+                    stroke-dasharray="427.3" stroke-dashoffset="119.6" transform="rotate(-90 85 85)"/>
+                  <circle cx="85" cy="85" r="44" fill="#FAF8F5"/>
+                  <text x="85" y="72" text-anchor="middle" font-family="Sora" font-weight="800" font-size="38" fill="#042C53" letter-spacing="-1.5">72</text>
+                  <text x="85" y="88" text-anchor="middle" font-family="JetBrains Mono" font-size="8.5" fill="#A8A095" letter-spacing="2">TALA SCORE</text>
+                  <text x="85" y="104" text-anchor="middle" font-family="Plus Jakarta Sans" font-size="12" fill="#1D9E75" font-weight="600">Good shape</text>
+                </svg>
+                <!-- Month stats -->
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #F2EFE9;margin-top:16px;padding-top:14px">
+                  <div style="text-align:center">
+                    <div style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:#1D9E75;letter-spacing:-.02em">$1,360</div>
+                    <div style="font-size:10px;color:#A8A095;margin-top:2px">Saved</div>
+                  </div>
+                  <div style="text-align:center;border-left:1px solid #F2EFE9;border-right:1px solid #F2EFE9">
+                    <div style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:#042C53">26%</div>
+                    <div style="font-size:10px;color:#A8A095;margin-top:2px">Rate</div>
+                  </div>
+                  <div style="text-align:center">
+                    <div style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:#042C53">$48.2k</div>
+                    <div style="font-size:10px;color:#A8A095;margin-top:2px">Net worth</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Streak banner -->
+              <div style="background:linear-gradient(135deg,#FEF3D6,#F5B947 180%);border-radius:16px;padding:13px 18px;display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+                <div>
+                  <div style="font-family:'Sora',sans-serif;font-size:15px;font-weight:700;color:#042C53">8-week streak!</div>
+                  <div style="font-size:12px;color:#6B6459;margin-top:2px">Check in Sunday to keep it going.</div>
+                </div>
+                <span style="font-size:26px">🔥</span>
+              </div>
+
+              <!-- Goals header -->
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                <div style="font-family:'Sora',sans-serif;font-size:16px;font-weight:700;color:#042C53">Your goals</div>
+                <div style="font-size:13px;color:#1D9E75;font-weight:600">See all</div>
+              </div>
+
+              <!-- Goal card 1 -->
+              <div class="card" style="padding:16px;margin-bottom:10px">
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">
+                  <div>
+                    <div class="eyebrow" style="margin-bottom:3px">ON TRACK</div>
+                    <div style="font-family:'Sora',sans-serif;font-size:15px;font-weight:700;color:#042C53">Emergency Fund</div>
+                  </div>
+                  <div style="text-align:right">
+                    <div style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:#042C53">$6,400</div>
+                    <div style="font-size:11px;color:#A8A095">of $10,000</div>
+                  </div>
+                </div>
+                <div class="pbar" style="margin-bottom:5px"><div class="pfill" style="width:64%"></div></div>
+                <div style="display:flex;justify-content:space-between;font-size:11px;color:#A8A095">
+                  <span>64% complete</span><span>Jan 2027 · 8 months</span>
+                </div>
+              </div>
+
+              <!-- Goal card 2 -->
+              <div class="card" style="padding:16px">
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">
+                  <div>
+                    <div class="eyebrow" style="margin-bottom:3px">ON TRACK</div>
+                    <div style="font-family:'Sora',sans-serif;font-size:15px;font-weight:700;color:#042C53">Japan Trip</div>
+                  </div>
+                  <div style="text-align:right">
+                    <div style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:#042C53">$840</div>
+                    <div style="font-size:11px;color:#A8A095">of $3,500</div>
+                  </div>
+                </div>
+                <div class="pbar" style="margin-bottom:5px"><div class="pfill" style="width:24%"></div></div>
+                <div style="display:flex;justify-content:space-between;font-size:11px;color:#A8A095">
+                  <span>24% complete</span><span>Dec 2026 · 7 months</span>
+                </div>
+              </div>
+
+            </div>
+          </div>
+          <!-- bottom nav -->
+          <div class="bnav">
+            <div class="ntab on">
+              <svg viewBox="0 0 26 26" fill="none"><circle cx="13" cy="13" r="7" fill="#E6F5EE"/><g stroke="#1D9E75" stroke-width="5" stroke-linecap="round"><line x1="13" y1="5" x2="13" y2="9"/><line x1="13" y1="17" x2="13" y2="21"/><line x1="5" y1="13" x2="9" y2="13"/><line x1="17" y1="13" x2="21" y2="13"/></g><circle cx="13" cy="13" r="4" fill="#1D9E75"/></svg>
+              <div class="nlabel" style="color:#1D9E75">Home</div>
+            </div>
+            <div class="ntab">
+              <svg viewBox="0 0 26 26" fill="none"><rect x="3" y="14" width="5" height="9" rx="2" fill="#A8A095" opacity=".5"/><rect x="10" y="9" width="5" height="14" rx="2" fill="#A8A095" opacity=".6"/><rect x="17" y="5" width="5" height="18" rx="2" fill="#A8A095" opacity=".4"/></svg>
+              <div class="nlabel">Budget</div>
+            </div>
+            <div class="ntab">
+              <svg viewBox="0 0 26 26" fill="none"><circle cx="13" cy="13" r="8" stroke="#A8A095" stroke-width="2"/><circle cx="13" cy="13" r="4" stroke="#A8A095" stroke-width="2"/><circle cx="13" cy="13" r="1.5" fill="#A8A095"/></svg>
+              <div class="nlabel">Goals</div>
+            </div>
+            <div class="ntab">
+              <svg viewBox="0 0 26 26" fill="none"><path d="M13 4l2.5 6 6.5.5-5 4.5 2 6.5L13 18l-6 3.5 2-6.5-5-4.5 6.5-.5z" stroke="#A8A095" stroke-width="1.8" stroke-linejoin="round" fill="none"/></svg>
+              <div class="nlabel">Badges</div>
+            </div>
+            <div class="ntab">
+              <svg viewBox="0 0 26 26" fill="none"><circle cx="13" cy="9" r="4" stroke="#A8A095" stroke-width="2"/><path d="M5 23Q5 17 13 17Q21 17 21 23" stroke="#A8A095" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
+              <div class="nlabel">Profile</div>
+            </div>
+          </div>
+        </div>
+        <div class="home-bar" style="background:#042C53"></div>
+      </div>
+      <div class="phone-label">Home · Dashboard</div>
+    </div>
+
+    <!-- ─── BUDGET & SPENDING ────────────── -->
+    <div class="phone-wrap">
+      <div class="iphone">
+        <div class="pill"></div>
+        <div class="status" style="color:#fff"><span>9:41</span><div class="status-icons"><svg viewBox="0 0 17 12" width="17" height="12"><rect x="0" y="8" width="3" height="4" rx="1" fill="currentColor" opacity=".35"/><rect x="4.5" y="5" width="3" height="7" rx="1" fill="currentColor" opacity=".5"/><rect x="9" y="2.5" width="3" height="9.5" rx="1" fill="currentColor" opacity=".7"/><rect x="13.5" y="0" width="3" height="12" rx="1" fill="currentColor"/></svg><svg viewBox="0 0 16 12" width="16" height="12"><path d="M8 9.5l1.2 1.2L8 12l-1.2-1.3z" fill="currentColor"/><path d="M3.8 6.8Q8 2.8 12.2 6.8" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/><path d="M1.2 4.2Q8-1.2 14.8 4.2" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" opacity=".5"/></svg><svg viewBox="0 0 25 12" width="25" height="12"><rect x="0" y="1" width="21" height="10" rx="2.5" stroke="currentColor" stroke-width="1.3" fill="none" opacity=".4"/><rect x="22" y="4" width="3" height="4" rx="1" fill="currentColor" opacity=".4"/><rect x="1.3" y="2.3" width="16" height="7.4" rx="1.5" fill="currentColor"/></svg></div></div>
+        <div class="screen" style="background:#042C53">
+          <!-- dark hero header, then cream content -->
+          <div style="height:100%;display:flex;flex-direction:column">
+            <!-- dark header area -->
+            <div style="padding:14px 22px 24px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+                <div style="font-family:'Sora',sans-serif;font-size:22px;font-weight:700;color:#fff;letter-spacing:-.02em">Budget</div>
+                <div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.1);border-radius:10px;padding:7px 14px">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 3L5 7l4 4" stroke="rgba(255,255,255,.6)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;color:#fff;letter-spacing:.04em">MAY 2026</span>
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 3l4 4-4 4" stroke="rgba(255,255,255,.6)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+              </div>
+              <!-- Summary -->
+              <div>
+                <div style="font-size:14px;color:rgba(255,255,255,.55);margin-bottom:4px">You spent</div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:42px;font-weight:700;color:#fff;letter-spacing:-.04em;line-height:1">$3,840</div>
+                <div style="display:flex;gap:12px;margin-top:14px">
+                  <div style="background:rgba(255,255,255,.1);border-radius:12px;padding:12px 16px;flex:1">
+                    <div style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:#1D9E75">$1,360</div>
+                    <div style="font-size:11px;color:rgba(255,255,255,.45);margin-top:2px">Saved · 26%</div>
+                  </div>
+                  <div style="background:rgba(255,255,255,.1);border-radius:12px;padding:12px 16px;flex:1">
+                    <div style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:#F5B947">↑ $48.2k</div>
+                    <div style="font-size:11px;color:rgba(255,255,255,.45);margin-top:2px">Net worth</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- cream content area -->
+            <div style="flex:1;background:#FAF8F5;border-radius:28px 28px 0 0;overflow:hidden">
+              <div class="scroll" style="height:100%">
+                <div style="padding:22px 22px 96px">
+                  <!-- Sol comment -->
+                  <div style="display:flex;gap:12px;align-items:flex-start;background:#E6F5EE;border-radius:16px;padding:14px 16px;margin-bottom:20px">
+                    <svg width="30" height="30" viewBox="0 0 100 100" style="flex-shrink:0">
+                      <circle cx="50" cy="50" r="38" fill="#1D9E75"/>
+                      <circle cx="40" cy="45" r="5" fill="#042C53"/><circle cx="60" cy="45" r="5" fill="#042C53"/>
+                      <circle cx="35" cy="56" r="7" fill="#F5896B" opacity=".5"/><circle cx="65" cy="56" r="7" fill="#F5896B" opacity=".5"/>
+                      <path d="M40 65Q50 72 60 65" stroke="#042C53" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+                    </svg>
+                    <div style="font-size:13px;color:#0F6E56;line-height:1.55;font-weight:500">"Quieter than April. Housing held, dining dipped $180. Quiet month — and your savings still climbed."</div>
+                  </div>
+                  <!-- Categories -->
+                  <div style="font-family:'Sora',sans-serif;font-size:16px;font-weight:700;color:#042C53;margin-bottom:12px">By category</div>
+                  <div class="card" style="padding:18px;display:flex;flex-direction:column;gap:14px">
+                    <!-- Housing -->
+                    <div>
+                      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                        <div style="display:flex;align-items:center;gap:8px"><div style="width:8px;height:8px;border-radius:50%;background:#042C53"></div><span style="font-size:13px;font-weight:500;color:#2D2A24">Housing</span></div>
+                        <div style="display:flex;gap:14px;align-items:center"><span style="font-size:11px;color:#A8A095">47%</span><span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:#042C53">$1,800</span></div>
+                      </div>
+                      <div class="pbar" style="background:#F2EFE9"><div style="width:47%;height:100%;background:#042C53;border-radius:999px"></div></div>
+                    </div>
+                    <!-- Food -->
+                    <div>
+                      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                        <div style="display:flex;align-items:center;gap:8px"><div style="width:8px;height:8px;border-radius:50%;background:#1D9E75"></div><span style="font-size:13px;font-weight:500;color:#2D2A24">Food & Dining</span></div>
+                        <div style="display:flex;gap:14px;align-items:center"><span style="font-size:11px;color:#A8A095">16%</span><span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:#042C53">$620</span></div>
+                      </div>
+                      <div class="pbar" style="background:#F2EFE9"><div style="width:16%;height:100%;background:#1D9E75;border-radius:999px"></div></div>
+                    </div>
+                    <!-- Transport -->
+                    <div>
+                      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                        <div style="display:flex;align-items:center;gap:8px"><div style="width:8px;height:8px;border-radius:50%;background:#4A7CB8"></div><span style="font-size:13px;font-weight:500;color:#2D2A24">Transport</span></div>
+                        <div style="display:flex;gap:14px;align-items:center"><span style="font-size:11px;color:#A8A095">10%</span><span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:#042C53">$380</span></div>
+                      </div>
+                      <div class="pbar" style="background:#F2EFE9"><div style="width:10%;height:100%;background:#4A7CB8;border-radius:999px"></div></div>
+                    </div>
+                    <!-- Shopping -->
+                    <div>
+                      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                        <div style="display:flex;align-items:center;gap:8px"><div style="width:8px;height:8px;border-radius:50%;background:#D86B5A"></div><span style="font-size:13px;font-weight:500;color:#2D2A24">Shopping</span></div>
+                        <div style="display:flex;gap:14px;align-items:center"><span style="font-size:11px;color:#A8A095">13%</span><span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:#042C53">$490</span></div>
+                      </div>
+                      <div class="pbar" style="background:#F2EFE9"><div style="width:13%;height:100%;background:#D86B5A;border-radius:999px"></div></div>
+                    </div>
+                    <!-- Other -->
+                    <div>
+                      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                        <div style="display:flex;align-items:center;gap:8px"><div style="width:8px;height:8px;border-radius:50%;background:#A8A095"></div><span style="font-size:13px;font-weight:500;color:#2D2A24">Other</span></div>
+                        <div style="display:flex;gap:14px;align-items:center"><span style="font-size:11px;color:#A8A095">14%</span><span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:#042C53">$550</span></div>
+                      </div>
+                      <div class="pbar" style="background:#F2EFE9"><div style="width:14%;height:100%;background:#A8A095;border-radius:999px"></div></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="bnav">
+            <div class="ntab"><svg viewBox="0 0 26 26" fill="none"><circle cx="13" cy="13" r="7" fill="none"/><g stroke="#A8A095" stroke-width="5" stroke-linecap="round"><line x1="13" y1="5" x2="13" y2="9"/><line x1="13" y1="17" x2="13" y2="21"/><line x1="5" y1="13" x2="9" y2="13"/><line x1="17" y1="13" x2="21" y2="13"/></g><circle cx="13" cy="13" r="4" fill="#A8A095"/></svg><div class="nlabel">Home</div></div>
+            <div class="ntab on"><svg viewBox="0 0 26 26" fill="none"><rect x="3" y="14" width="5" height="9" rx="2" fill="#1D9E75"/><rect x="10" y="9" width="5" height="14" rx="2" fill="#1D9E75" opacity=".7"/><rect x="17" y="5" width="5" height="18" rx="2" fill="#1D9E75" opacity=".4"/></svg><div class="nlabel" style="color:#1D9E75">Budget</div></div>
+            <div class="ntab"><svg viewBox="0 0 26 26" fill="none"><circle cx="13" cy="13" r="8" stroke="#A8A095" stroke-width="2"/><circle cx="13" cy="13" r="4" stroke="#A8A095" stroke-width="2"/><circle cx="13" cy="13" r="1.5" fill="#A8A095"/></svg><div class="nlabel">Goals</div></div>
+            <div class="ntab"><svg viewBox="0 0 26 26" fill="none"><path d="M13 4l2.5 6 6.5.5-5 4.5 2 6.5L13 18l-6 3.5 2-6.5-5-4.5 6.5-.5z" stroke="#A8A095" stroke-width="1.8" stroke-linejoin="round" fill="none"/></svg><div class="nlabel">Badges</div></div>
+            <div class="ntab"><svg viewBox="0 0 26 26" fill="none"><circle cx="13" cy="9" r="4" stroke="#A8A095" stroke-width="2"/><path d="M5 23Q5 17 13 17Q21 17 21 23" stroke="#A8A095" stroke-width="2" stroke-linecap="round" fill="none"/></svg><div class="nlabel">Profile</div></div>
+          </div>
+        </div>
+        <div class="home-bar" style="background:#042C53"></div>
+      </div>
+      <div class="phone-label">Budget · Spending</div>
+    </div>
+
+    <!-- ─── GOALS DETAIL ─────────────────── -->
+    <div class="phone-wrap">
+      <div class="iphone">
+        <div class="pill"></div>
+        <div class="status" style="color:#042C53"><span>9:41</span><div class="status-icons"><svg viewBox="0 0 17 12" width="17" height="12"><rect x="0" y="8" width="3" height="4" rx="1" fill="currentColor" opacity=".35"/><rect x="4.5" y="5" width="3" height="7" rx="1" fill="currentColor" opacity=".5"/><rect x="9" y="2.5" width="3" height="9.5" rx="1" fill="currentColor" opacity=".7"/><rect x="13.5" y="0" width="3" height="12" rx="1" fill="currentColor"/></svg><svg viewBox="0 0 16 12" width="16" height="12"><path d="M8 9.5l1.2 1.2L8 12l-1.2-1.3z" fill="currentColor"/><path d="M3.8 6.8Q8 2.8 12.2 6.8" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/><path d="M1.2 4.2Q8-1.2 14.8 4.2" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" opacity=".5"/></svg><svg viewBox="0 0 25 12" width="25" height="12"><rect x="0" y="1" width="21" height="10" rx="2.5" stroke="currentColor" stroke-width="1.3" fill="none" opacity=".4"/><rect x="22" y="4" width="3" height="4" rx="1" fill="currentColor" opacity=".4"/><rect x="1.3" y="2.3" width="16" height="7.4" rx="1.5" fill="currentColor"/></svg></div></div>
+        <div class="screen">
+          <div class="scroll">
+            <div style="padding:14px 22px 96px">
+              <!-- back -->
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:20px;cursor:pointer">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M12 5L7 10l5 5" stroke="#042C53" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span style="font-size:15px;color:#042C53;font-weight:500">Goals</span>
+              </div>
+              <!-- Ring card -->
+              <div class="card" style="padding:24px;text-align:center;margin-bottom:14px">
+                <div class="eyebrow" style="margin-bottom:4px">ON TRACK</div>
+                <div style="font-family:'Sora',sans-serif;font-size:20px;font-weight:700;color:#042C53;letter-spacing:-.02em;margin-bottom:18px">Emergency Fund</div>
+                <svg width="160" height="160" viewBox="0 0 160 160" style="display:block;margin:0 auto 12px">
+                  <circle cx="80" cy="80" r="66" fill="none" stroke="#E6F5EE" stroke-width="12"/>
+                  <!-- 64% · circ=414.7 · offset=414.7×0.36=149.3 -->
+                  <circle cx="80" cy="80" r="66" fill="none" stroke="#1D9E75" stroke-width="12" stroke-linecap="round"
+                    stroke-dasharray="414.7" stroke-dashoffset="149.3" transform="rotate(-90 80 80)"/>
+                  <!-- Sol encouraging in center -->
+                  <g transform="translate(80 80)">
+                    <g stroke="#1D9E75" stroke-width="4" stroke-linecap="round"><line x1="0" y1="-26" x2="0" y2="-34"/><line x1="-26" y1="0" x2="-34" y2="0"/><line x1="26" y1="0" x2="34" y2="0"/></g>
+                    <circle r="20" fill="#1D9E75"/>
+                    <circle cx="-6" cy="-3" r="2.5" fill="#042C53"/><circle cx="6" cy="-3" r="2.5" fill="#042C53"/>
+                    <path d="M-6 6Q0 10 6 6" stroke="#042C53" stroke-width="2.3" fill="none" stroke-linecap="round"/>
+                    <!-- wave arm -->
+                    <line x1="16" y1="8" x2="26" y2="-2" stroke="#042C53" stroke-width="2.5" stroke-linecap="round"/>
+                    <circle cx="26" cy="-2" r="3.5" fill="#042C53"/>
+                  </g>
+                </svg>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:30px;font-weight:700;color:#042C53;letter-spacing:-.02em">64%</div>
+                <div style="font-size:13px;color:#A8A095;margin-top:3px">$6,400 of $10,000</div>
+              </div>
+              <!-- Stats row -->
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+                <div class="card" style="padding:16px">
+                  <div style="font-size:11px;color:#A8A095;margin-bottom:4px">Monthly contribution</div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;color:#042C53">$450</div>
+                </div>
+                <div class="card" style="padding:16px">
+                  <div style="font-size:11px;color:#A8A095;margin-bottom:4px">On track for</div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;color:#1D9E75">Jan '27</div>
+                </div>
+              </div>
+              <!-- Sol tip -->
+              <div style="background:#E6F5EE;border-radius:16px;padding:14px 16px;margin-bottom:16px;display:flex;gap:12px;align-items:flex-start">
+                <svg width="28" height="28" viewBox="0 0 100 100" style="flex-shrink:0;margin-top:2px">
+                  <circle cx="50" cy="50" r="38" fill="#1D9E75"/>
+                  <circle cx="40" cy="45" r="5" fill="#042C53"/><circle cx="60" cy="45" r="5" fill="#042C53"/>
+                  <path d="M40 64Q50 71 60 64" stroke="#042C53" stroke-width="4.5" fill="none" stroke-linecap="round"/>
+                </svg>
+                <div style="font-size:13px;color:#0F6E56;line-height:1.55;font-weight:500">"$450 a month and you'll have a real safety net before next January. That's a big quiet move."</div>
+              </div>
+              <!-- History -->
+              <div style="font-family:'Sora',sans-serif;font-size:15px;font-weight:700;color:#042C53;margin-bottom:10px">Recent contributions</div>
+              <div class="card" style="overflow:hidden;padding:0">
+                <div style="padding:14px 18px;border-bottom:1px solid #F2EFE9;display:flex;justify-content:space-between;align-items:center">
+                  <div><div style="font-size:13px;font-weight:500;color:#2D2A24">May 2026</div><div style="font-size:11px;color:#A8A095;margin-top:1px">Auto-transfer</div></div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:#1D9E75">+$450</div>
+                </div>
+                <div style="padding:14px 18px;border-bottom:1px solid #F2EFE9;display:flex;justify-content:space-between;align-items:center">
+                  <div><div style="font-size:13px;font-weight:500;color:#2D2A24">Apr 2026</div><div style="font-size:11px;color:#A8A095;margin-top:1px">Auto-transfer</div></div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:#1D9E75">+$450</div>
+                </div>
+                <div style="padding:14px 18px;display:flex;justify-content:space-between;align-items:center">
+                  <div><div style="font-size:13px;font-weight:500;color:#2D2A24">Mar 2026</div><div style="font-size:11px;color:#A8A095;margin-top:1px">Manual top-up</div></div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:#1D9E75">+$600</div>
+                </div>
+              </div>
+              <div style="margin-top:18px"><button class="btn-o">Adjust goal</button></div>
+            </div>
+          </div>
+          <div class="bnav">
+            <div class="ntab"><svg viewBox="0 0 26 26" fill="none"><g stroke="#A8A095" stroke-width="5" stroke-linecap="round"><line x1="13" y1="5" x2="13" y2="9"/><line x1="13" y1="17" x2="13" y2="21"/><line x1="5" y1="13" x2="9" y2="13"/><line x1="17" y1="13" x2="21" y2="13"/></g><circle cx="13" cy="13" r="4" fill="#A8A095"/></svg><div class="nlabel">Home</div></div>
+            <div class="ntab"><svg viewBox="0 0 26 26" fill="none"><rect x="3" y="14" width="5" height="9" rx="2" fill="#A8A095" opacity=".5"/><rect x="10" y="9" width="5" height="14" rx="2" fill="#A8A095" opacity=".6"/><rect x="17" y="5" width="5" height="18" rx="2" fill="#A8A095" opacity=".4"/></svg><div class="nlabel">Budget</div></div>
+            <div class="ntab on"><svg viewBox="0 0 26 26" fill="none"><circle cx="13" cy="13" r="8" stroke="#1D9E75" stroke-width="2"/><circle cx="13" cy="13" r="4" stroke="#1D9E75" stroke-width="2"/><circle cx="13" cy="13" r="1.5" fill="#1D9E75"/></svg><div class="nlabel" style="color:#1D9E75">Goals</div></div>
+            <div class="ntab"><svg viewBox="0 0 26 26" fill="none"><path d="M13 4l2.5 6 6.5.5-5 4.5 2 6.5L13 18l-6 3.5 2-6.5-5-4.5 6.5-.5z" stroke="#A8A095" stroke-width="1.8" stroke-linejoin="round" fill="none"/></svg><div class="nlabel">Badges</div></div>
+            <div class="ntab"><svg viewBox="0 0 26 26" fill="none"><circle cx="13" cy="9" r="4" stroke="#A8A095" stroke-width="2"/><path d="M5 23Q5 17 13 17Q21 17 21 23" stroke="#A8A095" stroke-width="2" stroke-linecap="round" fill="none"/></svg><div class="nlabel">Profile</div></div>
+          </div>
+        </div>
+        <div class="home-bar" style="background:#042C53"></div>
+      </div>
+      <div class="phone-label">Goals · Detail</div>
+    </div>
+
+    <!-- ─── MILESTONES & BADGES ──────────── -->
+    <div class="phone-wrap">
+      <div class="iphone">
+        <div class="pill"></div>
+        <div class="status" style="color:#042C53"><span>9:41</span><div class="status-icons"><svg viewBox="0 0 17 12" width="17" height="12"><rect x="0" y="8" width="3" height="4" rx="1" fill="currentColor" opacity=".35"/><rect x="4.5" y="5" width="3" height="7" rx="1" fill="currentColor" opacity=".5"/><rect x="9" y="2.5" width="3" height="9.5" rx="1" fill="currentColor" opacity=".7"/><rect x="13.5" y="0" width="3" height="12" rx="1" fill="currentColor"/></svg><svg viewBox="0 0 16 12" width="16" height="12"><path d="M8 9.5l1.2 1.2L8 12l-1.2-1.3z" fill="currentColor"/><path d="M3.8 6.8Q8 2.8 12.2 6.8" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/><path d="M1.2 4.2Q8-1.2 14.8 4.2" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" opacity=".5"/></svg><svg viewBox="0 0 25 12" width="25" height="12"><rect x="0" y="1" width="21" height="10" rx="2.5" stroke="currentColor" stroke-width="1.3" fill="none" opacity=".4"/><rect x="22" y="4" width="3" height="4" rx="1" fill="currentColor" opacity=".4"/><rect x="1.3" y="2.3" width="16" height="7.4" rx="1.5" fill="currentColor"/></svg></div></div>
+        <div class="screen">
+          <div class="scroll">
+            <div style="padding:14px 22px 96px">
+              <!-- header -->
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                <div style="font-family:'Sora',sans-serif;font-size:22px;font-weight:700;color:#042C53;letter-spacing:-.02em">Milestones</div>
+                <div style="background:#FEF3D6;border-radius:10px;padding:6px 12px;display:flex;align-items:center;gap:6px">
+                  <span style="font-size:15px">🔥</span>
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:#C8881C">8 weeks</span>
+                </div>
+              </div>
+              <!-- streak card with Sol celebrating -->
+              <div style="background:linear-gradient(135deg,#042C53,#0A3A6B);border-radius:22px;padding:20px;margin-bottom:18px;display:flex;align-items:center;gap:14px;position:relative;overflow:hidden">
+                <!-- confetti -->
+                <div style="position:absolute;top:14px;right:90px;width:5px;height:5px;background:#F5B947;border-radius:50%"></div>
+                <div style="position:absolute;top:30px;right:60px;width:5px;height:5px;background:#1D9E75;transform:rotate(30deg)"></div>
+                <div style="position:absolute;bottom:18px;right:120px;width:4px;height:4px;background:#D86B5A;border-radius:50%"></div>
+                <!-- Sol celebrating mini -->
+                <svg width="64" height="64" viewBox="0 0 100 100" style="flex-shrink:0">
+                  <g stroke="#F5B947" stroke-width="6" stroke-linecap="round">
+                    <line x1="50" y1="10" x2="50" y2="0"/><line x1="50" y1="90" x2="50" y2="100"/>
+                    <line x1="10" y1="50" x2="0" y2="50"/><line x1="90" y1="50" x2="100" y2="50"/>
+                    <line x1="20" y1="20" x2="13" y2="13"/><line x1="80" y1="20" x2="87" y2="13"/>
+                    <line x1="20" y1="80" x2="13" y2="87"/><line x1="80" y1="80" x2="87" y2="87"/>
+                  </g>
+                  <circle cx="50" cy="50" r="28" fill="#F5B947"/>
+                  <circle cx="40" cy="44" r="4" fill="#042C53"/><circle cx="60" cy="44" r="4" fill="#042C53"/>
+                  <path d="M38 62Q50 70 62 62" stroke="#042C53" stroke-width="4" fill="none" stroke-linecap="round"/>
+                  <line x1="26" y1="42" x2="12" y2="28" stroke="#042C53" stroke-width="3.5" stroke-linecap="round"/>
+                  <line x1="74" y1="42" x2="88" y2="28" stroke="#042C53" stroke-width="3.5" stroke-linecap="round"/>
+                  <circle cx="12" cy="28" r="5" fill="#042C53"/><circle cx="88" cy="28" r="5" fill="#042C53"/>
+                </svg>
+                <div>
+                  <div style="font-family:'Sora',sans-serif;font-size:17px;font-weight:700;color:#fff;letter-spacing:-.01em">8-week streak!</div>
+                  <div style="font-size:12px;color:rgba(255,255,255,.55);line-height:1.45;margin-top:4px">Check in Sunday to extend it. 4 more weeks earns the 3-month badge.</div>
+                </div>
+              </div>
+              <!-- earned -->
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                <div style="font-family:'Sora',sans-serif;font-size:15px;font-weight:700;color:#042C53">Earned · 5 of 10</div>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
+                <!-- Goal setter -->
+                <div class="card" style="padding:12px 8px;text-align:center">
+                  <div style="width:52px;height:52px;background:#E6F5EE;border-radius:12px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center">
+                    <svg width="34" height="34" viewBox="0 0 100 100"><circle cx="50" cy="58" r="28" fill="none" stroke="#042C53" stroke-width="5"/><circle cx="50" cy="58" r="17" fill="#FEF3D6" stroke="#042C53" stroke-width="5"/><circle cx="50" cy="58" r="7" fill="#D86B5A" stroke="#042C53" stroke-width="4"/><line x1="50" y1="58" x2="84" y2="24" stroke="#042C53" stroke-width="5" stroke-linecap="round"/><path d="M80 20l8-4 .5 8-4 4z" fill="#1D9E75"/></svg>
+                  </div>
+                  <div style="font-size:11px;font-weight:600;color:#042C53">Goal setter</div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:.08em;text-transform:uppercase;color:#1D9E75;margin-top:2px">Earned</div>
+                </div>
+                <!-- Plan starter -->
+                <div class="card" style="padding:12px 8px;text-align:center">
+                  <div style="width:52px;height:52px;background:#E6F5EE;border-radius:12px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center">
+                    <svg width="34" height="34" viewBox="0 0 100 100"><rect x="28" y="26" width="44" height="56" rx="6" fill="white" stroke="#042C53" stroke-width="5"/><rect x="40" y="18" width="20" height="12" rx="3" fill="#0F6E56" stroke="#042C53" stroke-width="4"/><g stroke="#A8A095" stroke-width="4" stroke-linecap="round"><line x1="36" y1="44" x2="56" y2="44"/><line x1="36" y1="56" x2="62" y2="56"/></g><path d="M64 42l4 5 8-10" stroke="#1D9E75" stroke-width="4.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </div>
+                  <div style="font-size:11px;font-weight:600;color:#042C53">Plan starter</div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:.08em;text-transform:uppercase;color:#1D9E75;margin-top:2px">Earned</div>
+                </div>
+                <!-- 4-week streak -->
+                <div class="card" style="padding:12px 8px;text-align:center">
+                  <div style="width:52px;height:52px;background:#FEF3D6;border-radius:12px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center">
+                    <svg width="30" height="36" viewBox="0 0 80 96"><path d="M40 8Q58 30 60 56Q60 80 40 86Q20 80 20 56Q22 30 40 8Z" fill="#F5B947" stroke="#042C53" stroke-width="4.5" stroke-linejoin="round"/><path d="M40 30Q54 48 54 68Q54 78 40 82Q26 78 26 68Q26 48 40 30Z" fill="#D86B5A"/><circle cx="34" cy="66" r="3" fill="#042C53"/><circle cx="46" cy="66" r="3" fill="#042C53"/><path d="M33 74Q40 78 47 74" stroke="#042C53" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg>
+                  </div>
+                  <div style="font-size:11px;font-weight:600;color:#042C53">4-week streak</div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:.08em;text-transform:uppercase;color:#1D9E75;margin-top:2px">Earned</div>
+                </div>
+                <!-- Net worth + -->
+                <div class="card" style="padding:12px 8px;text-align:center">
+                  <div style="width:52px;height:52px;background:#E6F5EE;border-radius:12px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center">
+                    <svg width="34" height="34" viewBox="0 0 100 100"><rect x="16" y="68" width="12" height="22" rx="3" fill="#C2E7D5" stroke="#042C53" stroke-width="4"/><rect x="34" y="56" width="12" height="34" rx="3" fill="#8FD3B5" stroke="#042C53" stroke-width="4"/><rect x="52" y="44" width="12" height="46" rx="3" fill="#1D9E75" stroke="#042C53" stroke-width="4"/><path d="M14 60L80 22" stroke="#D86B5A" stroke-width="4.5" stroke-linecap="round"/><path d="M80 22L68 25M80 22L77 34" stroke="#D86B5A" stroke-width="4.5" stroke-linecap="round"/></svg>
+                  </div>
+                  <div style="font-size:11px;font-weight:600;color:#042C53">Net worth +</div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:.08em;text-transform:uppercase;color:#1D9E75;margin-top:2px">Earned</div>
+                </div>
+                <!-- Score 70+ -->
+                <div class="card" style="padding:12px 8px;text-align:center">
+                  <div style="width:52px;height:52px;background:#FEF3D6;border-radius:12px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center">
+                    <svg width="34" height="34" viewBox="0 0 100 100"><path d="M50 18l9 24 26 2-19 17 7 25L50 72l-23 14 7-25L15 44l26-2z" fill="#F5B947" stroke="#042C53" stroke-width="4" stroke-linejoin="round"/><circle cx="43" cy="56" r="3.5" fill="#042C53"/><circle cx="57" cy="56" r="3.5" fill="#042C53"/><path d="M42 65Q50 71 58 65" stroke="#042C53" stroke-width="3" fill="none" stroke-linecap="round"/></svg>
+                  </div>
+                  <div style="font-size:11px;font-weight:600;color:#042C53">Score 70+</div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:.08em;text-transform:uppercase;color:#1D9E75;margin-top:2px">Earned</div>
+                </div>
+                <!-- Next: 3-month (in progress) -->
+                <div style="background:#FEF3D6;border-radius:16px;padding:12px 8px;text-align:center;border:1.5px dashed #F5B947;box-shadow:0 2px 8px rgba(200,136,28,.1)">
+                  <div style="width:52px;height:52px;background:rgba(245,185,71,.15);border-radius:12px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center">
+                    <svg width="28" height="28" viewBox="0 0 100 100"><path d="M50 12l10 26 28 2-21 19 8 27L50 70l-25 16 8-27L12 40l28-2z" fill="none" stroke="#F5B947" stroke-width="7" stroke-linejoin="round"/><rect x="38" y="50" width="24" height="22" rx="3" fill="#C8881C" opacity=".5"/><path d="M38 52V42a12 12 0 0124 0v10" fill="none" stroke="#C8881C" stroke-width="6" stroke-linecap="round"/></svg>
+                  </div>
+                  <div style="font-size:11px;font-weight:600;color:#C8881C">3-month streak</div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:.08em;text-transform:uppercase;color:#C8881C;margin-top:2px">14d to go</div>
+                </div>
+              </div>
+              <!-- locked -->
+              <div style="font-family:'Sora',sans-serif;font-size:15px;font-weight:700;color:#042C53;margin-bottom:10px">Locked · 5 more</div>
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+                <div class="card" style="padding:12px 8px;text-align:center;opacity:.4">
+                  <div style="width:52px;height:52px;background:#F2EFE9;border-radius:12px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center"><svg width="22" height="28" viewBox="0 0 22 28"><rect x="1" y="12" width="20" height="16" rx="3" fill="#A8A095"/><path d="M4 12V8a7 7 0 0114 0v4" fill="none" stroke="#A8A095" stroke-width="3" stroke-linecap="round"/></svg></div>
+                  <div style="font-size:11px;font-weight:600;color:#042C53">20% saver</div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:.08em;text-transform:uppercase;color:#A8A095;margin-top:2px">Locked</div>
+                </div>
+                <div class="card" style="padding:12px 8px;text-align:center;opacity:.4">
+                  <div style="width:52px;height:52px;background:#F2EFE9;border-radius:12px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center"><svg width="22" height="28" viewBox="0 0 22 28"><rect x="1" y="12" width="20" height="16" rx="3" fill="#A8A095"/><path d="M4 12V8a7 7 0 0114 0v4" fill="none" stroke="#A8A095" stroke-width="3" stroke-linecap="round"/></svg></div>
+                  <div style="font-size:11px;font-weight:600;color:#042C53">Score 80+</div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:.08em;text-transform:uppercase;color:#A8A095;margin-top:2px">Locked</div>
+                </div>
+                <div class="card" style="padding:12px 8px;text-align:center;opacity:.4">
+                  <div style="width:52px;height:52px;background:#F2EFE9;border-radius:12px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center"><svg width="22" height="28" viewBox="0 0 22 28"><rect x="1" y="12" width="20" height="16" rx="3" fill="#A8A095"/><path d="M4 12V8a7 7 0 0114 0v4" fill="none" stroke="#A8A095" stroke-width="3" stroke-linecap="round"/></svg></div>
+                  <div style="font-size:11px;font-weight:600;color:#042C53">Budget habit</div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:.08em;text-transform:uppercase;color:#A8A095;margin-top:2px">Locked</div>
+                </div>
+                <div class="card" style="padding:12px 8px;text-align:center;opacity:.4">
+                  <div style="width:52px;height:52px;background:#F2EFE9;border-radius:12px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center"><svg width="22" height="28" viewBox="0 0 22 28"><rect x="1" y="12" width="20" height="16" rx="3" fill="#A8A095"/><path d="M4 12V8a7 7 0 0114 0v4" fill="none" stroke="#A8A095" stroke-width="3" stroke-linecap="round"/></svg></div>
+                  <div style="font-size:11px;font-weight:600;color:#042C53">On the money</div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:.08em;text-transform:uppercase;color:#A8A095;margin-top:2px">Locked</div>
+                </div>
+                <div class="card" style="padding:12px 8px;text-align:center;opacity:.4">
+                  <div style="width:52px;height:52px;background:#F2EFE9;border-radius:12px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center"><svg width="22" height="28" viewBox="0 0 22 28"><rect x="1" y="12" width="20" height="16" rx="3" fill="#A8A095"/><path d="M4 12V8a7 7 0 0114 0v4" fill="none" stroke="#A8A095" stroke-width="3" stroke-linecap="round"/></svg></div>
+                  <div style="font-size:11px;font-weight:600;color:#042C53">6-month streak</div>
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:.08em;text-transform:uppercase;color:#A8A095;margin-top:2px">Locked</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="bnav">
+            <div class="ntab"><svg viewBox="0 0 26 26" fill="none"><g stroke="#A8A095" stroke-width="5" stroke-linecap="round"><line x1="13" y1="5" x2="13" y2="9"/><line x1="13" y1="17" x2="13" y2="21"/><line x1="5" y1="13" x2="9" y2="13"/><line x1="17" y1="13" x2="21" y2="13"/></g><circle cx="13" cy="13" r="4" fill="#A8A095"/></svg><div class="nlabel">Home</div></div>
+            <div class="ntab"><svg viewBox="0 0 26 26" fill="none"><rect x="3" y="14" width="5" height="9" rx="2" fill="#A8A095" opacity=".5"/><rect x="10" y="9" width="5" height="14" rx="2" fill="#A8A095" opacity=".6"/><rect x="17" y="5" width="5" height="18" rx="2" fill="#A8A095" opacity=".4"/></svg><div class="nlabel">Budget</div></div>
+            <div class="ntab"><svg viewBox="0 0 26 26" fill="none"><circle cx="13" cy="13" r="8" stroke="#A8A095" stroke-width="2"/><circle cx="13" cy="13" r="4" stroke="#A8A095" stroke-width="2"/><circle cx="13" cy="13" r="1.5" fill="#A8A095"/></svg><div class="nlabel">Goals</div></div>
+            <div class="ntab on"><svg viewBox="0 0 26 26" fill="none"><path d="M13 4l2.5 6 6.5.5-5 4.5 2 6.5L13 18l-6 3.5 2-6.5-5-4.5 6.5-.5z" stroke="#1D9E75" stroke-width="1.8" stroke-linejoin="round" fill="#E6F5EE"/></svg><div class="nlabel" style="color:#1D9E75">Badges</div></div>
+            <div class="ntab"><svg viewBox="0 0 26 26" fill="none"><circle cx="13" cy="9" r="4" stroke="#A8A095" stroke-width="2"/><path d="M5 23Q5 17 13 17Q21 17 21 23" stroke="#A8A095" stroke-width="2" stroke-linecap="round" fill="none"/></svg><div class="nlabel">Profile</div></div>
+          </div>
+        </div>
+        <div class="home-bar" style="background:#042C53"></div>
+      </div>
+      <div class="phone-label">Milestones · Badges</div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

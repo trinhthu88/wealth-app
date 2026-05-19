@@ -1,5 +1,4 @@
 @layer theme, base, clerk, components, utilities;
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 @import "tailwindcss";
 @import "@clerk/themes/shadcn.css";
 @import "tw-animate-css";
@@ -60,16 +59,18 @@
   --color-sidebar-ring: hsl(var(--sidebar-ring));
 
   --font-sans: var(--app-font-sans);
+  --font-display: var(--app-font-display);
   --font-serif: var(--app-font-serif);
   --font-mono: var(--app-font-mono);
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --radius-xl: calc(var(--radius) + 6px);
+  --radius-2xl: calc(var(--radius) + 12px);
 }
 
-/* WealthApp Light Mode - Teal #1D9E75, Navy #042C53 */
+/* TALA Design System — Warm cream, navy, emerald green */
 :root {
   --button-outline: rgba(0,0,0,.10);
   --badge-outline: rgba(0,0,0,.05);
@@ -77,20 +78,20 @@
   --elevate-1: rgba(0,0,0,.03);
   --elevate-2: rgba(0,0,0,.08);
 
-  /* Background: soft off-white */
-  --background: 210 20% 98%;
+  /* Background: warm cream #FAF8F5 */
+  --background: 36 30% 97%;
   /* Foreground: dark navy */
   --foreground: 214 91% 17%;
-  --border: 214 20% 88%;
-  --input: 214 20% 88%;
+  --border: 35 20% 88%;
+  --input: 35 20% 88%;
   --ring: 158 68% 37%;
 
-  /* Cards: clean white */
+  /* Cards: warm white */
   --card: 0 0% 100%;
   --card-foreground: 214 91% 17%;
-  --card-border: 214 20% 90%;
+  --card-border: 35 20% 90%;
 
-  /* Sidebar: dark navy */
+  /* Sidebar: dark navy #042C53 */
   --sidebar: 214 91% 14%;
   --sidebar-foreground: 0 0% 95%;
   --sidebar-border: 214 50% 22%;
@@ -100,51 +101,56 @@
   --sidebar-accent-foreground: 0 0% 90%;
   --sidebar-ring: 158 68% 45%;
 
-  /* Primary: teal #1D9E75 */
+  /* Primary: emerald #1D9E75 */
   --primary: 158 68% 37%;
   --primary-foreground: 0 0% 100%;
 
-  /* Secondary: light teal tint */
-  --secondary: 158 30% 92%;
-  --secondary-foreground: 158 68% 25%;
+  /* Secondary: light emerald tint */
+  --secondary: 158 35% 92%;
+  --secondary-foreground: 158 68% 22%;
 
-  /* Muted: light gray */
-  --muted: 210 20% 95%;
-  --muted-foreground: 214 30% 45%;
+  /* Muted: warm neutral */
+  --muted: 35 25% 93%;
+  --muted-foreground: 214 20% 45%;
 
-  /* Accent: navy tint */
-  --accent: 214 40% 92%;
+  /* Accent: warm navy tint */
+  --accent: 214 30% 92%;
   --accent-foreground: 214 91% 17%;
 
   /* Popover */
   --popover: 0 0% 100%;
   --popover-foreground: 214 91% 17%;
-  --popover-border: 214 20% 88%;
+  --popover-border: 35 20% 88%;
 
-  /* Destructive: red */
-  --destructive: 0 84% 60%;
+  /* Destructive */
+  --destructive: 4 72% 55%;
   --destructive-foreground: 0 0% 100%;
 
   /* Charts */
   --chart-1: 158 68% 37%;
   --chart-2: 214 91% 17%;
-  --chart-3: 36 100% 50%;
-  --chart-4: 280 65% 55%;
-  --chart-5: 0 84% 60%;
+  --chart-3: 38 90% 55%;
+  --chart-4: 280 55% 55%;
+  --chart-5: 4 72% 55%;
 
-  --app-font-sans: 'Inter', sans-serif;
+  /* Typography */
+  --app-font-display: 'Sora', sans-serif;
+  --app-font-sans: 'Plus Jakarta Sans', sans-serif;
   --app-font-serif: Georgia, serif;
-  --app-font-mono: Menlo, monospace;
-  --radius: .75rem;
+  --app-font-mono: 'JetBrains Mono', monospace;
 
-  --shadow-2xs: 0px 1px 2px 0px rgba(4,44,83,0.06);
-  --shadow-xs: 0px 1px 3px 0px rgba(4,44,83,0.08);
-  --shadow-sm: 0px 2px 4px 0px rgba(4,44,83,0.08), 0px 1px 2px -1px rgba(4,44,83,0.04);
-  --shadow: 0px 4px 6px 0px rgba(4,44,83,0.07), 0px 2px 4px -1px rgba(4,44,83,0.05);
-  --shadow-md: 0px 8px 12px 0px rgba(4,44,83,0.08), 0px 4px 6px -2px rgba(4,44,83,0.05);
-  --shadow-lg: 0px 16px 24px 0px rgba(4,44,83,0.08), 0px 8px 10px -4px rgba(4,44,83,0.06);
-  --shadow-xl: 0px 24px 32px 0px rgba(4,44,83,0.1), 0px 12px 16px -4px rgba(4,44,83,0.07);
-  --shadow-2xl: 0px 32px 48px 0px rgba(4,44,83,0.12);
+  /* Radius — TALA uses generous rounding */
+  --radius: 1rem;
+
+  /* Shadows — warm navy tint */
+  --shadow-2xs: 0px 1px 2px 0px rgba(4,44,83,0.05);
+  --shadow-xs: 0px 1px 3px 0px rgba(4,44,83,0.07);
+  --shadow-sm: 0px 2px 4px 0px rgba(4,44,83,0.07), 0px 1px 2px -1px rgba(4,44,83,0.04);
+  --shadow: 0px 4px 14px 0px rgba(4,44,83,0.06);
+  --shadow-md: 0px 8px 20px 0px rgba(4,44,83,0.08), 0px 4px 6px -2px rgba(4,44,83,0.05);
+  --shadow-lg: 0px 16px 32px 0px rgba(4,44,83,0.08), 0px 8px 10px -4px rgba(4,44,83,0.06);
+  --shadow-xl: 0px 24px 40px 0px rgba(4,44,83,0.10), 0px 12px 16px -4px rgba(4,44,83,0.07);
+  --shadow-2xl: 0px 32px 56px 0px rgba(4,44,83,0.12);
   --tracking-normal: 0em;
   --spacing: 0.25rem;
 
@@ -172,13 +178,13 @@
   --elevate-2: rgba(255,255,255,.09);
 
   --background: 214 50% 8%;
-  --foreground: 210 20% 96%;
+  --foreground: 36 20% 95%;
   --border: 214 30% 22%;
   --input: 214 30% 22%;
   --ring: 158 68% 45%;
 
   --card: 214 50% 11%;
-  --card-foreground: 210 20% 96%;
+  --card-foreground: 36 20% 95%;
   --card-border: 214 30% 20%;
 
   --sidebar: 214 60% 6%;
@@ -194,44 +200,57 @@
   --primary-foreground: 0 0% 100%;
 
   --secondary: 214 40% 18%;
-  --secondary-foreground: 210 20% 85%;
+  --secondary-foreground: 36 20% 82%;
 
   --muted: 214 40% 15%;
-  --muted-foreground: 214 20% 60%;
+  --muted-foreground: 214 20% 58%;
 
   --accent: 214 40% 18%;
-  --accent-foreground: 210 20% 90%;
+  --accent-foreground: 36 20% 88%;
 
   --popover: 214 50% 10%;
-  --popover-foreground: 210 20% 96%;
+  --popover-foreground: 36 20% 95%;
   --popover-border: 214 30% 20%;
 
-  --destructive: 0 70% 50%;
+  --destructive: 4 65% 50%;
   --destructive-foreground: 0 0% 100%;
 
   --chart-1: 158 68% 45%;
   --chart-2: 214 60% 50%;
-  --chart-3: 36 100% 55%;
-  --chart-4: 280 65% 60%;
-  --chart-5: 0 70% 55%;
+  --chart-3: 38 90% 58%;
+  --chart-4: 280 55% 60%;
+  --chart-5: 4 65% 55%;
 
   --shadow-2xs: 0px 1px 2px 0px rgba(0,0,0,0.3);
   --shadow-xs: 0px 1px 3px 0px rgba(0,0,0,0.35);
   --shadow-sm: 0px 2px 4px 0px rgba(0,0,0,0.35), 0px 1px 2px -1px rgba(0,0,0,0.2);
-  --shadow: 0px 4px 6px 0px rgba(0,0,0,0.3), 0px 2px 4px -1px rgba(0,0,0,0.2);
-  --shadow-md: 0px 8px 12px 0px rgba(0,0,0,0.35), 0px 4px 6px -2px rgba(0,0,0,0.2);
-  --shadow-lg: 0px 16px 24px 0px rgba(0,0,0,0.35), 0px 8px 10px -4px rgba(0,0,0,0.25);
-  --shadow-xl: 0px 24px 32px 0px rgba(0,0,0,0.4), 0px 12px 16px -4px rgba(0,0,0,0.3);
-  --shadow-2xl: 0px 32px 48px 0px rgba(0,0,0,0.45);
+  --shadow: 0px 4px 14px 0px rgba(0,0,0,0.3);
+  --shadow-md: 0px 8px 20px 0px rgba(0,0,0,0.35), 0px 4px 6px -2px rgba(0,0,0,0.2);
+  --shadow-lg: 0px 16px 32px 0px rgba(0,0,0,0.35), 0px 8px 10px -4px rgba(0,0,0,0.25);
+  --shadow-xl: 0px 24px 40px 0px rgba(0,0,0,0.4), 0px 12px 16px -4px rgba(0,0,0,0.3);
+  --shadow-2xl: 0px 32px 56px 0px rgba(0,0,0,0.45);
 }
 
 @layer base {
   * { @apply border-border; }
   body { @apply font-sans antialiased bg-background text-foreground; }
-  h1,h2,h3,h4,h5,h6 { @apply font-semibold tracking-tight; }
+  h1, h2, h3 { font-family: var(--app-font-display); @apply font-bold tracking-tight; }
+  h4, h5, h6 { @apply font-semibold tracking-tight; }
 }
 
 @layer utilities {
+  .font-display { font-family: var(--app-font-display); }
+  .font-mono { font-family: var(--app-font-mono); }
+
+  /* Eyebrow label — TALA design system */
+  .tala-eyebrow {
+    font-family: var(--app-font-mono);
+    font-size: 0.625rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: hsl(var(--primary));
+  }
+
   input[type="search"]::-webkit-search-cancel-button { @apply hidden; }
   [contenteditable][data-placeholder]:empty::before {
     content: attr(data-placeholder);

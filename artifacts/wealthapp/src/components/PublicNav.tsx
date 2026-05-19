@@ -1,9 +1,32 @@
 import { Link } from "wouter";
-import { TrendingUp, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useUser, UserButton } from "@clerk/react";
 import { useProfile } from "@/hooks/useProfile";
+
+function SolWordmark() {
+  return (
+    <div className="flex items-center gap-2.5">
+      <svg width="28" height="28" viewBox="0 0 100 100" fill="none">
+        <circle cx="50" cy="50" r="22" fill="#1D9E75" />
+        <g stroke="#1D9E75" strokeWidth="6" strokeLinecap="round">
+          <line x1="50" y1="6" x2="50" y2="18" />
+          <line x1="50" y1="82" x2="50" y2="94" />
+          <line x1="6" y1="50" x2="18" y2="50" />
+          <line x1="82" y1="50" x2="94" y2="50" />
+          <line x1="20" y1="20" x2="28" y2="28" />
+          <line x1="72" y1="72" x2="80" y2="80" />
+          <line x1="80" y1="20" x2="72" y2="28" />
+          <line x1="28" y1="72" x2="20" y2="80" />
+        </g>
+      </svg>
+      <span style={{ fontFamily: "'Sora', sans-serif" }} className="text-xl font-bold tracking-tight text-foreground">
+        tala
+      </span>
+    </div>
+  );
+}
 
 export default function PublicNav() {
   const [open, setOpen] = useState(false);
@@ -17,13 +40,10 @@ export default function PublicNav() {
     : "/free/dashboard";
 
   return (
-    <nav className="sticky top-0 z-50 bg-card/80 backdrop-blur border-b border-border">
+    <nav className="sticky top-0 z-50 bg-[#FAF8F5]/90 backdrop-blur border-b border-border">
       <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2 font-bold text-foreground hover:opacity-90 transition-opacity">
-          <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-            <TrendingUp className="h-4 w-4 text-white" />
-          </div>
-          WealthApp
+        <Link href="/" className="hover:opacity-85 transition-opacity">
+          <SolWordmark />
         </Link>
 
         <div className="hidden md:flex items-center gap-6 text-sm font-medium text-muted-foreground">
@@ -36,19 +56,23 @@ export default function PublicNav() {
             </>
           ) : (
             <>
-              <Link href="/sign-in"><Button variant="ghost" size="sm">Sign In</Button></Link>
-              <Link href="/sign-up"><Button size="sm">Get Started</Button></Link>
+              <Link href="/sign-in">
+                <Button variant="ghost" size="sm" className="font-medium">Sign In</Button>
+              </Link>
+              <Link href="/sign-up">
+                <Button size="sm" className="rounded-full px-5 font-semibold">Get Started</Button>
+              </Link>
             </>
           )}
         </div>
 
-        <button className="md:hidden" onClick={() => setOpen(v => !v)}>
+        <button className="md:hidden text-foreground/70" onClick={() => setOpen(v => !v)}>
           {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
       </div>
 
       {open && (
-        <div className="md:hidden border-t border-border bg-card px-4 py-4 space-y-2">
+        <div className="md:hidden border-t border-border bg-[#FAF8F5] px-4 py-4 space-y-2">
           <Link href="/tools" className="block py-2 text-sm font-medium" onClick={() => setOpen(false)}>Free Tools</Link>
           <Link href="/blog" className="block py-2 text-sm font-medium" onClick={() => setOpen(false)}>Insights</Link>
           {isSignedIn ? (
@@ -56,7 +80,7 @@ export default function PublicNav() {
           ) : (
             <>
               <Link href="/sign-in"><Button variant="ghost" className="w-full" onClick={() => setOpen(false)}>Sign In</Button></Link>
-              <Link href="/sign-up"><Button className="w-full" onClick={() => setOpen(false)}>Get Started Free</Button></Link>
+              <Link href="/sign-up"><Button className="w-full rounded-full font-semibold" onClick={() => setOpen(false)}>Get Started Free</Button></Link>
             </>
           )}
         </div>
