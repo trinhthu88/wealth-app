@@ -11,6 +11,7 @@ import {
   portfolioSnapshotsTable,
   scenariosTable,
   clientProfilesTable,
+  profilesTable,
 } from "@workspace/db";
 import { requireAuth } from "../middlewares/requireAuth";
 import { requireRole } from "../middlewares/requireAuth";
@@ -193,9 +194,18 @@ router.get("/packages/:id", requireAuth, async (req, res): Promise<void> => {
   res.json({ ...pkg, allocations, transactions, snapshots });
 });
 
-router.post("/packages", requireAuth, requireRole("advisor", "super_admin"), async (req, res): Promise<void> => {
-  const advisorId = (req as any).userId;
-  const { userId, goalId, nickname, type, monthlyAmount, lumpSumAmount, startDate, endDate, currency, expectedAnnualReturn, advisorNotes, allocations } = req.body;
+router.post("/packages", requireAuth, async (req, res): Promise<void> => {
+  const callerId = (req as any).userId;
+
+  // Look up caller role to decide whether they are an advisor or client
+  const [callerProfile] = await db.select({ role: profilesTable.role }).from(profilesTable).where(eq(profilesTable.id, callerId));
+  const isAdvisor = callerProfile?.role === "advisor" || callerProfile?.role === "super_admin";
+
+  // Advisors supply a userId in the body; clients create for themselves
+  const userId = isAdvisor ? req.body.userId : callerId;
+  const advisorId = isAdvisor ? callerId : undefined;
+
+  const { goalId, nickname, type, monthlyAmount, lumpSumAmount, startDate, endDate, currency, expectedAnnualReturn, advisorNotes, allocations } = req.body;
   if (!userId || !nickname || !type) { res.status(400).json({ error: "userId, nickname, type required" }); return; }
 
   const [pkg] = await db.insert(clientPackagesTable).values({

@@ -24,14 +24,22 @@ const FREE_NAV: NavItem[] = [
 
 const CLIENT_NAV: NavItem[] = [
   { label: "Dashboard", href: "/client/dashboard", icon: LayoutDashboard },
-  { label: "Portfolio", href: "/client/portfolio", icon: BarChart3 },
-  { label: "My Packages", href: "/client/packages", icon: Package },
+  { label: "Investments", href: "/client/portfolio", icon: BarChart3 },
   { label: "Transactions", href: "/client/transactions", icon: ArrowLeftRight },
-  { label: "Scenarios", href: "/client/scenarios", icon: LineChart },
   { label: "Goals", href: "/client/goals", icon: Target },
+  { label: "Scenarios", href: "/client/scenarios", icon: LineChart },
   { label: "Net Worth", href: "/client/networth", icon: TrendingUp },
   { label: "Documents", href: "/client/documents", icon: FileText },
   { label: "Messages", href: "/client/messages", icon: MessageSquare },
+];
+
+// Tabs shown in the mobile footer for investment clients
+const CLIENT_FOOTER_NAV: NavItem[] = [
+  { label: "Dashboard", href: "/client/dashboard", icon: LayoutDashboard },
+  { label: "Invest", href: "/client/portfolio", icon: BarChart3 },
+  { label: "Transactions", href: "/client/transactions", icon: ArrowLeftRight },
+  { label: "Goals", href: "/client/goals", icon: Target },
+  { label: "More", href: "/client/scenarios", icon: Layers },
 ];
 
 const ADVISOR_NAV: NavItem[] = [
@@ -88,15 +96,35 @@ function NavLink({ item, collapsed }: { item: NavItem; collapsed: boolean }) {
   );
 }
 
+function ClientFooterTab({ item }: { item: NavItem }) {
+  const [active] = useRoute(item.href);
+  const Icon = item.icon;
+  return (
+    <Link href={item.href} className="flex-1">
+      <div className={cn(
+        "flex flex-col items-center gap-1 py-2 transition-colors",
+        active ? "text-primary" : "text-muted-foreground"
+      )}>
+        <div className={cn("p-1.5 rounded-xl transition-colors", active && "bg-primary/10")}>
+          <Icon className="h-5 w-5" />
+        </div>
+        <span className="text-[10px] font-medium leading-none">{item.label}</span>
+      </div>
+    </Link>
+  );
+}
+
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const { profile } = useProfile();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  const isClient = profile?.role === "investment_client";
+
   const nav = !profile ? FREE_NAV
     : profile.role === "super_admin" ? ADMIN_NAV
     : profile.role === "advisor" ? ADVISOR_NAV
-    : profile.role === "investment_client" ? CLIENT_NAV
+    : isClient ? CLIENT_NAV
     : FREE_NAV;
 
   const roleLabel = !profile ? "Free"
@@ -156,6 +184,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
+      {/* Desktop sidebar */}
       <div className="hidden md:flex md:flex-col md:shrink-0 relative">
         {Sidebar}
         <button
@@ -166,6 +195,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </button>
       </div>
 
+      {/* Mobile sidebar drawer */}
       {mobileOpen && (
         <div className="fixed inset-0 z-50 flex md:hidden">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
@@ -186,9 +216,24 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             <UserButton appearance={{ elements: { avatarBox: "h-7 w-7" } }} />
           </div>
         </header>
-        <main className="flex-1 overflow-y-auto p-4 md:p-6">
+
+        <main className={cn(
+          "flex-1 overflow-y-auto p-4 md:p-6",
+          isClient && "pb-20 md:pb-6"
+        )}>
           {children}
         </main>
+
+        {/* Mobile footer nav — investment clients only */}
+        {isClient && (
+          <div className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-card/95 backdrop-blur border-t border-border">
+            <div className="flex items-stretch px-2 safe-bottom">
+              {CLIENT_FOOTER_NAV.map(item => (
+                <ClientFooterTab key={item.href} item={item} />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

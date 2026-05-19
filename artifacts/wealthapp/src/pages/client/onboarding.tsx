@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState } from "react";
 import { useLocation } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
@@ -6,12 +6,11 @@ import { apiFetch } from "@/lib/api";
 import { useProfile } from "@/hooks/useProfile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import CurrencyInput from "@/components/CurrencyInput";
 import { ChevronLeft, ChevronRight, Plus, Grip, Check } from "lucide-react";
 import { toast } from "sonner";
 
-const STEPS = 6;
+const STEPS = 5;
 
 const GOAL_TYPES = [
   { id: "retire", label: "Retire comfortably", emoji: "🌴" },
@@ -109,9 +108,7 @@ interface GoalDraft {
   targetDate: string;
 }
 
-interface AdvisorProfile {
-  fullName: string;
-}
+const STEP_LABELS = ["About You", "Finances", "Your Goals", "Risk Profile", "Investment Style"];
 
 export default function ProspectOnboarding() {
   const [, navigate] = useLocation();
@@ -120,7 +117,6 @@ export default function ProspectOnboarding() {
   const [step, setStep] = useState(0);
   const [direction, setDirection] = useState(1);
 
-  // Step 1 state
   const [fullName, setFullName] = useState(profile?.fullName ?? "");
   const [age, setAge] = useState<number>(30);
   const [nationality, setNationality] = useState("");
@@ -128,7 +124,6 @@ export default function ProspectOnboarding() {
   const [isExpat, setIsExpat] = useState<boolean | null>(null);
   const [currency, setCurrency] = useState<"USD" | "VND">("USD");
 
-  // Step 2 state
   const [monthlyIncome, setMonthlyIncome] = useState<number>(0);
   const [savingsRange, setSavingsRange] = useState("");
   const [hasInvestments, setHasInvestments] = useState(false);
@@ -136,29 +131,17 @@ export default function ProspectOnboarding() {
   const [hasDebts, setHasDebts] = useState(false);
   const [debtValue, setDebtValue] = useState<number>(0);
 
-  // Step 3 state
   const [goals, setGoals] = useState<GoalDraft[]>([]);
   const [showGoalForm, setShowGoalForm] = useState(false);
   const [goalDraft, setGoalDraft] = useState<Partial<GoalDraft>>({});
 
-  // Step 4 state
   const [riskAnswers, setRiskAnswers] = useState<number[]>([]);
   const [riskQ, setRiskQ] = useState(0);
   const [riskResult, setRiskResult] = useState<ReturnType<typeof getRiskProfile> | null>(null);
 
-  // Step 5 state
   const [investmentStyle, setInvestmentStyle] = useState("");
   const [monthlyAmount, setMonthlyAmount] = useState<number>(0);
   const [lumpSumAmount, setLumpSumAmount] = useState<number>(0);
-
-  // Step 6 state
-  const [preCallNotes, setPreCallNotes] = useState("");
-  const [preferredTime, setPreferredTime] = useState("");
-
-  const { data: clientProfile } = useQuery<any>({
-    queryKey: ["client-profile-me"],
-    queryFn: () => apiFetch("/client-profile/me"),
-  });
 
   const saveProfileMut = useMutation({
     mutationFn: (data: any) => apiFetch("/client-profile/me", { method: "PUT", body: JSON.stringify(data) }),
@@ -173,30 +156,16 @@ export default function ProspectOnboarding() {
     mutationFn: (data: any) => apiFetch("/goals", { method: "POST", body: JSON.stringify(data) }),
   });
 
-  const goNext = () => {
-    setDirection(1);
-    setStep((s) => Math.min(s + 1, STEPS - 1));
-  };
-  const goPrev = () => {
-    setDirection(-1);
-    setStep((s) => Math.max(s - 1, 0));
-  };
+  const goNext = () => { setDirection(1); setStep((s) => Math.min(s + 1, STEPS - 1)); };
+  const goPrev = () => { setDirection(-1); setStep((s) => Math.max(s - 1, 0)); };
 
-  const handleStep1Next = () => {
-    saveProfileMut.mutate({ onboardingStep: 2 });
-    goNext();
-  };
-
+  const handleStep1Next = () => { saveProfileMut.mutate({ onboardingStep: 2 }); goNext(); };
   const handleStep2Next = () => {
     saveSnapshotMut.mutate({ monthlyIncome, savingsRange, hasInvestments, investmentsRoughValue: investValue, hasDebts, debtsRoughValue: debtValue });
     saveProfileMut.mutate({ onboardingStep: 3 });
     goNext();
   };
-
-  const handleStep3Next = () => {
-    saveProfileMut.mutate({ onboardingStep: 4 });
-    goNext();
-  };
+  const handleStep3Next = () => { saveProfileMut.mutate({ onboardingStep: 4 }); goNext(); };
 
   const handleRiskAnswer = (score: number) => {
     const next = [...riskAnswers, score];
@@ -205,33 +174,26 @@ export default function ProspectOnboarding() {
       setTimeout(() => setRiskQ((q) => q + 1), 300);
     } else {
       const total = next.reduce((a, b) => a + b, 0);
-      const profile = getRiskProfile(total);
-      setRiskResult(profile);
-      saveProfileMut.mutate({ riskProfile: profile.name, riskScore: total, onboardingStep: 5 });
+      const p = getRiskProfile(total);
+      setRiskResult(p);
+      saveProfileMut.mutate({ riskProfile: p.name, riskScore: total, onboardingStep: 5 });
     }
   };
 
-  const handleStep4Next = () => {
-    if (!riskResult) return;
-    goNext();
-  };
-
-  const handleStep5Next = () => {
-    const indicativeAmount = investmentStyle === "rsp" ? monthlyAmount : investmentStyle === "lump_sum" ? lumpSumAmount : investmentStyle === "combination" ? monthlyAmount + lumpSumAmount : 0;
-    saveProfileMut.mutate({ investmentStyle, indicativeAmount: indicativeAmount > 0 ? indicativeAmount : undefined, onboardingStep: 6 });
-    goNext();
-  };
-
   const handleComplete = () => {
+    const indicativeAmount = investmentStyle === "rsp" ? monthlyAmount
+      : investmentStyle === "lump_sum" ? lumpSumAmount
+      : investmentStyle === "combination" ? monthlyAmount + lumpSumAmount : 0;
     saveProfileMut.mutate({
-      preCallNotes,
-      preferredContactTime: preferredTime,
+      investmentStyle,
+      indicativeAmount: indicativeAmount > 0 ? indicativeAmount : undefined,
       prospectOnboardingComplete: true,
-      onboardingStep: 6,
+      status: "active",
+      onboardingStep: 5,
     }, {
       onSuccess: () => {
         qc.invalidateQueries({ queryKey: ["client-profile-me"] });
-        toast.success("You're all set! Your advisor will reach out within 24 hours.");
+        toast.success("You're all set! Welcome to your investment portal.");
         navigate("/client/dashboard");
       },
     });
@@ -263,27 +225,40 @@ export default function ProspectOnboarding() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex flex-col">
-      <div className="p-4 flex items-center gap-3">
-        <img src="/logo.svg" className="h-8 w-auto" alt="WealthApp" />
-        <div className="text-sm font-medium text-muted-foreground">Investment Setup</div>
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted flex flex-col">
+      <div className="p-4 flex items-center gap-3 border-b border-border bg-card/80 backdrop-blur">
+        <div className="flex items-center gap-2">
+          <svg width="28" height="28" viewBox="0 0 100 100" fill="none">
+            <circle cx="50" cy="50" r="22" fill="#1D9E75" />
+            <g stroke="#1D9E75" strokeWidth="6" strokeLinecap="round">
+              <line x1="50" y1="6" x2="50" y2="18" />
+              <line x1="50" y1="82" x2="50" y2="94" />
+              <line x1="6" y1="50" x2="18" y2="50" />
+              <line x1="82" y1="50" x2="94" y2="50" />
+              <line x1="20" y1="20" x2="28" y2="28" />
+              <line x1="72" y1="72" x2="80" y2="80" />
+              <line x1="80" y1="20" x2="72" y2="28" />
+              <line x1="28" y1="72" x2="20" y2="80" />
+            </g>
+          </svg>
+          <span className="font-display font-bold text-navy text-lg">tala</span>
+        </div>
+        <div className="text-sm text-muted-foreground font-medium">Investment Setup</div>
       </div>
 
-      <div className="px-4 mb-4">
-        <div className="flex items-center justify-between text-xs text-muted-foreground mb-1.5">
+      <div className="px-4 pt-4 pb-2">
+        <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
+          <span className="font-medium">{STEP_LABELS[step]}</span>
           <span>Step {step + 1} of {STEPS}</span>
-          <span>{Math.round(((step + 1) / STEPS) * 100)}%</span>
         </div>
-        <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
-          <motion.div
-            className="h-full bg-primary rounded-full"
-            animate={{ width: `${((step + 1) / STEPS) * 100}%` }}
-            transition={{ duration: 0.4 }}
-          />
+        <div className="flex gap-1">
+          {STEP_LABELS.map((_, i) => (
+            <div key={i} className={`flex-1 h-1.5 rounded-full transition-all duration-300 ${i <= step ? "bg-primary" : "bg-muted"}`} />
+          ))}
         </div>
       </div>
 
-      <div className="flex-1 px-4 pb-24 overflow-hidden">
+      <div className="flex-1 px-4 py-4 pb-28 overflow-hidden">
         <AnimatePresence mode="wait" custom={direction}>
           <motion.div
             key={step}
@@ -296,14 +271,14 @@ export default function ProspectOnboarding() {
           >
             {step === 0 && (
               <div className="max-w-md mx-auto">
-                <div className="bg-white rounded-2xl shadow-sm p-6 space-y-5">
+                <div className="bg-card rounded-2xl shadow-sm border border-card-border p-6 space-y-5">
                   <div>
-                    <h2 className="text-2xl font-bold text-navy mb-1">About You</h2>
+                    <h2 className="text-2xl font-display font-bold text-navy mb-1">About You</h2>
                     <p className="text-sm text-muted-foreground">Let's start with some basics.</p>
                   </div>
                   <div className="space-y-1">
                     <label className="text-sm font-medium">Full name</label>
-                    <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Your full name" className="text-lg" />
+                    <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Your full name" />
                   </div>
                   <div className="space-y-1">
                     <label className="text-sm font-medium">Age</label>
@@ -325,11 +300,8 @@ export default function ProspectOnboarding() {
                     <label className="text-sm font-medium">Are you an expat?</label>
                     <div className="grid grid-cols-2 gap-3">
                       {[true, false].map((v) => (
-                        <button
-                          key={String(v)}
-                          onClick={() => setIsExpat(v)}
-                          className={`py-3 rounded-xl border-2 font-semibold text-sm transition-all ${isExpat === v ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}
-                        >
+                        <button key={String(v)} onClick={() => setIsExpat(v)}
+                          className={`py-3 rounded-xl border-2 font-semibold text-sm transition-all ${isExpat === v ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}>
                           {v ? "YES" : "NO"}
                         </button>
                       ))}
@@ -339,11 +311,8 @@ export default function ProspectOnboarding() {
                     <label className="text-sm font-medium">Preferred currency</label>
                     <div className="flex gap-2">
                       {(["USD", "VND"] as const).map((c) => (
-                        <button
-                          key={c}
-                          onClick={() => setCurrency(c)}
-                          className={`flex-1 py-2 rounded-lg border-2 text-sm font-semibold transition-all ${currency === c ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}
-                        >
+                        <button key={c} onClick={() => setCurrency(c)}
+                          className={`flex-1 py-2 rounded-lg border-2 text-sm font-semibold transition-all ${currency === c ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}>
                           {c}
                         </button>
                       ))}
@@ -355,10 +324,10 @@ export default function ProspectOnboarding() {
 
             {step === 1 && (
               <div className="max-w-md mx-auto">
-                <div className="bg-white rounded-2xl shadow-sm p-6 space-y-5">
+                <div className="bg-card rounded-2xl shadow-sm border border-card-border p-6 space-y-5">
                   <div>
-                    <h2 className="text-2xl font-bold text-navy mb-1">Your Financial Picture</h2>
-                    <p className="text-sm text-muted-foreground">These ranges help us understand your situation — exact numbers come later.</p>
+                    <h2 className="text-2xl font-display font-bold text-navy mb-1">Your Financial Picture</h2>
+                    <p className="text-sm text-muted-foreground">These ranges help us understand your situation.</p>
                   </div>
                   <div className="space-y-1">
                     <label className="text-sm font-medium">Monthly take-home income</label>
@@ -368,11 +337,8 @@ export default function ProspectOnboarding() {
                     <label className="text-sm font-medium">Total savings</label>
                     <div className="flex flex-wrap gap-2">
                       {SAVINGS_RANGES.map((r) => (
-                        <button
-                          key={r}
-                          onClick={() => setSavingsRange(r)}
-                          className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${savingsRange === r ? "border-primary bg-primary text-white" : "border-border text-muted-foreground hover:border-primary/40"}`}
-                        >
+                        <button key={r} onClick={() => setSavingsRange(r)}
+                          className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${savingsRange === r ? "border-primary bg-primary text-white" : "border-border text-muted-foreground hover:border-primary/40"}`}>
                           {r}
                         </button>
                       ))}
@@ -381,29 +347,25 @@ export default function ProspectOnboarding() {
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <label className="text-sm font-medium">Do you have investments?</label>
-                      <button onClick={() => setHasInvestments(!hasInvestments)} className={`w-11 h-6 rounded-full transition-colors ${hasInvestments ? "bg-primary" : "bg-slate-300"} relative`}>
+                      <button onClick={() => setHasInvestments(!hasInvestments)} className={`w-11 h-6 rounded-full transition-colors ${hasInvestments ? "bg-primary" : "bg-muted"} relative`}>
                         <div className={`w-5 h-5 bg-white rounded-full shadow absolute top-0.5 transition-transform ${hasInvestments ? "translate-x-5.5 left-0.5" : "left-0.5"}`} />
                       </button>
                     </div>
                     {hasInvestments && (
-                      <div>
-                        <label className="text-xs text-muted-foreground mb-1 block">Rough value</label>
-                        <CurrencyInput value={investValue} onChange={setInvestValue} currency="USD" />
-                      </div>
+                      <div><label className="text-xs text-muted-foreground mb-1 block">Rough value</label>
+                        <CurrencyInput value={investValue} onChange={setInvestValue} currency="USD" /></div>
                     )}
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <label className="text-sm font-medium">Any significant debts?</label>
-                      <button onClick={() => setHasDebts(!hasDebts)} className={`w-11 h-6 rounded-full transition-colors ${hasDebts ? "bg-primary" : "bg-slate-300"} relative`}>
+                      <button onClick={() => setHasDebts(!hasDebts)} className={`w-11 h-6 rounded-full transition-colors ${hasDebts ? "bg-primary" : "bg-muted"} relative`}>
                         <div className={`w-5 h-5 bg-white rounded-full shadow absolute top-0.5 transition-transform ${hasDebts ? "translate-x-5.5 left-0.5" : "left-0.5"}`} />
                       </button>
                     </div>
                     {hasDebts && (
-                      <div>
-                        <label className="text-xs text-muted-foreground mb-1 block">Rough total</label>
-                        <CurrencyInput value={debtValue} onChange={setDebtValue} currency="USD" />
-                      </div>
+                      <div><label className="text-xs text-muted-foreground mb-1 block">Rough total</label>
+                        <CurrencyInput value={debtValue} onChange={setDebtValue} currency="USD" /></div>
                     )}
                   </div>
                 </div>
@@ -412,23 +374,21 @@ export default function ProspectOnboarding() {
 
             {step === 2 && (
               <div className="max-w-md mx-auto">
-                <div className="bg-white rounded-2xl shadow-sm p-6 space-y-4">
+                <div className="bg-card rounded-2xl shadow-sm border border-card-border p-6 space-y-4">
                   <div>
-                    <h2 className="text-2xl font-bold text-navy mb-1">Your Goals</h2>
-                    <p className="text-sm text-muted-foreground">Add up to 5 financial goals.</p>
+                    <h2 className="text-2xl font-display font-bold text-navy mb-1">Your Goals</h2>
+                    <p className="text-sm text-muted-foreground">Add your initial goals — you can refine them anytime in the Goals section.</p>
                   </div>
 
                   {goals.map((g, i) => (
-                    <div key={g.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-border">
+                    <div key={g.id} className="flex items-center gap-3 p-3 bg-muted/40 rounded-xl border border-border">
                       <Grip className="h-4 w-4 text-muted-foreground shrink-0" />
                       <div className="text-lg">{g.emoji}</div>
                       <div className="flex-1 min-w-0">
                         <div className="font-medium text-sm truncate">{g.name}</div>
                         <div className="text-xs text-muted-foreground">${g.targetAmount.toLocaleString()} · {g.targetDate}</div>
                       </div>
-                      <div className="shrink-0">
-                        <span className="text-xs font-medium px-2 py-0.5 bg-primary/10 text-primary rounded-full">Priority {i + 1}</span>
-                      </div>
+                      <span className="text-xs font-medium px-2 py-0.5 bg-primary/10 text-primary rounded-full shrink-0">Priority {i + 1}</span>
                     </div>
                   ))}
 
@@ -439,35 +399,28 @@ export default function ProspectOnboarding() {
                   )}
 
                   {showGoalForm && (
-                    <div className="border border-border rounded-xl p-4 space-y-3">
+                    <div className="border border-border rounded-xl p-4 space-y-3 bg-muted/20">
                       <div className="grid grid-cols-4 gap-2">
                         {GOAL_TYPES.map((t) => (
-                          <button
-                            key={t.id}
-                            onClick={() => setGoalDraft((d) => ({ ...d, type: t.id, name: t.label }))}
-                            className={`flex flex-col items-center gap-1 p-2 rounded-lg border text-xs transition-all ${goalDraft.type === t.id ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"}`}
-                          >
+                          <button key={t.id} onClick={() => setGoalDraft((d) => ({ ...d, type: t.id, name: t.label }))}
+                            className={`flex flex-col items-center gap-1 p-2 rounded-lg border text-xs transition-all ${goalDraft.type === t.id ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"}`}>
                             <span className="text-xl">{t.emoji}</span>
                             <span className="text-center leading-tight">{t.label}</span>
                           </button>
                         ))}
                       </div>
-                      <Input
-                        value={goalDraft.name ?? ""}
-                        onChange={(e) => setGoalDraft((d) => ({ ...d, name: e.target.value }))}
-                        placeholder="Goal name"
-                      />
+                      <Input value={goalDraft.name ?? ""} onChange={(e) => setGoalDraft((d) => ({ ...d, name: e.target.value }))} placeholder="Goal name" />
                       <CurrencyInput value={goalDraft.targetAmount ?? 0} onChange={(v) => setGoalDraft((d) => ({ ...d, targetAmount: v }))} currency="USD" />
-                      <Input
-                        type="date"
-                        value={goalDraft.targetDate ?? ""}
-                        onChange={(e) => setGoalDraft((d) => ({ ...d, targetDate: e.target.value }))}
-                      />
+                      <Input type="date" value={goalDraft.targetDate ?? ""} onChange={(e) => setGoalDraft((d) => ({ ...d, targetDate: e.target.value }))} />
                       <div className="flex gap-2">
                         <Button variant="outline" size="sm" onClick={() => setShowGoalForm(false)} className="flex-1">Cancel</Button>
                         <Button size="sm" onClick={addGoal} className="flex-1">Add goal</Button>
                       </div>
                     </div>
+                  )}
+
+                  {goals.length === 0 && (
+                    <p className="text-xs text-muted-foreground text-center pt-1">You can also skip this and add goals later in your Goals section.</p>
                   )}
                 </div>
               </div>
@@ -475,9 +428,9 @@ export default function ProspectOnboarding() {
 
             {step === 3 && (
               <div className="max-w-md mx-auto">
-                <div className="bg-white rounded-2xl shadow-sm p-6 space-y-4">
+                <div className="bg-card rounded-2xl shadow-sm border border-card-border p-6 space-y-4">
                   <div>
-                    <h2 className="text-2xl font-bold text-navy mb-1">Your Risk Profile</h2>
+                    <h2 className="text-2xl font-display font-bold text-navy mb-1">Your Risk Profile</h2>
                     <p className="text-sm text-muted-foreground">5 quick questions to understand how you invest.</p>
                   </div>
 
@@ -487,17 +440,14 @@ export default function ProspectOnboarding() {
                         <span>Question {Math.min(riskQ + 1, 5)} of 5</span>
                         <span>{Math.round(((riskQ) / 5) * 100)}%</span>
                       </div>
-                      <div className="h-1 bg-slate-200 rounded-full mb-4">
-                        <div className="h-full bg-primary rounded-full" style={{ width: `${(riskQ / 5) * 100}%` }} />
+                      <div className="h-1 bg-muted rounded-full mb-4">
+                        <div className="h-full bg-primary rounded-full transition-all duration-300" style={{ width: `${(riskQ / 5) * 100}%` }} />
                       </div>
                       <p className="font-semibold text-base mb-4">{RISK_QUESTIONS[riskQ]?.q}</p>
                       <div className="space-y-2">
                         {RISK_QUESTIONS[riskQ]?.options.map((opt) => (
-                          <button
-                            key={opt.label}
-                            onClick={() => handleRiskAnswer(opt.score)}
-                            className="w-full text-left px-4 py-3 rounded-xl border border-border hover:border-primary hover:bg-primary/5 text-sm font-medium transition-all"
-                          >
+                          <button key={opt.label} onClick={() => handleRiskAnswer(opt.score)}
+                            className="w-full text-left px-4 py-3 rounded-xl border border-border hover:border-primary hover:bg-primary/5 text-sm font-medium transition-all">
                             {opt.label}
                           </button>
                         ))}
@@ -510,7 +460,7 @@ export default function ProspectOnboarding() {
                         <p className="text-sm text-muted-foreground">{riskResult.desc}</p>
                       </div>
                       <div>
-                        <p className="text-xs font-medium text-muted-foreground mb-2 text-center">Illustrative allocation only — your advisor will personalise this</p>
+                        <p className="text-xs font-medium text-muted-foreground mb-2 text-center">Illustrative allocation — your advisor will personalise this</p>
                         <div className="h-4 rounded-full overflow-hidden flex">
                           <div style={{ width: `${riskResult.allocation.equity}%`, backgroundColor: "#1D9E75" }} className="h-full" />
                           <div style={{ width: `${riskResult.allocation.bond}%`, backgroundColor: "#042C53" }} className="h-full" />
@@ -530,25 +480,22 @@ export default function ProspectOnboarding() {
 
             {step === 4 && (
               <div className="max-w-md mx-auto">
-                <div className="bg-white rounded-2xl shadow-sm p-6 space-y-4">
+                <div className="bg-card rounded-2xl shadow-sm border border-card-border p-6 space-y-4">
                   <div>
-                    <h2 className="text-2xl font-bold text-navy mb-1">Investment Style</h2>
+                    <h2 className="text-2xl font-display font-bold text-navy mb-1">Investment Style</h2>
                     <p className="text-sm text-muted-foreground">How do you want to invest?</p>
                   </div>
                   <div className="space-y-3">
                     {INVESTMENT_STYLES.map((style) => (
-                      <button
-                        key={style.id}
-                        onClick={() => setInvestmentStyle(style.id)}
-                        className={`w-full text-left p-4 rounded-xl border-2 transition-all ${investmentStyle === style.id ? "border-primary bg-primary/5" : "border-border"}`}
-                      >
+                      <button key={style.id} onClick={() => setInvestmentStyle(style.id)}
+                        className={`w-full text-left p-4 rounded-xl border-2 transition-all ${investmentStyle === style.id ? "border-primary bg-primary/5" : "border-border"}`}>
                         <div className="flex items-center gap-3">
                           <span className="text-2xl">{style.emoji}</span>
-                          <div>
+                          <div className="flex-1">
                             <div className="font-semibold text-sm">{style.label}</div>
                             <div className="text-xs text-muted-foreground mt-0.5">{style.sub}</div>
                           </div>
-                          {investmentStyle === style.id && <Check className="h-5 w-5 text-primary ml-auto shrink-0" />}
+                          {investmentStyle === style.id && <Check className="h-5 w-5 text-primary shrink-0" />}
                         </div>
                       </button>
                     ))}
@@ -569,48 +516,10 @@ export default function ProspectOnboarding() {
                       )}
                     </div>
                   )}
-                </div>
-              </div>
-            )}
 
-            {step === 5 && (
-              <div className="max-w-md mx-auto">
-                <div className="bg-white rounded-2xl shadow-sm p-6 space-y-5">
-                  <div>
-                    <h2 className="text-2xl font-bold text-navy mb-1">Meet Your Advisor</h2>
-                    <p className="text-sm text-muted-foreground">Before we set up your investment, your advisor will have a short call to personalise everything.</p>
-                  </div>
-                  <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl border border-border">
-                    <div className="w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center text-2xl">👤</div>
-                    <div>
-                      <div className="font-semibold">Your Advisor</div>
-                      <div className="text-xs text-muted-foreground">Wealth Advisor · Boutique Advisory</div>
-                      <div className="text-xs text-muted-foreground mt-0.5">Specialist in Southeast Asia wealth planning</div>
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium">Any questions for your call? <span className="text-muted-foreground">(optional)</span></label>
-                    <Textarea
-                      value={preCallNotes}
-                      onChange={(e) => setPreCallNotes(e.target.value)}
-                      placeholder="e.g. How are my funds protected? What happens if I need access to my money?"
-                      rows={3}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Best time to reach you</label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {["Morning", "Afternoon", "Evening"].map((t) => (
-                        <button
-                          key={t}
-                          onClick={() => setPreferredTime(t.toLowerCase())}
-                          className={`py-2.5 rounded-xl border-2 text-sm font-medium transition-all ${preferredTime === t.toLowerCase() ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}
-                        >
-                          {t}
-                        </button>
-                      ))}
-                    </div>
-                    <p className="text-xs text-muted-foreground">All times in Asia/Ho_Chi_Minh timezone (ICT)</p>
+                  <div className="bg-muted/50 rounded-xl p-4 border border-border">
+                    <div className="text-xs font-mono text-muted-foreground uppercase tracking-wider mb-2">What happens next</div>
+                    <p className="text-sm text-foreground">You'll go straight to your investment portal. Add packages yourself or work with your advisor to set them up.</p>
                   </div>
                 </div>
               </div>
@@ -619,7 +528,7 @@ export default function ProspectOnboarding() {
         </AnimatePresence>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur border-t border-border px-4 py-3 flex gap-3">
+      <div className="fixed bottom-0 left-0 right-0 bg-card/90 backdrop-blur border-t border-border px-4 py-3 flex gap-3">
         {step > 0 && (
           <Button variant="outline" onClick={goPrev} className="flex-1 max-w-[120px]">
             <ChevronLeft className="h-4 w-4 mr-1" /> Back
@@ -627,15 +536,15 @@ export default function ProspectOnboarding() {
         )}
         {step < STEPS - 1 ? (
           <Button
-            onClick={step === 0 ? handleStep1Next : step === 1 ? handleStep2Next : step === 2 ? handleStep3Next : step === 3 ? handleStep4Next : handleStep5Next}
+            onClick={step === 0 ? handleStep1Next : step === 1 ? handleStep2Next : step === 2 ? handleStep3Next : () => { if (riskResult) goNext(); }}
             className="flex-1 ml-auto"
             disabled={step === 3 && !riskResult}
           >
             Continue <ChevronRight className="h-4 w-4 ml-1" />
           </Button>
         ) : (
-          <Button onClick={handleComplete} className="flex-1 ml-auto" disabled={saveProfileMut.isPending}>
-            {saveProfileMut.isPending ? "Saving…" : "I'm all set →"}
+          <Button onClick={handleComplete} className="flex-1 ml-auto" disabled={saveProfileMut.isPending || !investmentStyle}>
+            {saveProfileMut.isPending ? "Saving…" : "Enter my portal →"}
           </Button>
         )}
       </div>
