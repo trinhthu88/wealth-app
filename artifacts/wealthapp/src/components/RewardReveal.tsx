@@ -1,11 +1,6 @@
 import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-
-const REWARDS = {
-  1: { emoji: "✨", bg: "from-primary/5 to-teal-50" },
-  2: { emoji: "🎯", bg: "from-blue-50 to-indigo-50" },
-  3: { emoji: "🎉", bg: "from-amber-50 to-orange-50" },
-};
+import Sol from "@/components/Sol";
 
 interface Props {
   rewardNumber: 1 | 2 | 3;
@@ -14,32 +9,32 @@ interface Props {
   onDismiss: () => void;
 }
 
-export default function RewardReveal({ rewardNumber, title, description, onDismiss }: Props) {
-  const reward = REWARDS[rewardNumber];
-
+export default function RewardReveal({ title, description, onDismiss }: Props) {
   useEffect(() => {
-    const timer = setTimeout(onDismiss, 2500);
+    const timer = setTimeout(onDismiss, 3000);
     return () => clearTimeout(timer);
   }, [onDismiss]);
 
   return (
     <AnimatePresence>
       <motion.div
-        className="fixed inset-0 bg-white/90 z-50 flex items-center justify-center p-6"
+        className="fixed inset-0 bg-background/90 backdrop-blur-sm z-50 flex items-center justify-center p-6"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onDismiss}
       >
         <motion.div
-          className={`bg-gradient-to-br ${reward.bg} border border-border rounded-3xl p-8 text-center max-w-sm w-full shadow-xl`}
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.8, opacity: 0 }}
-          transition={{ duration: 0.3, type: "spring", stiffness: 200 }}
+          className="bg-card border border-primary/20 rounded-3xl p-8 text-center max-w-sm w-full shadow-xl"
+          initial={{ scale: 0.85, opacity: 0, y: 20 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          exit={{ scale: 0.85, opacity: 0, y: 20 }}
+          transition={{ duration: 0.35, type: "spring", stiffness: 220, damping: 18 }}
         >
-          <div className="text-6xl mb-4">{reward.emoji}</div>
-          <h2 className="text-2xl font-bold mb-2">{title}</h2>
+          <div className="flex justify-center mb-5">
+            <Sol size="lg" animate="float" showFace />
+          </div>
+          <h2 className="font-display text-2xl font-bold mb-2">{title}</h2>
           <p className="text-muted-foreground text-base">{description}</p>
           <p className="text-xs text-muted-foreground mt-6">Tap anywhere to continue</p>
         </motion.div>

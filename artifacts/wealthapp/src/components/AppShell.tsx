@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import {
   LayoutDashboard, TrendingUp, Target, DollarSign, BarChart3, Heart,
   Users, ClipboardList, Star, MessageSquare, FileText, Settings,
-  ChevronLeft, ChevronRight, Map, BookOpen, Menu, X, Bell,
+  ChevronLeft, ChevronRight, Map, BookOpen, Menu, X,
   Package, ArrowLeftRight, LineChart, Layers, Building2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -209,9 +209,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
           <div className="flex-1" />
-          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
-            <Bell className="h-4.5 w-4.5" />
-          </Button>
           <div className="md:hidden">
             <UserButton appearance={{ elements: { avatarBox: "h-7 w-7" } }} />
           </div>

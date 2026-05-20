@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { apiFetch } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
 import { FileText, Plus, Download, Calendar } from "lucide-react";
+import Sol from "@/components/Sol";
 import { toast } from "sonner";
 
 interface Doc { id: string; title: string; category: string; fileUrl: string; fileName: string | null; fileSizeBytes: number | null; createdAt: string; }
@@ -58,10 +59,12 @@ export default function ClientDocuments() {
       {isLoading ? (
         <div className="space-y-3">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-16 bg-muted rounded-xl animate-pulse" />)}</div>
       ) : docs.length === 0 ? (
-        <div className="bg-card border border-card-border rounded-xl p-16 text-center">
-          <FileText className="h-14 w-14 text-muted-foreground/30 mx-auto mb-4" />
-          <h3 className="font-semibold mb-2">No Documents</h3>
-          <p className="text-muted-foreground text-sm">Your advisor will share documents here.</p>
+        <div className="bg-card border border-card-border rounded-xl p-12 text-center flex flex-col items-center gap-4">
+          <Sol size="lg" animate="float" showFace />
+          <div>
+            <h3 className="font-semibold mb-1">No documents yet</h3>
+            <p className="text-muted-foreground text-sm">Documents shared by your advisor will appear here.</p>
+          </div>
         </div>
       ) : (
         <div className="space-y-3">

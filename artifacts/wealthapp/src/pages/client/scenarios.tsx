@@ -338,15 +338,17 @@ export default function ScenariosPage() {
           {timeline.length > 2 && (
             <div>
               <div className="text-xs font-medium text-muted-foreground mb-2">Projection</div>
-              <ResponsiveContainer width="100%" height={160}>
-                <AreaChart data={timeline}>
-                  <XAxis dataKey="month" tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}mo`} />
-                  <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} width={50} />
-                  <Tooltip formatter={(v: any) => fmtCurrency(v)} />
-                  <Area type="monotone" dataKey="value" fill="#1D9E7520" stroke="#1D9E75" strokeWidth={2} name="Projected value" />
-                  <Area type="monotone" dataKey="invested" fill="#94A3B820" stroke="#94A3B8" strokeWidth={1.5} strokeDasharray="4 4" fillOpacity={0} name="Invested" />
-                </AreaChart>
-              </ResponsiveContainer>
+              <div role="img" aria-label={`Scenario projection chart over ${timeline.length} months, projected value ${fmtCurrency(timeline[timeline.length - 1]?.value ?? 0)}`}>
+                <ResponsiveContainer width="100%" height={160}>
+                  <AreaChart data={timeline}>
+                    <XAxis dataKey="month" tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}mo`} />
+                    <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} width={50} />
+                    <Tooltip formatter={(v: any) => fmtCurrency(v)} />
+                    <Area type="monotone" dataKey="value" fill="#1D9E7520" stroke="#1D9E75" strokeWidth={2} name="Projected value" />
+                    <Area type="monotone" dataKey="invested" fill="#94A3B820" stroke="#94A3B8" strokeWidth={1.5} strokeDasharray="4 4" fillOpacity={0} name="Invested" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           )}
 

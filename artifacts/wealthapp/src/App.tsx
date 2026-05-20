@@ -8,47 +8,57 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { queryClient } from "@/lib/queryClient";
 import { useProfile } from "@/hooks/useProfile";
 import { setTokenGetter } from "@/lib/api";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, lazy, Suspense } from "react";
+import Sol from "@/components/Sol";
 
-import LandingPage from "@/pages/landing";
-import BlogListPage from "@/pages/blog/list";
-import BlogPostPage from "@/pages/blog/post";
-import ToolsPage from "@/pages/tools";
+const LandingPage = lazy(() => import("@/pages/landing"));
+const BlogListPage = lazy(() => import("@/pages/blog/list"));
+const BlogPostPage = lazy(() => import("@/pages/blog/post"));
+const ToolsPage = lazy(() => import("@/pages/tools"));
 
-import FreeDashboard from "@/pages/free/dashboard";
-import PathwayPage from "@/pages/free/pathway";
-import BudgetPage from "@/pages/free/budget";
-import GoalsPage from "@/pages/free/goals";
-import NetWorthPage from "@/pages/free/networth";
-import HealthScorePage from "@/pages/free/healthscore";
+const FreeDashboard = lazy(() => import("@/pages/free/dashboard"));
+const PathwayPage = lazy(() => import("@/pages/free/pathway"));
+const BudgetPage = lazy(() => import("@/pages/free/budget"));
+const GoalsPage = lazy(() => import("@/pages/free/goals"));
+const NetWorthPage = lazy(() => import("@/pages/free/networth"));
+const HealthScorePage = lazy(() => import("@/pages/free/healthscore"));
 
-import ClientDashboard from "@/pages/client/dashboard";
-import ClientPortfolio from "@/pages/client/portfolio";
-import ClientPlan from "@/pages/client/plan";
-import ClientGoals from "@/pages/client/goals";
-import ClientNetWorth from "@/pages/client/networth";
-import ClientDocuments from "@/pages/client/documents";
-import ClientMessages from "@/pages/client/messages";
-import ClientOnboarding from "@/pages/client/onboarding";
-import ClientPackages from "@/pages/client/packages";
-import ClientPackageDetail from "@/pages/client/package-detail";
-import ClientTransactions from "@/pages/client/transactions";
-import ClientScenarios from "@/pages/client/scenarios";
+const ClientDashboard = lazy(() => import("@/pages/client/dashboard"));
+const ClientPortfolio = lazy(() => import("@/pages/client/portfolio"));
+const ClientPlan = lazy(() => import("@/pages/client/plan"));
+const ClientGoals = lazy(() => import("@/pages/client/goals"));
+const ClientNetWorth = lazy(() => import("@/pages/client/networth"));
+const ClientDocuments = lazy(() => import("@/pages/client/documents"));
+const ClientMessages = lazy(() => import("@/pages/client/messages"));
+const ClientOnboarding = lazy(() => import("@/pages/client/onboarding"));
+const ClientPackages = lazy(() => import("@/pages/client/packages"));
+const ClientPackageDetail = lazy(() => import("@/pages/client/package-detail"));
+const ClientTransactions = lazy(() => import("@/pages/client/transactions"));
+const ClientScenarios = lazy(() => import("@/pages/client/scenarios"));
 
-import AdvisorDashboard from "@/pages/advisor/dashboard";
-import AdvisorClients from "@/pages/advisor/clients";
-import AdvisorClientDetail from "@/pages/advisor/client-detail";
-import AdvisorTasks from "@/pages/advisor/tasks";
-import AdvisorLeads from "@/pages/advisor/leads";
+const AdvisorDashboard = lazy(() => import("@/pages/advisor/dashboard"));
+const AdvisorClients = lazy(() => import("@/pages/advisor/clients"));
+const AdvisorClientDetail = lazy(() => import("@/pages/advisor/client-detail"));
+const AdvisorTasks = lazy(() => import("@/pages/advisor/tasks"));
+const AdvisorLeads = lazy(() => import("@/pages/advisor/leads"));
 
-import AdminDashboard from "@/pages/admin/dashboard";
-import AdminUsers from "@/pages/admin/users";
-import AdminBlog from "@/pages/admin/blog";
-import AdminFunds from "@/pages/admin/funds";
-import AdminClients from "@/pages/admin/clients";
-import AdminPrices from "@/pages/admin/prices";
+const AdminDashboard = lazy(() => import("@/pages/admin/dashboard"));
+const AdminUsers = lazy(() => import("@/pages/admin/users"));
+const AdminBlog = lazy(() => import("@/pages/admin/blog"));
+const AdminFunds = lazy(() => import("@/pages/admin/funds"));
+const AdminClients = lazy(() => import("@/pages/admin/clients"));
+const AdminPrices = lazy(() => import("@/pages/admin/prices"));
 
-import NotFound from "@/pages/not-found";
+const NotFound = lazy(() => import("@/pages/not-found"));
+
+function PageLoader() {
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+      <Sol size="md" animate="pulse" />
+      <p className="text-sm text-muted-foreground font-medium">Loading…</p>
+    </div>
+  );
+}
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -157,8 +167,9 @@ function ProtectedRoute({ component: C, role }: { component: React.ComponentType
   const { isLoaded, isSignedIn } = useUser();
   const { profile } = useProfile();
   if (!isLoaded) return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="animate-pulse text-muted-foreground">Loading…</div>
+    <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+      <Sol size="md" animate="pulse" />
+      <p className="text-sm text-muted-foreground font-medium">Loading…</p>
     </div>
   );
   if (!isSignedIn) return <Redirect to="/sign-in" />;
@@ -198,6 +209,7 @@ function SignUpPage() {
 
 function AppRoutes() {
   return (
+    <Suspense fallback={<PageLoader />}>
     <Switch>
       <Route path="/" component={LandingPage} />
       <Route path="/blog" component={BlogListPage} />
@@ -244,6 +256,7 @@ function AppRoutes() {
 
       <Route component={NotFound} />
     </Switch>
+    </Suspense>
   );
 }
 

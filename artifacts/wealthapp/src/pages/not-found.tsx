@@ -1,21 +1,36 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { AlertCircle } from "lucide-react";
+import { Link } from "wouter";
+import { motion } from "framer-motion";
+import Sol from "@/components/Sol";
+import { Button } from "@/components/ui/button";
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gray-50">
-      <Card className="w-full max-w-md mx-4">
-        <CardContent className="pt-6">
-          <div className="flex mb-4 gap-2">
-            <AlertCircle className="h-8 w-8 text-red-500" />
-            <h1 className="text-2xl font-bold text-gray-900">404 Page Not Found</h1>
-          </div>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background px-4 text-center">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="flex flex-col items-center gap-6 max-w-sm"
+      >
+        <Sol size="xl" animate="float" showFace />
 
-          <p className="mt-4 text-sm text-gray-600">
-            Did you forget to add the page to the router?
+        <div className="space-y-2">
+          <div className="font-mono text-xs tracking-widest uppercase text-muted-foreground">Error 404</div>
+          <h1 className="font-display text-3xl font-bold text-foreground">Lost in the sun</h1>
+          <p className="text-muted-foreground text-sm leading-relaxed">
+            Sol searched everywhere but couldn't find this page. It may have moved, or never existed.
           </p>
-        </CardContent>
-      </Card>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-3 w-full">
+          <Link href="/" className="flex-1">
+            <Button className="w-full">Back to home</Button>
+          </Link>
+          <Link href="/dashboard" className="flex-1">
+            <Button variant="outline" className="w-full">Go to dashboard</Button>
+          </Link>
+        </div>
+      </motion.div>
     </div>
   );
 }

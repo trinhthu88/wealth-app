@@ -282,12 +282,14 @@ export default function HealthScorePage() {
           <p className="text-xs font-medium text-muted-foreground mb-3">Score history</p>
           {chartData ? (
             <div className="bg-card border border-card-border rounded-2xl p-4">
-              <ResponsiveContainer width="100%" height={100}>
-                <LineChart data={chartData}>
-                  <Tooltip formatter={(v) => [`${v}`, "Score"]} labelFormatter={(l) => new Date(l).toLocaleDateString("en-US", { month: "short" })} />
-                  <Line type="monotone" dataKey="score" stroke="#1D9E75" strokeWidth={2} dot={{ fill: "#1D9E75", r: 4 }} />
-                </LineChart>
-              </ResponsiveContainer>
+              <div role="img" aria-label={`Health score history: latest score ${chartData[chartData.length - 1]?.score ?? "unavailable"} out of 100`}>
+                <ResponsiveContainer width="100%" height={100}>
+                  <LineChart data={chartData}>
+                    <Tooltip formatter={(v) => [`${v}`, "Score"]} labelFormatter={(l) => new Date(l).toLocaleDateString("en-US", { month: "short" })} />
+                    <Line type="monotone" dataKey="score" stroke="#1D9E75" strokeWidth={2} dot={{ fill: "#1D9E75", r: 4 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           ) : (
             <div className="bg-muted/50 rounded-2xl p-5 text-center">

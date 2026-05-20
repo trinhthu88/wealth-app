@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { X } from "lucide-react";
+import Sol from "@/components/Sol";
 
 interface Props {
   condition: boolean;
@@ -21,7 +22,7 @@ export default function SmartUpgradeCard({ condition, insightText, ctaText, ctaH
   };
 
   return (
-    <div className="relative border-l-4 border-amber-400 bg-amber-50 rounded-xl p-4">
+    <div className="relative bg-primary/5 border border-primary/20 rounded-xl p-4">
       <button
         onClick={handleDismiss}
         className="absolute top-2 right-2 text-muted-foreground hover:text-foreground"
@@ -29,8 +30,8 @@ export default function SmartUpgradeCard({ condition, insightText, ctaText, ctaH
       >
         <X className="h-4 w-4" />
       </button>
-      <div className="flex gap-3 pr-6">
-        <span className="text-lg shrink-0">💡</span>
+      <div className="flex gap-3 pr-6 items-start">
+        <Sol size="xs" animate="idle" showFace className="shrink-0 mt-0.5" />
         <div>
           <p className="text-sm text-foreground leading-snug">{insightText}</p>
           <a

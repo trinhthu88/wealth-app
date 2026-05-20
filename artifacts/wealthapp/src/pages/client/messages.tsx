@@ -8,6 +8,7 @@ import { apiFetch } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
 import { useProfile } from "@/hooks/useProfile";
 import { MessageSquare, Send } from "lucide-react";
+import Sol from "@/components/Sol";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -45,10 +46,12 @@ export default function ClientMessages() {
       <PageHeader title="Messages" subtitle="Communicate with your advisor." />
 
       {convs.length === 0 ? (
-        <div className="bg-card border border-card-border rounded-xl p-16 text-center">
-          <MessageSquare className="h-14 w-14 text-muted-foreground/30 mx-auto mb-4" />
-          <h3 className="font-semibold mb-2">No Conversations Yet</h3>
-          <p className="text-muted-foreground text-sm">Your advisor will initiate a conversation with you.</p>
+        <div className="bg-card border border-card-border rounded-xl p-12 text-center flex flex-col items-center gap-4">
+          <Sol size="lg" animate="float" showFace />
+          <div>
+            <h3 className="font-semibold mb-1">No messages yet</h3>
+            <p className="text-muted-foreground text-sm">Send your advisor a message to get started.</p>
+          </div>
         </div>
       ) : (
         <div className="bg-card border border-card-border rounded-xl overflow-hidden flex flex-col h-[520px]">

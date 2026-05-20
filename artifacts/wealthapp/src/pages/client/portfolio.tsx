@@ -155,15 +155,17 @@ export default function InvestmentsPage() {
               ))}
             </div>
           </div>
-          <ResponsiveContainer width="100%" height={160}>
-            <ComposedChart data={chartData}>
-              <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} width={55} />
-              <Tooltip formatter={(v: any) => fmtCurrency(v)} />
-              <Area type="monotone" dataKey="value" fill="#1D9E7520" stroke="#1D9E75" strokeWidth={2} name="Portfolio value" />
-              <Line type="monotone" dataKey="invested" stroke="#94A3B8" strokeWidth={1.5} strokeDasharray="4 4" dot={false} name="Total invested" />
-            </ComposedChart>
-          </ResponsiveContainer>
+          <div role="img" aria-label={`Portfolio performance chart: current value ${fmtCurrency(totalValue)}, total return ${totalReturn >= 0 ? "+" : ""}${totalReturnPct.toFixed(2)}%`}>
+            <ResponsiveContainer width="100%" height={160}>
+              <ComposedChart data={chartData}>
+                <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} width={55} />
+                <Tooltip formatter={(v: any) => fmtCurrency(v)} />
+                <Area type="monotone" dataKey="value" fill="#1D9E7520" stroke="#1D9E75" strokeWidth={2} name="Portfolio value" />
+                <Line type="monotone" dataKey="invested" stroke="#94A3B8" strokeWidth={1.5} strokeDasharray="4 4" dot={false} name="Total invested" />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
           <p className="text-xs text-muted-foreground text-center mt-1">Full history grows as your portfolio ages.</p>
         </motion.div>
       )}
@@ -174,12 +176,14 @@ export default function InvestmentsPage() {
           className="bg-card border border-card-border rounded-2xl p-4 mb-5">
           <h3 className="font-semibold text-sm mb-3">Allocation by Asset Class</h3>
           <div className="flex flex-col items-center">
-            <PieChart width={220} height={160}>
-              <Pie data={pieData} cx={110} cy={80} innerRadius={50} outerRadius={75} dataKey="value" paddingAngle={2}>
-                {pieData.map((entry) => <Cell key={entry.name} fill={entry.color} />)}
-              </Pie>
-              <Tooltip formatter={(v: any) => fmtCurrency(v)} />
-            </PieChart>
+            <div role="img" aria-label={`Asset allocation: ${pieData.map(d => `${d.name} ${d.pct.toFixed(1)}%`).join(", ")}`}>
+              <PieChart width={220} height={160}>
+                <Pie data={pieData} cx={110} cy={80} innerRadius={50} outerRadius={75} dataKey="value" paddingAngle={2}>
+                  {pieData.map((entry) => <Cell key={entry.name} fill={entry.color} />)}
+                </Pie>
+                <Tooltip formatter={(v: any) => fmtCurrency(v)} />
+              </PieChart>
+            </div>
             <div className="flex flex-wrap justify-center gap-x-4 gap-y-1.5 mt-1">
               {pieData.map((d) => (
                 <span key={d.name} className="text-xs flex items-center gap-1.5">

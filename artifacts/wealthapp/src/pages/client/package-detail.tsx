@@ -152,15 +152,17 @@ export default function PackageDetailPage() {
           <div className="bg-card border border-card-border rounded-2xl p-4">
             <h3 className="font-semibold mb-4 text-sm">Value vs. Invested Over Time</h3>
             {chartData.length > 1 ? (
-              <ResponsiveContainer width="100%" height={200}>
-                <ComposedChart data={chartData}>
-                  <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={(v) => v.slice(5)} />
-                  <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} width={55} />
-                  <Tooltip formatter={(v: any) => fmtCurrency(v)} />
-                  <Area type="monotone" dataKey="value" fill="#1D9E7520" stroke="#1D9E75" strokeWidth={2} name="Portfolio value" />
-                  <Line type="monotone" dataKey="invested" stroke="#94A3B8" strokeWidth={1.5} strokeDasharray="4 4" dot={false} name="Total invested" />
-                </ComposedChart>
-              </ResponsiveContainer>
+              <div role="img" aria-label={`Package performance chart: current value ${fmtCurrency(value)}, return ${retPct.toFixed(2)}% since inception`}>
+                <ResponsiveContainer width="100%" height={200}>
+                  <ComposedChart data={chartData}>
+                    <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={(v) => v.slice(5)} />
+                    <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} width={55} />
+                    <Tooltip formatter={(v: any) => fmtCurrency(v)} />
+                    <Area type="monotone" dataKey="value" fill="#1D9E7520" stroke="#1D9E75" strokeWidth={2} name="Portfolio value" />
+                    <Line type="monotone" dataKey="invested" stroke="#94A3B8" strokeWidth={1.5} strokeDasharray="4 4" dot={false} name="Total invested" />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
             ) : (
               <div className="h-40 flex items-center justify-center text-sm text-muted-foreground">
                 Performance chart will appear once your package has history.

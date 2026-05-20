@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import AppShell from "@/components/AppShell";
+import Sol from "@/components/Sol";
 import HealthScoreRing from "@/components/HealthScoreRing";
 import SmartUpgradeCard from "@/components/SmartUpgradeCard";
 import GoalCard from "@/components/GoalCard";
@@ -227,10 +228,16 @@ export default function FreeDashboard() {
     <AppShell>
       <div className="pb-20 md:pb-0 space-y-4">
         {/* Greeting */}
-        <div className="px-0.5 pt-0.5">
-          <h1 className="text-xl font-bold">{getGreeting()}, {firstName}! 👋</h1>
-          <p className="text-sm text-muted-foreground">Here's your financial overview</p>
-        </div>
+        <motion.div
+          initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
+          className="flex items-center gap-3 px-0.5 pt-0.5"
+        >
+          <Sol size="sm" animate="idle" showFace />
+          <div>
+            <h1 className="text-xl font-bold">{getGreeting()}, {firstName}!</h1>
+            <p className="text-sm text-muted-foreground">Here's your financial overview</p>
+          </div>
+        </motion.div>
 
         {/* Pathway banner */}
         <AnimatePresence>

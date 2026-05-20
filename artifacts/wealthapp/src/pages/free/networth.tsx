@@ -75,16 +75,18 @@ export default function NetWorthPage() {
 
       {(assets.length > 0 || liabilities.length > 0) && (
         <div className="bg-card border border-card-border rounded-xl p-5 mb-6">
-          <ResponsiveContainer width="100%" height={180}>
-            <BarChart data={chartData}>
-              <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} />
-              <Tooltip formatter={(v: number) => `$${v.toLocaleString()}`} />
-              <Bar dataKey="value" radius={[6, 6, 0, 0]}>
-                {chartData.map((d, i) => <Cell key={i} fill={d.fill} />)}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+          <div role="img" aria-label={`Net worth breakdown: assets $${totalAssets.toLocaleString()}, liabilities $${totalLiabilities.toLocaleString()}, net worth $${netWorth.toLocaleString()}`}>
+            <ResponsiveContainer width="100%" height={180}>
+              <BarChart data={chartData}>
+                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} />
+                <Tooltip formatter={(v: number) => `$${v.toLocaleString()}`} />
+                <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                  {chartData.map((d, i) => <Cell key={i} fill={d.fill} />)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       )}
 
