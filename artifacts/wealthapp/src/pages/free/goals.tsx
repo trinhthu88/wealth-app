@@ -270,13 +270,20 @@ export default function GoalsPage() {
   return (
     <AppShell>
       <div className="pb-20 md:pb-0 space-y-4">
-        <div className="px-0.5 flex items-center justify-between">
+        <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-xl font-bold">Financial Goals</h1>
-            <p className="text-sm text-muted-foreground">Free plan · 1 goal</p>
+            <h1 style={{ fontFamily: "'Sora', sans-serif", fontSize: 22, fontWeight: 700, color: "#042C53", letterSpacing: "-0.02em" }}>
+              Financial Goals
+            </h1>
+            <p style={{ fontSize: 12, color: "#A8A095", marginTop: 2 }}>Free plan · 1 active goal</p>
           </div>
           {topGoal && (
-            <Button variant="outline" size="sm" className="text-xs h-7" onClick={() => openEdit(topGoal)}>Edit goal</Button>
+            <button
+              onClick={() => openEdit(topGoal)}
+              style={{ fontSize: 13, fontWeight: 600, color: "#1D9E75", border: "1.5px solid #1D9E75", borderRadius: 999, padding: "5px 14px" }}
+            >
+              Edit goal
+            </button>
           )}
         </div>
 
@@ -299,13 +306,25 @@ export default function GoalsPage() {
 
         {/* Goal card with on-track / off-track projection */}
         {topGoal && (
-          <GoalCard
-            goal={topGoal}
-            projection={projection}
-            accountsBalance={savingsBalance + investmentValue}
-            onContribute={() => setContributeOpen(true)}
-            onEdit={() => openEdit(topGoal)}
-          />
+          <div>
+            {(() => {
+              const st = projection?.status ?? topGoal.status;
+              const eyebrowColor = st === "on_track" ? "#1D9E75" : st === "almost" ? "#E8A53C" : "#D86B5A";
+              const eyebrowText = st === "on_track" ? "ON TRACK" : st === "almost" ? "AT RISK" : "OFF TRACK";
+              return (
+                <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, letterSpacing: "0.14em", textTransform: "uppercase", color: eyebrowColor, marginBottom: 6 }}>
+                  {eyebrowText}
+                </p>
+              );
+            })()}
+            <GoalCard
+              goal={topGoal}
+              projection={projection}
+              accountsBalance={savingsBalance + investmentValue}
+              onContribute={() => setContributeOpen(true)}
+              onEdit={() => openEdit(topGoal)}
+            />
+          </div>
         )}
 
         {/* No budget/savings data notice */}

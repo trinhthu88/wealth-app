@@ -216,21 +216,56 @@ export default function BudgetPage() {
 
   const grouped = groupByDate(transactions);
 
+  const CAT_COLORS: Record<string, string> = {
+    housing: "#4A7CB8", food: "#1D9E75", transport: "#F5B947",
+    utilities: "#A8A095", entertainment: "#D86B5A", other: "#A8A095",
+    income: "#1D9E75",
+  };
+
   return (
     <AppShell>
-      <div className="pb-20 md:pb-0 space-y-4">
+      <div className="pb-20 md:pb-0">
 
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold">Budget</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">{monthLabel(viewDate)}</p>
+        {/* Dark navy header — break out of AppShell padding */}
+        <div className="-mx-4 -mt-4 md:-mx-6 md:-mt-6" style={{ background: "#042C53", padding: "20px 22px 48px" }}>
+          {/* Title + month selector */}
+          <div className="flex items-center justify-between mb-5">
+            <h1 style={{ fontFamily: "'Sora', sans-serif", fontSize: 22, fontWeight: 700, color: "white", letterSpacing: "-0.02em" }}>
+              Budget
+            </h1>
+            <div className="flex items-center gap-2" style={{ background: "rgba(255,255,255,0.1)", borderRadius: 10, padding: "7px 14px" }}>
+              <button onClick={prevMonth}><ChevronLeft className="h-4 w-4 text-white" /></button>
+              <span style={{ color: "white", fontSize: 13, fontWeight: 500 }}>{monthLabel(viewDate)}</span>
+              <button onClick={nextMonth} disabled={mk >= monthKey(now)}>
+                <ChevronRight className={`h-4 w-4 text-white ${mk >= monthKey(now) ? "opacity-30" : ""}`} />
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-1">
-            <button onClick={prevMonth} className="h-8 w-8 flex items-center justify-center rounded-full border border-border hover:border-primary transition-colors"><ChevronLeft className="h-4 w-4" /></button>
-            <button onClick={nextMonth} disabled={mk >= monthKey(now)} className="h-8 w-8 flex items-center justify-center rounded-full border border-border hover:border-primary transition-colors disabled:opacity-30"><ChevronRight className="h-4 w-4" /></button>
+          {/* Income vs Expenses */}
+          <div className="grid grid-cols-2 gap-5 mb-3">
+            <div>
+              <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 11 }}>Income</p>
+              <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 24, fontWeight: 700, color: "white", marginTop: 2 }}>
+                {totalIncome > 0 ? fmt(totalIncome) : "—"}
+              </p>
+            </div>
+            <div>
+              <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 11 }}>Expenses</p>
+              <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 24, fontWeight: 700, color: "white", marginTop: 2 }}>
+                {totalExpenses > 0 ? fmt(totalExpenses) : "—"}
+              </p>
+            </div>
           </div>
+          {totalIncome > 0 && (
+            <p style={{ color: "#F5B947", fontSize: 13, fontWeight: 500 }}>
+              Saved {fmt(Math.max(0, saved))} · {savingsRate.toFixed(0)}% rate
+            </p>
+          )}
         </div>
+
+        {/* Cream content area overlapping the navy header */}
+        <div className="-mx-4 md:-mx-6" style={{ background: "#FAF8F5", borderRadius: "24px 24px 0 0", marginTop: -24, padding: "22px 16px 0", minHeight: "100%" }}>
+        <div className="space-y-4">
 
         {/* Carry-forward banner */}
         <AnimatePresence>
@@ -255,64 +290,31 @@ export default function BudgetPage() {
           )}
         </AnimatePresence>
 
-        {/* Summary card */}
-        <div className="bg-[#042C53] rounded-2xl p-4 text-white">
-          <div className="grid grid-cols-3 gap-3 mb-3">
-            <div>
-              <p className="text-blue-200 text-xs">Income</p>
-              <p className="text-white font-bold text-lg">{totalIncome > 0 ? fmt(totalIncome) : "—"}</p>
-              {txIncome > 0 && estIncome > 0 && Math.abs(txIncome - estIncome) > 1 && <p className="text-blue-300 text-[10px]">est. {fmt(estIncome)}</p>}
-            </div>
-            <div>
-              <p className="text-blue-200 text-xs">Expenses</p>
-              <p className="text-white font-bold text-lg">{totalExpenses > 0 ? fmt(totalExpenses) : "—"}</p>
-            </div>
-            <div>
-              <p className="text-blue-200 text-xs">Saved</p>
-              <p className={cn("font-bold text-lg", totalIncome === 0 ? "text-blue-300" : saved >= 0 ? "text-emerald-300" : "text-red-300")}>
-                {totalIncome === 0 ? "—" : saved >= 0 ? fmt(saved) : `-${fmt(saved)}`}
-              </p>
-            </div>
-          </div>
-          {totalIncome > 0 && (
-            <div>
-              <div className="flex justify-between text-xs text-blue-200 mb-1">
-                <span>Savings rate</span>
-                <span className={savingsRate >= 20 ? "text-emerald-300 font-semibold" : savingsRate >= 10 ? "text-amber-300" : "text-red-300"}>{savingsRate.toFixed(0)}%</span>
-              </div>
-              <div className="h-1.5 bg-white/20 rounded-full overflow-hidden">
-                <div className={cn("h-full rounded-full transition-all", savingsRate >= 20 ? "bg-emerald-400" : savingsRate >= 10 ? "bg-amber-400" : "bg-red-400")} style={{ width: `${Math.max(0, Math.min(100, savingsRate))}%` }} />
-              </div>
-            </div>
-          )}
-          {totalIncome === 0 && (
-            <p className="text-blue-300 text-xs mt-1">Log income and expenses to see your savings rate</p>
-          )}
-        </div>
-
         {/* Primary action buttons */}
         <div className="grid grid-cols-2 gap-3">
           <button
             onClick={() => openTxForm("income")}
-            className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 text-left hover:border-emerald-400 transition-colors active:scale-95"
+            className="rounded-[20px] p-4 text-left active:scale-95 transition-transform"
+            style={{ background: "#E6F5EE", border: "1px solid rgba(29,158,117,0.25)" }}
           >
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center gap-2 mb-1.5">
               <span className="text-lg">💵</span>
-              <Plus className="h-3.5 w-3.5 text-emerald-600" />
+              <Plus className="h-3.5 w-3.5" style={{ color: "#1D9E75" }} />
             </div>
-            <p className="text-sm font-semibold text-emerald-700">Log Income</p>
-            <p className="text-xs text-emerald-600 mt-0.5">Salary, freelance, etc.</p>
+            <p style={{ fontSize: 13, fontWeight: 600, color: "#0F6E56" }}>Log Income</p>
+            <p style={{ fontSize: 11, color: "#1D9E75", marginTop: 2 }}>Salary, freelance, etc.</p>
           </button>
           <button
             onClick={() => openTxForm("expense")}
-            className="bg-red-50 border border-red-200 rounded-2xl p-4 text-left hover:border-red-400 transition-colors active:scale-95"
+            className="rounded-[20px] p-4 text-left active:scale-95 transition-transform"
+            style={{ background: "#FEEAE8", border: "1px solid rgba(216,107,90,0.25)" }}
           >
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center gap-2 mb-1.5">
               <span className="text-lg">🧾</span>
-              <Plus className="h-3.5 w-3.5 text-red-500" />
+              <Plus className="h-3.5 w-3.5" style={{ color: "#D86B5A" }} />
             </div>
-            <p className="text-sm font-semibold text-red-600">Log Expense</p>
-            <p className="text-xs text-red-500 mt-0.5">Food, rent, bills, etc.</p>
+            <p style={{ fontSize: 13, fontWeight: 600, color: "#B85544" }}>Log Expense</p>
+            <p style={{ fontSize: 11, color: "#D86B5A", marginTop: 2 }}>Food, rent, bills, etc.</p>
           </button>
         </div>
 
@@ -433,7 +435,7 @@ export default function BudgetPage() {
                             </div>
                             <p className="text-xs text-muted-foreground">{catLabel(tx.category)}</p>
                           </div>
-                          <span className={cn("text-sm font-semibold flex-shrink-0", tx.type === "income" ? "text-emerald-600" : "text-red-500")}>
+                          <span className="flex-shrink-0" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 14, fontWeight: 700, color: tx.type === "income" ? "#1D9E75" : "#D86B5A" }}>
                             {tx.type === "income" ? "+" : "-"}{sym}{parseFloat(tx.amount).toLocaleString()}
                           </span>
                           <button onClick={() => deleteTx.mutate(tx.id)} className="text-muted-foreground hover:text-red-500 transition-colors">
@@ -465,20 +467,26 @@ export default function BudgetPage() {
                 {catTotals.map(c => {
                   const isIncome = c.value === "income";
                   const pct = totalExpenses > 0 && !isIncome ? (c.total / totalExpenses) * 100 : 0;
+                  const dotColor = CAT_COLORS[c.value] ?? "#A8A095";
                   return (
-                    <div key={c.value} className="px-4 py-3 border-t border-border">
+                    <div key={c.value} style={{ padding: "12px 18px", borderBottom: "1px solid #F2EFE9" }}>
                       <div className="flex items-center justify-between mb-1.5">
                         <div className="flex items-center gap-2">
-                          <span className="text-base">{c.emoji}</span>
-                          <span className="text-sm font-medium">{c.label}</span>
+                          <div style={{ width: 8, height: 8, borderRadius: "50%", background: dotColor, flexShrink: 0 }} />
+                          <span style={{ fontSize: 13, fontWeight: 500, color: "#2D2A24" }}>{c.label}</span>
                         </div>
-                        <span className={cn("text-sm font-semibold", isIncome ? "text-emerald-600" : "text-foreground")}>
-                          {isIncome ? "+" : ""}{sym}{c.total.toLocaleString()}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          {!isIncome && totalExpenses > 0 && (
+                            <span style={{ fontSize: 11, color: "#A8A095" }}>{pct.toFixed(0)}%</span>
+                          )}
+                          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, fontWeight: 600, color: isIncome ? "#1D9E75" : "#042C53" }}>
+                            {isIncome ? "+" : ""}{sym}{c.total.toLocaleString()}
+                          </span>
+                        </div>
                       </div>
                       {!isIncome && totalExpenses > 0 && (
-                        <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                          <div className="h-full rounded-full bg-primary/50 transition-all" style={{ width: `${Math.min(100, pct)}%` }} />
+                        <div style={{ height: 6, borderRadius: 999, background: "#F2EFE9", overflow: "hidden" }}>
+                          <div style={{ height: "100%", borderRadius: 999, background: dotColor, width: `${Math.min(100, pct)}%`, transition: "width 0.4s ease" }} />
                         </div>
                       )}
                     </div>
@@ -559,6 +567,8 @@ export default function BudgetPage() {
             </div>
           </div>
         )}
+        </div>{/* end space-y-4 */}
+        </div>{/* end cream content area */}
       </div>
       <BottomNav />
     </AppShell>

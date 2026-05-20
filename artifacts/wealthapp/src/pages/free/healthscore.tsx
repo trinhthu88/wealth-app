@@ -173,60 +173,91 @@ export default function HealthScorePage() {
   return (
     <AppShell>
       <div className="pb-20 md:pb-0 space-y-5">
-        {/* Hero card */}
-        <motion.div className="bg-[#042C53] rounded-2xl p-6 text-center" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-          <div className="flex justify-center mb-3">
-            <HealthScoreRing score={overall} size="lg" animate darkMode />
-          </div>
-          <p className="text-4xl font-bold text-white mt-2">{overall}</p>
-          <p className="text-sm text-blue-200 mt-1">Financial Health Score</p>
-          <p className={cn("text-sm font-semibold mt-1", scoreColor)}>{scoreLabel}</p>
-          <Button size="sm" variant="outline" className="mt-4 border-white/20 text-white hover:bg-white/10 gap-1.5" onClick={() => calculate.mutate()} disabled={calculate.isPending}>
-            <RefreshCw className={cn("h-3.5 w-3.5", calculate.isPending && "animate-spin")} />
-            {calculate.isPending ? "Calculating…" : "Recalculate"}
-          </Button>
-          <p className="text-blue-300 text-[11px] mt-2">Updates when you edit your plan, budget, or asset data</p>
-        </motion.div>
+        {/* Hero card — white with custom SVG arc ring */}
+        {(() => {
+          const r = 84;
+          const circ = 2 * Math.PI * r;
+          const offset = circ * (1 - overall / 100);
+          const arcColor = overall >= 70 ? "#1D9E75" : overall >= 50 ? "#E8A53C" : overall > 0 ? "#D86B5A" : "#E6F5EE";
+          const statusText = overall >= 85 ? "Excellent" : overall >= 70 ? "Good shape" : overall >= 50 ? "Getting there" : overall > 0 ? "Needs attention" : "Calculating...";
+          const statusColor = overall >= 70 ? "#1D9E75" : overall >= 50 ? "#E8A53C" : overall > 0 ? "#D86B5A" : "#A8A095";
+          return (
+            <motion.div
+              className="bg-white rounded-[20px] p-6 text-center"
+              style={{ boxShadow: "0 4px 14px rgba(15,23,42,0.06)" }}
+              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+            >
+              <div className="flex justify-center mb-2">
+                <svg width={200} height={200} viewBox="0 0 200 200">
+                  <circle cx={100} cy={100} r={r} fill="none" stroke="#E6F5EE" strokeWidth={14} />
+                  <circle cx={100} cy={100} r={54} fill="#FAF8F5" />
+                  <circle
+                    cx={100} cy={100} r={r} fill="none"
+                    stroke={arcColor} strokeWidth={14} strokeLinecap="round"
+                    strokeDasharray={circ} strokeDashoffset={offset}
+                    transform="rotate(-90 100 100)"
+                    style={{ transition: "stroke-dashoffset 0.9s ease-out" }}
+                  />
+                  <text x={100} y={96} textAnchor="middle" dominantBaseline="middle"
+                    fontFamily="'Sora', sans-serif" fontSize={46} fontWeight={800}
+                    fill="#042C53" letterSpacing={-2}>
+                    {overall > 0 ? overall : "—"}
+                  </text>
+                  <text x={100} y={116} textAnchor="middle"
+                    fontFamily="'JetBrains Mono', monospace" fontSize={9}
+                    fill="#A8A095" letterSpacing={2.5}>
+                    OUT OF 100
+                  </text>
+                  <text x={100} y={132} textAnchor="middle"
+                    fontFamily="'Plus Jakarta Sans', sans-serif" fontSize={13}
+                    fontWeight={600} fill={statusColor}>
+                    {statusText}
+                  </text>
+                </svg>
+              </div>
+              <button
+                className="inline-flex items-center gap-1.5 rounded-full transition-colors"
+                style={{ border: "1.5px solid #E6E1D8", padding: "7px 16px", fontSize: 13, fontWeight: 500, color: "#6B6459", background: "white" }}
+                onClick={() => calculate.mutate()} disabled={calculate.isPending}
+              >
+                <RefreshCw className={cn("h-3.5 w-3.5", calculate.isPending && "animate-spin")} />
+                {calculate.isPending ? "Calculating…" : "Recalculate"}
+              </button>
+              <p style={{ fontSize: 11, color: "#A8A095", marginTop: 8 }}>Updates when you edit your plan, budget, or asset data</p>
+            </motion.div>
+          );
+        })()}
 
-        {/* 5-component breakdown with edit links */}
+        {/* Dimension breakdown */}
         {score && (
-          <div>
-            <p className="text-xs font-medium text-muted-foreground mb-3">Score breakdown — tap to improve each area</p>
-            <div className="grid grid-cols-2 gap-3">
-              {breakdown.map((b, i) => (
-                <motion.div
-                  key={b.label}
-                  className={cn("col-span-1", i === 4 && "col-span-2")}
-                  initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-                >
-                  <Link href={b.editHref}>
-                    <div className={cn(
-                      "bg-card border border-card-border rounded-2xl p-4 cursor-pointer transition-all hover:border-primary/40 hover:shadow-sm active:scale-[0.98]",
-                      b.score / b.maxScore >= 0.8 ? "" : b.score / b.maxScore >= 0.5 ? "" : "border-red-200/60",
-                    )}>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-base">{b.icon}</span>
-                        <div className="flex items-center gap-1">
-                          <span className="text-[10px] text-primary font-medium">{b.editLabel}</span>
-                          <ChevronRight className="h-3 w-3 text-primary" />
+          <div className="bg-white rounded-[20px]" style={{ boxShadow: "0 4px 14px rgba(15,23,42,0.06)", padding: 18 }}>
+            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, letterSpacing: "0.14em", textTransform: "uppercase", color: "#A8A095", marginBottom: 14 }}>
+              WHAT MAKES YOUR SCORE
+            </p>
+            <div className="space-y-3">
+              {breakdown.map((b) => {
+                const pct = b.score / b.maxScore;
+                const barColor = pct >= 0.8 ? "#1D9E75" : pct >= 0.5 ? "#E8A53C" : "#D86B5A";
+                const scoreColor = pct >= 0.8 ? "#1D9E75" : pct >= 0.5 ? "#E8A53C" : "#D86B5A";
+                return (
+                  <Link href={b.editHref} key={b.label}>
+                    <div className="cursor-pointer">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <div className="flex items-center gap-2">
+                          <span style={{ fontSize: 14 }}>{b.icon}</span>
+                          <span style={{ fontSize: 13, fontWeight: 500, color: "#2D2A24" }}>{b.label}</span>
                         </div>
+                        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, fontWeight: 700, color: scoreColor }}>
+                          {Math.min(b.score, b.maxScore)}/{b.maxScore}
+                        </span>
                       </div>
-                      <p className="text-xs text-muted-foreground mb-1">{b.label}</p>
-                      <p className="text-xl font-bold">{Math.min(b.score, b.maxScore)}<span className="text-sm font-normal text-muted-foreground">/{b.maxScore}</span></p>
-                      <div className="h-1.5 rounded-full bg-muted overflow-hidden mt-2 mb-1.5">
-                        <div
-                          className={cn("h-full rounded-full transition-all", b.score / b.maxScore >= 0.8 ? "bg-primary" : b.score / b.maxScore >= 0.5 ? "bg-amber-500" : "bg-red-400")}
-                          style={{ width: `${Math.min(100, (b.score / b.maxScore) * 100)}%` }}
-                        />
+                      <div style={{ height: 6, borderRadius: 999, background: "#F2EFE9", overflow: "hidden" }}>
+                        <div style={{ height: "100%", borderRadius: 999, background: barColor, width: `${Math.min(100, pct * 100)}%`, transition: "width 0.4s ease" }} />
                       </div>
-                      <p className="text-xs text-muted-foreground">{b.desc}</p>
-                      {b.tip && (
-                        <p className="text-[11px] text-primary mt-1.5 font-medium leading-tight">{b.tip}</p>
-                      )}
                     </div>
                   </Link>
-                </motion.div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}

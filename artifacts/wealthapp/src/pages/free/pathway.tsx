@@ -1,6 +1,7 @@
+import confetti from "canvas-confetti";
 import { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiFetch } from "@/lib/api";
 import { useProfile } from "@/hooks/useProfile";
@@ -9,7 +10,8 @@ import { Button } from "@/components/ui/button";
 import CurrencyInput from "@/components/CurrencyInput";
 import RewardReveal from "@/components/RewardReveal";
 import BottomNav from "@/components/BottomNav";
-import { ArrowLeft, Check } from "lucide-react";
+import Sol from "@/components/Sol";
+import { ArrowLeft, Check, Edit2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { saveRatesToStorage } from "@/lib/milestones";
 
@@ -76,15 +78,39 @@ const slideVariants = {
   exit: (dir: number) => ({ x: dir * -80, opacity: 0 }),
 };
 
+function StepHeading({ step: sn, title, sub }: { step: number; title: string; sub: string }) {
+  return (
+    <div style={{ marginBottom: 24 }}>
+      <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, letterSpacing: "0.14em", textTransform: "uppercase", color: "#1D9E75", marginBottom: 8 }}>
+        STEP {sn} OF 6
+      </p>
+      <h2 style={{ fontFamily: "'Sora', sans-serif", fontSize: 24, fontWeight: 700, color: "#042C53", letterSpacing: "-0.02em", lineHeight: 1.2 }}>
+        {title}
+      </h2>
+      <p style={{ fontSize: 14, color: "#6B6459", marginTop: 6 }}>{sub}</p>
+    </div>
+  );
+}
+
 export default function PathwayPage() {
   const { profile, update } = useProfile();
   const [, navigate] = useLocation();
-  const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : new URLSearchParams();
-  const initialStep = Math.max(0, Math.min(5, parseInt(searchParams.get("step") ?? "1") - 1));
-  const [step, setStep] = useState(initialStep);
+  const search = useSearch();
+  const stepParam = useMemo(() => {
+    const s = new URLSearchParams(search).get("step");
+    if (!s) return null;
+    const n = parseInt(s, 10);
+    return Number.isFinite(n) ? Math.max(1, Math.min(6, n)) : null;
+  }, [search]);
+
+  const [step, setStep] = useState(0);
   const [dir, setDir] = useState(1);
-  const [showReward, setShowReward] = useState<null | 1 | 2 | 3>(null);
+  const [showReward, setShowReward] = useState<null | 1 | 2>(null);
+  const [showCompletion, setShowCompletion] = useState(false);
+  const [alreadyComplete, setAlreadyComplete] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const [stepError, setStepError] = useState<string | null>(null);
+  const [stepResumed, setStepResumed] = useState(false);
   const [riskSubStep, setRiskSubStep] = useState(0);
   const [riskAnswered, setRiskAnswered] = useState(false);
   const [expandedCat, setExpandedCat] = useState<string | null>(null);
@@ -101,7 +127,7 @@ export default function PathwayPage() {
     riskAnswers: [null, null, null, null, null],
   });
 
-  const { data: progress = [] } = useQuery<Step[]>({
+  const { data: progress = [], isSuccess: progressLoaded, isLoading: progressLoading } = useQuery<Step[]>({
     queryKey: ["pathway"],
     queryFn: () => apiFetch<Step[]>("/pathway"),
   });
@@ -138,6 +164,35 @@ export default function PathwayPage() {
     setHydrated(true);
   }, [progress.length]);
 
+  // Resume on refresh: jump to the first incomplete step; show summary if all done
+  useEffect(() => {
+    if (stepResumed || !progressLoaded) return;
+    const completedNums = new Set(progress.filter(s => s.status === "completed").map(s => s.stepNumber));
+    const allDone = [1, 2, 3, 4, 5, 6].every(n => completedNums.has(n));
+
+    // If a specific step was requested via ?step=, jump there (allows editing from health score page etc.)
+    if (stepParam) {
+      setStep(stepParam - 1);
+      setStepResumed(true);
+      return;
+    }
+
+    // All steps complete → show summary instead of bouncing to dashboard
+    if (allDone) {
+      setAlreadyComplete(true);
+      setStepResumed(true);
+      return;
+    }
+
+    for (let i = 1; i <= 6; i++) {
+      if (!completedNums.has(i)) {
+        setStep(i - 1);
+        break;
+      }
+    }
+    setStepResumed(true);
+  }, [progressLoaded, stepResumed, stepParam]);
+
   const saveStep = useMutation({
     mutationFn: ({ stepNumber, formData, status }: { stepNumber: number; formData: Record<string, unknown>; status: string }) =>
       apiFetch(`/pathway/${stepNumber}`, { method: "PUT", body: JSON.stringify({ stepName: `Step ${stepNumber}`, status, formData }) }),
@@ -154,59 +209,69 @@ export default function PathwayPage() {
     setForm(f => { const n = { ...f, [k]: v }; autoSave(step + 1, n as unknown as Record<string, unknown>); return n; });
   };
 
-  const advance = (newStep: number) => { setDir(1); setStep(newStep); };
-  const back = () => { setDir(-1); setStep(s => Math.max(0, s - 1)); };
+  const advance = (newStep: number) => { setDir(1); setStep(newStep); setStepError(null); };
+  const back = () => { setDir(-1); setStep(s => Math.max(0, s - 1)); setStepError(null); };
+  // Skip advances without saving; step status stays 'not_started'
+  const skipStep = () => advance(Math.min(5, step + 1));
 
   const completedCount = progress.filter(s => s.status === "completed").length;
 
   async function finishStep(s: number) {
-    if (s === 1) {
-      await saveStep.mutateAsync({ stepNumber: 1, formData: { age: form.age, lifeStage: form.lifeStage, isExpat: form.isExpat, currency: form.currency }, status: "completed" });
-      update.mutate({ preferredCurrency: form.currency, isExpat: form.isExpat } as any);
-      advance(1);
-    } else if (s === 2) {
-      await saveStep.mutateAsync({ stepNumber: 2, formData: { income: form.income }, status: "completed" });
-      setShowReward(1);
-    } else if (s === 3) {
-      await saveStep.mutateAsync({ stepNumber: 3, formData: { housing: form.housing, food: form.food, transport: form.transport, utilities: form.utilities, entertainment: form.entertainment, other: form.other }, status: "completed" });
-      // Save complete budget entry with income + all expenses so savings rate calculations work
-      await apiFetch("/budget", { method: "POST", body: JSON.stringify({
-        periodMonth: new Date().toISOString().slice(0, 7),
-        currency: form.currency,
-        income: String(form.income),
-        housing: String(form.housing),
-        food: String(form.food),
-        transport: String(form.transport),
-        utilities: String(form.utilities),
-        entertainment: String(form.entertainment),
-        other: String(form.other),
-      }) }).catch(() => {});
-      advance(3);
-    } else if (s === 4) {
-      await saveStep.mutateAsync({ stepNumber: 4, formData: { goalType: form.goalType, goalTitle: form.goalTitle, goalTarget: form.goalTarget, goalMonth: form.goalMonth, goalYear: form.goalYear }, status: "completed" });
-      const goalTargetDate = `${form.goalYear}-${String(MONTHS.indexOf(form.goalMonth) + 1).padStart(2, "0")}-01`;
-      await apiFetch("/goals/upsert-from-pathway", { method: "POST", body: JSON.stringify({ title: form.goalTitle || GOAL_OPTIONS.find(g => g.type === form.goalType)?.name, goalType: form.goalType, targetAmount: String(form.goalTarget), targetDate: goalTargetDate, currency: form.currency }) }).catch(() => {});
-      setShowReward(2);
-    } else if (s === 5) {
-      await saveStep.mutateAsync({ stepNumber: 5, formData: { savings: form.savings, investments: form.investments, debts: form.debts, savingsRatePercent: form.savingsRatePercent, investmentRatePercent: form.investmentRatePercent }, status: "completed" });
-      if (form.savings > 0) await apiFetch("/assets/upsert-by-name", { method: "POST", body: JSON.stringify({ name: "Cash & Savings", category: "savings", valueUsd: String(form.savings), currencyOriginal: form.currency }) }).catch(() => {});
-      if (form.investments > 0) await apiFetch("/assets/upsert-by-name", { method: "POST", body: JSON.stringify({ name: "Investments", category: "investment", valueUsd: String(form.investments), currencyOriginal: form.currency }) }).catch(() => {});
-      if (form.debts > 0) await apiFetch("/liabilities/upsert-by-name", { method: "POST", body: JSON.stringify({ name: "Total Debts", category: "loan", balanceUsd: String(form.debts), currencyOriginal: form.currency }) }).catch(() => {});
-      // Save rates to profile AND localStorage so all pages get correct values
-      update.mutate({
-        totalSavings: String(form.savings) as any,
-        totalInvestments: String(form.investments) as any,
-        savingsRatePercent: String(form.savingsRatePercent) as any,
-        investmentRatePercent: String(form.investmentRatePercent) as any,
-      } as any);
-      saveRatesToStorage(form.savingsRatePercent, form.investmentRatePercent);
-      advance(5);
-    } else if (s === 6) {
-      const rp = getRiskProfile(form.riskAnswers);
-      await saveStep.mutateAsync({ stepNumber: 6, formData: { riskProfile: rp }, status: "completed" });
-      await apiFetch("/health-score", { method: "POST" }).catch(() => {});
-      update.mutate({ riskProfile: rp, onboardingComplete: true } as any);
-      setShowReward(3);
+    setStepError(null);
+    try {
+      if (s === 1) {
+        await saveStep.mutateAsync({ stepNumber: 1, formData: { age: form.age, lifeStage: form.lifeStage, isExpat: form.isExpat, currency: form.currency }, status: "completed" });
+        update.mutate({ preferredCurrency: form.currency, isExpat: form.isExpat } as any);
+        advance(1);
+      } else if (s === 2) {
+        await saveStep.mutateAsync({ stepNumber: 2, formData: { income: form.income }, status: "completed" });
+        setShowReward(1);
+      } else if (s === 3) {
+        await saveStep.mutateAsync({ stepNumber: 3, formData: { housing: form.housing, food: form.food, transport: form.transport, utilities: form.utilities, entertainment: form.entertainment, other: form.other }, status: "completed" });
+        // Save complete budget entry with income + all expenses so savings rate calculations work
+        await apiFetch("/budget", { method: "POST", body: JSON.stringify({
+          periodMonth: new Date().toISOString().slice(0, 7),
+          currency: form.currency,
+          income: String(form.income),
+          housing: String(form.housing),
+          food: String(form.food),
+          transport: String(form.transport),
+          utilities: String(form.utilities),
+          entertainment: String(form.entertainment),
+          other: String(form.other),
+        }) }).catch(() => {});
+        advance(3);
+      } else if (s === 4) {
+        await saveStep.mutateAsync({ stepNumber: 4, formData: { goalType: form.goalType, goalTitle: form.goalTitle, goalTarget: form.goalTarget, goalMonth: form.goalMonth, goalYear: form.goalYear }, status: "completed" });
+        const goalTargetDate = `${form.goalYear}-${String(MONTHS.indexOf(form.goalMonth) + 1).padStart(2, "0")}-01`;
+        await apiFetch("/goals/upsert-from-pathway", { method: "POST", body: JSON.stringify({ title: form.goalTitle || GOAL_OPTIONS.find(g => g.type === form.goalType)?.name, goalType: form.goalType, targetAmount: String(form.goalTarget), targetDate: goalTargetDate, currency: form.currency }) }).catch(() => {});
+        setShowReward(2);
+      } else if (s === 5) {
+        await saveStep.mutateAsync({ stepNumber: 5, formData: { savings: form.savings, investments: form.investments, debts: form.debts, savingsRatePercent: form.savingsRatePercent, investmentRatePercent: form.investmentRatePercent }, status: "completed" });
+        if (form.savings > 0) await apiFetch("/assets/upsert-by-name", { method: "POST", body: JSON.stringify({ name: "Cash & Savings", category: "savings", valueUsd: String(form.savings), currencyOriginal: form.currency }) }).catch(() => {});
+        if (form.investments > 0) await apiFetch("/assets/upsert-by-name", { method: "POST", body: JSON.stringify({ name: "Investments", category: "investment", valueUsd: String(form.investments), currencyOriginal: form.currency }) }).catch(() => {});
+        if (form.debts > 0) await apiFetch("/liabilities/upsert-by-name", { method: "POST", body: JSON.stringify({ name: "Total Debts", category: "loan", balanceUsd: String(form.debts), currencyOriginal: form.currency }) }).catch(() => {});
+        // Save rates to profile AND localStorage so all pages get correct values
+        update.mutate({
+          totalSavings: String(form.savings) as any,
+          totalInvestments: String(form.investments) as any,
+          savingsRatePercent: String(form.savingsRatePercent) as any,
+          investmentRatePercent: String(form.investmentRatePercent) as any,
+        } as any);
+        saveRatesToStorage(form.savingsRatePercent, form.investmentRatePercent);
+        advance(5);
+      } else if (s === 6) {
+        const rp = getRiskProfile(form.riskAnswers);
+        await saveStep.mutateAsync({ stepNumber: 6, formData: { riskProfile: rp }, status: "completed" });
+        await apiFetch("/health-score", { method: "POST" }).catch(() => {});
+        update.mutate({ riskProfile: rp, onboardingComplete: true } as any);
+        confetti({ particleCount: 160, spread: 90, origin: { y: 0.6 } });
+        setTimeout(() => confetti({ particleCount: 80, spread: 120, origin: { y: 0.4 }, angle: 60 }), 300);
+        setTimeout(() => confetti({ particleCount: 80, spread: 120, origin: { y: 0.4 }, angle: 120 }), 400);
+        setShowCompletion(true);
+      }
+    } catch {
+      setStepError("Failed to save. Please try again.");
     }
   }
 
@@ -226,7 +291,7 @@ export default function PathwayPage() {
   const STEPS = [
     /* Step 1 */
     <div className="space-y-6">
-      <div><h2 className="text-xl font-semibold">First, let's get to know you</h2><p className="text-muted-foreground text-sm mt-1">This helps us personalise everything</p></div>
+      <StepHeading step={1} title="Let's get to know you" sub="This helps us personalise everything" />
       <div className="text-center">
         <p className="text-sm font-medium text-muted-foreground mb-3">Your age</p>
         <div className="flex items-center justify-center gap-6">
@@ -270,7 +335,7 @@ export default function PathwayPage() {
 
     /* Step 2 */
     <div className="space-y-6">
-      <div><h2 className="text-xl font-semibold">How much do you earn each month?</h2><p className="text-muted-foreground text-sm mt-1">Your after-tax take-home pay</p></div>
+      <StepHeading step={2} title="How much do you earn?" sub="Your after-tax take-home pay" />
       <CurrencyInput value={form.income} onChange={v => setField("income", v)} currency={form.currency} />
       <div>
         <p className="text-sm font-medium mb-2">Income sources</p>
@@ -298,7 +363,7 @@ export default function PathwayPage() {
 
     /* Step 3 */
     <div className="space-y-4">
-      <div><h2 className="text-xl font-semibold">Where does your money go?</h2><p className="text-muted-foreground text-sm mt-1">Tap a category to enter your monthly spend</p></div>
+      <StepHeading step={3} title="Where does your money go?" sub="Tap a category to enter your monthly spend" />
       <div className="bg-card border border-card-border rounded-2xl overflow-hidden">
         {EXPENSE_CATS.map((cat, i) => (
           <div key={cat.key} className={cn("border-b border-border last:border-0", expandedCat === cat.key && "bg-muted/30")}>
@@ -339,16 +404,17 @@ export default function PathwayPage() {
 
     /* Step 4 */
     <div className="space-y-4">
-      <div><h2 className="text-xl font-semibold">What's your biggest financial goal?</h2><p className="text-muted-foreground text-sm mt-1">Pick one — you can add more later</p></div>
+      <StepHeading step={4} title="What's your biggest goal?" sub="Pick one — you can add more later" />
       <AnimatePresence mode="wait">
         {!goalPanel ? (
           <motion.div key="grid" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} className="grid grid-cols-2 gap-3">
             {GOAL_OPTIONS.map(g => (
               <button key={g.type} onClick={() => { setField("goalType", g.type); setField("goalTitle", g.name); setGoalPanel(true); }}
-                className={cn("rounded-2xl border-2 p-4 text-center transition-colors hover:border-primary/50", form.goalType === g.type ? "border-primary bg-primary/5" : "border-border")}>
+                className="rounded-[16px] p-4 text-center transition-colors active:scale-95"
+                style={{ border: form.goalType === g.type ? "2px solid #1D9E75" : "2px solid #E6E1D8", background: form.goalType === g.type ? "#E6F5EE" : "white" }}>
                 <div className="text-3xl mb-2">{g.emoji}</div>
-                <div className="font-medium text-sm">{g.name}</div>
-                <div className="text-muted-foreground text-xs mt-0.5">{g.desc}</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#042C53" }}>{g.name}</div>
+                <div style={{ fontSize: 11, color: "#A8A095", marginTop: 2 }}>{g.desc}</div>
               </button>
             ))}
           </motion.div>
@@ -382,7 +448,7 @@ export default function PathwayPage() {
 
     /* Step 5 */
     <div className="space-y-5">
-      <div><h2 className="text-xl font-semibold">Let's complete your picture</h2><p className="text-muted-foreground text-sm mt-1">Approximate numbers are totally fine</p></div>
+      <StepHeading step={5} title="Let's complete your picture" sub="Approximate numbers are totally fine" />
       <CurrencyInput value={form.savings} onChange={v => setField("savings", v)} currency={form.currency} label="💰 Total current savings" />
       <div>
         <div className="flex items-center justify-between mb-2">
@@ -459,7 +525,7 @@ export default function PathwayPage() {
 
     /* Step 6 */
     <div className="space-y-4">
-      <div><h2 className="text-xl font-semibold">What kind of investor are you?</h2><p className="text-muted-foreground text-sm mt-1">5 quick questions · no wrong answers</p></div>
+      <StepHeading step={6} title="What kind of investor are you?" sub="5 quick questions · no wrong answers" />
       <div className="flex gap-1.5 justify-center">
         {RISK_QUESTIONS.map((_, i) => (
           <div key={i} className={cn("h-1.5 rounded-full transition-all", i < riskSubStep ? "bg-primary" : i === riskSubStep ? "bg-primary/50 w-6" : "bg-muted")} style={{ width: i === riskSubStep ? 24 : 16 }} />
@@ -481,7 +547,8 @@ export default function PathwayPage() {
                   setTimeout(() => setRiskAnswered(true), 200);
                 }
               }}
-                className={cn("w-full rounded-xl border-2 p-3.5 text-sm text-left transition-colors", form.riskAnswers[riskSubStep] === i + 1 ? "border-primary bg-primary/5" : "border-border hover:border-primary/50")}>
+                className="w-full rounded-[14px] p-3.5 text-left transition-colors active:scale-[0.98]"
+                style={{ border: form.riskAnswers[riskSubStep] === i + 1 ? "2px solid #1D9E75" : "2px solid #E6E1D8", background: form.riskAnswers[riskSubStep] === i + 1 ? "#E6F5EE" : "white", fontSize: 14, color: "#042C53" }}>
                 {opt}
               </button>
             ))}
@@ -519,12 +586,64 @@ export default function PathwayPage() {
     </div>,
   ];
 
+  // Completion screen — shown after step 6 is saved
+  if (showCompletion) {
+    return (
+      <div className="h-screen flex flex-col items-center justify-center px-6" style={{ background: "#042C53" }}>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+          className="max-w-sm w-full text-center space-y-6"
+        >
+          <motion.div
+            animate={{ rotate: [0, -10, 10, -10, 0], scale: [1, 1.1, 1] }}
+            transition={{ duration: 1.2, delay: 0.3 }}
+          >
+            <Sol size="xl" animate="pulse" showFace />
+          </motion.div>
+
+          <div className="space-y-2">
+            <h1 style={{ fontFamily: "'Sora', sans-serif", fontSize: 26, fontWeight: 700, color: "white", lineHeight: 1.2 }}>
+              Your plan is ready.
+            </h1>
+            <p style={{ fontSize: 14, color: "rgba(255,255,255,0.5)", marginTop: 10, lineHeight: 1.6 }}>
+              Sol is proud of you. Your financial pathway is complete — your personalised plan awaits.
+            </p>
+          </div>
+
+          <div className="bg-white rounded-[20px] p-5 space-y-3 text-left">
+            {[
+              "Profile & goals saved",
+              "Risk profile set",
+              "Financial snapshot complete",
+            ].map((item) => (
+              <div key={item} className="flex items-center gap-3">
+                <div className="h-5 w-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "#1D9E75" }}>
+                  <Check className="h-3 w-3 text-white" />
+                </div>
+                <span style={{ fontSize: 13, fontWeight: 500, color: "#042C53" }}>{item}</span>
+              </div>
+            ))}
+          </div>
+
+          <button
+            className="w-full rounded-full transition-opacity active:opacity-80"
+            style={{ background: "#1D9E75", color: "white", padding: "17px 24px", fontSize: 16, fontWeight: 700, fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+            onClick={() => navigate("/free/dashboard")}
+          >
+            Take me to my dashboard →
+          </button>
+        </motion.div>
+      </div>
+    );
+  }
+
   if (showReward) {
     const messages = {
       1: { title: "Income logged! 💰", desc: "Step 2 complete — let's track your expenses next", nextStep: 2 },
       2: { title: "Goal set! 🎯", desc: "Step 4 complete — now let's see your full financial picture", nextStep: 4 },
-      3: { title: "You're all set! 🎉", desc: "Your financial plan is ready — explore your dashboard", nextStep: null },
-    };
+    } as const;
     const msg = messages[showReward];
     return (
       <RewardReveal
@@ -533,34 +652,139 @@ export default function PathwayPage() {
         description={msg.desc}
         onDismiss={() => {
           setShowReward(null);
-          if (msg.nextStep !== null) advance(msg.nextStep);
-          else navigate("/free/dashboard");
+          advance(msg.nextStep);
         }}
       />
+    );
+  }
+
+  // Already-complete summary: shown when all 6 steps are done and no ?step= param
+  if (alreadyComplete && !stepParam) {
+    const fd = (n: number) => (progress.find(s => s.stepNumber === n)?.formData ?? {}) as Record<string, unknown>;
+    const s1 = fd(1); const s2 = fd(2); const s3 = fd(3); const s4 = fd(4); const s5 = fd(5); const s6 = fd(6);
+    const totalExpenses = ["housing","food","transport","utilities","entertainment","other"].reduce((sum, k) => sum + Number(s3[k] ?? 0), 0);
+    const income = Number(s2.income ?? 0);
+    const srPct = income > 0 ? Math.round(((income - totalExpenses) / income) * 100) : 0;
+
+    return (
+      <div className="h-screen bg-background flex flex-col overflow-hidden">
+        <div className="sticky top-0 z-10" style={{ background: "#FAF8F5", borderBottom: "1px solid #E6E1D8" }}>
+          <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
+            <div className="flex gap-1.5 flex-1 mr-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} style={{ height: 4, flex: 1, borderRadius: 999, background: "#1D9E75" }} />
+              ))}
+            </div>
+            <span style={{ fontSize: 11, color: "#1D9E75", fontWeight: 600, whiteSpace: "nowrap" }}>
+              <Check className="inline h-3 w-3 mr-1" />All complete
+            </span>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-lg mx-auto px-4 py-6 pb-28 space-y-4">
+            <div className="text-center mb-4">
+              <div className="text-4xl mb-3">🎉</div>
+              <h1 style={{ fontFamily: "'Sora', sans-serif", fontSize: 22, fontWeight: 700, color: "#042C53" }}>
+                Your pathway is complete
+              </h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                Tap any section to update your answers
+              </p>
+            </div>
+
+            {[
+              {
+                step: 1, label: "About you",
+                value: `${s1.age ?? "—"} yrs · ${s1.lifeStage ?? "—"} · ${s1.currency ?? "USD"}`,
+              },
+              {
+                step: 2, label: "Income",
+                value: `${s2.currency === "VND" ? "₫" : "$"}${Number(s2.income ?? 0).toLocaleString()}/mo`,
+              },
+              {
+                step: 3, label: "Monthly expenses",
+                value: `${s3.currency === "VND" ? "₫" : "$"}${totalExpenses.toLocaleString()}/mo · ${srPct}% savings rate`,
+              },
+              {
+                step: 4, label: "Goal",
+                value: s4.goalTitle ? `${s4.goalTitle} · $${Number(s4.goalTarget ?? 0).toLocaleString()} by ${s4.goalMonth} ${s4.goalYear}` : "—",
+              },
+              {
+                step: 5, label: "Net worth snapshot",
+                value: `$${Number(s5.savings ?? 0).toLocaleString()} savings · $${Number(s5.investments ?? 0).toLocaleString()} invested`,
+              },
+              {
+                step: 6, label: "Risk profile",
+                value: String(s6.riskProfile ?? "—"),
+              },
+            ].map(item => (
+              <button
+                key={item.step}
+                onClick={() => { setAlreadyComplete(false); setStep(item.step - 1); }}
+                className="w-full bg-card border border-card-border rounded-xl px-4 py-3.5 flex items-center justify-between text-left hover:border-primary/40 transition-colors"
+              >
+                <div>
+                  <div className="text-xs text-muted-foreground font-medium mb-0.5">{item.label}</div>
+                  <div className="text-sm font-semibold text-foreground">{item.value}</div>
+                </div>
+                <Edit2 className="h-4 w-4 text-muted-foreground flex-shrink-0 ml-3" />
+              </button>
+            ))}
+
+            <button
+              onClick={() => navigate("/free/dashboard")}
+              className="w-full rounded-full mt-2"
+              style={{ background: "#1D9E75", color: "white", padding: "15px 24px", fontSize: 15, fontWeight: 700, fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+            >
+              Back to dashboard
+            </button>
+          </div>
+        </div>
+        <BottomNav />
+      </div>
+    );
+  }
+
+  // Show a spinner while the query determines where to resume
+  if (progressLoading) {
+    return (
+      <div className="h-screen bg-background flex items-center justify-center">
+        <div className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+      </div>
     );
   }
 
   return (
     <div className="h-screen bg-background flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-background border-b border-border">
+      <div className="sticky top-0 z-10" style={{ background: "#FAF8F5", borderBottom: "1px solid #E6E1D8" }}>
         <div className="max-w-lg mx-auto px-4 py-3 flex items-center gap-3">
           {step > 0 && (
-            <button onClick={back} className="text-muted-foreground hover:text-foreground transition-colors mr-1">
+            <button onClick={back} style={{ color: "#A8A095", marginRight: 4 }} className="transition-colors hover:opacity-70">
               <ArrowLeft className="h-5 w-5" />
             </button>
           )}
           <div className="flex-1">
-            <div className="flex gap-1.5">
+            <div className="flex gap-1.5" style={{ marginBottom: 6 }}>
               {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className={cn("h-1 rounded-full flex-1 transition-all", i < step ? "bg-primary" : i === step ? "bg-primary/40" : "bg-muted")} />
+                <div
+                  key={i}
+                  style={{
+                    height: 4, flex: 1, borderRadius: 999,
+                    background: i <= step - 1 ? "#1D9E75" : i === step ? "#1D9E75" : "#E6E1D8",
+                    transition: "background 0.3s",
+                  }}
+                />
               ))}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">Step {step + 1} of 6</p>
+            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: "#A8A095" }}>
+              {completedCount}/6 steps complete
+            </p>
           </div>
           {saveStatus !== "idle" && (
-            <span className="text-xs text-muted-foreground flex items-center gap-1">
-              {saveStatus === "saving" ? "Saving…" : <><Check className="h-3.5 w-3.5 text-primary" />Saved</>}
+            <span style={{ fontSize: 11, color: "#A8A095", display: "flex", alignItems: "center", gap: 4 }}>
+              {saveStatus === "saving" ? "Saving…" : <><Check className="h-3.5 w-3.5" style={{ color: "#1D9E75" }} />Saved</>}
             </span>
           )}
         </div>
@@ -582,6 +806,29 @@ export default function PathwayPage() {
               {STEPS[step]}
             </motion.div>
           </AnimatePresence>
+
+          {/* Save error */}
+          {stepError && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 text-center"
+            >
+              {stepError}
+            </motion.div>
+          )}
+
+          {/* Skip link — not shown on the final step */}
+          {step < 5 && (
+            <div className="mt-5 text-center">
+              <button
+                onClick={skipStep}
+                className="text-sm text-muted-foreground hover:text-foreground underline-offset-2 hover:underline transition-colors"
+              >
+                Skip for now
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

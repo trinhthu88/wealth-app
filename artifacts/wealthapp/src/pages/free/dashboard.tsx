@@ -4,13 +4,10 @@ import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import AppShell from "@/components/AppShell";
 import Sol from "@/components/Sol";
-import HealthScoreRing from "@/components/HealthScoreRing";
 import SmartUpgradeCard from "@/components/SmartUpgradeCard";
 import GoalCard from "@/components/GoalCard";
-import WeeklyTipCard from "@/components/WeeklyTipCard";
 import MilestoneChips from "@/components/MilestoneChips";
 import BottomNav from "@/components/BottomNav";
-import { Progress } from "@/components/ui/progress";
 import { apiFetch } from "@/lib/api";
 import { useProfile } from "@/hooks/useProfile";
 import { queryClient } from "@/lib/queryClient";
@@ -46,6 +43,13 @@ function getGreeting() {
   if (h < 12) return "Good morning";
   if (h < 17) return "Good afternoon";
   return "Good evening";
+}
+
+function formatDashboardDate() {
+  const d = new Date();
+  const day = d.toLocaleDateString("en-US", { weekday: "short" }).toUpperCase();
+  const month = d.toLocaleDateString("en-US", { month: "short" }).toUpperCase();
+  return `${day} · ${month} ${d.getDate()}`;
 }
 
 export default function FreeDashboard() {
@@ -208,158 +212,297 @@ export default function FreeDashboard() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [budgetEntryId]);
 
-  const age = null as number | null;
+  const age = ((profile as any)?.age as number | null) ?? null;
   const benchmarkSavingsRate = getAgeBenchmarkSavingsRate(age);
   const goalStatus = projection?.status ?? topGoal?.status ?? "on_track";
 
-  const weeklyTip = useMemo(() => generateWeeklyTip({
-    effectiveSavingsRate,
-    healthScore: score?.overallScore ?? 0,
-    goal: topGoal ? { title: topGoal.title, monthlyShortfall: projection?.monthlyShortfall } : null,
-    goalStatus,
-    ageBenchmarkSavingsRate: benchmarkSavingsRate,
-    streakWeeks,
-    isExpat: profile?.isExpat ?? false,
-    investmentRatePercent: invRatePct,
-  }), [effectiveSavingsRate, score?.overallScore, topGoal, goalStatus, benchmarkSavingsRate, streakWeeks, profile?.isExpat, invRatePct]);
+  const weeklyTip = useMemo(() => {
+    if (totalIncome === 0 && !score?.overallScore) {
+      return {
+        type: "market_context",
+        title: "Start with the basics",
+        body: "Set up your budget and financial pathway to get personalised weekly insights and your Financial Health Score.",
+        actionLabel: "Start your pathway",
+        actionRoute: "/free/pathway",
+      };
+    }
+    return generateWeeklyTip({
+      effectiveSavingsRate,
+      healthScore: score?.overallScore ?? 0,
+      goal: topGoal ? { title: topGoal.title, monthlyShortfall: projection?.monthlyShortfall } : null,
+      goalStatus,
+      ageBenchmarkSavingsRate: benchmarkSavingsRate,
+      streakWeeks,
+      isExpat: profile?.isExpat ?? false,
+      investmentRatePercent: invRatePct,
+    });
+  }, [effectiveSavingsRate, score?.overallScore, topGoal, goalStatus, benchmarkSavingsRate, streakWeeks, profile?.isExpat, invRatePct, totalIncome]);
 
+
+  const scoreVal = score?.overallScore || 0;
+  const ringR = 68;
+  const ringCirc = 2 * Math.PI * ringR;
+  const ringOffset = ringCirc * (1 - scoreVal / 100);
+  const ringStroke = scoreVal >= 70 ? "#1D9E75" : scoreVal >= 50 ? "#F5B947" : scoreVal > 0 ? "#D86B5A" : "#E6F5EE";
+  const scoreStatusText = !scoreVal ? "Complete setup" : scoreVal >= 85 ? "Excellent" : scoreVal >= 70 ? "Good shape" : scoreVal >= 50 ? "Fair" : "Needs attention";
+  const scoreStatusColor = !scoreVal ? "#A8A095" : scoreVal >= 70 ? "#1D9E75" : scoreVal >= 50 ? "#E8A53C" : "#D86B5A";
 
   return (
     <AppShell>
-      <div className="pb-20 md:pb-0 space-y-4">
-        {/* Greeting */}
+      <div className="pb-24 md:pb-0">
+
+        {/* Greeting header */}
         <motion.div
           initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-3 px-0.5 pt-0.5"
+          className="flex items-start justify-between mb-5"
         >
-          <Sol size="sm" animate="idle" showFace />
           <div>
-            <h1 className="text-xl font-bold">{getGreeting()}, {firstName}!</h1>
-            <p className="text-sm text-muted-foreground">Here's your financial overview</p>
+            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: "#A8A095", marginBottom: 3 }}>
+              {formatDashboardDate()}
+            </p>
+            <h1 style={{ fontFamily: "'Sora', sans-serif", fontSize: 22, fontWeight: 700, color: "#042C53", letterSpacing: "-0.02em", lineHeight: 1.2 }}>
+              {getGreeting()}, {firstName}.
+            </h1>
           </div>
+          <Sol size="sm" animate="idle" showFace />
         </motion.div>
 
-        {/* Pathway banner */}
-        <AnimatePresence>
-          {!pathwayDismissed && !profile?.onboardingComplete && (
-            <motion.div
-              initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, height: 0, marginTop: 0 }}
-              className="bg-emerald-50 border border-primary/20 rounded-2xl p-4 relative overflow-hidden"
-            >
-              <button onClick={() => setPathwayDismissed(true)} className="absolute top-3 right-3 text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
-              <div className="flex items-center gap-2 mb-2 pr-6">
-                <span className="text-primary font-medium text-sm">Your plan is {Math.round(pathwayPct)}% complete</span>
-              </div>
-              <Progress value={pathwayPct} className="h-1.5 mb-3" />
-              <Link href="/free/pathway">
-                <span className="text-xs font-semibold text-primary">Continue setup →</span>
-              </Link>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <div className="space-y-4">
 
-        {/* Health Score Card */}
-        <Link href="/free/health-score">
-          <div className="bg-[#042C53] rounded-2xl p-5 flex items-center gap-5 cursor-pointer hover:opacity-95 transition-opacity">
-            <HealthScoreRing score={score?.overallScore ?? 0} size="md" animate darkMode />
-            <div>
-              <p className="text-blue-200 text-xs mb-0.5">Financial Health Score</p>
-              <p className="text-white text-3xl font-bold">{score?.overallScore ?? "—"}<span className="text-base font-normal text-blue-300">/100</span></p>
-              <p className="text-blue-200 text-xs mt-1">
-                {!score ? "Complete your setup to get your score →" : score.overallScore >= 70 ? "Great work — keep building" : score.overallScore >= 50 ? "On track — a few quick wins ahead" : "Let's improve this together"}
+          {/* Pathway banner */}
+          <AnimatePresence>
+            {!pathwayDismissed && completedSteps < 6 && !profile?.onboardingComplete && (
+              <motion.div
+                initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                className="relative overflow-hidden rounded-[16px] p-4"
+                style={{ background: "#E6F5EE", border: "1px solid rgba(29,158,117,0.2)" }}
+              >
+                <button onClick={() => setPathwayDismissed(true)} className="absolute top-3 right-3" style={{ color: "#A8A095" }}><X className="h-4 w-4" /></button>
+                <div className="flex items-center gap-2 mb-2 pr-6">
+                  <span style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 13, fontWeight: 600, color: "#0F6E56" }}>
+                    {completedSteps} of 6 steps complete
+                  </span>
+                </div>
+                <div style={{ height: 4, borderRadius: 999, background: "#C8EDE0", overflow: "hidden", marginBottom: 10 }}>
+                  <div style={{ height: "100%", borderRadius: 999, background: "#1D9E75", width: `${pathwayPct}%`, transition: "width 0.4s ease" }} />
+                </div>
+                <Link href="/free/pathway">
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "#1D9E75" }}>
+                    {completedSteps === 0 ? "Start your financial pathway →" : "Continue setup →"}
+                  </span>
+                </Link>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Score card */}
+          <Link href="/free/health-score">
+            <div
+              className="bg-white rounded-[20px] cursor-pointer hover:opacity-[0.97] transition-opacity"
+              style={{ boxShadow: "0 4px 14px rgba(15,23,42,0.06)", padding: 22 }}
+            >
+              <div className="flex justify-center">
+                <svg width={170} height={170} viewBox="0 0 170 170">
+                  <circle cx={85} cy={85} r={ringR} fill="none" stroke="#E6F5EE" strokeWidth={12} />
+                  <circle cx={85} cy={85} r={44} fill="#FAF8F5" />
+                  <circle
+                    cx={85} cy={85} r={ringR} fill="none"
+                    stroke={ringStroke} strokeWidth={12} strokeLinecap="round"
+                    strokeDasharray={ringCirc} strokeDashoffset={ringOffset}
+                    transform="rotate(-90 85 85)"
+                    style={{ transition: "stroke-dashoffset 0.8s ease-out" }}
+                  />
+                  <text x={85} y={72} textAnchor="middle" dominantBaseline="middle"
+                    fontFamily="'Sora', sans-serif" fontSize={38} fontWeight={800}
+                    fill="#042C53" letterSpacing={-1.5}>
+                    {scoreVal > 0 ? scoreVal : "—"}
+                  </text>
+                  <text x={85} y={88} textAnchor="middle"
+                    fontFamily="'JetBrains Mono', monospace" fontSize={8.5}
+                    fill="#A8A095" letterSpacing={2}>
+                    TALA SCORE
+                  </text>
+                  <text x={85} y={104} textAnchor="middle"
+                    fontFamily="'Plus Jakarta Sans', sans-serif" fontSize={12}
+                    fontWeight={600} fill={scoreStatusColor}>
+                    {scoreStatusText}
+                  </text>
+                </svg>
+              </div>
+              {/* 3-col stats */}
+              <div className="grid grid-cols-3" style={{ borderTop: "1px solid #F2EFE9", paddingTop: 14 }}>
+                <div style={{ paddingRight: 12 }}>
+                  <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 15, fontWeight: 700, color: "#1D9E75" }}>
+                    {income > 0 || expenses > 0 ? fmt(Math.max(0, income - expenses)) : "—"}
+                  </p>
+                  <p style={{ fontSize: 10, color: "#A8A095", marginTop: 2 }}>Saved this month</p>
+                </div>
+                <div style={{ paddingLeft: 12, paddingRight: 12, borderLeft: "1px solid #F2EFE9", borderRight: "1px solid #F2EFE9" }}>
+                  <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 15, fontWeight: 700, color: "#042C53" }}>
+                    {savingsRate > 0 ? `${savingsRate.toFixed(0)}%` : "—"}
+                  </p>
+                  <p style={{ fontSize: 10, color: "#A8A095", marginTop: 2 }}>Savings rate</p>
+                </div>
+                <div style={{ paddingLeft: 12 }}>
+                  <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 15, fontWeight: 700, color: "#042C53" }}>
+                    {netWorth !== null ? fmt(netWorth) : "—"}
+                  </p>
+                  <p style={{ fontSize: 10, color: "#A8A095", marginTop: 2 }}>Net worth</p>
+                </div>
+              </div>
+            </div>
+          </Link>
+
+          {/* Streak banner */}
+          {streakWeeks > 0 && (
+            <div
+              className="flex items-center justify-between rounded-[16px]"
+              style={{ background: "linear-gradient(135deg, #FEF3D6, #F5B947 180%)", padding: "13px 18px" }}
+            >
+              <div>
+                <p style={{ fontFamily: "'Sora', sans-serif", fontSize: 15, fontWeight: 700, color: "#042C53" }}>
+                  {streakWeeks}-week streak
+                </p>
+                <p style={{ fontSize: 12, color: "#6B6459", marginTop: 2 }}>
+                  Consistency is your superpower.
+                </p>
+              </div>
+              <span style={{ fontSize: 26 }}>🔥</span>
+            </div>
+          )}
+
+          {/* Goals section */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 style={{ fontFamily: "'Sora', sans-serif", fontSize: 16, fontWeight: 700, color: "#042C53" }}>Your goals</h2>
+              <Link href="/free/goals">
+                <span style={{ fontSize: 13, fontWeight: 600, color: "#1D9E75" }}>See all</span>
+              </Link>
+            </div>
+            {goals.length === 0 ? (
+              <Link href="/free/goals">
+                <div className="bg-white rounded-[20px] p-5 text-center cursor-pointer"
+                  style={{ border: "1.5px dashed #E6E1D8", boxShadow: "0 4px 14px rgba(15,23,42,0.04)" }}>
+                  <p style={{ fontSize: 13, color: "#A8A095" }}>No goals yet.</p>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: "#1D9E75", marginTop: 4 }}>Add your first goal →</p>
+                </div>
+              </Link>
+            ) : (
+              <div className="space-y-3">
+                {goals.slice(0, 3).map((g, i) => {
+                  const gStatus = i === 0 ? (projection?.status ?? g.status) : g.status;
+                  const eyebrowColor = gStatus === "on_track" ? "#1D9E75" : gStatus === "almost" ? "#E8A53C" : "#D86B5A";
+                  const eyebrowText = gStatus === "on_track" ? "ON TRACK" : gStatus === "almost" ? "AT RISK" : "OFF TRACK";
+                  return (
+                    <div key={g.id}>
+                      <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, letterSpacing: "0.14em", textTransform: "uppercase", color: eyebrowColor, marginBottom: 6 }}>
+                        {eyebrowText}
+                      </p>
+                      <GoalCard
+                        goal={g}
+                        projection={i === 0 ? projection : undefined}
+                        accountsBalance={i === 0 ? savingsBalance + investmentValue : undefined}
+                        onContribute={() => window.location.href = "/free/goals"}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Budget summary */}
+          <div className="bg-white rounded-[20px] p-4" style={{ boxShadow: "0 4px 14px rgba(15,23,42,0.06)" }}>
+            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, letterSpacing: "0.14em", textTransform: "uppercase", color: "#A8A095", marginBottom: 12 }}>
+              This month's budget
+            </p>
+            <div className="grid grid-cols-2 gap-4 mb-3">
+              <div>
+                <p style={{ fontSize: 10, color: "#A8A095" }}>Income</p>
+                <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 18, fontWeight: 700, color: "#042C53", marginTop: 2 }}>
+                  {income > 0 ? fmt(income) : "$0"}
+                </p>
+              </div>
+              <div>
+                <p style={{ fontSize: 10, color: "#A8A095" }}>Expenses</p>
+                <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 18, fontWeight: 700, color: "#042C53", marginTop: 2 }}>
+                  {expenses > 0 ? fmt(expenses) : "$0"}
+                </p>
+              </div>
+            </div>
+            <div style={{ borderTop: "1px solid #F2EFE9", paddingTop: 10 }}>
+              <p style={{ fontSize: 10, color: "#A8A095" }}>Saved this month</p>
+              <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 16, fontWeight: 700, marginTop: 2, color: (income - expenses) > 0 ? "#1D9E75" : (income - expenses) < 0 ? "#D86B5A" : "#A8A095" }}>
+                {fmt(income > 0 || expenses > 0 ? income - expenses : 0)}
               </p>
             </div>
           </div>
-        </Link>
 
-        {/* 2×2 Metric Grid */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-card border border-card-border rounded-2xl p-4">
-            <p className="text-xs text-muted-foreground">Monthly savings rate</p>
-            <p className="text-2xl font-bold mt-1">{savingsRate > 0 ? `${savingsRate.toFixed(0)}%` : "—"}</p>
-            <p className={`text-xs mt-1 font-medium ${savingsRate >= 20 ? "text-primary" : savingsRate >= 10 ? "text-amber-500" : "text-red-500"}`}>
-              {savingsRate > 0 ? `Target: 20%` : "Set up budget →"}
-            </p>
-          </div>
-
-          <div className="bg-card border border-card-border rounded-2xl p-4">
-            <p className="text-xs text-muted-foreground">Net worth</p>
-            <p className="text-2xl font-bold mt-1">{netWorth !== null ? fmt(netWorth) : "—"}</p>
-            <p className={`text-xs mt-1 font-medium ${netWorth !== null ? (netWorth >= 0 ? "text-primary" : "text-red-500") : "text-primary"}`}>
-              {netWorth !== null ? (netWorth >= 0 ? "↑ Growing" : "↓ Check debts") : "Track assets →"}
-            </p>
-          </div>
-
-          <Link href="/free/goals" className="col-span-2">
-            <div className="bg-card border border-card-border rounded-2xl p-4 cursor-pointer hover:border-primary/30 transition-colors">
-              <p className="text-xs text-muted-foreground">Top goal</p>
-              <p className="text-sm font-semibold mt-1 truncate">{topGoal?.title ?? "No goal set"}</p>
-              {topGoal
-                ? (<><Progress value={goalPct} className="h-1.5 mt-2 mb-1" /><p className="text-xs text-muted-foreground">{goalPct}% complete</p></>)
-                : <p className="text-xs text-primary mt-1 font-medium">Set your first goal →</p>}
-            </div>
-          </Link>
-        </div>
-
-        {/* Weekly Tip */}
-        <div>
-          <p className="text-xs font-medium text-muted-foreground mb-2">This week's insight</p>
-          <WeeklyTipCard tip={weeklyTip} />
-        </div>
-
-        {/* Milestones */}
-        <div>
-          <p className="text-xs font-medium text-muted-foreground mb-2">Your achievements</p>
-          <MilestoneChips earnedKeys={earnedMilestones} newlyEarned={newlyEarned} />
-        </div>
-
-        {/* Smart Upgrade Cards */}
-        <SmartUpgradeCard
-          condition={income > 0 && effectiveSavingsRate < 15}
-          insightText={`You're saving ${effectiveSavingsRate.toFixed(0)}% — reaching 20% could move your retirement forward by 2+ years`}
-          ctaText="Book a free discovery call"
-          ctaType="savings_rate"
-        />
-        <SmartUpgradeCard
-          condition={goals.length > 0 && assets.filter(a => a.category === "investment").length === 0 && income > 0 && savingsRate >= 15}
-          insightText="Your goal needs an investment strategy — an advisor can build your personalised roadmap"
-          ctaText="Book a free discovery call"
-          ctaType="no_investments"
-        />
-        <SmartUpgradeCard
-          condition={(profile?.isExpat ?? false) && income > 0}
-          insightText="As an expat, you may be missing tax and pension optimisations worth thousands per year"
-          ctaText="Book a free discovery call"
-          ctaType="expat"
-        />
-
-        {/* Top Goal Card */}
-        {topGoal && (
+          {/* Weekly tip */}
           <div>
-            <p className="text-xs font-medium text-muted-foreground mb-2">Your main goal</p>
-            <GoalCard
-              goal={topGoal}
-              projection={projection}
-              accountsBalance={savingsBalance + investmentValue}
-              onContribute={() => window.location.href = "/free/goals"}
-            />
+            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, letterSpacing: "0.14em", textTransform: "uppercase", color: "#A8A095", marginBottom: 8 }}>
+              This week's insight
+            </p>
+            <div
+              className="flex items-start gap-3 rounded-[16px]"
+              style={{ background: "#E6F5EE", padding: "14px 16px" }}
+            >
+              <Sol size="xs" animate="idle" showFace />
+              <p style={{ fontSize: 13, color: "#0F6E56", lineHeight: 1.55, fontWeight: 500, flex: 1 }}>
+                "{weeklyTip.body}"
+              </p>
+            </div>
           </div>
-        )}
 
-        {/* Quick Actions */}
-        <div>
-          <p className="text-xs font-medium text-muted-foreground mb-2">Quick actions</p>
+          {/* Milestones */}
+          {(earnedMilestones.length > 0 || !!newlyEarned) && (
+            <div>
+              <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, letterSpacing: "0.14em", textTransform: "uppercase", color: "#A8A095", marginBottom: 8 }}>
+                Your achievements
+              </p>
+              <MilestoneChips earnedKeys={earnedMilestones} newlyEarned={newlyEarned} />
+            </div>
+          )}
+
+          {/* Smart Upgrade Cards */}
+          <SmartUpgradeCard
+            condition={income > 0 && effectiveSavingsRate < 15}
+            insightText={`You're saving ${effectiveSavingsRate.toFixed(0)}% — reaching 20% could move your retirement forward by 2+ years`}
+            ctaText="Book a free discovery call"
+            ctaType="savings_rate"
+          />
+          <SmartUpgradeCard
+            condition={goals.length > 0 && assets.filter(a => a.category === "investment").length === 0 && income > 0 && savingsRate >= 15}
+            insightText="Your goal needs an investment strategy — an advisor can build your personalised roadmap"
+            ctaText="Book a free discovery call"
+            ctaType="no_investments"
+          />
+          <SmartUpgradeCard
+            condition={(profile?.isExpat ?? false) && income > 0}
+            insightText="As an expat, you may be missing tax and pension optimisations worth thousands per year"
+            ctaText="Book a free discovery call"
+            ctaType="expat"
+          />
+
+          {/* Quick actions */}
           <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
             {[
               { icon: "📊", label: "Update budget", href: "/free/budget" },
               { icon: "🎯", label: "Add to goal", href: "/free/goals" },
             ].map((a, i) => (
-              <Link key={i} href={a.href}><div className="flex items-center gap-1.5 whitespace-nowrap bg-muted hover:bg-muted/80 rounded-full px-4 py-2 text-sm border border-border cursor-pointer transition-colors"><span>{a.icon}</span><span>{a.label}</span></div></Link>
+              <Link key={i} href={a.href}>
+                <div className="flex items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2 cursor-pointer transition-colors"
+                  style={{ background: "#F2EFE9", border: "1px solid #E6E1D8", fontSize: 13, fontWeight: 500, color: "#042C53" }}>
+                  <span>{a.icon}</span><span>{a.label}</span>
+                </div>
+              </Link>
             ))}
-            <a href="/book" className="flex items-center gap-1.5 whitespace-nowrap bg-muted hover:bg-muted/80 rounded-full px-4 py-2 text-sm border border-border transition-colors">
+            <a href="/book" className="flex items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2 transition-colors"
+              style={{ background: "#F2EFE9", border: "1px solid #E6E1D8", fontSize: 13, fontWeight: 500, color: "#042C53" }}>
               <Phone className="h-3.5 w-3.5" /><span>Book a call</span>
             </a>
           </div>
+
         </div>
       </div>
 

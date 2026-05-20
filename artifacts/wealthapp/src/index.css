@@ -63,6 +63,22 @@
   --font-serif: var(--app-font-serif);
   --font-mono: var(--app-font-mono);
 
+  /* TALA color utilities */
+  --color-tala-navy: #042C53;
+  --color-tala-green: #1D9E75;
+  --color-tala-green-dark: #0F6E56;
+  --color-tala-green-light: #E6F5EE;
+  --color-tala-cream: #FAF8F5;
+  --color-tala-cream-mid: #F2EFE9;
+  --color-tala-cream-border: #E6E1D8;
+  --color-tala-gold: #F5B947;
+  --color-tala-gold-light: #FEF3D6;
+  --color-tala-gold-dark: #C8881C;
+  --color-tala-coral: #D86B5A;
+  --color-tala-coral-accent: #F5896B;
+  --color-tala-blue: #4A7CB8;
+  --color-tala-muted: #A8A095;
+
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -72,6 +88,24 @@
 
 /* TALA Design System — Warm cream, navy, emerald green */
 :root {
+  /* TALA brand palette */
+  --tala-navy: #042C53;
+  --tala-green: #1D9E75;
+  --tala-green-dark: #0F6E56;
+  --tala-green-light: #E6F5EE;
+  --tala-cream: #FAF8F5;
+  --tala-cream-mid: #F2EFE9;
+  --tala-cream-border: #E6E1D8;
+  --tala-gold: #F5B947;
+  --tala-gold-light: #FEF3D6;
+  --tala-gold-dark: #C8881C;
+  --tala-coral: #D86B5A;
+  --tala-coral-accent: #F5896B;
+  --tala-blue: #4A7CB8;
+  --tala-text-primary: #042C53;
+  --tala-text-body: #2D2A24;
+  --tala-text-muted: #6B6459;
+  --tala-text-subtle: #A8A095;
   --button-outline: rgba(0,0,0,.10);
   --badge-outline: rgba(0,0,0,.05);
   --opaque-button-border-intensity: -8;

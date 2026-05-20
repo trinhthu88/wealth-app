@@ -22,6 +22,7 @@ const BudgetPage = lazy(() => import("@/pages/free/budget"));
 const GoalsPage = lazy(() => import("@/pages/free/goals"));
 const NetWorthPage = lazy(() => import("@/pages/free/networth"));
 const HealthScorePage = lazy(() => import("@/pages/free/healthscore"));
+const MilestonesPage = lazy(() => import("@/pages/free/milestones"));
 
 const ClientDashboard = lazy(() => import("@/pages/client/dashboard"));
 const ClientPortfolio = lazy(() => import("@/pages/client/portfolio"));
@@ -227,6 +228,7 @@ function AppRoutes() {
       <Route path="/free/goals" component={() => <ProtectedRoute component={GoalsPage} />} />
       <Route path="/free/networth" component={() => <ProtectedRoute component={NetWorthPage} />} />
       <Route path="/free/health-score" component={() => <ProtectedRoute component={HealthScorePage} />} />
+      <Route path="/free/milestones" component={() => <ProtectedRoute component={MilestonesPage} />} />
 
       <Route path="/client/onboarding" component={() => <ProtectedRoute component={ClientOnboarding} role={["investment_client", "super_admin"]} />} />
       <Route path="/client/dashboard" component={() => <ProtectedRoute component={ClientDashboard} role={["investment_client", "super_admin"]} />} />
