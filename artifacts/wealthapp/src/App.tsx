@@ -24,18 +24,19 @@ const NetWorthPage = lazy(() => import("@/pages/free/networth"));
 const HealthScorePage = lazy(() => import("@/pages/free/healthscore"));
 const MilestonesPage = lazy(() => import("@/pages/free/milestones"));
 
-const ClientDashboard = lazy(() => import("@/pages/client/dashboard"));
-const ClientPortfolio = lazy(() => import("@/pages/client/portfolio"));
+const ClientDashboard = lazy(() => import("@/pages/client/ClientDashboard"));
+const ClientPortfolio = lazy(() => import("@/pages/client/ClientPortfolio"));
 const ClientPlan = lazy(() => import("@/pages/client/plan"));
 const ClientGoals = lazy(() => import("@/pages/client/goals"));
 const ClientNetWorth = lazy(() => import("@/pages/client/networth"));
 const ClientDocuments = lazy(() => import("@/pages/client/documents"));
 const ClientMessages = lazy(() => import("@/pages/client/messages"));
-const ClientOnboarding = lazy(() => import("@/pages/client/onboarding"));
+const ClientOnboarding = lazy(() => import("@/pages/client/ClientOnboarding"));
 const ClientPackages = lazy(() => import("@/pages/client/packages"));
 const ClientPackageDetail = lazy(() => import("@/pages/client/package-detail"));
 const ClientTransactions = lazy(() => import("@/pages/client/transactions"));
-const ClientScenarios = lazy(() => import("@/pages/client/scenarios"));
+const ClientScenarios = lazy(() => import("@/pages/client/ClientScenarios"));
+const ClientBudget = lazy(() => import("@/pages/client/budget"));
 
 const AdvisorDashboard = lazy(() => import("@/pages/advisor/dashboard"));
 const AdvisorClients = lazy(() => import("@/pages/advisor/clients"));
@@ -188,7 +189,10 @@ function RoleRedirect() {
   if (!profile) return <Redirect to="/sign-in" />;
   if (profile.role === "super_admin") return <Redirect to="/admin/dashboard" />;
   if (profile.role === "advisor") return <Redirect to="/advisor/dashboard" />;
-  if (profile.role === "investment_client") return <Redirect to="/client/dashboard" />;
+  if (profile.role === "investment_client") {
+    // Check onboarding_track_complete via client profile — if not done, send to onboarding
+    return <Redirect to="/client/dashboard" />;
+  }
   return <Redirect to="/free/dashboard" />;
 }
 
@@ -241,6 +245,7 @@ function AppRoutes() {
       <Route path="/client/goals" component={() => <ProtectedRoute component={ClientGoals} role={["investment_client", "super_admin"]} />} />
       <Route path="/client/networth" component={() => <ProtectedRoute component={ClientNetWorth} role={["investment_client", "super_admin"]} />} />
       <Route path="/client/documents" component={() => <ProtectedRoute component={ClientDocuments} role={["investment_client", "super_admin"]} />} />
+      <Route path="/client/budget" component={() => <ProtectedRoute component={ClientBudget} role={["investment_client", "super_admin"]} />} />
       <Route path="/client/messages" component={() => <ProtectedRoute component={ClientMessages} role={["investment_client", "super_admin"]} />} />
 
       <Route path="/advisor/dashboard" component={() => <ProtectedRoute component={AdvisorDashboard} role={["advisor", "super_admin"]} />} />

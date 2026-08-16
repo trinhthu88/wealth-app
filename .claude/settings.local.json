@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc *)",
+      "Skill(impeccable)",
+      "Bash(xargs cat)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('pnpm',{}\\).get\\('catalog',{}\\), indent=2\\)\\)\")"
+    ]
+  }
+}

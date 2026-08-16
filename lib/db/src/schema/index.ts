@@ -13,3 +13,7 @@ export * from "./leads";
 export * from "./blog";
 export * from "./notifications";
 export * from "./investments";
+export * from "./advisedPlans";
+export * from "./clientHoldings";
+export * from "./clientBudget";
+export * from "./scenarioRuns";

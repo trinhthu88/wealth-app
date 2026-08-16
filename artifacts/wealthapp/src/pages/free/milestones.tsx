@@ -99,7 +99,7 @@ export default function MilestonesPage() {
                     <span style={{ fontSize: 26 }}>{m.emoji}</span>
                   </div>
                   <p style={{ fontSize: 11, fontWeight: 600, color: "#042C53", lineHeight: 1.3 }}>{m.label}</p>
-                  <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 8, letterSpacing: "0.08em", textTransform: "uppercase", color: "#1D9E75", marginTop: 3 }}>
+                  <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: "#1D9E75", marginTop: 3 }}>
                     Earned
                   </p>
                 </motion.div>
@@ -128,7 +128,7 @@ export default function MilestonesPage() {
                     <span style={{ fontSize: 26 }}>{m.emoji}</span>
                   </div>
                   <p style={{ fontSize: 11, fontWeight: 600, color: "#C8881C", lineHeight: 1.3 }}>{m.label}</p>
-                  <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 8, letterSpacing: "0.08em", textTransform: "uppercase", color: "#C8881C", marginTop: 3 }}>
+                  <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: "#C8881C", marginTop: 3 }}>
                     Not yet
                   </p>
                 </div>
@@ -148,19 +148,16 @@ export default function MilestonesPage() {
                 <div
                   key={m.key}
                   className="bg-white rounded-[20px] text-center"
-                  style={{ padding: "12px 8px", boxShadow: "0 4px 14px rgba(15,23,42,0.04)", opacity: 0.4 }}
+                  style={{ padding: "12px 8px", boxShadow: "0 4px 14px rgba(15,23,42,0.04)", opacity: 0.45 }}
                 >
                   <div
                     className="mx-auto flex items-center justify-center rounded-[12px] mb-2"
                     style={{ width: 52, height: 52, background: "#F2EFE9" }}
                   >
-                    <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="#A8A095" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                    </svg>
+                    <span style={{ fontSize: 26, filter: "grayscale(1)" }}>{m.emoji}</span>
                   </div>
                   <p style={{ fontSize: 11, fontWeight: 600, color: "#042C53", lineHeight: 1.3 }}>{m.label}</p>
-                  <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 8, letterSpacing: "0.08em", textTransform: "uppercase", color: "#A8A095", marginTop: 3 }}>
+                  <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: "#A8A095", marginTop: 3 }}>
                     Locked
                   </p>
                 </div>
@@ -171,14 +168,26 @@ export default function MilestonesPage() {
 
         {/* Empty earned state */}
         {earned.length === 0 && (
-          <div className="text-center py-8">
+          <div className="text-center py-4">
             <Sol size="md" animate="idle" showFace className="mx-auto mb-4" />
             <p style={{ fontFamily: "'Sora', sans-serif", fontSize: 16, fontWeight: 700, color: "#042C53", marginBottom: 6 }}>
               Your badges await
             </p>
-            <p style={{ fontSize: 13, color: "#A8A095", maxWidth: 220, margin: "0 auto", lineHeight: 1.5 }}>
+            <p style={{ fontSize: 13, color: "#A8A095", maxWidth: 220, margin: "0 auto 20px", lineHeight: 1.5 }}>
               Complete your pathway and track your budget to earn your first badge.
             </p>
+            {/* Preview of first earnable badges */}
+            <div className="grid grid-cols-3 gap-[10px] mt-2">
+              {MILESTONES.slice(0, 3).map(m => (
+                <div key={m.key} className="bg-white rounded-[20px] text-center" style={{ padding: "12px 8px", boxShadow: "0 4px 14px rgba(15,23,42,0.04)", opacity: 0.5 }}>
+                  <div className="mx-auto flex items-center justify-center rounded-[12px] mb-2" style={{ width: 52, height: 52, background: "#F2EFE9" }}>
+                    <span style={{ fontSize: 26, filter: "grayscale(1)" }}>{m.emoji}</span>
+                  </div>
+                  <p style={{ fontSize: 11, fontWeight: 600, color: "#042C53", lineHeight: 1.3 }}>{m.label}</p>
+                  <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: "#A8A095", marginTop: 3 }}>Earn it</p>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 

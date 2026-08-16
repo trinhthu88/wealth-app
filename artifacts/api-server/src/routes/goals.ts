@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, and } from "drizzle-orm";
-import { db, financialGoalsTable, profilesTable } from "@workspace/db";
+import { db, financialGoalsTable, profilesTable, goalHoldingLinksTable } from "@workspace/db";
 import { requireAuth } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
@@ -119,6 +119,66 @@ router.get("/advisor/clients/:id/goals", requireAuth, async (req, res): Promise<
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const goals = await db.select().from(financialGoalsTable).where(eq(financialGoalsTable.userId, rawId));
   res.json(goals);
+});
+
+// ── Goal holding links ────────────────────────────────────────────────────────
+router.get("/client/goals/:id/links", requireAuth, async (req, res): Promise<void> => {
+  const userId = (req as any).userId;
+  const goalId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  try {
+    const links = await db.select().from(goalHoldingLinksTable)
+      .where(and(eq(goalHoldingLinksTable.goalId, goalId), eq(goalHoldingLinksTable.userId, userId)));
+    res.json(links);
+  } catch {
+    res.json([]); // gracefully degrade if table doesn't exist yet
+  }
+});
+
+router.post("/client/goals/:id/links", requireAuth, async (req, res): Promise<void> => {
+  const userId = (req as any).userId;
+  const goalId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const { sourceType, sourceId, allocationPct } = req.body;
+  if (!sourceType || !sourceId) { res.status(400).json({ error: "sourceType and sourceId required" }); return; }
+  try {
+    const [link] = await db.insert(goalHoldingLinksTable).values({
+      goalId, userId, sourceType, sourceId, allocationPct: String(allocationPct ?? 100),
+    }).returning();
+    res.status(201).json(link);
+  } catch (err: any) {
+    if (err?.code === "23505") {
+      res.status(409).json({ error: "This investment is already linked to this goal." });
+    } else if (err?.message?.includes("does not exist")) {
+      res.status(503).json({ error: "Goal linking requires a database migration. Please run the SQL migration first." });
+    } else {
+      res.status(500).json({ error: "Failed to link holding" });
+    }
+  }
+});
+
+router.delete("/client/goals/links/:linkId", requireAuth, async (req, res): Promise<void> => {
+  const userId = (req as any).userId;
+  const linkId = Array.isArray(req.params.linkId) ? req.params.linkId[0] : req.params.linkId;
+  try {
+    await db.delete(goalHoldingLinksTable)
+      .where(and(eq(goalHoldingLinksTable.id, linkId), eq(goalHoldingLinksTable.userId, userId)));
+    res.sendStatus(204);
+  } catch {
+    res.sendStatus(204); // graceful degrade
+  }
+});
+
+// Patch goal status (mark complete / pause / reopen)
+router.patch("/goals/:id/status", requireAuth, async (req, res): Promise<void> => {
+  const userId = (req as any).userId;
+  const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const { status } = req.body;
+  const allowed = ["active", "completed", "paused", "cancelled"];
+  if (!allowed.includes(status)) { res.status(400).json({ error: "Invalid status" }); return; }
+  const [updated] = await db.update(financialGoalsTable).set({ status, updatedAt: new Date() })
+    .where(and(eq(financialGoalsTable.id, rawId), eq(financialGoalsTable.userId, userId)))
+    .returning();
+  if (!updated) { res.status(404).json({ error: "Not found" }); return; }
+  res.json(updated);
 });
 
 export default router;

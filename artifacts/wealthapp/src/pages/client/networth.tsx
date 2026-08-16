@@ -1,1 +1,1 @@
-export { default } from "@/pages/free/networth";
+export { default } from "./ClientNetWorth";

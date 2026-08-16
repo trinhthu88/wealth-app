@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { eq, and } from "drizzle-orm";
-import { db, assetsTable, liabilitiesTable } from "@workspace/db";
+import { eq, and, desc } from "drizzle-orm";
+import { db, assetsTable, liabilitiesTable, netWorthSnapshotsTable } from "@workspace/db";
 import { requireAuth } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
@@ -103,6 +103,60 @@ router.delete("/liabilities/:id", requireAuth, async (req, res): Promise<void> =
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   await db.delete(liabilitiesTable).where(and(eq(liabilitiesTable.id, rawId), eq(liabilitiesTable.userId, userId)));
   res.sendStatus(204);
+});
+
+// ── Net worth snapshots ──────────────────────────────────────────────────────
+router.get("/client/networth/snapshots", requireAuth, async (req, res): Promise<void> => {
+  const userId = (req as any).userId;
+  const rows = await db.select().from(netWorthSnapshotsTable)
+    .where(eq(netWorthSnapshotsTable.userId, userId))
+    .orderBy(desc(netWorthSnapshotsTable.snapshotDate))
+    .limit(24); // 2 years of monthly snapshots
+  res.json(rows.reverse()); // return ASC for charting
+});
+
+router.post("/client/networth/snapshot", requireAuth, async (req, res): Promise<void> => {
+  const userId = (req as any).userId;
+  const { totalAssetsUsd, totalLiabilitiesUsd, netWorthUsd, notes } = req.body;
+  if (totalAssetsUsd == null || totalLiabilitiesUsd == null || netWorthUsd == null) {
+    res.status(400).json({ error: "Missing required fields" }); return;
+  }
+  const today = new Date().toISOString().slice(0, 10);
+  // Upsert by date — one snapshot per day
+  const existing = await db.select({ id: netWorthSnapshotsTable.id })
+    .from(netWorthSnapshotsTable)
+    .where(and(
+      eq(netWorthSnapshotsTable.userId, userId),
+      eq(netWorthSnapshotsTable.snapshotDate, today)
+    ))
+    .limit(1);
+
+  if (existing.length > 0) {
+    const [row] = await db.update(netWorthSnapshotsTable)
+      .set({
+        totalAssetsUsd: String(totalAssetsUsd),
+        totalLiabilitiesUsd: String(totalLiabilitiesUsd),
+        netWorthUsd: String(netWorthUsd),
+        notes: notes ?? null,
+      })
+      .where(and(
+        eq(netWorthSnapshotsTable.userId, userId),
+        eq(netWorthSnapshotsTable.snapshotDate, today)
+      ))
+      .returning();
+    res.json(row);
+  } else {
+    const [row] = await db.insert(netWorthSnapshotsTable).values({
+      userId,
+      snapshotDate: today,
+      totalAssetsUsd: String(totalAssetsUsd),
+      totalLiabilitiesUsd: String(totalLiabilitiesUsd),
+      netWorthUsd: String(netWorthUsd),
+      notes: notes ?? null,
+      createdBy: "client",
+    }).returning();
+    res.status(201).json(row);
+  }
 });
 
 export default router;

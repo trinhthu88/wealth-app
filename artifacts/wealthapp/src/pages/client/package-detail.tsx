@@ -1,8 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
-import { motion } from "framer-motion";
-import AppShell from "@/components/AppShell";
-import { Button } from "@/components/ui/button";
+import ClientAppShell from "@/components/client/AppShell";
 import { apiFetch } from "@/lib/api";
 import { fmtCurrency, ASSET_CLASS_COLORS } from "@/lib/portfolioCalculations";
 import { ArrowLeft, TrendingUp, TrendingDown, FileText, ExternalLink } from "lucide-react";
@@ -71,13 +69,13 @@ export default function PackageDetailPage() {
 
   if (isLoading || !pkg) {
     return (
-      <AppShell>
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-muted rounded w-1/3" />
-          <div className="h-32 bg-muted rounded-2xl" />
-          <div className="h-64 bg-muted rounded-2xl" />
+      <ClientAppShell>
+        <div className="max-w-[860px] mx-auto animate-pulse space-y-4">
+          <div className="h-8 bg-slate-100 rounded w-1/3" />
+          <div className="h-32 bg-slate-100 rounded-xl" />
+          <div className="h-64 bg-slate-100 rounded-xl" />
         </div>
-      </AppShell>
+      </ClientAppShell>
     );
   }
 
@@ -108,38 +106,37 @@ export default function PackageDetailPage() {
   });
 
   return (
-    <AppShell>
+    <ClientAppShell>
+      <div className="max-w-[860px] mx-auto">
       <div className="mb-4">
         <Link href="/client/packages">
-          <a className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+          <a className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-[#042C53] transition-colors">
             <ArrowLeft className="h-4 w-4" /> My Packages
           </a>
         </Link>
       </div>
 
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-        <div className="rounded-2xl p-5 mb-5 text-white" style={{ background: "linear-gradient(135deg,#042C53 0%,#0a4a8a 100%)" }}>
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <div className="text-slate-300 text-xs mb-1">{TYPE_LABELS[pkg.type] ?? pkg.type}</div>
-              <h1 className="text-2xl font-bold">{pkg.nickname}</h1>
-            </div>
-            <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${pkg.status === "active" ? "bg-emerald-400/20 text-emerald-200" : "bg-amber-400/20 text-amber-200"}`}>
-              {pkg.status === "pending_setup" ? "Setting up" : pkg.status}
-            </span>
+      <div className="bg-white border border-[#E2E8F0] rounded-xl p-5 mb-5">
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <div className="text-xs text-slate-400 mb-1">{TYPE_LABELS[pkg.type] ?? pkg.type}</div>
+            <h1 className="text-2xl font-bold text-[#042C53]">{pkg.nickname}</h1>
           </div>
-          <div className="text-3xl font-bold mb-1">{fmtCurrency(value)}</div>
-          <div className={`flex items-center gap-1 text-sm ${ret >= 0 ? "text-emerald-300" : "text-red-300"}`}>
-            {ret >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
-            {ret >= 0 ? "+" : ""}{fmtCurrency(Math.abs(ret))} ({ret >= 0 ? "+" : ""}{retPct.toFixed(2)}%) since inception
-          </div>
-          <div className="flex gap-4 mt-3 text-xs text-slate-400">
-            <span>Invested: {fmtCurrency(invested)}</span>
-            {pkg.monthlyAmount && <span>{fmtCurrency(parseFloat(pkg.monthlyAmount))}/month</span>}
-            {pkg.startDate && <span>Since {pkg.startDate}</span>}
-          </div>
+          <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${pkg.status === "active" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+            {pkg.status === "pending_setup" ? "Setting up" : pkg.status}
+          </span>
         </div>
-      </motion.div>
+        <div className="text-3xl font-bold text-[#042C53] mb-1">{fmtCurrency(value)}</div>
+        <div className={`flex items-center gap-1 text-sm ${ret >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+          {ret >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+          {ret >= 0 ? "+" : ""}{fmtCurrency(Math.abs(ret))} ({ret >= 0 ? "+" : ""}{retPct.toFixed(2)}%) since inception
+        </div>
+        <div className="flex gap-4 mt-3 text-xs text-slate-400">
+          <span>Invested: {fmtCurrency(invested)}</span>
+          {pkg.monthlyAmount && <span>{fmtCurrency(parseFloat(pkg.monthlyAmount))}/month</span>}
+          {pkg.startDate && <span>Since {pkg.startDate}</span>}
+        </div>
+      </div>
 
       <Tabs defaultValue="performance">
         <TabsList className="mb-4 w-full">
@@ -269,6 +266,7 @@ export default function PackageDetailPage() {
           )}
         </TabsContent>
       </Tabs>
-    </AppShell>
+      </div>
+    </ClientAppShell>
   );
 }

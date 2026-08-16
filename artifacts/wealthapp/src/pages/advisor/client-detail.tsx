@@ -10,10 +10,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import CurrencyInput from "@/components/CurrencyInput";
 import { useProfile } from "@/hooks/useProfile";
-import { ArrowLeft, Plus, Check, X, Edit2, Save, Send, MessageCircle } from "lucide-react";
+import { ArrowLeft, Plus, Check, X, Edit2, Save, Send, MessageCircle, TrendingUp } from "lucide-react";
 import { fmtCurrency } from "@/lib/portfolioCalculations";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import AdvisedPlanManager from "@/components/advisor/AdvisedPlanManager";
 
 interface ClientProfile {
   id: string;
@@ -281,6 +282,9 @@ export default function AdvisorClientDetail() {
           <TabsTrigger value="tasks">Tasks</TabsTrigger>
           <TabsTrigger value="messages">
             <MessageCircle className="h-3.5 w-3.5 mr-1" />Messages
+          </TabsTrigger>
+          <TabsTrigger value="investment-plans">
+            <TrendingUp className="h-3.5 w-3.5 mr-1" />Investment Plans
           </TabsTrigger>
           <TabsTrigger value="kyc">KYC</TabsTrigger>
         </TabsList>
@@ -740,6 +744,11 @@ export default function AdvisorClientDetail() {
               ))}
             </div>
           )}
+        </TabsContent>
+
+        {/* ── Investment Plans ── */}
+        <TabsContent value="investment-plans">
+          {profile && <AdvisedPlanManager clientId={profile.id} />}
         </TabsContent>
       </Tabs>
     </AppShell>

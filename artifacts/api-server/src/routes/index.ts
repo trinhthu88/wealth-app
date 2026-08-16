@@ -18,9 +18,11 @@ import blogRouter from "./blog";
 import notificationsRouter from "./notifications";
 import adminRouter from "./admin";
 import investmentsRouter from "./investments";
+import clientPortalRouter from "./clientPortal";
 
 const router: IRouter = Router();
 
+router.use(clientPortalRouter);
 router.use(healthRouter);
 router.use(profilesRouter);
 router.use(pathwayRouter);

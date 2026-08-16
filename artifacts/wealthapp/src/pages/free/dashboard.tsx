@@ -277,7 +277,7 @@ export default function FreeDashboard() {
                 className="relative overflow-hidden rounded-[16px] p-4"
                 style={{ background: "#E6F5EE", border: "1px solid rgba(29,158,117,0.2)" }}
               >
-                <button onClick={() => setPathwayDismissed(true)} className="absolute top-3 right-3" style={{ color: "#A8A095" }}><X className="h-4 w-4" /></button>
+                <button onClick={() => setPathwayDismissed(true)} className="absolute top-2 right-2 flex items-center justify-center" style={{ color: "#A8A095", minWidth: 36, minHeight: 36 }} aria-label="Dismiss pathway banner"><X className="h-4 w-4" /></button>
                 <div className="flex items-center gap-2 mb-2 pr-6">
                   <span style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 13, fontWeight: 600, color: "#0F6E56" }}>
                     {completedSteps} of 6 steps complete
@@ -302,52 +302,57 @@ export default function FreeDashboard() {
               style={{ boxShadow: "0 4px 14px rgba(15,23,42,0.06)", padding: 22 }}
             >
               <div className="flex justify-center">
-                <svg width={170} height={170} viewBox="0 0 170 170">
-                  <circle cx={85} cy={85} r={ringR} fill="none" stroke="#E6F5EE" strokeWidth={12} />
-                  <circle cx={85} cy={85} r={44} fill="#FAF8F5" />
-                  <circle
-                    cx={85} cy={85} r={ringR} fill="none"
-                    stroke={ringStroke} strokeWidth={12} strokeLinecap="round"
-                    strokeDasharray={ringCirc} strokeDashoffset={ringOffset}
-                    transform="rotate(-90 85 85)"
-                    style={{ transition: "stroke-dashoffset 0.8s ease-out" }}
-                  />
-                  <text x={85} y={72} textAnchor="middle" dominantBaseline="middle"
-                    fontFamily="'Sora', sans-serif" fontSize={38} fontWeight={800}
-                    fill="#042C53" letterSpacing={-1.5}>
-                    {scoreVal > 0 ? scoreVal : "—"}
-                  </text>
-                  <text x={85} y={88} textAnchor="middle"
-                    fontFamily="'JetBrains Mono', monospace" fontSize={8.5}
-                    fill="#A8A095" letterSpacing={2}>
-                    TALA SCORE
-                  </text>
-                  <text x={85} y={104} textAnchor="middle"
-                    fontFamily="'Plus Jakarta Sans', sans-serif" fontSize={12}
-                    fontWeight={600} fill={scoreStatusColor}>
-                    {scoreStatusText}
-                  </text>
-                </svg>
+                {score === undefined ? (
+                  /* Skeleton ring while loading */
+                  <svg width={170} height={170} viewBox="0 0 170 170">
+                    <circle cx={85} cy={85} r={ringR} fill="none" stroke="#E6F5EE" strokeWidth={12} />
+                    <circle cx={85} cy={85} r={44} fill="#FAF8F5" />
+                    <rect x={60} y={67} width={50} height={12} rx={6} fill="#E6E1D8" className="animate-pulse" />
+                    <rect x={68} y={84} width={34} height={8} rx={4} fill="#F2EFE9" className="animate-pulse" />
+                    <rect x={72} y={97} width={26} height={8} rx={4} fill="#F2EFE9" className="animate-pulse" />
+                  </svg>
+                ) : (
+                  <svg width={170} height={170} viewBox="0 0 170 170">
+                    <circle cx={85} cy={85} r={ringR} fill="none" stroke="#E6F5EE" strokeWidth={12} />
+                    <circle cx={85} cy={85} r={44} fill="#FAF8F5" />
+                    <circle
+                      cx={85} cy={85} r={ringR} fill="none"
+                      stroke={ringStroke} strokeWidth={12} strokeLinecap="round"
+                      strokeDasharray={ringCirc} strokeDashoffset={ringOffset}
+                      transform="rotate(-90 85 85)"
+                      style={{ transition: "stroke-dashoffset 0.8s ease-out" }}
+                    />
+                    <text x={85} y={72} textAnchor="middle" dominantBaseline="middle"
+                      fontFamily="'Sora', sans-serif" fontSize={38} fontWeight={800}
+                      fill="#042C53" letterSpacing={-1.5}>
+                      {scoreVal > 0 ? scoreVal : "—"}
+                    </text>
+                    <text x={85} y={88} textAnchor="middle"
+                      fontFamily="'JetBrains Mono', monospace" fontSize={9}
+                      fill="#A8A095" letterSpacing={2}>
+                      TALA SCORE
+                    </text>
+                    <text x={85} y={104} textAnchor="middle"
+                      fontFamily="'Plus Jakarta Sans', sans-serif" fontSize={12}
+                      fontWeight={600} fill={scoreStatusColor}>
+                      {scoreStatusText}
+                    </text>
+                  </svg>
+                )}
               </div>
-              {/* 3-col stats */}
-              <div className="grid grid-cols-3" style={{ borderTop: "1px solid #F2EFE9", paddingTop: 14 }}>
-                <div style={{ paddingRight: 12 }}>
-                  <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 15, fontWeight: 700, color: "#1D9E75" }}>
-                    {income > 0 || expenses > 0 ? fmt(Math.max(0, income - expenses)) : "—"}
-                  </p>
-                  <p style={{ fontSize: 10, color: "#A8A095", marginTop: 2 }}>Saved this month</p>
-                </div>
-                <div style={{ paddingLeft: 12, paddingRight: 12, borderLeft: "1px solid #F2EFE9", borderRight: "1px solid #F2EFE9" }}>
-                  <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 15, fontWeight: 700, color: "#042C53" }}>
+              {/* Stats: savings rate as primary, saved + net worth as secondary */}
+              <div style={{ borderTop: "1px solid #F2EFE9", paddingTop: 14 }}>
+                <div className="flex items-baseline justify-between mb-1">
+                  <p style={{ fontSize: 12, color: "#6B6459" }}>Savings rate this month</p>
+                  <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 18, fontWeight: 700, color: savingsRate > 0 ? "#1D9E75" : "#A8A095" }}>
                     {savingsRate > 0 ? `${savingsRate.toFixed(0)}%` : "—"}
                   </p>
-                  <p style={{ fontSize: 10, color: "#A8A095", marginTop: 2 }}>Savings rate</p>
                 </div>
-                <div style={{ paddingLeft: 12 }}>
-                  <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 15, fontWeight: 700, color: "#042C53" }}>
-                    {netWorth !== null ? fmt(netWorth) : "—"}
+                <div className="flex items-center justify-between">
+                  <p style={{ fontSize: 11, color: "#A8A095" }}>
+                    {income > 0 || expenses > 0 ? `Saved ${fmt(Math.max(0, income - expenses))}` : "No budget data yet"}
+                    {netWorth !== null ? ` · Net worth ${fmt(netWorth)}` : ""}
                   </p>
-                  <p style={{ fontSize: 10, color: "#A8A095", marginTop: 2 }}>Net worth</p>
                 </div>
               </div>
             </div>
@@ -395,7 +400,7 @@ export default function FreeDashboard() {
                   const eyebrowText = gStatus === "on_track" ? "ON TRACK" : gStatus === "almost" ? "AT RISK" : "OFF TRACK";
                   return (
                     <div key={g.id}>
-                      <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, letterSpacing: "0.14em", textTransform: "uppercase", color: eyebrowColor, marginBottom: 6 }}>
+                      <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.11em", textTransform: "uppercase", color: eyebrowColor, marginBottom: 6 }}>
                         {eyebrowText}
                       </p>
                       <GoalCard
@@ -413,7 +418,7 @@ export default function FreeDashboard() {
 
           {/* Budget summary */}
           <div className="bg-white rounded-[20px] p-4" style={{ boxShadow: "0 4px 14px rgba(15,23,42,0.06)" }}>
-            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, letterSpacing: "0.14em", textTransform: "uppercase", color: "#A8A095", marginBottom: 12 }}>
+            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.11em", textTransform: "uppercase", color: "#A8A095", marginBottom: 12 }}>
               This month's budget
             </p>
             <div className="grid grid-cols-2 gap-4 mb-3">
@@ -440,7 +445,7 @@ export default function FreeDashboard() {
 
           {/* Weekly tip */}
           <div>
-            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, letterSpacing: "0.14em", textTransform: "uppercase", color: "#A8A095", marginBottom: 8 }}>
+            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.11em", textTransform: "uppercase", color: "#A8A095", marginBottom: 8 }}>
               This week's insight
             </p>
             <div
@@ -449,7 +454,7 @@ export default function FreeDashboard() {
             >
               <Sol size="xs" animate="idle" showFace />
               <p style={{ fontSize: 13, color: "#0F6E56", lineHeight: 1.55, fontWeight: 500, flex: 1 }}>
-                "{weeklyTip.body}"
+                {weeklyTip.body}
               </p>
             </div>
           </div>
@@ -457,7 +462,7 @@ export default function FreeDashboard() {
           {/* Milestones */}
           {(earnedMilestones.length > 0 || !!newlyEarned) && (
             <div>
-              <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, letterSpacing: "0.14em", textTransform: "uppercase", color: "#A8A095", marginBottom: 8 }}>
+              <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.11em", textTransform: "uppercase", color: "#A8A095", marginBottom: 8 }}>
                 Your achievements
               </p>
               <MilestoneChips earnedKeys={earnedMilestones} newlyEarned={newlyEarned} />

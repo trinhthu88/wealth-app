@@ -1,4 +1,5 @@
 import { pgTable, text, integer, numeric, timestamp, uuid, date, boolean } from "drizzle-orm/pg-core";
+// NOTE: milestone_comments table requires SQL migration (see Prompt 8 Step 1)
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -21,6 +22,10 @@ export const clientProfilesTable = pgTable("client_profiles", {
   annualReviewDate: date("annual_review_date"),
   internalNotes: text("internal_notes"),
   advisorInternalNotes: text("advisor_internal_notes"),
+  // Track A = has an advised investment plan; Track B = self-managed only
+  clientTrack: text("client_track").notNull().default("track_b"),
+  preferredDisplayCurrency: text("preferred_display_currency").notNull().default("USD"),
+  onboardingTrackComplete: boolean("onboarding_track_complete").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
@@ -55,9 +60,22 @@ export const planMilestonesTable = pgTable("plan_milestones", {
   planId: uuid("plan_id").notNull(),
   title: text("title").notNull(),
   targetDate: date("target_date"),
+  completedDate: date("completed_date"),
+  linkedGoalId: uuid("linked_goal_id"),
   status: text("status").notNull().default("upcoming"),
   notes: text("notes"),
+  orderIndex: integer("order_index").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const milestoneCommentsTable = pgTable("milestone_comments", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  milestoneId: uuid("milestone_id").notNull(),
+  userId: text("user_id").notNull(),
+  authorRole: text("author_role").notNull().default("client"),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
 export const insertClientProfileSchema = createInsertSchema(clientProfilesTable).omit({ id: true, createdAt: true, updatedAt: true });
@@ -73,3 +91,4 @@ export type InsertFinancialPlan = z.infer<typeof insertFinancialPlanSchema>;
 export type FinancialPlan = typeof financialPlansTable.$inferSelect;
 export type InsertPlanMilestone = z.infer<typeof insertPlanMilestoneSchema>;
 export type PlanMilestone = typeof planMilestonesTable.$inferSelect;
+export type MilestoneComment = typeof milestoneCommentsTable.$inferSelect;

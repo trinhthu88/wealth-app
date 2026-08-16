@@ -91,21 +91,12 @@ router.post("/health-score", requireAuth, async (req, res): Promise<void> => {
   ]);
 
   // ── Shared values ──────────────────────────────────────────────────────────
-  // Income: prefer latest budget entry; fall back to pathway step 2 formData
-  const incomeFromBudget = lastBudget ? parseFloat(lastBudget.income ?? "0") : 0;
-  const pathwayStep2 = steps.find(s => s.stepNumber === 2);
-  const incomeFromPathway = pathwayStep2?.formData ? parseFloat(((pathwayStep2.formData as Record<string, unknown>)?.income as string | undefined) ?? "0") : 0;
-  const income = incomeFromBudget > 0 ? incomeFromBudget : incomeFromPathway;
+  // Income: only from latest budget entry — pathway formData is not used as a fallback
+  const income = lastBudget ? parseFloat(lastBudget.income ?? "0") : 0;
   const expenseKeys = ["housing", "food", "transport", "utilities", "entertainment", "other"] as const;
-  const totalExpensesFromBudget = lastBudget
+  const totalExpenses = lastBudget
     ? expenseKeys.reduce((s, k) => s + parseFloat((lastBudget as any)[k] ?? "0"), 0)
     : 0;
-  // Fallback: pathway step 3 formData has expense breakdowns if the budget entry lacks them
-  const pathwayStep3 = steps.find(s => s.stepNumber === 3);
-  const totalExpensesFromPathway = pathwayStep3?.formData
-    ? expenseKeys.reduce((s, k) => s + parseFloat(((pathwayStep3.formData as Record<string, unknown>)?.[k] as string | undefined) ?? "0"), 0)
-    : 0;
-  const totalExpenses = totalExpensesFromBudget > 0 ? totalExpensesFromBudget : totalExpensesFromPathway;
   const monthlyCashSaved = Math.max(0, income - totalExpenses);
 
   const totalAssetsVal = assets.reduce((s, a) => s + parseFloat(a.valueUsd ?? "0"), 0);
@@ -116,9 +107,10 @@ router.post("/health-score", requireAuth, async (req, res): Promise<void> => {
   const savRatePct = parseFloat(profile?.savingsRatePercent ?? "4.0");
   const invRatePct = parseFloat(profile?.investmentRatePercent ?? "7.0");
 
-  // Net worth: prefer categorised asset rows; fall back to profile totals (pathway saves here)
+  // Net worth: prefer categorised asset rows; fall back to profile totals
+  // Cash + Savings categories both count toward the savings/emergency-fund balance
   const assetsSavingsVal = assets
-    .filter(a => (a as any).category === "savings")
+    .filter(a => a.category === "savings" || a.category === "cash")
     .reduce((s, a) => s + parseFloat(a.valueUsd ?? "0"), 0);
   const assetsInvestVal = assets
     .filter(a => (a as any).category === "investment")
