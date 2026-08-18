@@ -128,8 +128,10 @@ export function scenarioMarketDrop(
     (currentPackages.reduce((sum, p) => sum + p.expectedAnnualReturn, 0) / Math.max(currentPackages.length, 1)) /
     100 /
     12;
+  // Recovering from a d% drop requires growing by a factor of 1/(1-d), not 1+d
+  // (e.g. a 50% drop needs a 100% gain to recover, not a 50% gain).
   const recoveryMonths =
-    avgMonthlyRate > 0 ? Math.log(1 + dropPercent / 100) / Math.log(1 + avgMonthlyRate) : 0;
+    avgMonthlyRate > 0 ? Math.log(1 / (1 - dropPercent / 100)) / Math.log(1 + avgMonthlyRate) : 0;
   return { ...result, recoveryMonths: Math.ceil(recoveryMonths), dollarLost: totalCurrentLost };
 }
 
