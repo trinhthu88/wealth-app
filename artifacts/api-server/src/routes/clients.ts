@@ -1,9 +1,43 @@
 import { Router, type IRouter } from "express";
 import { eq, inArray, desc } from "drizzle-orm";
 import { db, clientProfilesTable, profilesTable, clientPackagesTable, portfolioSnapshotsTable } from "@workspace/db";
-import { requireAuth } from "../middlewares/requireAuth";
+import { requireAuth, requireRole, requireAdvisorOwnsClient } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
+
+const advisorGuard = [requireAuth, requireRole("advisor", "super_admin")];
+const advisorOwnsClientGuard = [...advisorGuard, requireAdvisorOwnsClient("id")];
+
+// Explicit allowlist of client-profile fields an advisor may update through this endpoint.
+// advisorId, kycStatus, id, and any role/status field are intentionally excluded.
+const CLIENT_PROFILE_UPDATABLE_FIELDS = [
+  "riskProfile",
+  "riskScore",
+  "investmentStyle",
+  "indicativeAmount",
+  "preCallNotes",
+  "preferredContactTime",
+  "onboardingStep",
+  "prospectOnboardingComplete",
+  "fullOnboardingComplete",
+  "relationshipStartDate",
+  "annualReviewDate",
+  "internalNotes",
+  "advisorInternalNotes",
+  "clientTrack",
+  "preferredDisplayCurrency",
+  "onboardingTrackComplete",
+] as const;
+
+function pickUpdatableClientProfileFields(body: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const field of CLIENT_PROFILE_UPDATABLE_FIELDS) {
+    if (Object.prototype.hasOwnProperty.call(body, field)) {
+      result[field] = body[field];
+    }
+  }
+  return result;
+}
 
 router.get("/client-profile", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
@@ -12,34 +46,34 @@ router.get("/client-profile", requireAuth, async (req, res): Promise<void> => {
   res.json(cp);
 });
 
-router.get("/advisor/clients/:id/profile", requireAuth, async (req, res): Promise<void> => {
+router.get("/advisor/clients/:id/profile", ...advisorOwnsClientGuard, async (req, res): Promise<void> => {
   const id = req.params.id as string;
   const [profile] = await db.select().from(profilesTable).where(eq(profilesTable.id, id));
   if (!profile) { res.status(404).json({ error: "Not found" }); return; }
   res.json(profile);
 });
 
-router.get("/advisor/clients/:id/client-profile", requireAuth, async (req, res): Promise<void> => {
+router.get("/advisor/clients/:id/client-profile", ...advisorOwnsClientGuard, async (req, res): Promise<void> => {
   const id = req.params.id as string;
   const [cp] = await db.select().from(clientProfilesTable).where(eq(clientProfilesTable.userId, id));
   if (!cp) { res.status(404).json({ error: "Not found" }); return; }
   res.json(cp);
 });
 
-router.put("/advisor/clients/:id/client-profile", requireAuth, async (req, res): Promise<void> => {
+router.put("/advisor/clients/:id/client-profile", ...advisorOwnsClientGuard, async (req, res): Promise<void> => {
   const id = req.params.id as string;
-  const updates = req.body;
+  const updates = pickUpdatableClientProfileFields(req.body ?? {});
   const existing = await db.select().from(clientProfilesTable).where(eq(clientProfilesTable.userId, id));
   let cp;
   if (existing.length > 0) {
     [cp] = await db.update(clientProfilesTable).set({ ...updates, updatedAt: new Date() }).where(eq(clientProfilesTable.userId, id)).returning();
   } else {
-    [cp] = await db.insert(clientProfilesTable).values({ userId: id, ...updates }).returning();
+    [cp] = await db.insert(clientProfilesTable).values({ ...updates, userId: id }).returning();
   }
   res.json(cp);
 });
 
-router.get("/advisor/clients", requireAuth, async (req, res): Promise<void> => {
+router.get("/advisor/clients", ...advisorGuard, async (req, res): Promise<void> => {
   const callerId = (req as any).userId;
 
   // Check if caller is super_admin (sees all) or advisor (sees assigned)

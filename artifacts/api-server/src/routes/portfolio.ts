@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq, and } from "drizzle-orm";
 import { db, portfolioHoldingsTable } from "@workspace/db";
-import { requireAuth } from "../middlewares/requireAuth";
+import { requireAuth, requireRole, requireAdvisorOwnsClient } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
 
@@ -43,12 +43,12 @@ router.delete("/portfolio/:id", requireAuth, async (req, res): Promise<void> => 
   res.sendStatus(204);
 });
 
-router.get("/advisor/clients/:id/portfolio", requireAuth, async (req, res): Promise<void> => {
+router.get("/advisor/clients/:id/portfolio", requireAuth, requireRole("advisor", "super_admin"), requireAdvisorOwnsClient("id"), async (req, res): Promise<void> => {
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   res.json(await db.select().from(portfolioHoldingsTable).where(eq(portfolioHoldingsTable.userId, rawId)));
 });
 
-router.put("/advisor/clients/:id/portfolio", requireAuth, async (req, res): Promise<void> => {
+router.put("/advisor/clients/:id/portfolio", requireAuth, requireRole("advisor", "super_admin"), requireAdvisorOwnsClient("id"), async (req, res): Promise<void> => {
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const { holdings } = req.body;
   if (!Array.isArray(holdings)) { res.status(400).json({ error: "holdings array required" }); return; }

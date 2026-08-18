@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
 import { db, blogPostsTable } from "@workspace/db";
-import { requireAuth } from "../middlewares/requireAuth";
+import { requireAuth, requireRole } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
 
@@ -17,7 +17,7 @@ router.get("/blog/:slug", async (req, res): Promise<void> => {
   res.json(post);
 });
 
-router.post("/blog", requireAuth, async (req, res): Promise<void> => {
+router.post("/blog", requireAuth, requireRole("advisor", "super_admin"), async (req, res): Promise<void> => {
   const authorId = (req as any).userId;
   const { title, slug, excerpt, contentMarkdown, category, status, coverImageUrl } = req.body;
   if (!title || !slug) { res.status(400).json({ error: "title and slug required" }); return; }
@@ -30,7 +30,7 @@ router.post("/blog", requireAuth, async (req, res): Promise<void> => {
   res.status(201).json(post);
 });
 
-router.put("/blog/:id/admin", requireAuth, async (req, res): Promise<void> => {
+router.put("/blog/:id/admin", requireAuth, requireRole("advisor", "super_admin"), async (req, res): Promise<void> => {
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const { title, slug, excerpt, contentMarkdown, category, status, coverImageUrl } = req.body;
   const [updated] = await db.update(blogPostsTable).set({

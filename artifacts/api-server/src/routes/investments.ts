@@ -14,7 +14,7 @@ import {
   profilesTable,
 } from "@workspace/db";
 import { requireAuth } from "../middlewares/requireAuth";
-import { requireRole } from "../middlewares/requireAuth";
+import { requireRole, requireAdvisorOwnsClient, requirePackageReadAccess, requireAdvisorOwnsPackage } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
 
@@ -240,9 +240,26 @@ router.post("/packages", requireAuth, async (req, res): Promise<void> => {
   res.status(201).json(pkg);
 });
 
-router.put("/packages/:id", requireAuth, requireRole("advisor", "super_admin"), async (req, res): Promise<void> => {
+// Explicit allowlist of client_packages fields an advisor may update through this endpoint.
+// userId, advisorId, and id are intentionally excluded to prevent reassigning a package.
+const PACKAGE_UPDATABLE_FIELDS = [
+  "goalId", "nickname", "status", "type", "monthlyAmount", "lumpSumAmount",
+  "startDate", "endDate", "currency", "expectedAnnualReturn", "advisorNotes",
+] as const;
+
+function pickUpdatablePackageFields(body: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const field of PACKAGE_UPDATABLE_FIELDS) {
+    if (Object.prototype.hasOwnProperty.call(body, field)) {
+      result[field] = body[field];
+    }
+  }
+  return result;
+}
+
+router.put("/packages/:id", requireAuth, requireRole("advisor", "super_admin"), requireAdvisorOwnsPackage("id"), async (req, res): Promise<void> => {
   const id = req.params.id as string;
-  const updates = req.body;
+  const updates = pickUpdatablePackageFields(req.body ?? {});
   const [pkg] = await db.update(clientPackagesTable).set(updates).where(eq(clientPackagesTable.id, id)).returning();
   if (!pkg) { res.status(404).json({ error: "Not found" }); return; }
   res.json(pkg);
@@ -250,7 +267,7 @@ router.put("/packages/:id", requireAuth, requireRole("advisor", "super_admin"), 
 
 // ── Package Allocations (advisor manages) ────────────────────────────────────
 
-router.put("/packages/:id/allocations", requireAuth, requireRole("advisor", "super_admin"), async (req, res): Promise<void> => {
+router.put("/packages/:id/allocations", requireAuth, requireRole("advisor", "super_admin"), requireAdvisorOwnsPackage("id"), async (req, res): Promise<void> => {
   const advisorId = (req as any).userId;
   const id = req.params.id as string;
   const { allocations } = req.body;
@@ -289,7 +306,7 @@ router.put("/packages/:id/allocations", requireAuth, requireRole("advisor", "sup
 
 // ── Package Transactions (advisor enters) ────────────────────────────────────
 
-router.get("/packages/:id/transactions", requireAuth, async (req, res): Promise<void> => {
+router.get("/packages/:id/transactions", requireAuth, requirePackageReadAccess("id"), async (req, res): Promise<void> => {
   const id = req.params.id as string;
   const txs = await db.select({
     id: packageTransactionsTable.id,
@@ -308,7 +325,7 @@ router.get("/packages/:id/transactions", requireAuth, async (req, res): Promise<
   res.json(txs);
 });
 
-router.post("/packages/:id/transactions", requireAuth, requireRole("advisor", "super_admin"), async (req, res): Promise<void> => {
+router.post("/packages/:id/transactions", requireAuth, requireRole("advisor", "super_admin"), requireAdvisorOwnsPackage("id"), async (req, res): Promise<void> => {
   const createdBy = (req as any).userId;
   const clientPackageId = req.params.id as string;
   const { userId, fundId, transactionDate, transactionType, amountUsd, units, pricePerUnitUsd, notes } = req.body;
@@ -325,7 +342,7 @@ router.post("/packages/:id/transactions", requireAuth, requireRole("advisor", "s
 
 // ── Portfolio Snapshots ──────────────────────────────────────────────────────
 
-router.get("/packages/:id/snapshots", requireAuth, async (req, res): Promise<void> => {
+router.get("/packages/:id/snapshots", requireAuth, requirePackageReadAccess("id"), async (req, res): Promise<void> => {
   const id = req.params.id as string;
   const snapshots = await db.select().from(portfolioSnapshotsTable)
     .where(eq(portfolioSnapshotsTable.clientPackageId, id))
@@ -333,7 +350,7 @@ router.get("/packages/:id/snapshots", requireAuth, async (req, res): Promise<voi
   res.json(snapshots);
 });
 
-router.post("/packages/:id/snapshots", requireAuth, requireRole("advisor", "super_admin"), async (req, res): Promise<void> => {
+router.post("/packages/:id/snapshots", requireAuth, requireRole("advisor", "super_admin"), requireAdvisorOwnsPackage("id"), async (req, res): Promise<void> => {
   const clientPackageId = req.params.id as string;
   const { userId, snapshotDate, totalInvestedUsd, totalValueUsd, totalReturnPercent, fundBreakdown } = req.body;
   const existing = await db.select().from(portfolioSnapshotsTable)
@@ -406,7 +423,7 @@ router.put("/scenarios/:id", requireAuth, async (req, res): Promise<void> => {
 
 // ── Advisor: client packages view ────────────────────────────────────────────
 
-router.get("/advisor/clients/:clientId/packages", requireAuth, requireRole("advisor", "super_admin"), async (req, res): Promise<void> => {
+router.get("/advisor/clients/:clientId/packages", requireAuth, requireRole("advisor", "super_admin"), requireAdvisorOwnsClient("clientId"), async (req, res): Promise<void> => {
   const clientId = req.params.clientId as string;
   const packages = await db.select().from(clientPackagesTable)
     .where(eq(clientPackagesTable.userId, clientId))
@@ -430,7 +447,7 @@ router.get("/advisor/clients/:clientId/packages", requireAuth, requireRole("advi
   res.json(result);
 });
 
-router.get("/advisor/clients/:clientId/transactions", requireAuth, requireRole("advisor", "super_admin"), async (req, res): Promise<void> => {
+router.get("/advisor/clients/:clientId/transactions", requireAuth, requireRole("advisor", "super_admin"), requireAdvisorOwnsClient("clientId"), async (req, res): Promise<void> => {
   const clientId = req.params.clientId as string;
   const txs = await db.select({
     id: packageTransactionsTable.id,

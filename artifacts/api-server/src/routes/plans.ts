@@ -1,9 +1,16 @@
 import { Router, type IRouter } from "express";
 import { eq, or } from "drizzle-orm";
 import { db, financialPlansTable, planMilestonesTable } from "@workspace/db";
-import { requireAuth } from "../middlewares/requireAuth";
+import { requireAuth, requireRole, requireAdvisorOwnsClient } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
+
+async function isSuperAdmin(userId: string): Promise<boolean> {
+  const { db, profilesTable } = await import("@workspace/db");
+  const { eq } = await import("drizzle-orm");
+  const [profile] = await db.select({ role: profilesTable.role }).from(profilesTable).where(eq(profilesTable.id, userId));
+  return profile?.role === "super_admin";
+}
 
 router.get("/plans", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
@@ -13,14 +20,26 @@ router.get("/plans", requireAuth, async (req, res): Promise<void> => {
 });
 
 router.get("/plans/:id", requireAuth, async (req, res): Promise<void> => {
+  const userId = (req as any).userId;
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const [plan] = await db.select().from(financialPlansTable).where(eq(financialPlansTable.id, rawId));
   if (!plan) { res.status(404).json({ error: "Not found" }); return; }
+  if (plan.clientId !== userId && plan.advisorId !== userId && !(await isSuperAdmin(userId))) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
   res.json(plan);
 });
 
 router.put("/plans/:id", requireAuth, async (req, res): Promise<void> => {
+  const userId = (req as any).userId;
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const [existing] = await db.select().from(financialPlansTable).where(eq(financialPlansTable.id, rawId));
+  if (!existing) { res.status(404).json({ error: "Not found" }); return; }
+  if (existing.advisorId !== userId && !(await isSuperAdmin(userId))) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
   const { title, status, planData, nextReviewDate } = req.body;
   const [updated] = await db.update(financialPlansTable).set({
     title, status, planData: planData ?? null, nextReviewDate: nextReviewDate ?? null, updatedAt: new Date(),
@@ -30,12 +49,26 @@ router.put("/plans/:id", requireAuth, async (req, res): Promise<void> => {
 });
 
 router.get("/plans/:id/milestones", requireAuth, async (req, res): Promise<void> => {
+  const userId = (req as any).userId;
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const [plan] = await db.select().from(financialPlansTable).where(eq(financialPlansTable.id, rawId));
+  if (!plan) { res.status(404).json({ error: "Not found" }); return; }
+  if (plan.clientId !== userId && plan.advisorId !== userId && !(await isSuperAdmin(userId))) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
   res.json(await db.select().from(planMilestonesTable).where(eq(planMilestonesTable.planId, rawId)));
 });
 
 router.post("/plans/:id/milestones", requireAuth, async (req, res): Promise<void> => {
+  const userId = (req as any).userId;
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const [plan] = await db.select().from(financialPlansTable).where(eq(financialPlansTable.id, rawId));
+  if (!plan) { res.status(404).json({ error: "Not found" }); return; }
+  if (plan.advisorId !== userId && !(await isSuperAdmin(userId))) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
   const { title, targetDate, status, notes } = req.body;
   if (!title) { res.status(400).json({ error: "title required" }); return; }
   const [m] = await db.insert(planMilestonesTable).values({
@@ -44,14 +77,14 @@ router.post("/plans/:id/milestones", requireAuth, async (req, res): Promise<void
   res.status(201).json(m);
 });
 
-router.get("/advisor/clients/:id/plan", requireAuth, async (req, res): Promise<void> => {
+router.get("/advisor/clients/:id/plan", requireAuth, requireRole("advisor", "super_admin"), requireAdvisorOwnsClient("id"), async (req, res): Promise<void> => {
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const [plan] = await db.select().from(financialPlansTable).where(eq(financialPlansTable.clientId, rawId));
   if (!plan) { res.status(404).json({ error: "No plan" }); return; }
   res.json(plan);
 });
 
-router.post("/advisor/clients/:id/plan", requireAuth, async (req, res): Promise<void> => {
+router.post("/advisor/clients/:id/plan", requireAuth, requireRole("advisor", "super_admin"), requireAdvisorOwnsClient("id"), async (req, res): Promise<void> => {
   const advisorId = (req as any).userId;
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const { title, status, planData, nextReviewDate } = req.body;

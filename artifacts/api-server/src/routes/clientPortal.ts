@@ -8,7 +8,7 @@ import {
   financialPlansTable, planMilestonesTable, milestoneCommentsTable,
   conversationsTable, messagesTable,
 } from "@workspace/db";
-import { requireAuth } from "../middlewares/requireAuth";
+import { requireAuth, requireRole, requireAdvisorOwnsClient } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
 
@@ -111,7 +111,7 @@ router.get("/client/advised-plans", requireAuth, async (req, res): Promise<void>
 });
 
 // Advisor route: create/update advised plan
-router.post("/advisor/clients/:id/advised-plans", requireAuth, async (req, res): Promise<void> => {
+router.post("/advisor/clients/:id/advised-plans", requireAuth, requireRole("advisor", "super_admin"), requireAdvisorOwnsClient("id"), async (req, res): Promise<void> => {
   const advisorId = (req as any).userId;
   const userId = req.params.id as string;
   const {
@@ -149,7 +149,7 @@ router.post("/advisor/clients/:id/advised-plans", requireAuth, async (req, res):
 });
 
 // ── Advisor: list plans for a client ─────────────────────────────────────
-router.get("/advisor/clients/:id/advised-plans", requireAuth, async (req, res): Promise<void> => {
+router.get("/advisor/clients/:id/advised-plans", requireAuth, requireRole("advisor", "super_admin"), requireAdvisorOwnsClient("id"), async (req, res): Promise<void> => {
   const userId = req.params.id as string;
   const plans = await db.select().from(advisedPlansTable)
     .where(eq(advisedPlansTable.userId, userId))
@@ -158,7 +158,7 @@ router.get("/advisor/clients/:id/advised-plans", requireAuth, async (req, res): 
 });
 
 // ── Advisor: get statements for a plan ───────────────────────────────────
-router.get("/advisor/clients/:clientId/advised-plans/:planId/statements", requireAuth, async (req, res): Promise<void> => {
+router.get("/advisor/clients/:clientId/advised-plans/:planId/statements", requireAuth, requireRole("advisor", "super_admin"), requireAdvisorOwnsClient("clientId"), async (req, res): Promise<void> => {
   const planId = req.params.planId as string;
   const stmts = await db.select().from(advisedPlanStatementsTable)
     .where(eq(advisedPlanStatementsTable.advisedPlanId, planId))
@@ -189,7 +189,7 @@ router.get("/client/advised-plans/:planId/statements/:stmtId/holdings", requireA
 });
 
 // ── Advisor: add statement + holdings + transactions ──────────────────────
-router.post("/advisor/clients/:clientId/advised-plans/:planId/statements", requireAuth, async (req, res): Promise<void> => {
+router.post("/advisor/clients/:clientId/advised-plans/:planId/statements", requireAuth, requireRole("advisor", "super_admin"), requireAdvisorOwnsClient("clientId"), async (req, res): Promise<void> => {
   const advisorId = (req as any).userId;
   const planId = req.params.planId as string;
   const clientId = req.params.clientId as string;

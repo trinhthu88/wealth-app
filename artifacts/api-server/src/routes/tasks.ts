@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq, and } from "drizzle-orm";
 import { db, advisorTasksTable } from "@workspace/db";
-import { requireAuth } from "../middlewares/requireAuth";
+import { requireAuth, requireRole, requireAdvisorOwnsClient } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
 
@@ -41,7 +41,7 @@ router.delete("/tasks/:id", requireAuth, async (req, res): Promise<void> => {
   res.sendStatus(204);
 });
 
-router.get("/advisor/clients/:id/tasks", requireAuth, async (req, res): Promise<void> => {
+router.get("/advisor/clients/:id/tasks", requireAuth, requireRole("advisor", "super_admin"), requireAdvisorOwnsClient("id"), async (req, res): Promise<void> => {
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   res.json(await db.select().from(advisorTasksTable).where(eq(advisorTasksTable.clientId, rawId)));
 });

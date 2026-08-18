@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq, and } from "drizzle-orm";
 import { db, financialGoalsTable, profilesTable, goalHoldingLinksTable } from "@workspace/db";
-import { requireAuth } from "../middlewares/requireAuth";
+import { requireAuth, requireRole, requireAdvisorOwnsClient } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
 
@@ -115,7 +115,7 @@ router.post("/goals/upsert-from-pathway", requireAuth, async (req, res): Promise
   }
 });
 
-router.get("/advisor/clients/:id/goals", requireAuth, async (req, res): Promise<void> => {
+router.get("/advisor/clients/:id/goals", requireAuth, requireRole("advisor", "super_admin"), requireAdvisorOwnsClient("id"), async (req, res): Promise<void> => {
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const goals = await db.select().from(financialGoalsTable).where(eq(financialGoalsTable.userId, rawId));
   res.json(goals);
