@@ -24,7 +24,7 @@ export const financialGoalsTable = pgTable("financial_goals", {
 export const goalHoldingLinksTable = pgTable("goal_holding_links", {
   id: uuid("id").primaryKey().defaultRandom(),
   goalId: uuid("goal_id").notNull().references(() => financialGoalsTable.id, { onDelete: "cascade" }),
-  userId: uuid("user_id").notNull().references(() => profilesTable.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull().references(() => profilesTable.id, { onDelete: "cascade" }),
   sourceType: text("source_type").notNull(), // 'advised_plan' | 'self_holding'
   sourceId: uuid("source_id").notNull(),
   allocationPct: numeric("allocation_pct").notNull().default("100"),
