@@ -35,6 +35,13 @@ export function requireRole(...roles: string[]) {
   };
 }
 
+export async function isSuperAdmin(userId: string): Promise<boolean> {
+  const { db, profilesTable } = await import("@workspace/db");
+  const { eq } = await import("drizzle-orm");
+  const [profile] = await db.select({ role: profilesTable.role }).from(profilesTable).where(eq(profilesTable.id, userId));
+  return profile?.role === "super_admin";
+}
+
 /**
  * Must run after requireAuth + requireRole("advisor", "super_admin"). Verifies the
  * caller is either super_admin, or the advisor assigned to the client identified by
@@ -86,6 +93,8 @@ export function requirePackageReadAccess(paramName: string = "id") {
       .select({ userId: clientPackagesTable.userId })
       .from(clientPackagesTable)
       .where(eq(clientPackagesTable.id, packageId));
+    // A nonexistent package and one the caller can't access both 404, so an
+    // unauthorized caller can't use the response to enumerate valid package IDs.
     if (!pkg) {
       res.status(404).json({ error: "Not found" });
       return;
@@ -107,7 +116,7 @@ export function requirePackageReadAccess(paramName: string = "id") {
       next();
       return;
     }
-    res.status(403).json({ error: "Forbidden" });
+    res.status(404).json({ error: "Not found" });
   };
 }
 
@@ -131,6 +140,8 @@ export function requireAdvisorOwnsPackage(paramName: string = "id") {
       .select({ userId: clientPackagesTable.userId })
       .from(clientPackagesTable)
       .where(eq(clientPackagesTable.id, packageId));
+    // A nonexistent package and one the caller can't manage both 404, so an
+    // unauthorized caller can't use the response to enumerate valid package IDs.
     if (!pkg) {
       res.status(404).json({ error: "Not found" });
       return;
@@ -144,7 +155,7 @@ export function requireAdvisorOwnsPackage(paramName: string = "id") {
       .from(clientProfilesTable)
       .where(eq(clientProfilesTable.userId, pkg.userId));
     if (!cp || cp.advisorId !== userId) {
-      res.status(403).json({ error: "Forbidden" });
+      res.status(404).json({ error: "Not found" });
       return;
     }
     next();

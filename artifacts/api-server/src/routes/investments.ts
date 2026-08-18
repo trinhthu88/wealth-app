@@ -13,8 +13,7 @@ import {
   clientProfilesTable,
   profilesTable,
 } from "@workspace/db";
-import { requireAuth } from "../middlewares/requireAuth";
-import { requireRole, requireAdvisorOwnsClient, requirePackageReadAccess, requireAdvisorOwnsPackage } from "../middlewares/requireAuth";
+import { requireAuth, requireRole, requireAdvisorOwnsClient, requirePackageReadAccess, requireAdvisorOwnsPackage } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
 
@@ -112,6 +111,29 @@ router.post("/client-financial-snapshot", requireAuth, async (req, res): Promise
 
 // ── Client Profile (extended for investment portal) ──────────────────────────
 
+// Explicit allowlist of client_profiles fields a client may set about themselves
+// through the self-service endpoint. advisorId, kycStatus, id, internal advisor
+// notes, and other advisor/admin-only fields are intentionally excluded.
+const SELF_SERVICE_CLIENT_PROFILE_FIELDS = [
+  "riskProfile",
+  "riskScore",
+  "investmentStyle",
+  "indicativeAmount",
+  "onboardingStep",
+  "prospectOnboardingComplete",
+  "status",
+] as const;
+
+function pickSelfServiceClientProfileFields(body: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const field of SELF_SERVICE_CLIENT_PROFILE_FIELDS) {
+    if (Object.prototype.hasOwnProperty.call(body, field)) {
+      result[field] = body[field];
+    }
+  }
+  return result;
+}
+
 router.get("/client-profile/me", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
   const [cp] = await db.select().from(clientProfilesTable).where(eq(clientProfilesTable.userId, userId));
@@ -126,13 +148,13 @@ router.get("/client-profile/me", requireAuth, async (req, res): Promise<void> =>
 
 router.put("/client-profile/me", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
-  const updates = req.body;
+  const updates = pickSelfServiceClientProfileFields(req.body ?? {});
   const existing = await db.select().from(clientProfilesTable).where(eq(clientProfilesTable.userId, userId));
   let cp;
   if (existing.length > 0) {
-    [cp] = await db.update(clientProfilesTable).set(updates).where(eq(clientProfilesTable.userId, userId)).returning();
+    [cp] = await db.update(clientProfilesTable).set({ ...updates, updatedAt: new Date() }).where(eq(clientProfilesTable.userId, userId)).returning();
   } else {
-    [cp] = await db.insert(clientProfilesTable).values({ userId, ...updates }).returning();
+    [cp] = await db.insert(clientProfilesTable).values({ ...updates, userId }).returning();
   }
   res.json(cp);
 });
@@ -199,7 +221,8 @@ router.post("/packages", requireAuth, async (req, res): Promise<void> => {
 
   // Look up caller role to decide whether they are an advisor or client
   const [callerProfile] = await db.select({ role: profilesTable.role }).from(profilesTable).where(eq(profilesTable.id, callerId));
-  const isAdvisor = callerProfile?.role === "advisor" || callerProfile?.role === "super_admin";
+  const isSuperAdmin = callerProfile?.role === "super_admin";
+  const isAdvisor = callerProfile?.role === "advisor" || isSuperAdmin;
 
   // Advisors supply a userId in the body; clients create for themselves
   const userId = isAdvisor ? req.body.userId : callerId;
@@ -207,6 +230,14 @@ router.post("/packages", requireAuth, async (req, res): Promise<void> => {
 
   const { goalId, nickname, type, monthlyAmount, lumpSumAmount, startDate, endDate, currency, expectedAnnualReturn, advisorNotes, allocations } = req.body;
   if (!userId || !nickname || !type) { res.status(400).json({ error: "userId, nickname, type required" }); return; }
+
+  if (isAdvisor && !isSuperAdmin) {
+    const [clientProfile] = await db.select({ advisorId: clientProfilesTable.advisorId }).from(clientProfilesTable).where(eq(clientProfilesTable.userId, userId));
+    if (!clientProfile || clientProfile.advisorId !== callerId) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+  }
 
   const [pkg] = await db.insert(clientPackagesTable).values({
     userId, advisorId, goalId, nickname, type, monthlyAmount, lumpSumAmount,

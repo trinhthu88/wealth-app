@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import request from "supertest";
 
 // Simulate different logged-in Clerk users per-request via a test-only header,
@@ -9,7 +9,7 @@ vi.mock("@clerk/express", () => ({
 }));
 
 const { default: app } = await import("../../app");
-const { db, profilesTable, clientProfilesTable } = await import("@workspace/db");
+const { db, profilesTable, clientProfilesTable, clientPackagesTable, portfolioSnapshotsTable } = await import("@workspace/db");
 const { eq } = await import("drizzle-orm");
 
 const RUN_ID = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -23,6 +23,12 @@ const testUserIds = [advisorA, advisorB, superAdmin, freeUser, client1];
 
 function asUser(userId: string) {
   return { "x-test-user-id": userId };
+}
+
+async function deleteClient1Packages() {
+  // Portfolio snapshots FK-reference client_packages, so they must go first.
+  await db.delete(portfolioSnapshotsTable).where(eq(portfolioSnapshotsTable.userId, client1));
+  await db.delete(clientPackagesTable).where(eq(clientPackagesTable.userId, client1));
 }
 
 beforeAll(async () => {
@@ -42,6 +48,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  await deleteClient1Packages();
   await db.delete(clientProfilesTable).where(eq(clientProfilesTable.userId, client1));
   for (const id of testUserIds) {
     await db.delete(profilesTable).where(eq(profilesTable.id, id));
@@ -120,5 +127,51 @@ describe("advisor client-profile access control", () => {
     const [cp] = await db.select().from(clientProfilesTable).where(eq(clientProfilesTable.userId, client1));
     expect(cp.advisorId).toBe(advisorA);
     expect(cp.kycStatus).toBe("not_started");
+  });
+});
+
+describe("self-service client-profile mass assignment", () => {
+  it("ignores mass-assigned advisorId/kycStatus/status on PUT /client-profile/me", async () => {
+    const res = await request(app)
+      .put("/api/client-profile/me")
+      .set(asUser(client1))
+      .send({ riskProfile: "growth", advisorId: advisorB, kycStatus: "verified", status: "active" })
+      .expect(200);
+
+    expect(res.body.riskProfile).toBe("growth");
+    expect(res.body.advisorId).toBe(advisorA);
+    expect(res.body.kycStatus).toBe("not_started");
+
+    const [cp] = await db.select().from(clientProfilesTable).where(eq(clientProfilesTable.userId, client1));
+    expect(cp.advisorId).toBe(advisorA);
+    expect(cp.kycStatus).toBe("not_started");
+  });
+});
+
+describe("POST /packages advisor ownership", () => {
+  afterEach(deleteClient1Packages);
+
+  it("403s an advisor creating a package for a client they don't own", async () => {
+    await request(app)
+      .post("/api/packages")
+      .set(asUser(advisorB))
+      .send({ userId: client1, nickname: "Rogue Package", type: "rsp" })
+      .expect(403);
+  });
+
+  it("allows the assigned advisor to create a package for their client", async () => {
+    await request(app)
+      .post("/api/packages")
+      .set(asUser(advisorA))
+      .send({ userId: client1, nickname: "Legit Package", type: "rsp" })
+      .expect(201);
+  });
+
+  it("allows super_admin to create a package for any client", async () => {
+    await request(app)
+      .post("/api/packages")
+      .set(asUser(superAdmin))
+      .send({ userId: client1, nickname: "Admin-created Package", type: "rsp" })
+      .expect(201);
   });
 });

@@ -1,16 +1,9 @@
 import { Router, type IRouter } from "express";
 import { eq, or } from "drizzle-orm";
 import { db, financialPlansTable, planMilestonesTable } from "@workspace/db";
-import { requireAuth, requireRole, requireAdvisorOwnsClient } from "../middlewares/requireAuth";
+import { requireAuth, requireRole, requireAdvisorOwnsClient, isSuperAdmin } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
-
-async function isSuperAdmin(userId: string): Promise<boolean> {
-  const { db, profilesTable } = await import("@workspace/db");
-  const { eq } = await import("drizzle-orm");
-  const [profile] = await db.select({ role: profilesTable.role }).from(profilesTable).where(eq(profilesTable.id, userId));
-  return profile?.role === "super_admin";
-}
 
 router.get("/plans", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
