@@ -4,6 +4,7 @@ import { apiFetch } from "@/lib/api";
 import CurrencyDisplay from "@/components/client/CurrencyDisplay";
 import AdvisedPlanCardFull from "./AdvisedPlanCard";
 import StatementHistoryDrawer from "./StatementHistoryDrawer";
+import PackageSection from "./PackageSection";
 import type { AdvisedPlan, AdvisedPlanStatement, AdvisedPlanHolding } from "@/hooks/useAdvisedPlans";
 
 interface Props {
@@ -54,14 +55,17 @@ export default function AdvisedPlanSection({ plans, advisorName }: Props) {
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-base font-semibold text-[#042C53]">Advised investment plans</p>
+          <p className="text-base font-semibold text-[#042C53]">Managed by your advisor</p>
           {advisorName && <p className="text-xs text-slate-500">Managed by {advisorName}</p>}
         </div>
-        <p className="text-sm font-semibold text-[#042C53]">
-          <CurrencyDisplay amountUsd={totalValue} compact />
-        </p>
+        {totalValue > 0 && (
+          <p className="text-sm font-semibold text-[#042C53]">
+            <CurrencyDisplay amountUsd={totalValue} compact />
+          </p>
+        )}
       </div>
       {plans.map(plan => <PlanWithDrawer key={plan.id} plan={plan} />)}
+      <PackageSection />
     </div>
   );
 }

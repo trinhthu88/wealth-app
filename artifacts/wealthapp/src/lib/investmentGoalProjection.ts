@@ -1,3 +1,9 @@
+// calculateInvestmentGoalProjection is used by the "bring under management" comparison
+// (BringUnderManagementCompare) to project a single self-tracked holding forward under
+// two different assumed returns. The scenario-planner UI (ClientScenarios) does NOT use
+// this file — it uses lib/investmentCalculations.ts's chart-trajectory engine instead,
+// including the corrected market-drop recovery formula (calcMarketDropRecoveryMonths).
+
 export interface PackageInput {
   currentValueUsd: number;
   monthlyContribution: number;
@@ -89,72 +95,3 @@ export function calculateInvestmentGoalProjection(
   };
 }
 
-export function scenarioIncreaseMonthly(
-  currentPackages: PackageInput[],
-  additionalMonthly: number,
-  targetAmount: number,
-  targetDate: string,
-) {
-  const enhanced = currentPackages.map((pkg, i) =>
-    i === 0 ? { ...pkg, monthlyContribution: pkg.monthlyContribution + additionalMonthly } : pkg,
-  );
-  return calculateInvestmentGoalProjection(targetAmount, targetDate, enhanced);
-}
-
-export function scenarioAddLumpSum(
-  currentPackages: PackageInput[],
-  lumpSumAmount: number,
-  targetAmount: number,
-  targetDate: string,
-) {
-  const enhanced = currentPackages.map((pkg, i) =>
-    i === 0 ? { ...pkg, currentValueUsd: pkg.currentValueUsd + lumpSumAmount } : pkg,
-  );
-  return calculateInvestmentGoalProjection(targetAmount, targetDate, enhanced);
-}
-
-export function scenarioMarketDrop(
-  currentPackages: PackageInput[],
-  dropPercent: number,
-  targetAmount: number,
-  targetDate: string,
-) {
-  const factor = 1 - dropPercent / 100;
-  const dropped = currentPackages.map((pkg) => ({ ...pkg, currentValueUsd: pkg.currentValueUsd * factor }));
-  const result = calculateInvestmentGoalProjection(targetAmount, targetDate, dropped);
-  const totalCurrentLost =
-    currentPackages.reduce((sum, p) => sum + p.currentValueUsd, 0) * (dropPercent / 100);
-  const avgMonthlyRate =
-    (currentPackages.reduce((sum, p) => sum + p.expectedAnnualReturn, 0) / Math.max(currentPackages.length, 1)) /
-    100 /
-    12;
-  // Recovering from a d% drop requires growing by a factor of 1/(1-d), not 1+d
-  // (e.g. a 50% drop needs a 100% gain to recover, not a 50% gain).
-  const recoveryMonths =
-    avgMonthlyRate > 0 ? Math.log(1 / (1 - dropPercent / 100)) / Math.log(1 + avgMonthlyRate) : 0;
-  return { ...result, recoveryMonths: Math.ceil(recoveryMonths), dollarLost: totalCurrentLost };
-}
-
-export function scenarioPauseContributions(
-  currentPackages: PackageInput[],
-  pauseMonths: number,
-  targetAmount: number,
-  targetDate: string,
-) {
-  const paused = currentPackages.map((pkg) => ({ ...pkg, monthlyContribution: 0 }));
-  const pausedResult = calculateInvestmentGoalProjection(targetAmount, targetDate, paused);
-  const normalResult = calculateInvestmentGoalProjection(targetAmount, targetDate, currentPackages);
-  const pauseCost = normalResult.totalProjectedValue - pausedResult.totalProjectedValue;
-  const goalDelayMonths = pausedResult.onTrack
-    ? 0
-    : Math.ceil(pausedResult.projectedShortfall / (normalResult.totalMonthlyContribution || 1));
-  return { ...pausedResult, pauseCost, goalDelayMonths };
-}
-
-export function scenarioEarlierGoal(
-  currentPackages: PackageInput[],
-  newTargetDate: string,
-  targetAmount: number,
-) {
-  return calculateInvestmentGoalProjection(targetAmount, newTargetDate, currentPackages);
-}

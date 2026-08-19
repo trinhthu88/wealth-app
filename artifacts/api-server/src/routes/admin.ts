@@ -1,6 +1,9 @@
 import { Router, type IRouter } from "express";
 import { eq, inArray, desc } from "drizzle-orm";
-import { db, profilesTable, clientProfilesTable, clientPackagesTable, portfolioSnapshotsTable } from "@workspace/db";
+import {
+  db, profilesTable, clientProfilesTable, clientPackagesTable, portfolioSnapshotsTable,
+  assetClassBenchmarksTable, advisedStrategyReturnsTable,
+} from "@workspace/db";
 import { requireAuth, requireRole } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
@@ -220,6 +223,85 @@ router.get("/admin/stats", ...adminGuard, async (req, res): Promise<void> => {
     return acc;
   }, {});
   res.json({ totalUsers: users.length, byRole });
+});
+
+// ── Admin: asset class benchmarks (expected-return defaults for self-tracked holdings) ────
+
+const ASSET_CLASSES = ["us_equity", "global_equity", "crypto", "global_property", "pension_balanced", "other"];
+
+router.get("/admin/asset-class-benchmarks", ...adminGuard, async (req, res): Promise<void> => {
+  const rows = await db.select().from(assetClassBenchmarksTable).orderBy(assetClassBenchmarksTable.assetClass);
+  res.json(rows);
+});
+
+router.post("/admin/asset-class-benchmarks", ...adminGuard, async (req, res): Promise<void> => {
+  const { assetClass, label, tenYearCagrPct, source } = req.body;
+  if (!ASSET_CLASSES.includes(assetClass) || !label || tenYearCagrPct == null) {
+    res.status(400).json({ error: `assetClass (one of ${ASSET_CLASSES.join(", ")}), label, and tenYearCagrPct required` });
+    return;
+  }
+  const [row] = await db.insert(assetClassBenchmarksTable).values({
+    assetClass, label, tenYearCagrPct: String(tenYearCagrPct), source: source ?? null,
+  }).returning();
+  res.status(201).json(row);
+});
+
+router.put("/admin/asset-class-benchmarks/:id", ...adminGuard, async (req, res): Promise<void> => {
+  const id = req.params.id as string;
+  const { label, tenYearCagrPct, source } = req.body;
+  const [row] = await db.update(assetClassBenchmarksTable).set({
+    ...(label !== undefined ? { label } : {}),
+    ...(tenYearCagrPct !== undefined ? { tenYearCagrPct: String(tenYearCagrPct) } : {}),
+    ...(source !== undefined ? { source } : {}),
+    updatedAt: new Date(),
+  }).where(eq(assetClassBenchmarksTable.id, id)).returning();
+  if (!row) { res.status(404).json({ error: "Not found" }); return; }
+  res.json(row);
+});
+
+router.delete("/admin/asset-class-benchmarks/:id", ...adminGuard, async (req, res): Promise<void> => {
+  const id = req.params.id as string;
+  await db.delete(assetClassBenchmarksTable).where(eq(assetClassBenchmarksTable.id, id));
+  res.sendStatus(204);
+});
+
+// ── Admin: advised strategy target returns (for "bring under management" comparison) ─────
+
+const PLAN_TYPES = ["rsp", "lump_sum", "combination"];
+
+router.get("/admin/advised-strategy-returns", ...adminGuard, async (req, res): Promise<void> => {
+  const rows = await db.select().from(advisedStrategyReturnsTable).orderBy(advisedStrategyReturnsTable.planType);
+  res.json(rows);
+});
+
+router.post("/admin/advised-strategy-returns", ...adminGuard, async (req, res): Promise<void> => {
+  const { planType, label, targetAnnualReturnPct } = req.body;
+  if (!PLAN_TYPES.includes(planType) || !label || targetAnnualReturnPct == null) {
+    res.status(400).json({ error: `planType (one of ${PLAN_TYPES.join(", ")}), label, and targetAnnualReturnPct required` });
+    return;
+  }
+  const [row] = await db.insert(advisedStrategyReturnsTable).values({
+    planType, label, targetAnnualReturnPct: String(targetAnnualReturnPct),
+  }).returning();
+  res.status(201).json(row);
+});
+
+router.put("/admin/advised-strategy-returns/:id", ...adminGuard, async (req, res): Promise<void> => {
+  const id = req.params.id as string;
+  const { label, targetAnnualReturnPct } = req.body;
+  const [row] = await db.update(advisedStrategyReturnsTable).set({
+    ...(label !== undefined ? { label } : {}),
+    ...(targetAnnualReturnPct !== undefined ? { targetAnnualReturnPct: String(targetAnnualReturnPct) } : {}),
+    updatedAt: new Date(),
+  }).where(eq(advisedStrategyReturnsTable.id, id)).returning();
+  if (!row) { res.status(404).json({ error: "Not found" }); return; }
+  res.json(row);
+});
+
+router.delete("/admin/advised-strategy-returns/:id", ...adminGuard, async (req, res): Promise<void> => {
+  const id = req.params.id as string;
+  await db.delete(advisedStrategyReturnsTable).where(eq(advisedStrategyReturnsTable.id, id));
+  res.sendStatus(204);
 });
 
 export default router;

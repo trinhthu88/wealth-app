@@ -4,9 +4,8 @@ import { UserButton } from "@clerk/react";
 import { useProfile } from "@/hooks/useProfile";
 import { cn } from "@/lib/utils";
 import {
-  LayoutDashboard, PieChart, Calculator, Target, TrendingUp,
-  Wallet, Map, MessageSquare, FolderOpen, Menu, X, ChevronLeft, ChevronRight,
-  Package2, Receipt,
+  LayoutDashboard, PieChart, Calculator, Target,
+  Wallet, MessageSquare, FolderOpen, Menu, X, ChevronLeft, ChevronRight,
 } from "lucide-react";
 
 interface NavItem {
@@ -15,35 +14,29 @@ interface NavItem {
   icon: React.ElementType;
 }
 
+// 7 destinations (down from 11) — Net Worth, Packages, Transactions, and Financial Plan
+// no longer stand on their own; see ClientDashboard, ClientPortfolio, and ClientGoals.
 const SIDEBAR_NAV: NavItem[] = [
-  { label: "Dashboard",      href: "/client/dashboard",     icon: LayoutDashboard },
-  { label: "Portfolio",      href: "/client/portfolio",     icon: PieChart },
-  { label: "Packages",       href: "/client/packages",      icon: Package2 },
-  { label: "Transactions",   href: "/client/transactions",  icon: Receipt },
-  { label: "Scenarios",      href: "/client/scenarios",     icon: Calculator },
-  { label: "Goals",          href: "/client/goals",         icon: Target },
-  { label: "Net Worth",      href: "/client/networth",      icon: TrendingUp },
-  { label: "Budget",         href: "/client/budget",        icon: Wallet },
-  { label: "Financial Plan", href: "/client/plan",          icon: Map },
-  { label: "Messages",       href: "/client/messages",      icon: MessageSquare },
-  { label: "Documents",      href: "/client/documents",     icon: FolderOpen },
+  { label: "Dashboard",           href: "/client/dashboard",  icon: LayoutDashboard },
+  { label: "Investment accounts", href: "/client/portfolio",  icon: PieChart },
+  { label: "Scenarios",           href: "/client/scenarios",  icon: Calculator },
+  { label: "Goals",               href: "/client/goals",      icon: Target },
+  { label: "Budget",              href: "/client/budget",     icon: Wallet },
+  { label: "Messages",            href: "/client/messages",   icon: MessageSquare },
+  { label: "Documents",           href: "/client/documents",  icon: FolderOpen },
 ];
 
 const BOTTOM_NAV_PRIMARY: NavItem[] = [
-  { label: "Home",      href: "/client/dashboard", icon: LayoutDashboard },
-  { label: "Portfolio", href: "/client/portfolio", icon: PieChart },
-  { label: "Goals",     href: "/client/goals",     icon: Target },
-  { label: "Budget",    href: "/client/budget",    icon: Wallet },
+  { label: "Home",     href: "/client/dashboard", icon: LayoutDashboard },
+  { label: "Accounts", href: "/client/portfolio", icon: PieChart },
+  { label: "Goals",    href: "/client/goals",     icon: Target },
+  { label: "Budget",   href: "/client/budget",    icon: Wallet },
 ];
 
 const BOTTOM_NAV_MORE: NavItem[] = [
-  { label: "Net Worth",      href: "/client/networth",     icon: TrendingUp },
-  { label: "Scenarios",      href: "/client/scenarios",    icon: Calculator },
-  { label: "Financial Plan", href: "/client/plan",         icon: Map },
-  { label: "Packages",       href: "/client/packages",     icon: Package2 },
-  { label: "Transactions",   href: "/client/transactions", icon: Receipt },
-  { label: "Messages",       href: "/client/messages",     icon: MessageSquare },
-  { label: "Documents",      href: "/client/documents",    icon: FolderOpen },
+  { label: "Scenarios", href: "/client/scenarios", icon: Calculator },
+  { label: "Messages",  href: "/client/messages",  icon: MessageSquare },
+  { label: "Documents", href: "/client/documents", icon: FolderOpen },
 ];
 
 function SidebarLink({ item, collapsed }: { item: NavItem; collapsed: boolean }) {

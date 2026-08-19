@@ -6,9 +6,10 @@ import {
   clientHoldingsTable, clientBudgetMonthsTable, advisedPlanTransactionsTable,
   scenarioRunsTable, financialGoalsTable, netWorthSnapshotsTable, assetsTable, liabilitiesTable,
   financialPlansTable, planMilestonesTable, milestoneCommentsTable,
-  conversationsTable, messagesTable,
+  conversationsTable, messagesTable, advisedStrategyReturnsTable,
 } from "@workspace/db";
 import { requireAuth, requireRole, requireAdvisorOwnsClient } from "../middlewares/requireAuth";
+import { resolveHoldingBenchmark, getDeviationWarning } from "../lib/benchmarks";
 
 const router: IRouter = Router();
 
@@ -278,10 +279,10 @@ router.get("/client/holdings", requireAuth, async (req, res): Promise<void> => {
 router.post("/client/holdings", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
   const {
-    holdingType, label, currency, purchaseDate, notes,
+    holdingType, label, currency, purchaseDate, notes, expectedAnnualReturnPct,
     ticker, brokerPlatform, unitsHeld, averageCostPrice,
     coinSymbol, exchangeName,
-    propertyAddress, purchasePrice, currentEstimatedValue, outstandingMortgage, monthlyRentalIncome,
+    propertyAddress, country, purchasePrice, currentEstimatedValue, outstandingMortgage, monthlyRentalIncome,
     bankName, accountType, currentBalance, interestRatePct,
     schemeName, pensionCountry, currentBalancePension, monthlyContribution, employerContribution,
     currentValueOther, totalInvestedOther,
@@ -295,11 +296,12 @@ router.post("/client/holdings", requireAuth, async (req, res): Promise<void> => 
   const [holding] = await db.insert(clientHoldingsTable).values({
     userId, holdingType, label, currency: currency ?? "USD",
     purchaseDate: purchaseDate ?? null, notes: notes ?? null,
+    expectedAnnualReturnPct: expectedAnnualReturnPct != null ? String(expectedAnnualReturnPct) : null,
     ticker: ticker ?? null, brokerPlatform: brokerPlatform ?? null,
     unitsHeld: unitsHeld != null ? String(unitsHeld) : null,
     averageCostPrice: averageCostPrice != null ? String(averageCostPrice) : null,
     coinSymbol: coinSymbol ?? null, exchangeName: exchangeName ?? null,
-    propertyAddress: propertyAddress ?? null,
+    propertyAddress: propertyAddress ?? null, country: country ?? null,
     purchasePrice: purchasePrice != null ? String(purchasePrice) : null,
     currentEstimatedValue: currentEstimatedValue != null ? String(currentEstimatedValue) : null,
     outstandingMortgage: outstandingMortgage != null ? String(outstandingMortgage) : "0",
@@ -327,7 +329,7 @@ router.put("/client/holdings/:id", requireAuth, async (req, res): Promise<void> 
   const numericFields = ["unitsHeld", "averageCostPrice", "purchasePrice", "currentEstimatedValue",
     "outstandingMortgage", "monthlyRentalIncome", "currentBalance", "interestRatePct",
     "currentBalancePension", "monthlyContribution", "employerContribution",
-    "currentValueOther", "totalInvestedOther"];
+    "currentValueOther", "totalInvestedOther", "expectedAnnualReturnPct"];
 
   for (const [k, v] of Object.entries(body)) {
     if (numericFields.includes(k)) {
@@ -353,6 +355,51 @@ router.delete("/client/holdings/:id", requireAuth, async (req, res): Promise<voi
     .set({ isActive: false, updatedAt: new Date() })
     .where(and(eq(clientHoldingsTable.id, id), eq(clientHoldingsTable.userId, userId)));
   res.sendStatus(204);
+});
+
+function deviationResponse(value: number | null, benchmarkValue: number | null) {
+  if (value == null || benchmarkValue == null) return null;
+  const warning = getDeviationWarning(value, benchmarkValue);
+  return warning ? { deltaPoints: warning.deltaPoints, isOptimistic: warning.isOptimistic } : null;
+}
+
+// Resolve the expected-return benchmark for a holding shape that may not be saved yet
+// (used by the add/edit holding form to preview the benchmark + deviation as the client types).
+router.post("/client/holdings/benchmark-preview", requireAuth, async (req, res): Promise<void> => {
+  const { holdingType, ticker, coinSymbol, interestRatePct, expectedAnnualReturnPct } = req.body;
+  if (!holdingType) { res.status(400).json({ error: "holdingType required" }); return; }
+  const result = await resolveHoldingBenchmark({ holdingType, ticker, coinSymbol, interestRatePct, expectedAnnualReturnPct });
+  res.json({
+    ...result,
+    deviation: deviationResponse(result.isOverride ? result.value : null, result.benchmarkValue),
+  });
+});
+
+// Resolve the benchmark for an already-saved holding.
+router.get("/client/holdings/:id/benchmark", requireAuth, async (req, res): Promise<void> => {
+  const userId = (req as any).userId;
+  const id = req.params.id as string;
+  const [holding] = await db.select().from(clientHoldingsTable)
+    .where(and(eq(clientHoldingsTable.id, id), eq(clientHoldingsTable.userId, userId)));
+  if (!holding) { res.status(404).json({ error: "Not found" }); return; }
+  const result = await resolveHoldingBenchmark({
+    holdingType: holding.holdingType,
+    ticker: holding.ticker,
+    coinSymbol: holding.coinSymbol,
+    interestRatePct: holding.interestRatePct,
+    expectedAnnualReturnPct: holding.expectedAnnualReturnPct,
+  });
+  res.json({
+    ...result,
+    deviation: deviationResponse(result.isOverride ? result.value : null, result.benchmarkValue),
+  });
+});
+
+// Read-only, non-admin: target strategy returns for the "bring under management"
+// comparison (self-tracked-holding scenario). Not sensitive — same data shown to admins.
+router.get("/client/advised-strategy-returns", requireAuth, async (req, res): Promise<void> => {
+  const rows = await db.select().from(advisedStrategyReturnsTable).orderBy(advisedStrategyReturnsTable.planType);
+  res.json(rows);
 });
 
 // ── Client budget months ──────────────────────────────────────────────────

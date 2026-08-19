@@ -4,7 +4,6 @@ import { cn } from "@/lib/utils";
 import AdvisorScenarioCard from "./AdvisorScenarioCard";
 import type { ScenarioRun } from "@/hooks/useScenarios";
 import type { AdvisedPlan } from "@/hooks/useAdvisedPlans";
-import type { ClientHolding } from "@/hooks/useClientHoldings";
 import type { DashboardGoal } from "@/hooks/useDashboardData";
 
 export type ScenarioSource = {
@@ -12,7 +11,7 @@ export type ScenarioSource = {
   label: string;
   currentValue: number;
   currentMonthly: number;
-  kind: "plan" | "holding" | "total" | "goal";
+  kind: "plan" | "total" | "goal";
   linkedGoal?: DashboardGoal;
 };
 
@@ -27,9 +26,8 @@ const SCENARIO_TYPES = [
 
 interface Props {
   plans: AdvisedPlan[];
-  selfHoldings: ClientHolding[];
   goals: DashboardGoal[];
-  totalPortfolioValue: number;
+  totalAdvisedValue: number;
   totalMonthly: number;
   selectedSource: ScenarioSource | null;
   onSelectSource: (s: ScenarioSource) => void;
@@ -44,16 +42,19 @@ interface Props {
 }
 
 export default function ScenarioSidebar({
-  plans, selfHoldings, goals, totalPortfolioValue, totalMonthly,
+  plans, goals, totalAdvisedValue, totalMonthly,
   selectedSource, onSelectSource, selectedType, onSelectType,
   savedScenarios, advisorScenarios, onLoadSaved, onDeleteSaved, onLoadAdvisor, onAdvisorViewed,
 }: Props) {
   const [savedOpen, setSavedOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
+  // Actionable scenarios apply only to advised holdings — these are the levers an
+  // advisor can actually pull. Self-tracked holdings get the separate "bring under
+  // management" comparison instead (see BringUnderManagementCompare).
   const sources: ScenarioSource[] = [
-    // All investments combined
-    { id: "total", label: "All investments combined", currentValue: totalPortfolioValue, currentMonthly: totalMonthly, kind: "total" },
+    // All advised investments combined
+    { id: "total", label: "All advised investments combined", currentValue: totalAdvisedValue, currentMonthly: totalMonthly, kind: "total" },
     // Advised plans
     ...plans.map(p => ({
       id: p.id,
@@ -62,16 +63,6 @@ export default function ScenarioSidebar({
       currentMonthly: parseFloat(p.annualPremium) / 12 || 0,
       kind: "plan" as const,
     })),
-    // Market-priced holdings (stocks, ETFs, crypto, commodities, bonds, mutual funds)
-    ...selfHoldings
-      .filter(h => ["stock_etf", "etf", "mutual_fund", "commodity", "bond", "crypto"].includes(h.holdingType))
-      .map(h => ({
-        id: h.id,
-        label: `${h.label}${h.ticker ? ` · ${h.ticker}` : h.coinSymbol ? ` · ${h.coinSymbol}` : ""}`,
-        currentValue: h.currentValue,
-        currentMonthly: 0,
-        kind: "holding" as const,
-      })),
   ];
 
   return (
@@ -108,7 +99,7 @@ export default function ScenarioSidebar({
                   onClick={() => onSelectSource({
                     id: `goal-${g.id}`,
                     label: g.title,
-                    currentValue: totalPortfolioValue,
+                    currentValue: totalAdvisedValue,
                     currentMonthly: totalMonthly,
                     kind: "goal",
                     linkedGoal: g,

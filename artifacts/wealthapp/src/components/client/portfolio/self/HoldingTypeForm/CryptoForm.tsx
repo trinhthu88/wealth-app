@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Field, TextInput, NumberInput, AmountWithCurrency, DateInput, SubmitButton, SymbolSearchInput } from "./_shared";
+import { Field, TextInput, NumberInput, AmountWithCurrency, DateInput, SubmitButton, SymbolSearchInput, ExpectedReturnField } from "./_shared";
 import type { ClientHolding } from "@/hooks/useClientHoldings";
 
 interface Props {
@@ -16,6 +16,7 @@ export default function CryptoForm({ initial, onSubmit, submitLabel }: Props) {
   const [currency, setCurrency] = useState(initial?.currency ?? "USD");
   const [exchange, setExchange] = useState(initial?.exchangeName ?? "");
   const [purchaseDate, setPurchaseDate] = useState(initial?.purchaseDate ?? "");
+  const [expectedReturn, setExpectedReturn] = useState(initial?.expectedAnnualReturnPct ?? "");
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -33,7 +34,10 @@ export default function CryptoForm({ initial, onSubmit, submitLabel }: Props) {
     if (!validate()) return;
     setLoading(true);
     try {
-      await onSubmit({ holdingType: "crypto", label, coinSymbol: coin, unitsHeld: parseFloat(units), averageCostPrice: parseFloat(avgCost), currency, exchangeName: exchange || null, purchaseDate: purchaseDate || null });
+      await onSubmit({
+        holdingType: "crypto", label, coinSymbol: coin, unitsHeld: parseFloat(units), averageCostPrice: parseFloat(avgCost), currency, exchangeName: exchange || null, purchaseDate: purchaseDate || null,
+        expectedAnnualReturnPct: expectedReturn ? parseFloat(expectedReturn) : null,
+      });
     } finally { setLoading(false); }
   }
 
@@ -62,6 +66,7 @@ export default function CryptoForm({ initial, onSubmit, submitLabel }: Props) {
       <Field label="Purchase date">
         <DateInput value={purchaseDate} onChange={setPurchaseDate} />
       </Field>
+      <ExpectedReturnField value={expectedReturn} onChange={setExpectedReturn} holdingType="crypto" coinSymbol={coin} />
       <SubmitButton label={submitLabel} disabled={!label || !coin || !units || !avgCost} loading={loading} onClick={handleSubmit} />
     </div>
   );

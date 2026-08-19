@@ -2,6 +2,7 @@
 import { cn } from "@/lib/utils";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { apiFetch } from "@/lib/api";
+import { AlertTriangle } from "lucide-react";
 
 const CURRENCIES = ["USD", "VND", "EUR"] as const;
 
@@ -314,6 +315,66 @@ export function SymbolSearchInput({ value, onChange, onSelect, symbolType, place
         </ul>
       )}
     </div>
+  );
+}
+
+interface BenchmarkPreview {
+  value: number;
+  isOverride: boolean;
+  benchmarkValue: number | null;
+  benchmarkLabel: string | null;
+  deviation: { deltaPoints: number; isOptimistic: boolean } | null;
+}
+
+/** Expected-return override field with a live benchmark comparison and >3pp deviation warning. Not used for cash. */
+export function ExpectedReturnField({ value, onChange, holdingType, ticker, coinSymbol }: {
+  value: string;
+  onChange: (v: string) => void;
+  holdingType: string;
+  ticker?: string;
+  coinSymbol?: string;
+}) {
+  const [preview, setPreview] = useState<BenchmarkPreview | null>(null);
+  const [loading, setLoading] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setLoading(true);
+      apiFetch<BenchmarkPreview>("/client/holdings/benchmark-preview", {
+        method: "POST",
+        body: JSON.stringify({ holdingType, ticker: ticker || undefined, coinSymbol: coinSymbol || undefined, expectedAnnualReturnPct: value || undefined }),
+      })
+        .then(setPreview)
+        .catch(() => setPreview(null))
+        .finally(() => setLoading(false));
+    }, 400);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [holdingType, ticker, coinSymbol, value]);
+
+  return (
+    <Field label="Expected annual return (optional)">
+      <div className="flex items-center gap-2">
+        <NumberInput value={value} onChange={onChange} placeholder="e.g. 7" step="0.1" className="flex-1" />
+        <span className="text-sm text-slate-400">%</span>
+      </div>
+      {loading ? (
+        <p className="text-xs text-slate-400 mt-1 animate-pulse">Checking benchmark…</p>
+      ) : preview?.benchmarkValue != null ? (
+        <div className="mt-1.5 space-y-1">
+          <p className="text-xs text-slate-400">
+            Benchmark: {preview.benchmarkValue.toFixed(1)}%{preview.benchmarkLabel ? ` — ${preview.benchmarkLabel}` : ""}
+          </p>
+          {preview.deviation && (
+            <p className="flex items-start gap-1 text-xs text-amber-600">
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+              {preview.deviation.deltaPoints.toFixed(1)} points {preview.deviation.isOptimistic ? "above" : "below"} the historical benchmark — your projection will be more {preview.deviation.isOptimistic ? "optimistic" : "conservative"} than historical averages suggest.
+            </p>
+          )}
+        </div>
+      ) : null}
+    </Field>
   );
 }
 

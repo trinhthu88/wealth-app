@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import CurrencyDisplay from "@/components/client/CurrencyDisplay";
 import { formatPct } from "@/lib/currencyUtils";
 import PlanFundBar from "./PlanFundBar";
+import SourceBadge from "@/components/client/portfolio/shared/SourceBadge";
 import type { AdvisedPlan } from "@/hooks/useAdvisedPlans";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
@@ -50,11 +51,15 @@ export default function AdvisedPlanCardFull({ plan, onViewStatements }: Props) {
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
               <p className="text-sm font-semibold text-[#042C53]">{plan.nickname ?? plan.productName}</p>
+              <SourceBadge kind="advised" />
               <span className={cn("text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0", status.color)}>
                 {status.label}
               </span>
             </div>
-            <p className="text-xs text-slate-400 mt-0.5">{plan.providerName}{plan.policyNumber ? ` · ${plan.policyNumber}` : ""}</p>
+            <p className="text-xs text-slate-400 mt-0.5">
+              {plan.providerName}{plan.policyNumber ? ` · ${plan.policyNumber}` : ""}
+              {plan.latestStatementDate && ` · Last reviewed ${new Date(plan.latestStatementDate).toLocaleDateString("en-US", { month: "short", year: "numeric" })}`}
+            </p>
           </div>
         </div>
 

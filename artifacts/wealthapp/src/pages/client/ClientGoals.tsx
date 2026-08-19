@@ -5,14 +5,137 @@
 // ✗ BANNED:  Progress bar width animation on page load (bars render at final width)
 
 import { useState, useEffect } from "react";
-import { Plus, Target, ChevronDown, ChevronRight } from "lucide-react";
+import { Link } from "wouter";
+import { Plus, Target, ChevronDown, ChevronRight, Map } from "lucide-react";
 import ClientAppShell from "@/components/client/AppShell";
 import GoalsSummaryBar from "@/components/client/goals/GoalsSummaryBar";
 import GoalCard from "@/components/client/goals/GoalCard";
 import AddGoalSheet from "@/components/client/goals/AddGoalSheet";
 import EditGoalSheet from "@/components/client/goals/EditGoalSheet";
+import PlanHeader from "@/components/client/plan/PlanHeader";
+import ReviewCountdown from "@/components/client/plan/ReviewCountdown";
+import PlanProgressRing from "@/components/client/plan/PlanProgressRing";
+import PlanTimeline from "@/components/client/plan/PlanTimeline";
+import RequestReviewSheet from "@/components/client/plan/RequestReviewSheet";
 import { useGoals, type EnrichedGoal } from "@/hooks/useGoals";
+import { usePlan } from "@/hooks/usePlan";
 import { cn } from "@/lib/utils";
+
+const GOALS_TABS = [
+  { id: "goals", label: "Goals" },
+  { id: "plan", label: "Your plan" },
+] as const;
+
+function GoalsTabs({ activeTab, onTabChange }: { activeTab: string; onTabChange: (tab: string) => void }) {
+  return (
+    <div className="flex gap-1 bg-slate-100 rounded-xl p-1 w-fit">
+      {GOALS_TABS.map(tab => (
+        <button
+          key={tab.id}
+          onClick={() => onTabChange(tab.id)}
+          className={cn(
+            "px-4 py-1.5 rounded-lg text-sm font-medium transition-all",
+            activeTab === tab.id
+              ? "bg-white text-[#042C53] shadow-sm"
+              : "text-slate-500 hover:text-slate-700"
+          )}
+        >
+          {tab.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function PlanTab() {
+  const {
+    plan, milestones,
+    completedCount, inProgressCount, upcomingCount, totalCount, completionPct,
+    nextMilestone, daysUntilReview, isReviewOverdue,
+    advisorName, advisorId, nextReviewDate,
+    loading, statusGroup,
+  } = usePlan();
+
+  const [showReviewSheet, setShowReviewSheet] = useState(false);
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <div className="h-24 bg-slate-100 animate-pulse rounded-xl" />
+        <div className="h-40 bg-slate-100 animate-pulse rounded-xl" />
+      </div>
+    );
+  }
+
+  if (!plan) {
+    return (
+      <div className="bg-white border border-[#E2E8F0] rounded-xl py-16 px-6 text-center">
+        <Map className="h-10 w-10 text-[#1D9E75] mx-auto mb-3" />
+        <h2 className="text-base font-semibold text-[#042C53] mb-1">
+          Your financial plan hasn't been created yet.
+        </h2>
+        <p className="text-sm text-slate-400 mb-5">
+          Your advisor will create a personalised plan for you.
+        </p>
+        <Link
+          href="/client/messages"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#1D9E75] text-white text-sm font-semibold hover:bg-[#0F6E56] transition-colors"
+        >
+          Message your advisor →
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-5">
+      <PlanHeader advisorName={advisorName} />
+
+      <ReviewCountdown
+        nextReviewDate={nextReviewDate}
+        daysUntilReview={daysUntilReview}
+        isReviewOverdue={isReviewOverdue}
+        onRequestReview={() => setShowReviewSheet(true)}
+      />
+
+      {totalCount > 0 && (
+        <div className="bg-white border border-[#E2E8F0] rounded-xl p-4">
+          <PlanProgressRing
+            completedCount={completedCount}
+            inProgressCount={inProgressCount}
+            upcomingCount={upcomingCount}
+            totalCount={totalCount}
+            completionPct={completionPct}
+          />
+        </div>
+      )}
+
+      {milestones.length > 0 ? (
+        <div className="space-y-1">
+          <h2 className="text-sm font-semibold text-[#042C53] px-1">Milestones</h2>
+          <PlanTimeline
+            milestones={milestones}
+            nextMilestoneId={nextMilestone?.id ?? null}
+            statusGroup={statusGroup}
+          />
+        </div>
+      ) : (
+        <div className="bg-white border border-[#E2E8F0] rounded-xl py-10 text-center">
+          <p className="text-sm text-slate-400">No milestones have been added to your plan yet.</p>
+        </div>
+      )}
+
+      <RequestReviewSheet
+        isOpen={showReviewSheet}
+        onClose={() => setShowReviewSheet(false)}
+        advisorId={advisorId}
+        advisorName={advisorName}
+        completionPct={completionPct}
+        nextMilestoneTitle={nextMilestone?.title ?? null}
+      />
+    </div>
+  );
+}
 
 export default function ClientGoals() {
   const {
@@ -25,6 +148,7 @@ export default function ClientGoals() {
   const [showAdd, setShowAdd] = useState(false);
   const [editTarget, setEditTarget] = useState<EnrichedGoal | null>(null);
   const [completedOpen, setCompletedOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>("goals");
 
   // Handle ?newGoal=true URL param
   useEffect(() => {
@@ -52,15 +176,23 @@ export default function ClientGoals() {
         {/* Page header */}
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-bold text-[#042C53]">Your goals</h1>
-          <button
-            onClick={() => setShowAdd(true)}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#1D9E75] text-white text-sm font-semibold hover:bg-[#0F6E56] transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-            Add goal
-          </button>
+          {activeTab === "goals" && (
+            <button
+              onClick={() => setShowAdd(true)}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#1D9E75] text-white text-sm font-semibold hover:bg-[#0F6E56] transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              Add goal
+            </button>
+          )}
         </div>
 
+        <GoalsTabs activeTab={activeTab} onTabChange={setActiveTab} />
+
+        {activeTab === "plan" ? (
+          <PlanTab />
+        ) : (
+          <>
         {/* Summary bar */}
         <GoalsSummaryBar
           totalActive={totalActive}
@@ -150,6 +282,8 @@ export default function ClientGoals() {
               </div>
             )}
           </div>
+        )}
+          </>
         )}
       </div>
 

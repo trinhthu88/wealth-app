@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Field, TextInput, AmountWithCurrency, DateInput, SubmitButton } from "./_shared";
+import { Field, TextInput, AmountWithCurrency, DateInput, SubmitButton, ExpectedReturnField } from "./_shared";
 import { formatCurrency } from "@/lib/currencyUtils";
 import type { ClientHolding } from "@/hooks/useClientHoldings";
 
@@ -9,6 +9,8 @@ interface Props {
   submitLabel: string;
 }
 
+const COUNTRIES = ["UK", "France", "Ireland", "Germany", "Vietnam", "Singapore", "Australia", "Canada", "US", "Hong Kong", "UAE", "Other"];
+
 export default function PropertyForm({ initial, onSubmit, submitLabel }: Props) {
   const [label, setLabel] = useState(initial?.label ?? "");
   const [purchasePrice, setPurchasePrice] = useState(initial?.purchasePrice ?? "");
@@ -17,7 +19,9 @@ export default function PropertyForm({ initial, onSubmit, submitLabel }: Props) 
   const [mortgage, setMortgage] = useState(initial?.outstandingMortgage ?? "");
   const [rental, setRental] = useState(initial?.monthlyRentalIncome ?? "");
   const [address, setAddress] = useState(initial?.propertyAddress ?? "");
+  const [country, setCountry] = useState(initial?.country ?? "");
   const [purchaseDate, setPurchaseDate] = useState(initial?.purchaseDate ?? "");
+  const [expectedReturn, setExpectedReturn] = useState(initial?.expectedAnnualReturnPct ?? "");
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -36,7 +40,10 @@ export default function PropertyForm({ initial, onSubmit, submitLabel }: Props) 
     if (!validate()) return;
     setLoading(true);
     try {
-      await onSubmit({ holdingType: "property", label, purchasePrice: parseFloat(purchasePrice), currentEstimatedValue: parseFloat(currentValue), currency, outstandingMortgage: parseFloat(mortgage) || 0, monthlyRentalIncome: parseFloat(rental) || 0, propertyAddress: address || null, purchaseDate: purchaseDate || null });
+      await onSubmit({
+        holdingType: "property", label, purchasePrice: parseFloat(purchasePrice), currentEstimatedValue: parseFloat(currentValue), currency, outstandingMortgage: parseFloat(mortgage) || 0, monthlyRentalIncome: parseFloat(rental) || 0, propertyAddress: address || null, country: country || null, purchaseDate: purchaseDate || null,
+        expectedAnnualReturnPct: expectedReturn ? parseFloat(expectedReturn) : null,
+      });
     } finally { setLoading(false); }
   }
 
@@ -65,9 +72,16 @@ export default function PropertyForm({ initial, onSubmit, submitLabel }: Props) 
       <Field label="Property address">
         <TextInput value={address} onChange={setAddress} placeholder="e.g. 12 Nguyen Hue, District 1" />
       </Field>
+      <Field label="Country">
+        <select value={country} onChange={e => setCountry(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#042C53] bg-white focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/30">
+          <option value="">Select country…</option>
+          {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+      </Field>
       <Field label="Purchase date">
         <DateInput value={purchaseDate} onChange={setPurchaseDate} />
       </Field>
+      <ExpectedReturnField value={expectedReturn} onChange={setExpectedReturn} holdingType="property" />
       <SubmitButton label={submitLabel} disabled={!label || !purchasePrice || !currentValue} loading={loading} onClick={handleSubmit} />
     </div>
   );

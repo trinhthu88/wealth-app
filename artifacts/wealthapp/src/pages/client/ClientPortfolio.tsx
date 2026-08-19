@@ -7,7 +7,9 @@
 // ✗ BANNED:  Fake filters (no UI controls that don't actually filter)
 
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { BarChart2 } from "lucide-react";
+import { apiFetch } from "@/lib/api";
 import ClientAppShell from "@/components/client/AppShell";
 import PortfolioHeader from "@/components/client/portfolio/PortfolioHeader";
 import PortfolioTabs from "@/components/client/portfolio/PortfolioTabs";
@@ -32,13 +34,21 @@ export default function ClientPortfolio() {
   const { plans } = useAdvisedPlans();
   const { holdings, addHolding, updateHolding, deleteHolding } = useClientHoldings();
   const totals = usePortfolioTotals();
+  const { data: advisor } = useQuery<{ id: string; fullName: string | null } | null>({
+    queryKey: ["dashboard-advisor"],
+    queryFn: () => apiFetch("/client/dashboard/advisor"),
+  });
+  const { data: packages = [] } = useQuery<Array<{ id: string }>>({
+    queryKey: ["my-packages"],
+    queryFn: () => apiFetch("/packages"),
+  });
 
   const [activeTab, setActiveTab] = useState("overview");
   const [addOpen, setAddOpen] = useState(false);
   const [editHolding, setEditHolding] = useState<ClientHolding | null>(null);
 
   const displayCurrency = profile?.preferredCurrency ?? "USD";
-  const isEmpty = plans.length === 0 && holdings.length === 0;
+  const isEmpty = plans.length === 0 && holdings.length === 0 && packages.length === 0;
 
   async function handleAdd(data: Record<string, unknown>) {
     await addHolding(data as any);
@@ -63,7 +73,7 @@ export default function ClientPortfolio() {
   return (
     <ClientAppShell>
       <div className="max-w-[1100px] mx-auto space-y-5">
-        <h1 className="text-xl font-bold text-[#042C53]">Portfolio</h1>
+        <h1 className="text-xl font-bold text-[#042C53]">Investment accounts</h1>
 
         <PortfolioHeader totals={totals} loading={totals.loading} />
 
@@ -88,6 +98,7 @@ export default function ClientPortfolio() {
                 selfHoldings={holdings}
                 totals={totals}
                 displayCurrency={displayCurrency}
+                advisorName={advisor?.fullName ?? undefined}
                 onAddHolding={() => setAddOpen(true)}
                 onEditHolding={setEditHolding}
               />

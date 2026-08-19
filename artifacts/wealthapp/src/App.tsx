@@ -32,9 +32,7 @@ const ClientNetWorth = lazy(() => import("@/pages/client/networth"));
 const ClientDocuments = lazy(() => import("@/pages/client/documents"));
 const ClientMessages = lazy(() => import("@/pages/client/messages"));
 const ClientOnboarding = lazy(() => import("@/pages/client/ClientOnboarding"));
-const ClientPackages = lazy(() => import("@/pages/client/packages"));
 const ClientPackageDetail = lazy(() => import("@/pages/client/package-detail"));
-const ClientTransactions = lazy(() => import("@/pages/client/transactions"));
 const ClientScenarios = lazy(() => import("@/pages/client/ClientScenarios"));
 const ClientBudget = lazy(() => import("@/pages/client/budget"));
 
@@ -50,6 +48,7 @@ const AdminBlog = lazy(() => import("@/pages/admin/blog"));
 const AdminFunds = lazy(() => import("@/pages/admin/funds"));
 const AdminClients = lazy(() => import("@/pages/admin/clients"));
 const AdminPrices = lazy(() => import("@/pages/admin/prices"));
+const AdminBenchmarks = lazy(() => import("@/pages/admin/benchmarks"));
 
 const NotFound = lazy(() => import("@/pages/not-found"));
 
@@ -238,8 +237,9 @@ function AppRoutes() {
       <Route path="/client/dashboard" component={() => <ProtectedRoute component={ClientDashboard} role={["investment_client", "super_admin"]} />} />
       <Route path="/client/portfolio" component={() => <ProtectedRoute component={ClientPortfolio} role={["investment_client", "super_admin"]} />} />
       <Route path="/client/packages/:id" component={() => <ProtectedRoute component={ClientPackageDetail} role={["investment_client", "super_admin"]} />} />
-      <Route path="/client/packages" component={() => <ProtectedRoute component={ClientPackages} role={["investment_client", "super_admin"]} />} />
-      <Route path="/client/transactions" component={() => <ProtectedRoute component={ClientTransactions} role={["investment_client", "super_admin"]} />} />
+      {/* Packages and Transactions folded into Investment accounts (Phase 5/6) — old links redirect there. */}
+      <Route path="/client/packages" component={() => <Redirect to="/client/portfolio" />} />
+      <Route path="/client/transactions" component={() => <Redirect to="/client/portfolio" />} />
       <Route path="/client/scenarios" component={() => <ProtectedRoute component={ClientScenarios} role={["investment_client", "super_admin"]} />} />
       <Route path="/client/plan" component={() => <ProtectedRoute component={ClientPlan} role={["investment_client", "super_admin"]} />} />
       <Route path="/client/goals" component={() => <ProtectedRoute component={ClientGoals} role={["investment_client", "super_admin"]} />} />
@@ -258,6 +258,7 @@ function AppRoutes() {
       <Route path="/admin/users" component={() => <ProtectedRoute component={AdminUsers} role={["super_admin"]} />} />
       <Route path="/admin/clients" component={() => <ProtectedRoute component={AdminClients} role={["super_admin"]} />} />
       <Route path="/admin/prices" component={() => <ProtectedRoute component={AdminPrices} role={["super_admin"]} />} />
+      <Route path="/admin/benchmarks" component={() => <ProtectedRoute component={AdminBenchmarks} role={["super_admin"]} />} />
       <Route path="/admin/blog" component={() => <ProtectedRoute component={AdminBlog} role={["super_admin", "advisor"]} />} />
       <Route path="/admin/funds" component={() => <ProtectedRoute component={AdminFunds} role={["super_admin"]} />} />
 

@@ -53,13 +53,14 @@ export default function OverviewTab({ isTrackA, plans, selfHoldings, totals, dis
 
   return (
     <div className="space-y-6">
-      {isTrackA && plans.length > 0 && (
+      {isTrackA && (
         <AdvisedPlanSection plans={plans} advisorName={advisorName} />
       )}
 
       <SelfHoldingsSection
         holdings={selfHoldings}
         totalValue={selfValue}
+        advisorName={advisorName}
         onAdd={onAddHolding}
         onEdit={onEditHolding}
       />

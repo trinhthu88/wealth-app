@@ -7,11 +7,12 @@ import type { ClientHolding } from "@/hooks/useClientHoldings";
 interface Props {
   holdings: ClientHolding[];
   totalValue: number;
+  advisorName?: string;
   onAdd: () => void;
   onEdit: (h: ClientHolding) => void;
 }
 
-export default function SelfHoldingsSection({ holdings, totalValue, onAdd, onEdit }: Props) {
+export default function SelfHoldingsSection({ holdings, totalValue, advisorName, onAdd, onEdit }: Props) {
   const byType = holdings.reduce<Record<string, ClientHolding[]>>((acc, h) => {
     if (!acc[h.holdingType]) acc[h.holdingType] = [];
     acc[h.holdingType].push(h);
@@ -22,7 +23,7 @@ export default function SelfHoldingsSection({ holdings, totalValue, onAdd, onEdi
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-base font-semibold text-[#042C53]">My other investments</p>
+          <p className="text-base font-semibold text-[#042C53]">Your other holdings</p>
           <p className="text-xs text-slate-400">Added by you · prices refresh automatically</p>
         </div>
         <div className="flex items-center gap-3">
@@ -44,7 +45,11 @@ export default function SelfHoldingsSection({ holdings, totalValue, onAdd, onEdi
           <button onClick={onAdd} className="mt-2 text-sm font-medium text-[#1D9E75] hover:text-[#0F6E56]">+ Add investment</button>
         </div>
       ) : (
-        Object.entries(byType).map(([type, group]) => (
+        <>
+        <p className="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+          These holdings are tracked for your reference and are not managed or reviewed by {advisorName ?? "your advisor"}.
+        </p>
+        {Object.entries(byType).map(([type, group]) => (
           <div key={type}>
             <div className="flex items-center justify-between mb-2">
               <HoldingTypeBadge type={type} size="sm" />
@@ -56,7 +61,8 @@ export default function SelfHoldingsSection({ holdings, totalValue, onAdd, onEdi
               {group.map(h => <HoldingCard key={h.id} holding={h} onEdit={() => onEdit(h)} />)}
             </div>
           </div>
-        ))
+        ))}
+        </>
       )}
     </div>
   );

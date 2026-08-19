@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { apiFetch } from "@/lib/api";
-import { Field, TextInput, NumberInput, AmountWithCurrency, DateInput, SubmitButton, SymbolSearchInput } from "./_shared";
+import { Field, TextInput, NumberInput, AmountWithCurrency, DateInput, SubmitButton, SymbolSearchInput, ExpectedReturnField } from "./_shared";
 import type { SymbolSearchType } from "./_shared";
 import type { ClientHolding } from "@/hooks/useClientHoldings";
 
@@ -26,6 +26,7 @@ export default function TickerHoldingForm({
   const [avgCost, setAvgCost] = useState(initial?.averageCostPrice ?? "");
   const [currency, setCurrency] = useState(initial?.currency ?? "USD");
   const [purchaseDate, setPurchaseDate] = useState(initial?.purchaseDate ?? "");
+  const [expectedReturn, setExpectedReturn] = useState(initial?.expectedAnnualReturnPct ?? "");
   const [pricePreview, setPricePreview] = useState<{ price: number; change: number } | null>(null);
   const [priceFetching, setPriceFetching] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -63,6 +64,7 @@ export default function TickerHoldingForm({
         holdingType, label, ticker, brokerPlatform: broker || null,
         unitsHeld: parseFloat(units), averageCostPrice: parseFloat(avgCost),
         currency, purchaseDate: purchaseDate || null,
+        expectedAnnualReturnPct: expectedReturn ? parseFloat(expectedReturn) : null,
       });
     } finally { setLoading(false); }
   }
@@ -124,6 +126,8 @@ export default function TickerHoldingForm({
       <Field label="Purchase date">
         <DateInput value={purchaseDate} onChange={setPurchaseDate} />
       </Field>
+
+      <ExpectedReturnField value={expectedReturn} onChange={setExpectedReturn} holdingType={holdingType} ticker={ticker} />
 
       <SubmitButton label={submitLabel} disabled={!label || !ticker || !units || !avgCost} loading={loading} onClick={handleSubmit} />
     </div>

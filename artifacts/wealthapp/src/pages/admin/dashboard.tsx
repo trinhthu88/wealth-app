@@ -127,7 +127,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Quick links */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Link href="/admin/clients" className="bg-card border border-card-border rounded-xl p-4 flex items-center gap-3 hover:shadow-sm transition-shadow">
           <div className="h-10 w-10 rounded-xl bg-purple-100 flex items-center justify-center shrink-0"><UserCheck className="h-5 w-5 text-purple-600" /></div>
           <div><div className="font-semibold text-sm">All Clients</div><div className="text-xs text-muted-foreground">{clients.length} investment clients</div></div>
@@ -135,6 +135,10 @@ export default function AdminDashboard() {
         <Link href="/admin/prices" className="bg-card border border-card-border rounded-xl p-4 flex items-center gap-3 hover:shadow-sm transition-shadow">
           <div className="h-10 w-10 rounded-xl bg-green-100 flex items-center justify-center shrink-0"><DollarSign className="h-5 w-5 text-green-600" /></div>
           <div><div className="font-semibold text-sm">Fund Prices</div><div className="text-xs text-muted-foreground">Manage prices</div></div>
+        </Link>
+        <Link href="/admin/benchmarks" className="bg-card border border-card-border rounded-xl p-4 flex items-center gap-3 hover:shadow-sm transition-shadow">
+          <div className="h-10 w-10 rounded-xl bg-teal-100 flex items-center justify-center shrink-0"><TrendingUp className="h-5 w-5 text-teal-600" /></div>
+          <div><div className="font-semibold text-sm">Return Benchmarks</div><div className="text-xs text-muted-foreground">Expected returns</div></div>
         </Link>
         <Link href="/admin/blog" className="bg-card border border-card-border rounded-xl p-4 flex items-center gap-3 hover:shadow-sm transition-shadow">
           <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0"><BookOpen className="h-5 w-5 text-primary" /></div>

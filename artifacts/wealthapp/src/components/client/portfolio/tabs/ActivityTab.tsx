@@ -1,15 +1,83 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, TrendingUp, TrendingDown } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import StatementDetailView from "@/components/client/portfolio/advised/StatementDetailView";
 import HoldingTypeBadge from "@/components/client/HoldingTypeBadge";
+import { fmtCurrency } from "@/lib/portfolioCalculations";
 import { cn } from "@/lib/utils";
 import type { AdvisedPlan, AdvisedPlanStatement, AdvisedPlanHolding } from "@/hooks/useAdvisedPlans";
 import type { ClientHolding } from "@/hooks/useClientHoldings";
 import { useQueryClient } from "@tanstack/react-query";
 
 function n(v: string | number | null | undefined) { return parseFloat(String(v ?? "0")) || 0; }
+
+interface PackageTransaction {
+  id: string;
+  transactionDate: string;
+  transactionType: string;
+  amountUsd: string;
+  units: string | null;
+  pricePerUnitUsd: string | null;
+  fund: { name: string; ticker: string } | null;
+  package: { nickname: string; type: string } | null;
+}
+
+const TX_TYPE_LABELS: Record<string, string> = {
+  initial_investment: "Initial Investment",
+  monthly_contribution: "Monthly Contribution",
+  top_up: "Top Up",
+  withdrawal: "Withdrawal",
+  dividend_reinvested: "Dividend Reinvested",
+  fee_charged: "Fee Charged",
+  rebalance: "Rebalance",
+};
+const TX_OUTFLOWS = ["withdrawal", "fee_charged"];
+
+function fmtTxDate(iso: string) {
+  return new Date(iso + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function PackageContributionHistory() {
+  const { data: transactions = [], isLoading } = useQuery<PackageTransaction[]>({
+    queryKey: ["transactions-all"],
+    queryFn: () => apiFetch("/transactions/all"),
+  });
+
+  if (isLoading || transactions.length === 0) return null;
+
+  return (
+    <div className="space-y-3">
+      <p className="text-base font-semibold text-[#042C53]">Investment account contributions</p>
+      <div className="bg-white border border-[#E2E8F0] rounded-xl overflow-hidden">
+        {transactions.slice(0, 20).map((tx, i) => {
+          const isOut = TX_OUTFLOWS.includes(tx.transactionType);
+          return (
+            <div key={tx.id} className={cn(
+              "flex items-center gap-3 px-4 py-3.5",
+              i < Math.min(transactions.length, 20) - 1 && "border-b border-[#E2E8F0]"
+            )}>
+              <div className={cn("w-9 h-9 rounded-full flex items-center justify-center shrink-0", isOut ? "bg-red-50" : "bg-emerald-50")}>
+                {isOut ? <TrendingDown className="h-4 w-4 text-red-500" /> : <TrendingUp className="h-4 w-4 text-emerald-600" />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-[#042C53]">{TX_TYPE_LABELS[tx.transactionType] ?? tx.transactionType}</div>
+                <div className="text-xs text-slate-400 flex items-center gap-1.5 flex-wrap mt-0.5">
+                  {tx.package?.nickname && <span className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-500">{tx.package.nickname}</span>}
+                  {tx.fund?.name && <span>{tx.fund.name}</span>}
+                  <span>{fmtTxDate(tx.transactionDate)}</span>
+                </div>
+              </div>
+              <div className={cn("text-sm font-bold shrink-0", isOut ? "text-red-500" : "text-emerald-600")}>
+                {isOut ? "-" : "+"}{fmtCurrency(n(tx.amountUsd))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 interface PlanStatements {
   planId: string;
@@ -122,12 +190,15 @@ export default function ActivityTab({ plans, selfHoldings }: Props) {
       {/* Section 1: Statements */}
       {plans.length > 0 && (
         <div className="space-y-4">
-          <p className="text-base font-semibold text-[#042C53]">Quarterly statements</p>
+          <p className="text-base font-semibold text-[#042C53]">Statement history</p>
           {plans.map(plan => <PlanActivitySection key={plan.id} plan={plan} />)}
         </div>
       )}
 
-      {/* Section 2: Price updates */}
+      {/* Section 2: Investment account contribution history */}
+      <PackageContributionHistory />
+
+      {/* Section 3: Price updates */}
       {priceHoldings.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center justify-between">

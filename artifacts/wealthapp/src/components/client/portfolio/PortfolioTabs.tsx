@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 const TABS = [
   { id: "overview", label: "Overview" },
   { id: "holdings", label: "Holdings" },
-  { id: "activity", label: "Activity" },
+  { id: "activity", label: "Statement & contribution history" },
 ];
 
 interface Props {

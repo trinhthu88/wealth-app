@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Field, TextInput, AmountWithCurrency, DateInput, TextareaInput, SubmitButton } from "./_shared";
+import { Field, TextInput, AmountWithCurrency, DateInput, TextareaInput, SubmitButton, ExpectedReturnField } from "./_shared";
 import type { ClientHolding } from "@/hooks/useClientHoldings";
 
 interface Props {
@@ -15,6 +15,7 @@ export default function OtherForm({ initial, onSubmit, submitLabel }: Props) {
   const [currency, setCurrency] = useState(initial?.currency ?? "USD");
   const [purchaseDate, setPurchaseDate] = useState(initial?.purchaseDate ?? "");
   const [notes, setNotes] = useState(initial?.notes ?? "");
+  const [expectedReturn, setExpectedReturn] = useState(initial?.expectedAnnualReturnPct ?? "");
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -30,7 +31,10 @@ export default function OtherForm({ initial, onSubmit, submitLabel }: Props) {
     if (!validate()) return;
     setLoading(true);
     try {
-      await onSubmit({ holdingType: "other", label, currentValueOther: parseFloat(currentValue), totalInvestedOther: costBasis ? parseFloat(costBasis) : null, currency, purchaseDate: purchaseDate || null, notes: notes || null });
+      await onSubmit({
+        holdingType: "other", label, currentValueOther: parseFloat(currentValue), totalInvestedOther: costBasis ? parseFloat(costBasis) : null, currency, purchaseDate: purchaseDate || null, notes: notes || null,
+        expectedAnnualReturnPct: expectedReturn ? parseFloat(expectedReturn) : null,
+      });
     } finally { setLoading(false); }
   }
 
@@ -52,6 +56,7 @@ export default function OtherForm({ initial, onSubmit, submitLabel }: Props) {
       <Field label="Notes">
         <TextareaInput value={notes} onChange={setNotes} placeholder="Any notes about this investment…" rows={2} />
       </Field>
+      <ExpectedReturnField value={expectedReturn} onChange={setExpectedReturn} holdingType="other" />
       <SubmitButton label={submitLabel} disabled={!label || !currentValue} loading={loading} onClick={handleSubmit} />
     </div>
   );

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Field, TextInput, AmountWithCurrency, SubmitButton } from "./_shared";
+import { Field, TextInput, AmountWithCurrency, SubmitButton, ExpectedReturnField } from "./_shared";
 import type { ClientHolding } from "@/hooks/useClientHoldings";
 
 interface Props {
@@ -18,6 +18,7 @@ export default function PensionForm({ initial, onSubmit, submitLabel }: Props) {
   const [country, setCountry] = useState(initial?.pensionCountry ?? "");
   const [monthly, setMonthly] = useState(initial?.monthlyContribution ?? "");
   const [employer, setEmployer] = useState(initial?.employerContribution ?? "");
+  const [expectedReturn, setExpectedReturn] = useState(initial?.expectedAnnualReturnPct ?? "");
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -34,7 +35,10 @@ export default function PensionForm({ initial, onSubmit, submitLabel }: Props) {
     if (!validate()) return;
     setLoading(true);
     try {
-      await onSubmit({ holdingType: "pension", label, schemeName, currentBalancePension: parseFloat(balance), currency, pensionCountry: country || null, monthlyContribution: monthly ? parseFloat(monthly) : 0, employerContribution: employer ? parseFloat(employer) : 0 });
+      await onSubmit({
+        holdingType: "pension", label, schemeName, currentBalancePension: parseFloat(balance), currency, pensionCountry: country || null, monthlyContribution: monthly ? parseFloat(monthly) : 0, employerContribution: employer ? parseFloat(employer) : 0,
+        expectedAnnualReturnPct: expectedReturn ? parseFloat(expectedReturn) : null,
+      });
     } finally { setLoading(false); }
   }
 
@@ -61,6 +65,7 @@ export default function PensionForm({ initial, onSubmit, submitLabel }: Props) {
       <Field label="Employer monthly contribution">
         <AmountWithCurrency amount={employer} onAmountChange={setEmployer} currency={currency} onCurrencyChange={setCurrency} />
       </Field>
+      <ExpectedReturnField value={expectedReturn} onChange={setExpectedReturn} holdingType="pension" />
       <SubmitButton label={submitLabel} disabled={!label || !schemeName || !balance} loading={loading} onClick={handleSubmit} />
     </div>
   );

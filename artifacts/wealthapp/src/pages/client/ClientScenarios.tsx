@@ -7,14 +7,15 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { BarChart2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import ClientAppShell from "@/components/client/AppShell";
 import ScenarioSidebar, { type ScenarioSource } from "@/components/client/scenarios/ScenarioSidebar";
 import ScenarioInputPanel from "@/components/client/scenarios/ScenarioInputPanel";
 import ScenarioResultPanel from "@/components/client/scenarios/ScenarioResultPanel";
 import ScenarioCompareView from "@/components/client/scenarios/ScenarioCompareView";
+import BringUnderManagementCompare from "@/components/client/scenarios/BringUnderManagementCompare";
 import { useAdvisedPlans } from "@/hooks/useAdvisedPlans";
 import { useClientHoldings } from "@/hooks/useClientHoldings";
-import { usePortfolioTotals } from "@/hooks/usePortfolioTotals";
 import { useScenarios } from "@/hooks/useScenarios";
 import { useQuery } from "@tanstack/react-query";
 import { useUser } from "@clerk/react";
@@ -23,13 +24,18 @@ import { runScenario as runScenarioFn, type ScenarioResult } from "@/lib/investm
 import type { DashboardGoal } from "@/hooks/useDashboardData";
 import type { ScenarioRun } from "@/hooks/useScenarios";
 
+const MODES = [
+  { id: "advised", label: "Advised scenarios" },
+  { id: "self", label: "Bring under management" },
+] as const;
+
 export default function ClientScenarios() {
   const [location] = useLocation();
   const { user, isLoaded } = useUser();
+  const [mode, setMode] = useState<string>("advised");
 
-  const { plans } = useAdvisedPlans();
+  const { plans, totalAdvisedValue } = useAdvisedPlans();
   const { holdings } = useClientHoldings();
-  const totals = usePortfolioTotals();
   const { savedScenarios, advisorScenarios, saveScenario, deleteScenario, markAdvisorScenarioViewed } = useScenarios();
 
   const goalsQuery = useQuery<DashboardGoal[]>({
@@ -92,9 +98,9 @@ export default function ClientScenarios() {
   return (
     <ClientAppShell>
       <div className="max-w-[1100px] mx-auto">
-        <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center justify-between mb-3">
           <h1 className="text-xl font-bold text-[#042C53]">Scenario Planner</h1>
-          {(selectedSource || selectedType || currentResult) && (
+          {mode === "advised" && (selectedSource || selectedType || currentResult) && (
             <button
               onClick={handleReset}
               className="text-sm text-slate-500 hover:text-[#042C53] transition-colors"
@@ -104,14 +110,31 @@ export default function ClientScenarios() {
           )}
         </div>
 
+        <div className="flex gap-1 bg-slate-100 rounded-xl p-1 w-fit mb-5">
+          {MODES.map(m => (
+            <button
+              key={m.id}
+              onClick={() => setMode(m.id)}
+              className={cn(
+                "px-4 py-1.5 rounded-lg text-sm font-medium transition-all",
+                mode === m.id ? "bg-white text-[#042C53] shadow-sm" : "text-slate-500 hover:text-slate-700"
+              )}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+
+        {mode === "self" ? (
+          <BringUnderManagementCompare holdings={holdings} />
+        ) : (
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Sidebar */}
           <div className="lg:w-[300px] lg:shrink-0">
             <ScenarioSidebar
               plans={plans}
-              selfHoldings={holdings}
               goals={goals}
-              totalPortfolioValue={totals.totalPortfolioValue}
+              totalAdvisedValue={totalAdvisedValue}
               totalMonthly={totalMonthly}
               selectedSource={selectedSource}
               onSelectSource={s => { setSelectedSource(s); setCurrentResult(null); }}
@@ -172,6 +195,7 @@ export default function ClientScenarios() {
             )}
           </div>
         </div>
+        )}
       </div>
     </ClientAppShell>
   );

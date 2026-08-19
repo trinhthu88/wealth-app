@@ -16,6 +16,10 @@ export const clientHoldingsTable = pgTable("client_holdings", {
   notes: text("notes"),
   isActive: boolean("is_active").notNull().default(true),
 
+  // Client's own expected-return override, used for projections instead of the
+  // asset-class benchmark when set. Nullable — most holdings rely on the benchmark.
+  expectedAnnualReturnPct: numeric("expected_annual_return_pct"),
+
   // stock_etf + crypto
   ticker: text("ticker"),
   brokerPlatform: text("broker_platform"),
@@ -28,6 +32,10 @@ export const clientHoldingsTable = pgTable("client_holdings", {
 
   // property
   propertyAddress: text("property_address"),
+  // Property benchmark is a single USD-denominated global figure for now (see
+  // asset_class_benchmarks.global_property) — country is stored but not yet used
+  // to select a localized benchmark. Not inferred from propertyAddress.
+  country: text("country"),
   purchasePrice: numeric("purchase_price"),
   currentEstimatedValue: numeric("current_estimated_value"),
   outstandingMortgage: numeric("outstanding_mortgage").default("0"),
@@ -63,10 +71,39 @@ export const priceCacheTable = pgTable("price_cache", {
   fetchedAt: timestamp("fetched_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [unique().on(t.symbol, t.symbolType)]);
 
+// Admin-managed expected-return benchmarks, one row per asset class. USD-denominated
+// global figures for now — no per-country variants (see country comment above).
+export const assetClassBenchmarksTable = pgTable("asset_class_benchmarks", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  assetClass: text("asset_class").notNull().unique(),
+  label: text("label").notNull(),
+  tenYearCagrPct: numeric("ten_year_cagr_pct").notNull(),
+  source: text("source"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+});
+
+// Admin-managed "if brought under management" target return per advised plan/package
+// type (rsp / lump_sum / combination) — used by the self-tracked-holding "bring under
+// management" comparison. Distinct axis from asset_class_benchmarks (plan type vs.
+// asset class), so kept as its own table rather than forced into that one.
+export const advisedStrategyReturnsTable = pgTable("advised_strategy_returns", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  planType: text("plan_type").notNull().unique(),
+  label: text("label").notNull(),
+  targetAnnualReturnPct: numeric("target_annual_return_pct").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+});
+
 export const insertClientHoldingSchema = createInsertSchema(clientHoldingsTable).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertPriceCacheSchema = createInsertSchema(priceCacheTable).omit({ id: true });
+export const insertAssetClassBenchmarkSchema = createInsertSchema(assetClassBenchmarksTable).omit({ id: true, updatedAt: true });
+export const insertAdvisedStrategyReturnSchema = createInsertSchema(advisedStrategyReturnsTable).omit({ id: true, updatedAt: true });
 
 export type ClientHolding = typeof clientHoldingsTable.$inferSelect;
 export type InsertClientHolding = z.infer<typeof insertClientHoldingSchema>;
 export type PriceCache = typeof priceCacheTable.$inferSelect;
 export type InsertPriceCache = z.infer<typeof insertPriceCacheSchema>;
+export type AssetClassBenchmark = typeof assetClassBenchmarksTable.$inferSelect;
+export type InsertAssetClassBenchmark = z.infer<typeof insertAssetClassBenchmarkSchema>;
+export type AdvisedStrategyReturn = typeof advisedStrategyReturnsTable.$inferSelect;
+export type InsertAdvisedStrategyReturn = z.infer<typeof insertAdvisedStrategyReturnSchema>;

@@ -4,6 +4,7 @@ import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import CurrencyDisplay from "@/components/client/CurrencyDisplay";
 import HoldingTypeBadge from "@/components/client/HoldingTypeBadge";
+import SourceBadge from "../shared/SourceBadge";
 import PriceTag from "../shared/PriceTag";
 import { apiFetch } from "@/lib/api";
 import { useQueryClient } from "@tanstack/react-query";
@@ -46,6 +47,7 @@ export default function HoldingCard({ holding: h, onEdit }: Props) {
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <HoldingTypeBadge type={h.holdingType} size="sm" />
+          <SourceBadge kind="self" />
           <div className="min-w-0">
             <p className="text-sm font-semibold text-[#042C53] truncate">{h.label}</p>
             <p className="text-xs text-slate-400 truncate">

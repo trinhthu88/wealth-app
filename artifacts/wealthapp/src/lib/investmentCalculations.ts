@@ -75,6 +75,16 @@ export function calcHoldingGainLoss(
   return { costBasis, currentValue, gainLoss, gainLossPct };
 }
 
+// Recovering from a d% drop requires growing by a factor of 1/(1-d), not 1+d
+// (e.g. a 50% drop needs a 100% gain to recover, not a 50% gain). This is the
+// one formula from the Phase 2 bugfix — kept here, next to the scenario engine
+// that actually ships to users, rather than in the unused lib/investmentGoalProjection.ts.
+export function calcMarketDropRecoveryMonths(dropPct: number, annualReturnPct: number): number {
+  const monthlyRate = annualReturnPct / 100 / 12;
+  if (monthlyRate <= 0 || dropPct <= 0) return 0;
+  return Math.ceil(Math.log(1 / (1 - dropPct / 100)) / Math.log(1 + monthlyRate));
+}
+
 // ── Scenario projection ──────────────────────────────────────────
 
 export function projectMonthlyGrowth(

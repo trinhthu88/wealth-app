@@ -13,6 +13,7 @@ export interface ClientHolding {
   purchaseDate: string | null;
   notes: string | null;
   isActive: boolean;
+  expectedAnnualReturnPct: string | null;
   // stock_etf + crypto
   ticker: string | null;
   brokerPlatform: string | null;
@@ -23,6 +24,7 @@ export interface ClientHolding {
   exchangeName: string | null;
   // property
   propertyAddress: string | null;
+  country: string | null;
   purchasePrice: string | null;
   currentEstimatedValue: string | null;
   outstandingMortgage: string | null;
