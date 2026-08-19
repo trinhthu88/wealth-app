@@ -5,6 +5,7 @@ import {
   pathwayProgressTable, assetsTable, liabilitiesTable, profilesTable,
 } from "@workspace/db";
 import { requireAuth } from "../middlewares/requireAuth";
+import { calculateProjection } from "@workspace/goal-math";
 
 const router: IRouter = Router();
 
@@ -134,24 +135,25 @@ router.post("/health-score", requireAuth, async (req, res): Promise<void> => {
   let goalsScore = 0;
   if (goals.length > 0) {
     const topGoal = goals[0];
-    // current_amount = goal progress + savings principal + investment principal (same as frontend)
+    // current_amount = goal progress + savings principal + investment principal (same as frontend
+    // free-tier model — see the tier note in @workspace/goal-math for why this doesn't apply
+    // to the investment-client tier's currentAmount semantics)
     const goalCurrentAmt = parseFloat(topGoal.currentAmount ?? "0");
     const effectiveCurrentAmt = goalCurrentAmt + effectiveSavingsBal + effectiveInvestBal;
     const targetAmt = parseFloat(topGoal.targetAmount ?? "0");
 
     if (topGoal.targetDate && targetAmt > 0) {
-      const today = new Date();
-      const target = new Date(topGoal.targetDate);
-      const monthsRemaining = Math.max(
-        0,
-        (target.getFullYear() - today.getFullYear()) * 12 + (target.getMonth() - today.getMonth()),
-      );
-      // Spec formula: compound interest for savings, compound for investments
-      const projectedCash = monthlyCashSaved * monthsRemaining;
-      const projectedInterest = effectiveSavingsBal * (Math.pow(1 + savRatePct / 100 / 12, monthsRemaining) - 1);
-      const projectedInvest = effectiveInvestBal * (Math.pow(1 + invRatePct / 100 / 12, monthsRemaining) - 1);
-      const projectedAtTarget = effectiveCurrentAmt + projectedCash + projectedInterest + projectedInvest;
-      goalsScore = scoreGoalProjection(projectedAtTarget, targetAmt, true);
+      const { projectedAmount } = calculateProjection({
+        currentAmount: effectiveCurrentAmt,
+        targetAmount: targetAmt,
+        targetDate: topGoal.targetDate,
+        monthlyCashSaved,
+        savingsBalance: effectiveSavingsBal,
+        savingsRatePercent: savRatePct,
+        investmentValue: effectiveInvestBal,
+        investmentRatePercent: invRatePct,
+      });
+      goalsScore = scoreGoalProjection(projectedAmount, targetAmt, true);
     } else {
       // No target date set — use stored status as fallback
       if (topGoal.status === "on_track" || topGoal.status === "achieved") goalsScore = 25;

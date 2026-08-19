@@ -1,27 +1,34 @@
 import { Link } from "wouter";
+import { computeGoalProgress, type GoalStatus } from "@workspace/goal-math";
 import type { DashboardGoal } from "@/hooks/useDashboardData";
 
 function n(v: string | null | undefined) { return parseFloat(v ?? "0") || 0; }
 
+const BADGE_BY_STATUS: Record<GoalStatus, { label: string; bg: string; text: string; msg: string }> = {
+  on_track:  { label: "On track",  bg: "#E6F5EE", text: "#0F6E56", msg: "Tracking ahead of your plan." },
+  at_risk:   { label: "Behind",    bg: "#FEF3D6", text: "#8A5B12", msg: "Behind by a few months." },
+  off_track: { label: "Off track", bg: "#FCE8E5", text: "#A63D2F", msg: "Needs attention." },
+  completed: { label: "Achieved",  bg: "#E6F5EE", text: "#0F6E56", msg: "Goal reached." },
+  no_target: { label: "Active",    bg: "#E6F5EE", text: "#0F6E56", msg: "On track" },
+};
+
+// Reuses the canonical investment-client pacing model (@workspace/goal-math) so this
+// dashboard card can't drift from the goals page's own status calculation.
 function statusBadge(goal: DashboardGoal) {
-  if (!goal.targetDate || !goal.targetAmount) return null;
-  const created = new Date(goal.createdAt);
-  const target = new Date(goal.targetDate + "-01");
-  const now = new Date();
-  const totalMonths = (target.getTime() - created.getTime()) / (1000 * 60 * 60 * 24 * 30);
-  const elapsed = (now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24 * 30);
-  const expectedPct = totalMonths > 0 ? (elapsed / totalMonths) * 100 : 0;
-  const currentPct = n(goal.targetAmount) > 0 ? (n(goal.currentAmount) / n(goal.targetAmount)) * 100 : 0;
-  if (currentPct >= expectedPct * 0.9) return { label: "On track", bg: "#E6F5EE", text: "#0F6E56", msg: "Tracking ahead of your plan." };
-  if (currentPct >= expectedPct * 0.6) return { label: "Behind", bg: "#FEF3D6", text: "#8A5B12", msg: "Behind by a few months." };
-  return { label: "Off track", bg: "#FCE8E5", text: "#A63D2F", msg: "Needs attention." };
+  const { status } = computeGoalProgress({
+    currentAmount: n(goal.currentAmount),
+    targetAmount: goal.targetAmount ? n(goal.targetAmount) : null,
+    targetDate: goal.targetDate,
+    createdAt: goal.createdAt,
+  });
+  return BADGE_BY_STATUS[status];
 }
 
 function PrimaryGoalCard({ goal }: { goal: DashboardGoal }) {
   const current = n(goal.currentAmount);
   const target = n(goal.targetAmount);
   const pct = target > 0 ? Math.min(100, (current / target) * 100) : 0;
-  const badge = statusBadge(goal) || { label: "Active", bg: "#E6F5EE", text: "#0F6E56", msg: "On track" };
+  const badge = statusBadge(goal);
   const targetYear = goal.targetDate ? new Date(goal.targetDate).getFullYear() : "future";
 
   const radius = 54;
@@ -75,7 +82,7 @@ function SmallGoalCard({ goal, color = "#1D9E75" }: { goal: DashboardGoal, color
   const current = n(goal.currentAmount);
   const target = n(goal.targetAmount);
   const pct = target > 0 ? Math.min(100, (current / target) * 100) : 0;
-  const badge = statusBadge(goal) || { label: "Active", bg: "#E6F5EE", text: "#0F6E56", msg: "On track" };
+  const badge = statusBadge(goal);
   
   const radius = 14;
   const circumference = 2 * Math.PI * radius;
