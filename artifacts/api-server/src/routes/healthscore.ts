@@ -12,7 +12,7 @@ const router: IRouter = Router();
 // ── Scoring tier helpers ────────────────────────────────────────────────────
 
 /** Component 1: Effective Savings Rate → 25 pts max */
-function scoreEffectiveSavingsRate(pct: number): number {
+export function scoreEffectiveSavingsRate(pct: number): number {
   if (pct >= 25) return 25;
   if (pct >= 20) return 22;
   if (pct >= 15) return 18;
@@ -22,7 +22,7 @@ function scoreEffectiveSavingsRate(pct: number): number {
 }
 
 /** Component 2: Goal projection → 25 pts max */
-function scoreGoalProjection(projected: number, target: number, hasGoal: boolean): number {
+export function scoreGoalProjection(projected: number, target: number, hasGoal: boolean): number {
   if (!hasGoal) return 0;
   if (projected >= target) return 25;
   const gap = (target - projected) / target * 100;
@@ -31,7 +31,7 @@ function scoreGoalProjection(projected: number, target: number, hasGoal: boolean
 }
 
 /** Component 3: Net worth → 20 pts max */
-function scoreNetWorth(netWorth: number, hasData: boolean): number {
+export function scoreNetWorth(netWorth: number, hasData: boolean): number {
   if (!hasData) return 0;
   if (netWorth > 100_000) return 20;
   if (netWorth > 0) return 14;
@@ -40,7 +40,7 @@ function scoreNetWorth(netWorth: number, hasData: boolean): number {
 }
 
 /** Component 4: Wealth growth rate (annual growth / net worth) → 20 pts max */
-function scoreWealthGrowthRate(pct: number): number {
+export function scoreWealthGrowthRate(pct: number): number {
   if (pct >= 10) return 20;
   if (pct >= 7)  return 16;
   if (pct >= 4)  return 10;
