@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useRoute } from "wouter";
 import { UserButton } from "@clerk/react";
 import { useProfile } from "@/hooks/useProfile";
+import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard, TrendingUp, Target, DollarSign, BarChart3, Heart,
@@ -82,6 +83,8 @@ function NavLink({ item, collapsed, light }: { item: NavItem; collapsed: boolean
   return (
     <Link
       href={item.href}
+      aria-current={active ? "page" : undefined}
+      aria-label={collapsed ? item.label : undefined}
       className={cn(
         "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150",
         light
@@ -96,7 +99,7 @@ function NavLink({ item, collapsed, light }: { item: NavItem; collapsed: boolean
         collapsed && "justify-center px-2"
       )}
     >
-      <Icon className="h-[18px] w-[18px] shrink-0" />
+      <Icon className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
       {!collapsed && <span className="text-[13px]">{item.label}</span>}
     </Link>
   );
@@ -106,13 +109,13 @@ function ClientFooterTab({ item }: { item: NavItem }) {
   const [active] = useRoute(item.href);
   const Icon = item.icon;
   return (
-    <Link href={item.href} className="flex-1">
+    <Link href={item.href} className="flex-1" aria-current={active ? "page" : undefined}>
       <div className={cn(
         "flex flex-col items-center gap-1 py-2 transition-colors",
         active ? "text-primary" : "text-muted-foreground"
       )}>
         <div className={cn("p-1.5 rounded-xl transition-colors", active && "bg-primary/10")}>
-          <Icon className="h-5 w-5" />
+          <Icon className="h-5 w-5" aria-hidden="true" />
         </div>
         <span className="text-[10px] font-medium leading-none">{item.label}</span>
       </div>
@@ -124,6 +127,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const { profile } = useProfile();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const drawerRef = useFocusTrap<HTMLDivElement>(mobileOpen, () => setMobileOpen(false));
 
   const isClient = profile?.role === "investment_client";
   const isFree = !profile || profile.role === "free_user";
@@ -179,7 +183,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Nav items */}
-      <nav className="flex-1 p-2 space-y-0.5 overflow-y-auto">
+      <nav className="flex-1 p-2 space-y-0.5 overflow-y-auto" aria-label="Primary">
         {nav.map(item => (
           <NavLink key={item.href} item={item} collapsed={collapsed} light={isFree} />
         ))}
@@ -244,6 +248,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         {Sidebar}
         <button
           onClick={() => setCollapsed(v => !v)}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-expanded={!collapsed}
           className={cn(
             "absolute -right-3 top-[72px] z-10 h-6 w-6 rounded-full border flex items-center justify-center transition-all shadow-sm",
             isFree
@@ -251,15 +257,28 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               : "border-sidebar-border bg-sidebar text-sidebar-foreground/60 hover:bg-sidebar-primary hover:text-white hover:border-sidebar-primary"
           )}
         >
-          {collapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
+          {collapsed ? <ChevronRight className="h-3 w-3" aria-hidden="true" /> : <ChevronLeft className="h-3 w-3" aria-hidden="true" />}
         </button>
       </div>
 
       {/* Mobile sidebar drawer */}
       {mobileOpen && (
         <div className="fixed inset-0 z-50 flex md:hidden">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
-          <div className="relative z-10 w-60 h-full flex flex-col">{Sidebar}</div>
+          <button
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            aria-label="Close menu"
+            onClick={() => setMobileOpen(false)}
+          />
+          <div
+            ref={drawerRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Navigation menu"
+            tabIndex={-1}
+            className="relative z-10 w-60 h-full flex flex-col outline-none"
+          >
+            {Sidebar}
+          </div>
         </div>
       )}
 
@@ -268,8 +287,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <button
             className="md:hidden text-foreground/70 hover:text-foreground transition-colors"
             onClick={() => setMobileOpen(v => !v)}
+            aria-label={mobileOpen ? "Close menu" : "Open menu"}
+            aria-expanded={mobileOpen}
           >
-            {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            {mobileOpen ? <X className="h-5 w-5" aria-hidden="true" /> : <Menu className="h-5 w-5" aria-hidden="true" />}
           </button>
           <div className="flex-1" />
           <div className="md:hidden">

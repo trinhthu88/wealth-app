@@ -386,8 +386,12 @@ export default function HealthScorePage() {
           style={{ boxShadow: "0 4px 14px rgba(15,23,42,0.06)" }}
           initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
         >
-          <div className="flex justify-center mb-2">
-            <svg width={200} height={200} viewBox="0 0 200 200">
+          <div
+            className="flex justify-center mb-2"
+            role="img"
+            aria-label={`Health score: ${overall > 0 ? overall : "not yet calculated"} out of 100${overall > 0 ? `, ${statusText}` : ""}`}
+          >
+            <svg width={200} height={200} viewBox="0 0 200 200" aria-hidden="true">
               <circle cx={100} cy={100} r={r} fill="none" stroke="#E6F5EE" strokeWidth={14} />
               <circle cx={100} cy={100} r={54} fill="#FAF8F5" />
               <circle
@@ -429,9 +433,9 @@ export default function HealthScorePage() {
         {/* ── Four dimension cards ────────────────────────────────────────── */}
         {score && (
           <div className="space-y-3">
-            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "#A8A095" }}>
+            <h2 style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "#A8A095", margin: 0 }}>
               YOUR FINANCIAL HEALTH
-            </p>
+            </h2>
             {dimensions.map((dim) => {
               const badge = dim.badge;
               const barPct = Math.min(100, dim.score);
@@ -442,7 +446,7 @@ export default function HealthScorePage() {
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2.5">
                         <div className="h-9 w-9 rounded-xl flex items-center justify-center text-lg"
-                          style={{ background: badge.bg }}>
+                          style={{ background: badge.bg }} aria-hidden="true">
                           {dim.emoji}
                         </div>
                         <div>
@@ -461,7 +465,14 @@ export default function HealthScorePage() {
                         </span>
                       </div>
                     </div>
-                    <div style={{ height: 6, borderRadius: 999, background: "#F2EFE9", overflow: "hidden" }}>
+                    <div
+                      style={{ height: 6, borderRadius: 999, background: "#F2EFE9", overflow: "hidden" }}
+                      role="progressbar"
+                      aria-valuenow={barPct}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-label={`${dim.label}: ${dim.score} out of 100, ${badge.label}`}
+                    >
                       <div style={{ height: "100%", borderRadius: 999, background: barColor, width: `${barPct}%`, transition: "width 0.6s ease" }} />
                     </div>
                   </div>
@@ -470,7 +481,7 @@ export default function HealthScorePage() {
                   {dim.tip && (
                     <div className="mt-1.5 mx-1 rounded-xl px-3 py-2.5 flex items-start gap-2"
                       style={{ background: "#FEF9ED", border: "1px solid #F5D88A" }}>
-                      <span style={{ fontSize: 13, flexShrink: 0, marginTop: 1 }}>💡</span>
+                      <span style={{ fontSize: 13, flexShrink: 0, marginTop: 1 }} aria-hidden="true">💡</span>
                       <p style={{ fontSize: 12, color: "#7A5A00", lineHeight: 1.5 }}>{dim.tip}</p>
                     </div>
                   )}
@@ -483,7 +494,7 @@ export default function HealthScorePage() {
         {/* ── What would improve this — one clear next action ─────────────── */}
         {score && (
           <div>
-            <p className="text-xs font-medium text-muted-foreground mb-3">What would improve this</p>
+            <h2 className="text-xs font-medium text-muted-foreground mb-3">What would improve this</h2>
             <WeeklyTipCard tip={weeklyTip} />
           </div>
         )}
@@ -491,7 +502,7 @@ export default function HealthScorePage() {
         {/* ── Personalised insights ──────────────────────────────────────── */}
         {score && insights.length > 0 && (
           <div>
-            <p className="text-xs font-medium text-muted-foreground mb-3">Personalised insights</p>
+            <h2 className="text-xs font-medium text-muted-foreground mb-3">Personalised insights</h2>
             <div className="space-y-2">
               {insights.map((text, i) => {
                 const cardStyle = insightCardStyle(text);
@@ -516,7 +527,7 @@ export default function HealthScorePage() {
 
         {/* ── Score history ─────────────────────────────────────────────── */}
         <div>
-          <p className="text-xs font-medium text-muted-foreground mb-3">Score history</p>
+          <h2 className="text-xs font-medium text-muted-foreground mb-3">Score history</h2>
           {chartData ? (
             <div className="bg-card border border-card-border rounded-2xl p-4">
               <div role="img" aria-label={`Health score history: latest score ${chartData[chartData.length - 1]?.score ?? "unavailable"} out of 100`}>

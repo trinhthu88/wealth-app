@@ -43,11 +43,11 @@ const TABS = [
 function Tab({ href, icon, label }: { href: string; icon: (active: boolean) => React.ReactNode; label: string }) {
   const [active] = useRoute(href);
   return (
-    <Link href={href} className="flex-1">
+    <Link href={href} className="flex-1" aria-current={active ? "page" : undefined}>
       <div
         className={cn("flex flex-col items-center gap-[5px] pt-2", active ? "text-[#1D9E75]" : "text-[#A8A095]")}
       >
-        {icon(active)}
+        <span aria-hidden="true">{icon(active)}</span>
         <span style={{ fontSize: 10, fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 500, lineHeight: 1 }}>
           {label}
         </span>
@@ -59,6 +59,7 @@ function Tab({ href, icon, label }: { href: string; icon: (active: boolean) => R
 export default function BottomNav() {
   return (
     <nav
+      aria-label="Primary"
       className="fixed bottom-0 left-0 right-0 flex items-stretch md:hidden z-40"
       style={{
         height: 80,

@@ -44,7 +44,7 @@ function GrowthChip({ amount, bgClass, textClass }: { amount: number; bgClass: s
   if (amount <= 0) return null;
   return (
     <div className={cn("flex items-center gap-1.5 text-xs rounded-full px-3 py-1.5 w-fit", bgClass, textClass)}>
-      <TrendingUp className="h-3.5 w-3.5 flex-shrink-0" />
+      <TrendingUp className="h-3.5 w-3.5 flex-shrink-0" aria-hidden="true" />
       <span>+{fmt(amount)}/month from savings interest &amp; investment returns</span>
     </div>
   );
@@ -96,11 +96,13 @@ function ActionButtons({ onContribute, onEdit, btnClass }: { onContribute?: () =
     <div className="flex gap-2">
       {onContribute && (
         <Button size="sm" className={cn("flex-1 gap-1.5", btnClass)} onClick={onContribute}>
-          <PlusCircle className="h-3.5 w-3.5" />Add contribution
+          <PlusCircle className="h-3.5 w-3.5" aria-hidden="true" />Add contribution
         </Button>
       )}
       {onEdit && (
-        <Button size="sm" variant="outline" onClick={onEdit}><Pencil className="h-3.5 w-3.5" /></Button>
+        <Button size="sm" variant="outline" onClick={onEdit} aria-label="Edit goal">
+          <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+        </Button>
       )}
     </div>
   );
@@ -129,7 +131,7 @@ export default function GoalCard({ goal, projection, onContribute, onEdit, accou
     return (
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
-          <div className="h-12 w-12 rounded-xl flex items-center justify-center text-2xl bg-white/60">
+          <div className="h-12 w-12 rounded-xl flex items-center justify-center text-2xl bg-white/60" aria-hidden="true">
             {emoji}
           </div>
           <div>
@@ -154,7 +156,14 @@ export default function GoalCard({ goal, projection, onContribute, onEdit, accou
           </div>
           <span className="text-muted-foreground">{target > 0 ? fmt(target) : "—"} by {targetDateStr ?? "target"}</span>
         </div>
-        <div className="h-2 rounded-full bg-white/60 overflow-hidden">
+        <div
+          className="h-2 rounded-full bg-white/60 overflow-hidden"
+          role="progressbar"
+          aria-valuenow={pct}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label={`${goal.title} progress: ${pct}% funded`}
+        >
           <div className={cn("h-full rounded-full transition-all", barClass)} style={{ width: `${pct}%` }} />
         </div>
       </div>

@@ -42,7 +42,10 @@
       "Bash(find /nix/store/cpwib3zazj49fm0y04y53w4xkbqsgrgm-mesa-25.0.7 -iname libgbm*)",
       "Bash(nix-build '<nixpkgs>' --no-out-link -A libgbm)",
       "Bash(LD_LIBRARY_PATH=$\\(cat /tmp/ld_library_path.txt\\) timeout 60 node step2-login-portfolio.mjs)",
-      "Bash(curl *)"
+      "Bash(curl *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(npx vitest *)"
     ]
   }
 }

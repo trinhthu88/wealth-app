@@ -34,7 +34,7 @@ export default function MilestonesPage() {
               className="flex items-center gap-1.5 rounded-full px-3 py-1.5"
               style={{ background: "#FEF3D6" }}
             >
-              <span>🔥</span>
+              <span aria-hidden="true">🔥</span>
               <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, fontWeight: 700, color: "#C8881C" }}>
                 {streakWeeks} weeks
               </span>
@@ -77,9 +77,9 @@ export default function MilestonesPage() {
         {/* Earned badges */}
         {earned.length > 0 && (
           <div className="mb-6">
-            <p style={{ fontFamily: "'Sora', sans-serif", fontSize: 15, fontWeight: 700, color: "#042C53", marginBottom: 10 }}>
+            <h2 style={{ fontFamily: "'Sora', sans-serif", fontSize: 15, fontWeight: 700, color: "#042C53", margin: 0, marginBottom: 10 }}>
               Earned · {earned.length} of {MILESTONES.length}
-            </p>
+            </h2>
             <div className="grid grid-cols-3 gap-[10px]">
               {earned.map(m => (
                 <motion.div
@@ -96,7 +96,7 @@ export default function MilestonesPage() {
                       background: isStreakBadge(m.key) ? "#FEF3D6" : "#E6F5EE",
                     }}
                   >
-                    <span style={{ fontSize: 26 }}>{m.emoji}</span>
+                    <span style={{ fontSize: 26 }} aria-hidden="true">{m.emoji}</span>
                   </div>
                   <p style={{ fontSize: 11, fontWeight: 600, color: "#042C53", lineHeight: 1.3 }}>{m.label}</p>
                   <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: "#1D9E75", marginTop: 3 }}>
@@ -111,9 +111,9 @@ export default function MilestonesPage() {
         {/* In-progress: closest badges */}
         {locked.slice(0, 3).length > 0 && (
           <div className="mb-6">
-            <p style={{ fontFamily: "'Sora', sans-serif", fontSize: 15, fontWeight: 700, color: "#042C53", marginBottom: 10 }}>
+            <h2 style={{ fontFamily: "'Sora', sans-serif", fontSize: 15, fontWeight: 700, color: "#042C53", margin: 0, marginBottom: 10 }}>
               Almost there
-            </p>
+            </h2>
             <div className="grid grid-cols-3 gap-[10px]">
               {locked.slice(0, 3).map(m => (
                 <div
@@ -125,7 +125,7 @@ export default function MilestonesPage() {
                     className="mx-auto flex items-center justify-center rounded-[12px] mb-2"
                     style={{ width: 52, height: 52, background: "rgba(245,185,71,0.2)" }}
                   >
-                    <span style={{ fontSize: 26 }}>{m.emoji}</span>
+                    <span style={{ fontSize: 26 }} aria-hidden="true">{m.emoji}</span>
                   </div>
                   <p style={{ fontSize: 11, fontWeight: 600, color: "#C8881C", lineHeight: 1.3 }}>{m.label}</p>
                   <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: "#C8881C", marginTop: 3 }}>
@@ -140,9 +140,9 @@ export default function MilestonesPage() {
         {/* Locked badges */}
         {locked.slice(3).length > 0 && (
           <div>
-            <p style={{ fontFamily: "'Sora', sans-serif", fontSize: 15, fontWeight: 700, color: "#042C53", marginBottom: 10 }}>
+            <h2 style={{ fontFamily: "'Sora', sans-serif", fontSize: 15, fontWeight: 700, color: "#042C53", margin: 0, marginBottom: 10 }}>
               Locked · {locked.slice(3).length} more
-            </p>
+            </h2>
             <div className="grid grid-cols-3 gap-[10px]">
               {locked.slice(3).map(m => (
                 <div
@@ -154,7 +154,7 @@ export default function MilestonesPage() {
                     className="mx-auto flex items-center justify-center rounded-[12px] mb-2"
                     style={{ width: 52, height: 52, background: "#F2EFE9" }}
                   >
-                    <span style={{ fontSize: 26, filter: "grayscale(1)" }}>{m.emoji}</span>
+                    <span style={{ fontSize: 26, filter: "grayscale(1)" }} aria-hidden="true">{m.emoji}</span>
                   </div>
                   <p style={{ fontSize: 11, fontWeight: 600, color: "#042C53", lineHeight: 1.3 }}>{m.label}</p>
                   <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: "#A8A095", marginTop: 3 }}>
@@ -181,7 +181,7 @@ export default function MilestonesPage() {
               {MILESTONES.slice(0, 3).map(m => (
                 <div key={m.key} className="bg-white rounded-[20px] text-center" style={{ padding: "12px 8px", boxShadow: "0 4px 14px rgba(15,23,42,0.04)", opacity: 0.5 }}>
                   <div className="mx-auto flex items-center justify-center rounded-[12px] mb-2" style={{ width: 52, height: 52, background: "#F2EFE9" }}>
-                    <span style={{ fontSize: 26, filter: "grayscale(1)" }}>{m.emoji}</span>
+                    <span style={{ fontSize: 26, filter: "grayscale(1)" }} aria-hidden="true">{m.emoji}</span>
                   </div>
                   <p style={{ fontSize: 11, fontWeight: 600, color: "#042C53", lineHeight: 1.3 }}>{m.label}</p>
                   <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: "#A8A095", marginTop: 3 }}>Earn it</p>

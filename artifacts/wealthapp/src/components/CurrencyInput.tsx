@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -13,6 +13,7 @@ interface Props {
 export default function CurrencyInput({ value, onChange, currency = "USD", label, placeholder = "0", className }: Props) {
   const symbol = currency === "VND" ? "₫" : "$";
   const [focused, setFocused] = useState(false);
+  const inputId = useId();
 
   const displayValue = focused
     ? (value === 0 ? "" : String(value))
@@ -20,14 +21,16 @@ export default function CurrencyInput({ value, onChange, currency = "USD", label
 
   return (
     <div className={cn("space-y-2", className)}>
-      {label && <div className="text-sm font-medium text-foreground">{label}</div>}
+      {label && <label htmlFor={inputId} className="text-sm font-medium text-foreground">{label}</label>}
       <div className="relative flex items-center border-2 border-border rounded-xl bg-card focus-within:border-primary transition-colors">
-        <span className="pl-4 text-2xl font-semibold text-muted-foreground select-none">{symbol}</span>
+        <span className="pl-4 text-2xl font-semibold text-muted-foreground select-none" aria-hidden="true">{symbol}</span>
         <input
+          id={inputId}
           type="text"
           inputMode="numeric"
           value={displayValue}
           placeholder={placeholder}
+          aria-label={label ? undefined : `Amount in ${currency}`}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           onChange={(e) => {

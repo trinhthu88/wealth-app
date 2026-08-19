@@ -21,8 +21,10 @@ export default function MilestoneChips({ earnedKeys, newlyEarned }: Props) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -8 }}
             className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex items-start gap-3"
+            role="status"
+            aria-live="polite"
           >
-            <div className="text-3xl">{newM.emoji}</div>
+            <div className="text-3xl" aria-hidden="true">{newM.emoji}</div>
             <div className="flex-1">
               <div className="font-semibold text-emerald-800">
                 Achievement unlocked: {newM.label}
@@ -32,6 +34,7 @@ export default function MilestoneChips({ earnedKeys, newlyEarned }: Props) {
             <button
               onClick={() => setCelebrationDismissed(true)}
               className="text-emerald-500 hover:text-emerald-700 text-lg leading-none"
+              aria-label="Dismiss achievement notification"
             >
               ×
             </button>
@@ -39,13 +42,14 @@ export default function MilestoneChips({ earnedKeys, newlyEarned }: Props) {
         )}
       </AnimatePresence>
 
-      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide" role="list" aria-label="Milestones">
         {MILESTONES.map((m) => {
           const isEarned = earnedKeys.includes(m.key);
           return (
             <div
               key={m.key}
-              title={m.desc}
+              role="listitem"
+              aria-label={`${m.label}: ${m.desc} — ${isEarned ? "earned" : "not yet earned"}`}
               className={cn(
                 "flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all",
                 isEarned
@@ -53,7 +57,7 @@ export default function MilestoneChips({ earnedKeys, newlyEarned }: Props) {
                   : "bg-muted/40 border-border text-muted-foreground grayscale opacity-60",
               )}
             >
-              <span className={cn(!isEarned && "grayscale")}>{m.emoji}</span>
+              <span className={cn(!isEarned && "grayscale")} aria-hidden="true">{m.emoji}</span>
               {m.label}
             </div>
           );
