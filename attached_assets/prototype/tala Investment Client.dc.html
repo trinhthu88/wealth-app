@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  body { margin: 0; background: #F2EFE9; font-family: 'Plus Jakarta Sans', sans-serif; }
+  a { color: #1D9E75; text-decoration: none; }
+  a:hover { color: #0F6E56; }
+  @keyframes solGlow { 0%,100% { opacity: .10; transform: scale(1); } 50% { opacity: .18; transform: scale(1.06); } }
+  @keyframes solRays { 0%,100% { opacity: .85; transform: scale(1) rotate(0deg); } 50% { opacity: 1; transform: scale(1.05) rotate(4deg); } }
+  @keyframes solCelebrate { 0% { transform: scale(1); } 40% { transform: scale(1.08); } 100% { transform: scale(1.03); } }
+  @keyframes solRing { 0% { opacity: .35; transform: scale(.85); } 100% { opacity: 0; transform: scale(1.5); } }
+  @keyframes solThink { 0%,100% { opacity: .35; } 50% { opacity: 1; } }
+  @keyframes riseIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes warnIn { from { opacity: 0; transform: translateY(-6px); max-height: 0; } to { opacity: 1; transform: translateY(0); max-height: 200px; } }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+</style>
+</helmet>
+<div style="min-height: 100vh; display: flex; flex-direction: column; align-items: center; gap: 20px; padding: 32px 16px 48px; background: #F2EFE9">
+  <div style="display: flex; align-items: center; gap: 10px; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: #6B6459">
+    <span>tala</span><span style="color: #A8A095">/</span><span>investment client prototype</span>
+  </div>
+
+  <div style="width: 390px; height: 844px; background: #FAF8F5; border-radius: 44px; box-shadow: 0 32px 56px rgba(4,44,83,.14), 0 0 0 10px #042C53; overflow: hidden; position: relative; display: flex; flex-direction: column">
+
+    <div style="height: 50px; flex: none; display: flex; align-items: flex-end; justify-content: space-between; padding: 0 26px 6px; font-size: 12px; font-weight: 600; color: #042C53">
+      <span>9:41</span>
+      <span style="display: flex; gap: 5px; align-items: center">
+        <span style="width: 16px; height: 9px; border: 1.5px solid #042C53; border-radius: 2px; display: inline-block"></span>
+      </span>
+    </div>
+
+    <div style="flex: 1; overflow-y: auto; overflow-x: hidden">
+
+      <sc-if value="{{ isDashboard }}" hint-placeholder-val="{{ true }}">
+        <div style="padding: 8px 20px 24px; animation: riseIn .38s ease both">
+          <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 20px">
+            <div>
+              <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: #1D9E75; margin-bottom: 6px">Tuesday, 17 August</div>
+              <div style="font-family: 'Sora', sans-serif; font-size: 22px; font-weight: 700; color: #042C53; letter-spacing: -.02em">Good morning, Linh</div>
+            </div>
+            <button onClick="{{ toggleCurrency }}" style="flex: none; min-height: 44px; padding: 0 14px; border-radius: 999px; border: 1px solid #E6E1D8; background: #FFFFFF; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 500; color: #042C53; cursor: pointer" style-hover="border-color: #1D9E75; color: #1D9E75">{{ currency }}</button>
+          </div>
+
+          <div style="background: #FFFFFF; border: 1px solid #E6E1D8; border-radius: 24px; padding: 24px 20px; box-shadow: 0 4px 14px rgba(4,44,83,.06)">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px">
+              <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: #6B6459">Your biggest goal</div>
+              <div style="font-size: 11px; font-weight: 600; color: #0F6E56; background: #E6F5EE; padding: 5px 10px; border-radius: 999px">On track</div>
+            </div>
+            <div style="font-family: 'Sora', sans-serif; font-size: 19px; font-weight: 700; color: #042C53; margin-bottom: 18px">Retirement in Da Nang</div>
+
+            <div style="display: flex; align-items: center; gap: 22px">
+              <div style="position: relative; width: 132px; height: 132px; flex: none">
+                <svg width="132" height="132" viewBox="0 0 132 132">
+                  <circle cx="66" cy="66" r="54" fill="none" stroke="#F2EFE9" strokeWidth="14"></circle>
+                  <circle cx="66" cy="66" r="54" fill="none" stroke="#1D9E75" strokeWidth="14" strokeLinecap="round" strokeDasharray="339.3" strokeDashoffset="{{ ringOffset }}" transform="rotate(-90 66 66)"></circle>
+                </svg>
+                <div style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center">
+                  <div style="font-family: 'Sora', sans-serif; font-size: 30px; font-weight: 700; color: #042C53; letter-spacing: -.03em; line-height: 1">{{ goalPctLabel }}</div>
+                  <div style="font-size: 11px; color: #6B6459; margin-top: 2px">funded</div>
+                </div>
+              </div>
+              <div style="min-width: 0">
+                <div style="font-family: 'Sora', sans-serif; font-size: 20px; font-weight: 700; color: #042C53; letter-spacing: -.02em">{{ goalCurrentLabel }}</div>
+                <div style="font-size: 12px; color: #6B6459; margin-top: 3px">of {{ goalTargetLabel }} by 2045</div>
+                <div style="height: 1px; background: #E6E1D8; margin: 14px 0"></div>
+                <div style="font-size: 13px; line-height: 1.45; color: #2D2A24; text-wrap: pretty">Tracking <strong style="color: #0F6E56">4% ahead</strong> of the plan you set with Minh Anh.</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 12px; margin-top: 14px">
+            <div style="flex: 1; background: #FFFFFF; border: 1px solid #E6E1D8; border-radius: 20px; padding: 16px">
+              <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px">
+                <svg width="34" height="34" viewBox="0 0 34 34"><circle cx="17" cy="17" r="14" fill="none" stroke="#F2EFE9" strokeWidth="5"></circle><circle cx="17" cy="17" r="14" fill="none" stroke="#F5B947" strokeWidth="5" strokeLinecap="round" strokeDasharray="88" strokeDashoffset="{{ ring2Offset }}" transform="rotate(-90 17 17)"></circle></svg>
+                <div style="font-size: 12px; font-weight: 600; color: #042C53; line-height: 1.2">Apartment<br /><span style="font-weight: 500; color: #6B6459">34% funded</span></div>
+              </div>
+              <div style="font-size: 11px; color: #6B6459">Behind by 7 months</div>
+            </div>
+            <div style="flex: 1; background: #FFFFFF; border: 1px solid #E6E1D8; border-radius: 20px; padding: 16px">
+              <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px">
+                <svg width="34" height="34" viewBox="0 0 34 34"><circle cx="17" cy="17" r="14" fill="none" stroke="#F2EFE9" strokeWidth="5"></circle><circle cx="17" cy="17" r="14" fill="none" stroke="#1D9E75" strokeWidth="5" strokeLinecap="round" strokeDasharray="88" strokeDashoffset="{{ ring3Offset }}" transform="rotate(-90 17 17)"></circle></svg>
+                <div style="font-size: 12px; font-weight: 600; color: #042C53; line-height: 1.2">Education<br /><span style="font-weight: 500; color: #6B6459">32% funded</span></div>
+              </div>
+              <div style="font-size: 11px; color: #6B6459">On track for 2033</div>
+            </div>
+          </div>
+
+          <div style="margin-top: 22px; background: #042C53; border-radius: 24px; padding: 20px; color: #FFFFFF">
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: #7FCBAE; margin-bottom: 10px">One thing to do</div>
+            <div style="font-family: 'Sora', sans-serif; font-size: 16px; font-weight: 600; line-height: 1.35; margin-bottom: 6px">Confirm the expected return on your VN30 ETF</div>
+            <div style="font-size: 12px; color: #A9C0D6; line-height: 1.5; margin-bottom: 16px">Your figure of 14% is 4.5 points above the 10-year VN30 benchmark, which makes the apartment goal look closer than it is.</div>
+            <button onClick="{{ goAccounts }}" style="min-height: 44px; width: 100%; border: none; border-radius: 14px; background: #1D9E75; color: #FFFFFF; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer" style-hover="background: #17805F">Review the assumption</button>
+          </div>
+
+          <div style="margin-top: 14px; display: flex; align-items: center; gap: 14px; background: #FFFFFF; border: 1px solid #E6E1D8; border-radius: 20px; padding: 14px 16px">
+            <div style="width: 44px; height: 44px; flex: none; border-radius: 999px; background: #E6F5EE; color: #0F6E56; display: flex; align-items: center; justify-content: center; font-family: 'Sora', sans-serif; font-weight: 700; font-size: 14px">MA</div>
+            <div style="flex: 1; min-width: 0">
+              <div style="font-size: 13px; font-weight: 600; color: #042C53">Nguyen Minh Anh</div>
+              <div style="font-size: 11px; color: #6B6459">Your advisor · replies within a day</div>
+            </div>
+            <button onClick="{{ goGoal }}" style="min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid #1D9E75; background: #FFFFFF; color: #1D9E75; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer" style-hover="background: #E6F5EE">Message</button>
+          </div>
+
+          <button onClick="{{ goOnboarding }}" style="margin-top: 16px; width: 100%; min-height: 44px; background: none; border: 1px dashed #E6E1D8; border-radius: 16px; color: #6B6459; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; cursor: pointer" style-hover="border-color: #1D9E75; color: #1D9E75">Replay onboarding</button>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isAccounts }}" hint-placeholder-val="{{ false }}">
+        <div style="padding: 8px 20px 24px; animation: riseIn .38s ease both">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px">
+            <div style="font-family: 'Sora', sans-serif; font-size: 22px; font-weight: 700; color: #042C53; letter-spacing: -.02em">Accounts</div>
+            <button onClick="{{ toggleCurrency }}" style="min-height: 44px; padding: 0 14px; border-radius: 999px; border: 1px solid #E6E1D8; background: #FFFFFF; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #042C53; cursor: pointer" style-hover="border-color: #1D9E75; color: #1D9E75">{{ currency }}</button>
+          </div>
+
+          <div style="background: #FFFFFF; border: 1px solid #E6E1D8; border-radius: 24px; padding: 20px; box-shadow: 0 4px 14px rgba(4,44,83,.06)">
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: #6B6459; margin-bottom: 8px">Everything tracked in tala</div>
+            <div style="font-family: 'Sora', sans-serif; font-size: 32px; font-weight: 700; color: #042C53; letter-spacing: -.03em; line-height: 1">{{ totalLabel }}</div>
+            <div style="font-size: 12px; color: #6B6459; margin-top: 8px">{{ totalAltLabel }} · across 6 accounts</div>
+            <div style="display: flex; height: 8px; border-radius: 999px; overflow: hidden; margin-top: 16px; background: #F2EFE9">
+              <div style="width: 46.5%; background: #1D9E75"></div>
+              <div style="width: 53.5%; background: #4A7CB8"></div>
+            </div>
+            <div style="display: flex; gap: 16px; margin-top: 10px; font-size: 11px; color: #6B6459">
+              <span style="display: flex; align-items: center; gap: 6px"><span style="width: 8px; height: 8px; border-radius: 999px; background: #1D9E75"></span>Advisor-managed 46%</span>
+              <span style="display: flex; align-items: center; gap: 6px"><span style="width: 8px; height: 8px; border-radius: 999px; background: #4A7CB8"></span>Self-tracked 54%</span>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 6px; background: #F2EFE9; border-radius: 999px; padding: 4px; margin: 18px 0 16px">
+            <button onClick="{{ showManaged }}" style="flex: 1; min-height: 44px; border: none; border-radius: 999px; background: {{ managedTabBg }}; color: {{ managedTabColor }}; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; transition: background 220ms ease, color 220ms ease">Managed by your advisor</button>
+            <button onClick="{{ showOther }}" style="flex: 1; min-height: 44px; border: none; border-radius: 999px; background: {{ otherTabBg }}; color: {{ otherTabColor }}; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; transition: background 220ms ease, color 220ms ease">Your other holdings</button>
+          </div>
+
+          <div style="opacity: {{ managedOpacity }}; display: {{ managedDisplay }}; transition: opacity 260ms ease">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px">
+              <span style="font-size: 11px; font-weight: 600; color: #0F6E56; background: #E6F5EE; padding: 5px 10px; border-radius: 999px">Advisor-managed</span>
+              <span style="font-size: 11px; color: #6B6459">Return assumptions set by tala</span>
+            </div>
+            <div style="background: #FFFFFF; border: 1px solid #E6E1D8; border-radius: 20px; padding: 18px; margin-bottom: 12px">
+              <div style="display: flex; justify-content: space-between; gap: 12px; align-items: flex-start">
+                <div>
+                  <div style="font-size: 14px; font-weight: 600; color: #042C53">Global Growth Package</div>
+                  <div style="font-size: 11px; color: #6B6459; margin-top: 3px">Utmost International · since 2021</div>
+                </div>
+                <div style="text-align: right">
+                  <div style="font-family: 'Sora', sans-serif; font-size: 16px; font-weight: 700; color: #042C53">{{ pkg1Label }}</div>
+                  <div style="font-size: 11px; color: #0F6E56; margin-top: 3px">+12.4% since inception</div>
+                </div>
+              </div>
+              <div style="height: 1px; background: #F2EFE9; margin: 14px 0"></div>
+              <div style="display: flex; justify-content: space-between; font-size: 11px; color: #6B6459"><span>Expected return (advisor)</span><span style="font-family: 'JetBrains Mono', monospace; color: #042C53">7.4% p.a.</span></div>
+            </div>
+            <div style="background: #FFFFFF; border: 1px solid #E6E1D8; border-radius: 20px; padding: 18px">
+              <div style="display: flex; justify-content: space-between; gap: 12px; align-items: flex-start">
+                <div>
+                  <div style="font-size: 14px; font-weight: 600; color: #042C53">Income Package</div>
+                  <div style="font-size: 11px; color: #6B6459; margin-top: 3px">Utmost International · since 2023</div>
+                </div>
+                <div style="text-align: right">
+                  <div style="font-family: 'Sora', sans-serif; font-size: 16px; font-weight: 700; color: #042C53">{{ pkg2Label }}</div>
+                  <div style="font-size: 11px; color: #0F6E56; margin-top: 3px">+5.1% since inception</div>
+                </div>
+              </div>
+              <div style="height: 1px; background: #F2EFE9; margin: 14px 0"></div>
+              <div style="display: flex; justify-content: space-between; font-size: 11px; color: #6B6459"><span>Expected return (advisor)</span><span style="font-family: 'JetBrains Mono', monospace; color: #042C53">5.2% p.a.</span></div>
+            </div>
+          </div>
+
+          <div style="opacity: {{ otherOpacity }}; display: {{ otherDisplay }}; transition: opacity 260ms ease">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px">
+              <span style="font-size: 11px; font-weight: 600; color: #34567F; background: #E8EEF6; padding: 5px 10px; border-radius: 999px">Self-tracked</span>
+              <span style="font-size: 11px; color: #6B6459">You set the return assumption</span>
+            </div>
+
+            <div style="background: #FFFFFF; border: 1px solid #E6E1D8; border-radius: 20px; padding: 18px; margin-bottom: 12px">
+              <div style="display: flex; justify-content: space-between; gap: 12px; align-items: flex-start">
+                <div>
+                  <div style="font-size: 14px; font-weight: 600; color: #042C53">VN30 ETF (E1VFVN30)</div>
+                  <div style="font-size: 11px; color: #6B6459; margin-top: 3px">SSI · Vietnamese equities</div>
+                </div>
+                <div style="text-align: right">
+                  <div style="font-family: 'Sora', sans-serif; font-size: 16px; font-weight: 700; color: #042C53">{{ h1Label }}</div>
+                  <div style="font-size: 11px; color: #6B6459; margin-top: 3px">{{ h1AltLabel }}</div>
+                </div>
+              </div>
+              <div style="height: 1px; background: #F2EFE9; margin: 14px 0"></div>
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+                <div>
+                  <div style="font-size: 12px; font-weight: 600; color: #042C53">Expected return</div>
+                  <div style="font-size: 11px; color: #6B6459; margin-top: 2px">Benchmark 9.5% · VN30 10-yr average</div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px; border: 1px solid #E6E1D8; border-radius: 12px; padding: 0 10px; height: 44px; background: #FAF8F5">
+                  <input type="number" step="0.1" value="{{ vn30Return }}" onChange="{{ setVn30Return }}" style="width: 52px; border: none; background: none; outline: none; font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 500; color: #042C53; text-align: right" />
+                  <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #6B6459">%</span>
+                </div>
+              </div>
+              <sc-if value="{{ vn30Deviates }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-top: 14px; background: #FEF3D6; border: 1px solid #F0D79A; border-radius: 14px; padding: 12px 14px; animation: warnIn 300ms ease both; overflow: hidden">
+                  <div style="font-size: 12px; font-weight: 600; color: #8A5B12; margin-bottom: 4px">{{ vn30WarnTitle }}</div>
+                  <div style="font-size: 11px; line-height: 1.5; color: #7A5A25">At this rate the apartment goal shows as funded two years earlier than the benchmark implies. Your advisor can walk through it with you.</div>
+                  <button onClick="{{ goGoal }}" style="margin-top: 10px; min-height: 44px; padding: 0 14px; border: 1px solid #C8881C; border-radius: 12px; background: #FFFFFF; color: #8A5B12; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer" style-hover="background: #FEF9EC">Compare both trajectories</button>
+                </div>
+              </sc-if>
+            </div>
+
+            <div style="background: #FFFFFF; border: 1px solid #E6E1D8; border-radius: 20px; padding: 18px; margin-bottom: 12px">
+              <div style="display: flex; justify-content: space-between; gap: 12px; align-items: flex-start">
+                <div>
+                  <div style="font-size: 14px; font-weight: 600; color: #042C53">Apartment, Thao Dien</div>
+                  <div style="font-size: 11px; color: #6B6459; margin-top: 3px">Property · valued Mar 2026</div>
+                </div>
+                <div style="text-align: right">
+                  <div style="font-family: 'Sora', sans-serif; font-size: 16px; font-weight: 700; color: #042C53">{{ h2Label }}</div>
+                  <div style="font-size: 11px; color: #6B6459; margin-top: 3px">{{ h2AltLabel }}</div>
+                </div>
+              </div>
+              <div style="height: 1px; background: #F2EFE9; margin: 14px 0"></div>
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+                <div>
+                  <div style="font-size: 12px; font-weight: 600; color: #042C53">Expected return</div>
+                  <div style="font-size: 11px; color: #6B6459; margin-top: 2px">Benchmark 5.2% · HCMC resale index</div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px; border: 1px solid #E6E1D8; border-radius: 12px; padding: 0 10px; height: 44px; background: #FAF8F5">
+                  <input type="number" step="0.1" value="{{ propReturn }}" onChange="{{ setPropReturn }}" style="width: 52px; border: none; background: none; outline: none; font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 500; color: #042C53; text-align: right" />
+                  <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #6B6459">%</span>
+                </div>
+              </div>
+              <sc-if value="{{ propDeviates }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-top: 14px; background: #FEF3D6; border: 1px solid #F0D79A; border-radius: 14px; padding: 12px 14px; animation: warnIn 300ms ease both; overflow: hidden">
+                  <div style="font-size: 12px; font-weight: 600; color: #8A5B12">{{ propWarnTitle }}</div>
+                  <div style="font-size: 11px; line-height: 1.5; color: #7A5A25; margin-top: 4px">Projections using this figure are flagged as an override wherever they appear.</div>
+                </div>
+              </sc-if>
+            </div>
+
+            <div style="background: #FFFFFF; border: 1px solid #E6E1D8; border-radius: 20px; padding: 18px">
+              <div style="display: flex; justify-content: space-between; gap: 12px; align-items: flex-start">
+                <div>
+                  <div style="font-size: 14px; font-weight: 600; color: #042C53">Techcombank term deposit</div>
+                  <div style="font-size: 11px; color: #6B6459; margin-top: 3px">Cash · 12-month term</div>
+                </div>
+                <div style="text-align: right">
+                  <div style="font-family: 'Sora', sans-serif; font-size: 16px; font-weight: 700; color: #042C53">{{ h3Label }}</div>
+                  <div style="font-size: 11px; color: #6B6459; margin-top: 3px">{{ h3AltLabel }}</div>
+                </div>
+              </div>
+              <div style="height: 1px; background: #F2EFE9; margin: 14px 0"></div>
+              <div style="display: flex; justify-content: space-between; font-size: 11px; color: #6B6459"><span>Expected return · benchmark 4.6%</span><span style="font-family: 'JetBrains Mono', monospace; color: #042C53">4.6% p.a.</span></div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isGoal }}" hint-placeholder-val="{{ false }}">
+        <div style="padding: 8px 20px 24px; animation: riseIn .38s ease both">
+          <button onClick="{{ goAccounts }}" style="min-height: 44px; background: none; border: none; padding: 0; color: #1D9E75; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer">← Accounts</button>
+          <div style="font-family: 'Sora', sans-serif; font-size: 22px; font-weight: 700; color: #042C53; letter-spacing: -.02em; margin: 6px 0 4px">VN30 ETF, two ways</div>
+          <div style="font-size: 13px; color: #6B6459; line-height: 1.5; margin-bottom: 18px; text-wrap: pretty">{{ scenarioIntro }}</div>
+
+          <div style="display: flex; gap: 12px">
+            <div style="flex: 1; background: #FFFFFF; border: 1px solid #E6E1D8; border-radius: 20px; padding: 16px">
+              <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: .12em; text-transform: uppercase; color: #6B6459; margin-bottom: 10px">Left as-is</div>
+              <svg width="100%" height="72" viewBox="0 0 140 72" preserveAspectRatio="none" style="display: block; margin-bottom: 12px">
+                <path d="M0,68 Q80,60 140,30" fill="none" stroke="#4A7CB8" strokeWidth="2.5" strokeLinecap="round"></path>
+                <path d="M0,68 Q80,60 140,30 L140,72 L0,72 Z" fill="#4A7CB8" opacity=".08"></path>
+              </svg>
+              <div style="font-family: 'Sora', sans-serif; font-size: 19px; font-weight: 700; color: #042C53; letter-spacing: -.02em">{{ asIsLabel }}</div>
+              <div style="font-size: 11px; color: #6B6459; margin-top: 4px; line-height: 1.45">in 2038, assuming <strong style="color: #042C53">9.5% p.a.</strong> before fees and tax</div>
+            </div>
+            <div style="flex: 1; background: #FFFFFF; border: 1.5px solid #1D9E75; border-radius: 20px; padding: 16px; box-shadow: 0 4px 14px rgba(29,158,117,.12)">
+              <div style="font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: .12em; text-transform: uppercase; color: #0F6E56; margin-bottom: 10px">Under advisor management</div>
+              <svg width="100%" height="72" viewBox="0 0 140 72" preserveAspectRatio="none" style="display: block; margin-bottom: 12px">
+                <path d="M0,68 Q80,52 140,8" fill="none" stroke="#1D9E75" strokeWidth="2.5" strokeLinecap="round"></path>
+                <path d="M0,68 Q80,52 140,8 L140,72 L0,72 Z" fill="#1D9E75" opacity=".10"></path>
+              </svg>
+              <div style="font-family: 'Sora', sans-serif; font-size: 19px; font-weight: 700; color: #0F6E56; letter-spacing: -.02em">{{ advisedLabel }}</div>
+              <div style="font-size: 11px; color: #6B6459; margin-top: 4px; line-height: 1.45">in 2038, assuming <strong style="color: #042C53">11.2% p.a.</strong> net of a 0.9% advice fee</div>
+            </div>
+          </div>
+
+          <div style="margin-top: 14px; background: #FFFFFF; border: 1px solid #E6E1D8; border-radius: 20px; padding: 18px">
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: #6B6459; margin-bottom: 12px">What sits behind these numbers</div>
+            <div style="display: flex; justify-content: space-between; font-size: 12px; color: #2D2A24; padding: 7px 0; border-bottom: 1px solid #F2EFE9"><span>Starting value</span><span style="font-family: 'JetBrains Mono', monospace">{{ startLabel }}</span></div>
+            <div style="display: flex; justify-content: space-between; font-size: 12px; color: #2D2A24; padding: 7px 0; border-bottom: 1px solid #F2EFE9"><span>Horizon</span><span style="font-family: 'JetBrains Mono', monospace">12 years</span></div>
+            <div style="display: flex; justify-content: space-between; font-size: 12px; color: #2D2A24; padding: 7px 0; border-bottom: 1px solid #F2EFE9"><span>Further contributions</span><span style="font-family: 'JetBrains Mono', monospace">None assumed</span></div>
+            <div style="display: flex; justify-content: space-between; font-size: 12px; color: #2D2A24; padding: 7px 0"><span>Inflation adjustment</span><span style="font-family: 'JetBrains Mono', monospace">Not applied</span></div>
+          </div>
+
+          <div style="margin-top: 14px; background: #F2EFE9; border-radius: 16px; padding: 14px 16px">
+            <div style="font-size: 11px; line-height: 1.55; color: #6B6459; text-wrap: pretty"><strong style="color: #042C53">Not a guarantee.</strong> Both figures are illustrations based on the assumptions above. Actual returns will differ, and the advised trajectory is not a promise of outperformance. Past performance does not predict future results.</div>
+          </div>
+
+          <button onClick="{{ goDashboard }}" style="margin-top: 16px; width: 100%; min-height: 48px; border: none; border-radius: 16px; background: #1D9E75; color: #FFFFFF; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer" style-hover="background: #17805F">Ask Minh Anh about this</button>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isHealth }}" hint-placeholder-val="{{ false }}">
+        <div style="padding: 8px 20px 24px; animation: riseIn .38s ease both">
+          <div style="font-family: 'Sora', sans-serif; font-size: 22px; font-weight: 700; color: #042C53; letter-spacing: -.02em; margin-bottom: 18px">Financial health</div>
+
+          <div style="background: #FFFFFF; border: 1px solid #E6E1D8; border-radius: 24px; padding: 24px 20px; display: flex; align-items: center; gap: 20px; box-shadow: 0 4px 14px rgba(4,44,83,.06)">
+            <div style="position: relative; width: 116px; height: 116px; flex: none">
+              <svg width="116" height="116" viewBox="0 0 116 116">
+                <circle cx="58" cy="58" r="48" fill="none" stroke="#F2EFE9" strokeWidth="12"></circle>
+                <circle cx="58" cy="58" r="48" fill="none" stroke="#1D9E75" strokeWidth="12" strokeLinecap="round" strokeDasharray="301.6" strokeDashoffset="{{ healthOffset }}" transform="rotate(-90 58 58)"></circle>
+              </svg>
+              <div style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center">
+                <div style="font-family: 'Sora', sans-serif; font-size: 32px; font-weight: 700; color: #042C53; letter-spacing: -.03em; line-height: 1">{{ healthLabel }}</div>
+                <div style="font-size: 10px; color: #6B6459; margin-top: 2px">out of 100</div>
+              </div>
+            </div>
+            <div>
+              <div style="font-size: 11px; font-weight: 600; color: #0F6E56; background: #E6F5EE; padding: 5px 10px; border-radius: 999px; display: inline-block">Solid</div>
+              <div style="font-size: 13px; line-height: 1.5; color: #2D2A24; margin-top: 10px; text-wrap: pretty">Up 4 points since May, mostly from steady contributions.</div>
+            </div>
+          </div>
+
+          <div style="margin-top: 14px; background: #042C53; border-radius: 24px; padding: 20px; color: #FFFFFF">
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: #7FCBAE; margin-bottom: 10px">Raise it by 8 points</div>
+            <div style="font-family: 'Sora', sans-serif; font-size: 16px; font-weight: 600; line-height: 1.35; margin-bottom: 8px">Build your cash buffer to three months of expenses</div>
+            <div style="font-size: 12px; color: #A9C0D6; line-height: 1.5">You hold {{ bufferLabel }} in cash against monthly expenses of {{ expensesLabel }}. Adding {{ bufferGapLabel }} would cover three months and lift resilience from 42 to 74.</div>
+            <button onClick="{{ goAccounts }}" style="margin-top: 16px; min-height: 44px; width: 100%; border: none; border-radius: 14px; background: #1D9E75; color: #FFFFFF; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer" style-hover="background: #17805F">Set up the buffer</button>
+          </div>
+
+          <div style="margin-top: 14px; background: #FFFFFF; border: 1px solid #E6E1D8; border-radius: 20px; padding: 18px">
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: #6B6459; margin-bottom: 14px">What makes up the score</div>
+            <sc-for list="{{ healthFactors }}" as="f" hint-placeholder-count="4">
+              <div style="margin-bottom: 14px">
+                <div style="display: flex; justify-content: space-between; font-size: 12px; color: #2D2A24; margin-bottom: 6px"><span>{{ f.label }}</span><span style="font-family: 'JetBrains Mono', monospace; color: #6B6459">{{ f.score }}</span></div>
+                <div style="height: 6px; border-radius: 999px; background: #F2EFE9; overflow: hidden">
+                  <div style="height: 6px; border-radius: 999px; background: {{ f.color }}; width: {{ f.width }}; transition: width 900ms cubic-bezier(.22,1,.36,1)"></div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isOnboarding }}" hint-placeholder-val="{{ false }}">
+        <div style="min-height: 100%; padding: 8px 20px 24px; display: flex; flex-direction: column">
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 24px">
+            <div style="flex: 1; height: 4px; border-radius: 999px; background: #F2EFE9; overflow: hidden">
+              <div style="height: 4px; border-radius: 999px; background: #1D9E75; width: {{ obProgress }}; transition: width 320ms cubic-bezier(.22,1,.36,1)"></div>
+            </div>
+            <button onClick="{{ goDashboard }}" style="min-height: 44px; background: none; border: none; color: #6B6459; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 12px; cursor: pointer">Skip</button>
+          </div>
+
+          <sc-if value="{{ obWelcome }}" hint-placeholder-val="{{ true }}">
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding-bottom: 40px">
+              <svg width="128" height="128" viewBox="0 0 100 100" style="overflow: visible; animation: solCelebrate 380ms cubic-bezier(.22,1,.36,1) both">
+                <circle cx="50" cy="50" r="34" fill="#1D9E75" style="animation: solGlow 3.2s ease-in-out infinite"></circle>
+                <g stroke="#1D9E75" strokeWidth="5" strokeLinecap="round" style="animation: solRays 3.2s ease-in-out infinite; transform-origin: 50px 50px">
+                  <line x1="50" y1="8" x2="50" y2="20"></line>
+                  <line x1="50" y1="80" x2="50" y2="92"></line>
+                  <line x1="8" y1="50" x2="20" y2="50"></line>
+                  <line x1="80" y1="50" x2="92" y2="50"></line>
+                  <line x1="21" y1="21" x2="29" y2="29"></line>
+                  <line x1="71" y1="71" x2="79" y2="79"></line>
+                  <line x1="79" y1="21" x2="71" y2="29"></line>
+                  <line x1="29" y1="71" x2="21" y2="79"></line>
+                </g>
+                <circle cx="50" cy="50" r="21" fill="#1D9E75"></circle>
+                <circle cx="43" cy="44" r="4.4" fill="#FAF8F5" opacity=".92"></circle>
+              </svg>
+              <div style="font-family: 'Sora', sans-serif; font-size: 26px; font-weight: 700; color: #042C53; letter-spacing: -.02em; margin: 28px 0 10px">Welcome to tala</div>
+              <div style="font-size: 14px; line-height: 1.6; color: #6B6459; max-width: 280px; text-wrap: pretty">tala brings everything you already own into one view, in VND and USD, alongside the plan you build with your advisor.</div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ obPlace }}" hint-placeholder-val="{{ false }}">
+            <div style="flex: 1; animation: riseIn .3s ease both">
+              <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: #1D9E75; margin-bottom: 10px">1 of 4</div>
+              <div style="font-family: 'Sora', sans-serif; font-size: 24px; font-weight: 700; color: #042C53; letter-spacing: -.02em; line-height: 1.25; margin-bottom: 8px">Where are you based?</div>
+              <div style="font-size: 13px; color: #6B6459; line-height: 1.5; margin-bottom: 22px">This sets your tax context and which local products we can track.</div>
+              <div style="display: flex; flex-direction: column; gap: 10px">
+                <sc-for list="{{ places }}" as="p" hint-placeholder-count="4">
+                  <button onClick="{{ p.select }}" style="min-height: 56px; text-align: left; padding: 0 18px; border: 1.5px solid {{ p.border }}; background: {{ p.bg }}; border-radius: 16px; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 14px; font-weight: 600; color: #042C53; cursor: pointer; transition: border-color 180ms ease, background 180ms ease">{{ p.label }}</button>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ obCurrency }}" hint-placeholder-val="{{ false }}">
+            <div style="flex: 1; animation: riseIn .3s ease both">
+              <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: #1D9E75; margin-bottom: 10px">2 of 4</div>
+              <div style="font-family: 'Sora', sans-serif; font-size: 24px; font-weight: 700; color: #042C53; letter-spacing: -.02em; line-height: 1.25; margin-bottom: 8px">Which currency should we lead with?</div>
+              <div style="font-size: 13px; color: #6B6459; line-height: 1.5; margin-bottom: 22px">Both are always stored. You can switch anywhere in the app.</div>
+              <div style="display: flex; flex-direction: column; gap: 10px">
+                <button onClick="{{ pickUsd }}" style="min-height: 68px; text-align: left; padding: 0 18px; border: 1.5px solid {{ usdBorder }}; background: {{ usdBg }}; border-radius: 16px; cursor: pointer; transition: border-color 180ms ease, background 180ms ease">
+                  <div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 14px; font-weight: 600; color: #042C53">US dollars</div>
+                  <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #6B6459; margin-top: 4px">$646,900 · offshore packages priced in USD</div>
+                </button>
+                <button onClick="{{ pickVnd }}" style="min-height: 68px; text-align: left; padding: 0 18px; border: 1.5px solid {{ vndBorder }}; background: {{ vndBg }}; border-radius: 16px; cursor: pointer; transition: border-color 180ms ease, background 180ms ease">
+                  <div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 14px; font-weight: 600; color: #042C53">Vietnamese đồng</div>
+                  <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #6B6459; margin-top: 4px">₫16.43bn · at 25,400 ₫/$, updated daily</div>
+                </button>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ obGoals }}" hint-placeholder-val="{{ false }}">
+            <div style="flex: 1; animation: riseIn .3s ease both">
+              <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: #1D9E75; margin-bottom: 10px">3 of 4</div>
+              <div style="font-family: 'Sora', sans-serif; font-size: 24px; font-weight: 700; color: #042C53; letter-spacing: -.02em; line-height: 1.25; margin-bottom: 8px">What are you saving for?</div>
+              <div style="font-size: 13px; color: #6B6459; line-height: 1.5; margin-bottom: 22px">Pick as many as apply. Your advisor will help you put numbers on them later.</div>
+              <div style="display: flex; flex-wrap: wrap; gap: 10px">
+                <sc-for list="{{ goalOptions }}" as="g" hint-placeholder-count="6">
+                  <button onClick="{{ g.select }}" style="min-height: 48px; padding: 0 16px; border: 1.5px solid {{ g.border }}; background: {{ g.bg }}; border-radius: 999px; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 13px; font-weight: 600; color: #042C53; cursor: pointer; transition: border-color 180ms ease, background 180ms ease">{{ g.label }}</button>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ obAmount }}" hint-placeholder-val="{{ false }}">
+            <div style="flex: 1; animation: riseIn .3s ease both">
+              <div style="font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: #1D9E75; margin-bottom: 10px">4 of 4</div>
+              <div style="font-family: 'Sora', sans-serif; font-size: 24px; font-weight: 700; color: #042C53; letter-spacing: -.02em; line-height: 1.25; margin-bottom: 8px">Roughly how much do you set aside each month?</div>
+              <div style="font-size: 13px; color: #6B6459; line-height: 1.5; margin-bottom: 22px">An estimate is fine. Nothing here is a commitment.</div>
+              <div style="background: #FFFFFF; border: 1px solid #E6E1D8; border-radius: 20px; padding: 20px">
+                <div style="font-family: 'Sora', sans-serif; font-size: 30px; font-weight: 700; color: #042C53; letter-spacing: -.03em">{{ monthlyLabel }}</div>
+                <div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #6B6459; margin-top: 6px">{{ monthlyAltLabel }}</div>
+                <input type="range" min="200" max="8000" step="100" value="{{ monthly }}" onChange="{{ setMonthly }}" style="width: 100%; margin-top: 20px; accent-color: #1D9E75" />
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ obDone }}" hint-placeholder-val="{{ false }}">
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding-bottom: 40px">
+              <div style="position: relative; width: 128px; height: 128px; display: flex; align-items: center; justify-content: center">
+                <div style="position: absolute; width: 118px; height: 118px; border-radius: 999px; border: 2px solid #1D9E75; animation: solRing 1.6s ease-out infinite"></div>
+                <svg width="128" height="128" viewBox="0 0 100 100" style="overflow: visible; animation: solCelebrate 360ms cubic-bezier(.22,1,.36,1) both">
+                  <circle cx="50" cy="50" r="36" fill="#1D9E75" opacity=".16"></circle>
+                  <g stroke="#1D9E75" strokeWidth="5.5" strokeLinecap="round" style="animation: solRays 2.4s ease-in-out infinite; transform-origin: 50px 50px">
+                    <line x1="50" y1="6" x2="50" y2="19"></line>
+                    <line x1="50" y1="81" x2="50" y2="94"></line>
+                    <line x1="6" y1="50" x2="19" y2="50"></line>
+                    <line x1="81" y1="50" x2="94" y2="50"></line>
+                    <line x1="20" y1="20" x2="29" y2="29"></line>
+                    <line x1="71" y1="71" x2="80" y2="80"></line>
+                    <line x1="80" y1="20" x2="71" y2="29"></line>
+                    <line x1="29" y1="71" x2="20" y2="80"></line>
+                  </g>
+                  <circle cx="50" cy="50" r="21" fill="#1D9E75"></circle>
+                  <circle cx="43" cy="43" r="4.6" fill="#FAF8F5" opacity=".95"></circle>
+                </svg>
+              </div>
+              <div style="font-family: 'Sora', sans-serif; font-size: 24px; font-weight: 700; color: #042C53; letter-spacing: -.02em; margin: 26px 0 10px">That's everything we needed</div>
+              <div style="font-size: 14px; line-height: 1.6; color: #6B6459; max-width: 290px; text-wrap: pretty">Minh Anh has your profile and will send a first plan within two working days. Your dashboard is ready in the meantime.</div>
+            </div>
+          </sc-if>
+
+          <div style="display: flex; gap: 10px; padding-top: 20px">
+            <sc-if value="{{ obCanBack }}" hint-placeholder-val="{{ false }}">
+              <button onClick="{{ obBack }}" style="min-height: 52px; padding: 0 20px; border: 1px solid #E6E1D8; background: #FFFFFF; border-radius: 16px; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 14px; font-weight: 600; color: #042C53; cursor: pointer" style-hover="border-color: #A8A095">Back</button>
+            </sc-if>
+            <button onClick="{{ obNext }}" style="flex: 1; min-height: 52px; border: none; border-radius: 16px; background: #1D9E75; color: #FFFFFF; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer" style-hover="background: #17805F">{{ obNextLabel }}</button>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+
+    <sc-if value="{{ showNav }}" hint-placeholder-val="{{ true }}">
+      <div style="flex: none; height: 76px; border-top: 1px solid #E6E1D8; background: #FFFFFF; display: flex; align-items: stretch; padding: 0 8px">
+        <sc-for list="{{ navItems }}" as="n" hint-placeholder-count="4">
+          <button onClick="{{ n.select }}" style="flex: 1; min-height: 44px; border: none; background: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; cursor: pointer; color: {{ n.color }}; transition: color 180ms ease">
+            <span style="width: 24px; height: 24px; border-radius: 8px; background: {{ n.dotBg }}; display: flex; align-items: center; justify-content: center; transition: background 180ms ease">
+              <span style="width: 9px; height: 9px; border-radius: 3px; background: {{ n.color }}"></span>
+            </span>
+            <span style="font-size: 10px; font-weight: 600">{{ n.label }}</span>
+          </button>
+        </sc-for>
+      </div>
+    </sc-if>
+  </div>
+
+  <div style="max-width: 390px; font-size: 11px; line-height: 1.6; color: #6B6459; text-align: center; text-wrap: pretty">Tap the tabs to move between dashboard, accounts, the scenario comparison and health score. Edit an expected-return field to trigger the benchmark warning.</div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:460,&quot;height&quot;:980},&quot;startScreen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;dashboard&quot;,&quot;accounts&quot;,&quot;goal&quot;,&quot;health&quot;,&quot;onboarding&quot;],&quot;default&quot;:&quot;dashboard&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototype&quot;},&quot;deviationThreshold&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;min&quot;:0.5,&quot;max&quot;:6,&quot;step&quot;:0.5,&quot;default&quot;:2,&quot;unit&quot;:&quot;pts&quot;,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Benchmarks&quot;}}">
+const RATE = 25400;
+
+class Component extends DCLogic {
+  state = {
+    screen: "dashboard",
+    p: 0,
+    currency: "USD",
+    tab: "managed",
+    vn30Return: 14,
+    propReturn: 5.2,
+    obStep: 0,
+    place: "Ho Chi Minh City",
+    goals: ["Retirement", "Property"],
+    monthly: 2400,
+  };
+
+  componentDidMount() {
+    const start = this.props.startScreen;
+    if (start && start !== this.state.screen) this.setState({ screen: start });
+    this.startScreen();
+  }
+
+  get reduced() {
+    return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  }
+
+  startScreen() {
+    this._ramping = true;
+    clearInterval(this._timer);
+    if (this.reduced) { this._ramping = false; this.setState({ p: 1 }); return; }
+    const t0 = Date.now();
+    this._timer = setInterval(() => {
+      const k = Math.min(1, (Date.now() - t0) / 1100);
+      this.setState({ p: 1 - Math.pow(1 - k, 3) });
+      if (k >= 1) { clearInterval(this._timer); this._ramping = false; }
+    }, 32);
+  }
+
+  componentWillUnmount() { clearInterval(this._timer); }
+
+  go(screen) {
+    this.setState({ screen, p: 0 }, () => this.startScreen());
+  }
+
+  money(usd, opts) {
+    const compact = opts && opts.compact;
+    if (this.state.currency === "VND") {
+      const v = usd * RATE;
+      if (v >= 1e9) return "\u20AB" + (v / 1e9).toFixed(2) + "bn";
+      if (v >= 1e6) return "\u20AB" + (v / 1e6).toFixed(0) + "m";
+      return "\u20AB" + Math.round(v).toLocaleString("en-US");
+    }
+    if (compact && usd >= 1e6) return "$" + (usd / 1e6).toFixed(2) + "M";
+    return "$" + Math.round(usd).toLocaleString("en-US");
+  }
+
+  alt(usd) {
+    if (this.state.currency === "VND") return "\u2248 $" + Math.round(usd).toLocaleString("en-US");
+    const v = usd * RATE;
+    return v >= 1e9 ? "\u2248 \u20AB" + (v / 1e9).toFixed(2) + "bn" : "\u2248 \u20AB" + (v / 1e6).toFixed(0) + "m";
+  }
+
+  renderVals() {
+    const s = this.state;
+    if (!this._ramping && s.p === 0) {
+      clearTimeout(this._kick);
+      this._kick = setTimeout(() => { if (!this._ramping && this.state.p === 0) this.startScreen(); }, 40);
+    }
+    const p = s.p;
+    const threshold = this.props.deviationThreshold ?? 2;
+    const goalPct = 34.4;
+    const managed = s.tab === "managed";
+
+    const vn30Dev = Math.abs(s.vn30Return - 9.5);
+    const propDev = Math.abs(s.propReturn - 5.2);
+
+    const chip = (on) => ({
+      border: on ? "#1D9E75" : "#E6E1D8",
+      bg: on ? "#E6F5EE" : "#FFFFFF",
+    });
+
+    const asIs = 56000 * Math.pow(1.095, 12);
+    const advised = 56000 * Math.pow(1.112, 12);
+
+    const nav = [
+      ["dashboard", "Home"],
+      ["accounts", "Accounts"],
+      ["goal", "Scenarios"],
+      ["health", "Health"],
+    ].map(([id, label]) => {
+      const on = s.screen === id;
+      return {
+        label,
+        color: on ? "#1D9E75" : "#A8A095",
+        dotBg: on ? "#E6F5EE" : "#FAF8F5",
+        select: () => this.go(id),
+      };
+    });
+
+    const factors = [
+      ["Contribution consistency", 88, "#1D9E75"],
+      ["Goal funding", 71, "#1D9E75"],
+      ["Diversification", 64, "#F5B947"],
+      ["Cash resilience", 42, "#D86B5A"],
+    ].map(([label, score, color]) => ({
+      label, color, score: score + "/100", width: Math.round(score * p) + "%",
+    }));
+
+    return {
+      currency: s.currency,
+      toggleCurrency: () => this.setState({ currency: s.currency === "USD" ? "VND" : "USD" }),
+
+      isDashboard: s.screen === "dashboard",
+      isAccounts: s.screen === "accounts",
+      isGoal: s.screen === "goal",
+      isHealth: s.screen === "health",
+      isOnboarding: s.screen === "onboarding",
+      showNav: s.screen !== "onboarding",
+      navItems: nav,
+      goDashboard: () => this.go("dashboard"),
+      goAccounts: () => this.go("accounts"),
+      goGoal: () => this.go("goal"),
+      goOnboarding: () => this.setState({ screen: "onboarding", obStep: 0 }),
+
+      ringOffset: 339.3 * (1 - (goalPct / 100) * p),
+      ring2Offset: 88 * (1 - 0.34 * p),
+      ring3Offset: 88 * (1 - 0.32 * p),
+      goalPctLabel: Math.round(goalPct * p) + "%",
+      goalCurrentLabel: this.money(412400 * p),
+      goalTargetLabel: this.money(1200000, { compact: true }),
+
+      totalLabel: this.money(646900 * p, { compact: true }),
+      totalAltLabel: this.alt(646900),
+      pkg1Label: this.money(214800 * p),
+      pkg2Label: this.money(86200 * p),
+      h1Label: this.money(56000 * p),
+      h1AltLabel: this.alt(56000),
+      h2Label: this.money(180000 * p),
+      h2AltLabel: this.alt(180000),
+      h3Label: this.money(25600 * p),
+      h3AltLabel: this.alt(25600),
+
+      showManaged: () => this.setState({ tab: "managed" }),
+      showOther: () => this.setState({ tab: "other" }),
+      managedTabBg: managed ? "#FFFFFF" : "transparent",
+      managedTabColor: managed ? "#042C53" : "#6B6459",
+      otherTabBg: managed ? "transparent" : "#FFFFFF",
+      otherTabColor: managed ? "#6B6459" : "#042C53",
+      managedOpacity: managed ? 1 : 0,
+      otherOpacity: managed ? 0 : 1,
+      managedDisplay: managed ? "block" : "none",
+      otherDisplay: managed ? "none" : "block",
+
+      vn30Return: s.vn30Return,
+      setVn30Return: (e) => this.setState({ vn30Return: parseFloat(e.target.value || 0) }),
+      vn30Deviates: vn30Dev >= threshold,
+      vn30WarnTitle: (s.vn30Return > 9.5 ? "+" : "\u2212") + vn30Dev.toFixed(1) + " points from the VN30 benchmark",
+      propReturn: s.propReturn,
+      setPropReturn: (e) => this.setState({ propReturn: parseFloat(e.target.value || 0) }),
+      propDeviates: propDev >= threshold,
+      propWarnTitle: (s.propReturn > 5.2 ? "+" : "\u2212") + propDev.toFixed(1) + " points from the HCMC resale index",
+
+      scenarioIntro: "You track this holding yourself at " + s.vn30Return.toFixed(1) + "%. Below, the same " + this.money(56000) + " under the benchmark rate and under advisor management, both to 2038.",
+      asIsLabel: this.money(asIs * p, { compact: true }),
+      advisedLabel: this.money(advised * p, { compact: true }),
+      startLabel: this.money(56000),
+
+      healthOffset: 301.6 * (1 - 0.72 * p),
+      healthLabel: Math.round(72 * p),
+      healthFactors: factors,
+      bufferLabel: this.money(6200),
+      expensesLabel: this.money(4300),
+      bufferGapLabel: this.money(6700),
+
+      obProgress: Math.round((s.obStep / 5) * 100) + "%",
+      obWelcome: s.obStep === 0,
+      obPlace: s.obStep === 1,
+      obCurrency: s.obStep === 2,
+      obGoals: s.obStep === 3,
+      obAmount: s.obStep === 4,
+      obDone: s.obStep === 5,
+      obCanBack: s.obStep > 0 && s.obStep < 5,
+      obNextLabel: s.obStep === 0 ? "Get started" : s.obStep === 5 ? "Go to my dashboard" : "Continue",
+      obNext: () => { if (s.obStep === 5) this.go("dashboard"); else this.setState({ obStep: s.obStep + 1 }); },
+      obBack: () => this.setState({ obStep: Math.max(0, s.obStep - 1) }),
+
+      places: ["Ho Chi Minh City", "Hanoi", "Da Nang", "Elsewhere in Vietnam"].map((label) => ({
+        label, ...chip(s.place === label), select: () => this.setState({ place: label }),
+      })),
+      pickUsd: () => this.setState({ currency: "USD" }),
+      pickVnd: () => this.setState({ currency: "VND" }),
+      usdBorder: s.currency === "USD" ? "#1D9E75" : "#E6E1D8",
+      usdBg: s.currency === "USD" ? "#E6F5EE" : "#FFFFFF",
+      vndBorder: s.currency === "VND" ? "#1D9E75" : "#E6E1D8",
+      vndBg: s.currency === "VND" ? "#E6F5EE" : "#FFFFFF",
+      goalOptions: ["Retirement", "Property", "Children's education", "Leaving Vietnam", "Business", "Just growing wealth"].map((label) => ({
+        label,
+        ...chip(s.goals.indexOf(label) > -1),
+        select: () => this.setState({
+          goals: s.goals.indexOf(label) > -1 ? s.goals.filter((g) => g !== label) : s.goals.concat([label]),
+        }),
+      })),
+      monthly: s.monthly,
+      setMonthly: (e) => this.setState({ monthly: parseInt(e.target.value, 10) }),
+      monthlyLabel: s.currency === "VND"
+        ? "\u20AB" + Math.round((s.monthly * RATE) / 1e6) + "m / month"
+        : "$" + s.monthly.toLocaleString("en-US") + " / month",
+      monthlyAltLabel: s.currency === "VND"
+        ? "\u2248 $" + s.monthly.toLocaleString("en-US")
+        : "\u2248 \u20AB" + Math.round((s.monthly * RATE) / 1e6) + "m",
+    };
+  }
+}
+
+</script>
+</body>
+</html>

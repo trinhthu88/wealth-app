@@ -1,6 +1,3 @@
-import { useState } from "react";
-import { Link } from "wouter";
-import { X } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
 
 function greeting(): string {
@@ -12,7 +9,7 @@ function greeting(): string {
 
 function formatDate(): string {
   return new Date().toLocaleDateString("en-GB", {
-    weekday: "long", day: "numeric", month: "long", year: "numeric",
+    weekday: "long", day: "numeric", month: "long",
   });
 }
 
@@ -22,49 +19,30 @@ interface Props {
 }
 
 export default function DashboardWelcome({ isTrackA = false, advisorName }: Props) {
-  const { profile } = useProfile();
+  const { profile, update } = useProfile();
   const firstName = (profile?.fullName ?? "").split(" ")[0] || "there";
-  const [chipDismissed, setChipDismissed] = useState(() =>
-    sessionStorage.getItem("advisor_chip_dismissed") === "1"
-  );
 
-  function dismissChip() {
-    setChipDismissed(true);
-    sessionStorage.setItem("advisor_chip_dismissed", "1");
-  }
-
-  const initials = (advisorName ?? "")
-    .split(" ")
-    .map(n => n[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
+  const currency = profile?.preferredCurrency ?? "USD";
+  const toggleCurrency = () => {
+    update.mutate({ preferredCurrency: currency === "USD" ? "VND" : "USD" });
+  };
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
-      <h1 className="text-2xl font-semibold text-[#042C53]">
-        {greeting()}, {firstName}
-      </h1>
-      <div className="flex flex-col items-start sm:items-end gap-1.5">
-        <p className="text-sm text-[#64748B]">{formatDate()}</p>
-        {isTrackA && advisorName && !chipDismissed && (
-          <Link href="/client/messages">
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-[#1D9E75]/10 rounded-full cursor-pointer hover:bg-[#1D9E75]/15 transition-colors">
-              <div className="h-5 w-5 rounded-full bg-[#1D9E75] flex items-center justify-center text-white text-[9px] font-bold shrink-0">
-                {initials}
-              </div>
-              <span className="text-xs font-medium text-[#1D9E75]">Your advisor: {advisorName}</span>
-              <button
-                onClick={e => { e.preventDefault(); dismissChip(); }}
-                aria-label="Dismiss advisor chip"
-                className="text-[#1D9E75]/60 hover:text-[#1D9E75] ml-0.5"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </div>
-          </Link>
-        )}
+    <div className="flex items-start justify-between gap-3 mb-5">
+      <div>
+        <div className="font-mono text-[10px] tracking-[0.14em] uppercase text-[#1D9E75] mb-1.5">
+          {formatDate()}
+        </div>
+        <h1 className="font-display text-[22px] font-bold text-[#042C53] tracking-[-0.02em]">
+          {greeting()}, {firstName}
+        </h1>
       </div>
+      <button
+        onClick={toggleCurrency}
+        className="shrink-0 min-h-[44px] px-3.5 rounded-full border border-[#E6E1D8] bg-white font-mono text-[11px] font-medium text-[#042C53] cursor-pointer hover:border-[#1D9E75] hover:text-[#1D9E75] transition-colors"
+      >
+        {currency}
+      </button>
     </div>
   );
 }

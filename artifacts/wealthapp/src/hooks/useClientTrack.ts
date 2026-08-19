@@ -8,15 +8,19 @@ interface ClientProfileTrack {
   onboardingTrackComplete: boolean;
 }
 
-export function useClientTrack() {
+/** Shared query for /client/profile/track — the single source of truth for onboarding-track state. */
+function useClientProfileTrackQuery(enabled = true) {
   const { user, isLoaded } = useUser();
 
-  const profileQuery = useQuery<ClientProfileTrack>({
+  return useQuery<ClientProfileTrack>({
     queryKey: ["client-track"],
     queryFn: () => apiFetch("/client/profile/track"),
-    enabled: isLoaded && !!user,
+    enabled: isLoaded && !!user && enabled,
   });
+}
 
+export function useClientTrack() {
+  const profileQuery = useClientProfileTrackQuery();
   const { plans, loading: plansLoading } = useAdvisedPlans();
 
   const track = profileQuery.data?.clientTrack ?? "track_b";
@@ -33,5 +37,18 @@ export function useClientTrack() {
     hasPendingAdvisorSetup,
     onboardingTrackComplete: onboardingComplete,
     loading: profileQuery.isLoading || plansLoading,
+  };
+}
+
+/**
+ * Lightweight variant of useClientTrack for callers that only need onboarding-completion
+ * status (e.g. the post-sign-in redirect) and shouldn't pay for the advised-plans fetch.
+ */
+export function useOnboardingTrackComplete(enabled = true) {
+  const profileQuery = useClientProfileTrackQuery(enabled);
+
+  return {
+    onboardingTrackComplete: profileQuery.data?.onboardingTrackComplete ?? false,
+    isLoading: enabled && profileQuery.isLoading,
   };
 }

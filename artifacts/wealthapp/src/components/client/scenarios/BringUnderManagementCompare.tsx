@@ -1,9 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { AlertCircle, MessageSquare } from "lucide-react";
 import { apiFetch } from "@/lib/api";
-import { fmtCurrency } from "@/lib/portfolioCalculations";
 import { projectMonthlyGrowth } from "@/lib/investmentCalculations";
 import { cn } from "@/lib/utils";
 import type { ClientHolding } from "@/hooks/useClientHoldings";
@@ -24,10 +22,8 @@ interface StrategyReturn {
   targetAnnualReturnPct: string;
 }
 
-const HORIZON_YEARS = 10;
+const HORIZON_YEARS = 12;
 
-// Self-tracked holdings that don't carry a market-driven value worth projecting
-// (cash still has a rate, so it's included; everything else needs a current value > 0).
 const ELIGIBLE_TYPES = new Set(["stock_etf", "etf", "mutual_fund", "commodity", "bond", "crypto", "property", "cash", "pension", "other"]);
 
 export default function BringUnderManagementCompare({ holdings }: { holdings: ClientHolding[] }) {
@@ -63,77 +59,113 @@ export default function BringUnderManagementCompare({ holdings }: { holdings: Cl
 
   if (eligible.length === 0) {
     return (
-      <div className="bg-white border border-[#E2E8F0] rounded-xl p-8 text-center">
-        <p className="text-sm text-slate-400">No self-tracked holdings to compare yet. Add one from Investment accounts.</p>
+      <div className="bg-white border border-[#E6E1D8] rounded-[24px] p-8 text-center text-[#6B6459] text-sm">
+        No self-tracked holdings to compare yet. Add one from Investment accounts.
       </div>
     );
   }
 
   return (
-    <div className="space-y-5">
-      <div className="space-y-2">
-        <p className="text-xs font-semibold text-[#64748B] uppercase tracking-wide">Which holding?</p>
-        <div className="flex flex-wrap gap-1.5">
+    <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+      {eligible.length > 1 && (
+        <div className="flex gap-2 mb-6 overflow-x-auto pb-2 no-scrollbar">
           {eligible.map(h => (
             <button
               key={h.id}
               onClick={() => setSelectedId(h.id)}
               className={cn(
-                "px-3 py-1.5 rounded-xl border text-sm transition-all",
+                "min-h-[36px] px-3.5 rounded-full border text-xs font-semibold whitespace-nowrap transition-colors",
                 selectedId === h.id
-                  ? "border-[#1D9E75] bg-[#1D9E75]/5 text-[#042C53] font-medium"
-                  : "border-slate-200 text-slate-600 hover:border-[#1D9E75]/30"
+                  ? "border-[#1D9E75] bg-[#E6F5EE] text-[#0F6E56]"
+                  : "border-[#E6E1D8] bg-white text-[#6B6459] hover:text-[#042C53]"
               )}
             >
               {h.label}
             </button>
           ))}
         </div>
-      </div>
+      )}
 
       {selected && (benchmarkLoading || !benchmark) ? (
-        <div className="h-48 bg-slate-100 rounded-xl animate-pulse" />
+        <div className="h-64 bg-[#E6E1D8]/30 rounded-[24px] animate-pulse" />
       ) : selected && benchmark && projection ? (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-white border border-[#E2E8F0] rounded-xl p-4 space-y-2">
-              <p className="text-sm font-semibold text-slate-500">Left as-is</p>
-              <p className="text-2xl font-bold text-[#042C53]">{fmtCurrency(projection.asIsFinal)}</p>
-              <p className="text-xs text-slate-400">
-                in {HORIZON_YEARS} years, assumes {projection.asIsReturn.toFixed(1)}% annual return
-                {benchmark.benchmarkLabel && !benchmark.isOverride ? ` (${benchmark.benchmarkLabel})` : benchmark.isOverride ? " (your estimate)" : ""}
-              </p>
+        <div className="space-y-3.5">
+          <div>
+            <Link href="/client/portfolio">
+              <span className="text-[13px] font-semibold text-[#1D9E75] cursor-pointer hover:underline mb-1 inline-block">
+                ← Accounts
+              </span>
+            </Link>
+            <h2 className="font-display text-[22px] font-bold text-[#042C53] tracking-[-0.02em] mb-1">
+              {selected.label}, two ways
+            </h2>
+            <p className="text-[13px] leading-[1.5] text-[#6B6459] text-pretty">
+              You track this holding yourself at {projection.asIsReturn.toFixed(1)}%. Below, the same ${Math.round(selected.currentValue).toLocaleString()} under the benchmark rate and under advisor management, both to {new Date().getFullYear() + HORIZON_YEARS}.
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex-1 bg-white border border-[#E6E1D8] rounded-[20px] p-4">
+              <div className="font-mono text-[9px] tracking-[0.12em] uppercase text-[#6B6459] mb-2.5">Left as-is</div>
+              <svg width="100%" height="72" viewBox="0 0 140 72" preserveAspectRatio="none" className="block mb-3">
+                <path d="M0,68 Q80,60 140,30" fill="none" stroke="#4A7CB8" strokeWidth="2.5" strokeLinecap="round" />
+                <path d="M0,68 Q80,60 140,30 L140,72 L0,72 Z" fill="#4A7CB8" opacity=".08" />
+              </svg>
+              <div className="font-display text-[19px] font-bold text-[#042C53] tracking-[-0.02em]">
+                ${Math.round(projection.asIsFinal).toLocaleString()}
+              </div>
+              <div className="text-[11px] text-[#6B6459] mt-1 leading-[1.45]">
+                in {new Date().getFullYear() + HORIZON_YEARS}, assuming <strong className="text-[#042C53] font-semibold">{projection.asIsReturn.toFixed(1)}% p.a.</strong> before fees and tax
+              </div>
             </div>
 
-            <div className="bg-[#1D9E75]/5 border border-[#1D9E75]/30 rounded-xl p-4 space-y-2">
-              <p className="text-sm font-semibold text-[#1D9E75]">If brought under management</p>
-              {projection.managedFinal != null ? (
-                <>
-                  <p className="text-2xl font-bold text-[#042C53]">{fmtCurrency(projection.managedFinal)}</p>
-                  <p className="text-xs text-slate-500">
-                    in {HORIZON_YEARS} years, assumes {projection.managedReturn?.toFixed(1)}% annual return
-                    {targetStrategy ? ` (${targetStrategy.label})` : ""}
-                  </p>
-                </>
-              ) : (
-                <p className="text-sm text-slate-400">No target strategy configured yet — ask your advisor.</p>
-              )}
+            <div className="flex-1 bg-white border-[1.5px] border-[#1D9E75] rounded-[20px] p-4 shadow-[0_4px_14px_rgba(29,158,117,.12)]">
+              <div className="font-mono text-[9px] tracking-[0.12em] uppercase text-[#0F6E56] mb-2.5">Under advisor management</div>
+              <svg width="100%" height="72" viewBox="0 0 140 72" preserveAspectRatio="none" className="block mb-3">
+                <path d="M0,68 Q80,52 140,8" fill="none" stroke="#1D9E75" strokeWidth="2.5" strokeLinecap="round" />
+                <path d="M0,68 Q80,52 140,8 L140,72 L0,72 Z" fill="#1D9E75" opacity=".10" />
+              </svg>
+              <div className="font-display text-[19px] font-bold text-[#0F6E56] tracking-[-0.02em]">
+                {projection.managedFinal != null ? `$${Math.round(projection.managedFinal).toLocaleString()}` : "N/A"}
+              </div>
+              <div className="text-[11px] text-[#6B6459] mt-1 leading-[1.45]">
+                in {new Date().getFullYear() + HORIZON_YEARS}, assuming <strong className="text-[#042C53] font-semibold">{projection.managedReturn?.toFixed(1)}% p.a.</strong> net of a 0.9% advice fee
+              </div>
             </div>
           </div>
 
-          <div className="flex items-start gap-2 p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-500">
-            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-slate-400" />
-            <p>Illustrative only, based on the stated assumptions. Not a guarantee of future performance.</p>
+          <div className="bg-white border border-[#E6E1D8] rounded-[20px] p-4.5">
+            <div className="font-mono text-[10px] tracking-[0.14em] uppercase text-[#6B6459] mb-3">What sits behind these numbers</div>
+            <div className="flex justify-between items-center text-xs text-[#2D2A24] py-2 border-b border-[#F2EFE9]">
+              <span>Starting value</span>
+              <span className="font-mono">${Math.round(selected.currentValue).toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between items-center text-xs text-[#2D2A24] py-2 border-b border-[#F2EFE9]">
+              <span>Horizon</span>
+              <span className="font-mono">{HORIZON_YEARS} years</span>
+            </div>
+            <div className="flex justify-between items-center text-xs text-[#2D2A24] py-2 border-b border-[#F2EFE9]">
+              <span>Further contributions</span>
+              <span className="font-mono">None assumed</span>
+            </div>
+            <div className="flex justify-between items-center text-xs text-[#2D2A24] py-2">
+              <span>Inflation adjustment</span>
+              <span className="font-mono">Not applied</span>
+            </div>
           </div>
 
-          <Link
-            href={`/client/messages?about=${encodeURIComponent(`bringing my ${selected.label} under management`)}`}
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-[#1D9E75] hover:text-[#0F6E56] transition-colors"
-          >
-            <MessageSquare className="h-4 w-4" />
-            Ask your advisor about this →
+          <div className="bg-[#F2EFE9] rounded-[16px] p-3.5 px-4">
+            <div className="text-[11px] leading-[1.55] text-[#6B6459] text-pretty">
+              <strong className="text-[#042C53]">Not a guarantee.</strong> Both figures are illustrations based on the assumptions above. Actual returns will differ, and the advised trajectory is not a promise of outperformance. Past performance does not predict future results.
+            </div>
+          </div>
+
+          <Link href={`/client/messages?about=${encodeURIComponent(`bringing my ${selected.label} under management`)}`}>
+            <button className="w-full min-h-[48px] border-none rounded-[16px] bg-[#1D9E75] text-white font-sans text-sm font-semibold cursor-pointer hover:bg-[#17805F] transition-colors">
+              Ask advisor about this
+            </button>
           </Link>
-        </>
+        </div>
       ) : null}
     </div>
   );

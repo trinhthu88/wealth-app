@@ -59,15 +59,6 @@ export default function ClientDashboard() {
               displayCurrency={data.preferredCurrency}
             />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <NetWorthRingSection netWorth={data.netWorth} />
-              <BudgetSnapshotSection
-                budget={data.currentBudget}
-                isTrackA={data.isTrackA}
-                planNickname={planNickname}
-              />
-            </div>
-
             <GoalsProgressSection
               goals={data.topGoals}
               totalGoals={data.topGoals.length}
@@ -86,7 +77,7 @@ export default function ClientDashboard() {
               />
             )}
 
-            <QuickActionsSection isTrackA={data.isTrackA} />
+            <QuickActionsSection isTrackA={data.isTrackA} advisorName={data.advisorName} />
           </>
         )}
       </div>

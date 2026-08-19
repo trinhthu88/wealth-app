@@ -7,6 +7,8 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { queryClient } from "@/lib/queryClient";
 import { useProfile } from "@/hooks/useProfile";
+import { useOnboardingTrackComplete } from "@/hooks/useClientTrack";
+import { resolveRoleRedirectPath } from "@/lib/roleRedirect";
 import { setTokenGetter } from "@/lib/api";
 import { useEffect, useRef, lazy, Suspense } from "react";
 import Sol from "@/components/Sol";
@@ -34,6 +36,7 @@ const ClientMessages = lazy(() => import("@/pages/client/messages"));
 const ClientOnboarding = lazy(() => import("@/pages/client/ClientOnboarding"));
 const ClientPackageDetail = lazy(() => import("@/pages/client/package-detail"));
 const ClientScenarios = lazy(() => import("@/pages/client/ClientScenarios"));
+const ClientHealthScore = lazy(() => import("@/pages/client/ClientHealthScore"));
 const ClientBudget = lazy(() => import("@/pages/client/budget"));
 
 const AdvisorDashboard = lazy(() => import("@/pages/advisor/dashboard"));
@@ -180,19 +183,16 @@ function ProtectedRoute({ component: C, role }: { component: React.ComponentType
 
 function RoleRedirect() {
   const { profile, isLoading } = useProfile();
-  if (isLoading) return (
+  const isInvestmentClient = profile?.role === "investment_client";
+  const { onboardingTrackComplete, isLoading: trackLoading } = useOnboardingTrackComplete(isInvestmentClient);
+
+  if (isLoading || trackLoading) return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="animate-pulse text-muted-foreground">Loading…</div>
     </div>
   );
   if (!profile) return <Redirect to="/sign-in" />;
-  if (profile.role === "super_admin") return <Redirect to="/admin/dashboard" />;
-  if (profile.role === "advisor") return <Redirect to="/advisor/dashboard" />;
-  if (profile.role === "investment_client") {
-    // Check onboarding_track_complete via client profile — if not done, send to onboarding
-    return <Redirect to="/client/dashboard" />;
-  }
-  return <Redirect to="/free/dashboard" />;
+  return <Redirect to={resolveRoleRedirectPath(profile.role, onboardingTrackComplete)} />;
 }
 
 function SignInPage() {
@@ -241,6 +241,7 @@ function AppRoutes() {
       <Route path="/client/packages" component={() => <Redirect to="/client/portfolio" />} />
       <Route path="/client/transactions" component={() => <Redirect to="/client/portfolio" />} />
       <Route path="/client/scenarios" component={() => <ProtectedRoute component={ClientScenarios} role={["investment_client", "super_admin"]} />} />
+      <Route path="/client/health-score" component={() => <ProtectedRoute component={ClientHealthScore} role={["investment_client", "super_admin"]} />} />
       <Route path="/client/plan" component={() => <ProtectedRoute component={ClientPlan} role={["investment_client", "super_admin"]} />} />
       <Route path="/client/goals" component={() => <ProtectedRoute component={ClientGoals} role={["investment_client", "super_admin"]} />} />
       <Route path="/client/networth" component={() => <ProtectedRoute component={ClientNetWorth} role={["investment_client", "super_admin"]} />} />

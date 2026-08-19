@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { Sparkles, X } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
 import type { ScenarioAlert } from "@/hooks/useDashboardData";
@@ -36,11 +35,6 @@ export default function ScenarioAlertSection({ alert }: Props) {
 
   if (dismissed) return null;
 
-  function handleDismiss() {
-    setDismissed(true);
-    statusMutation.mutate("dismissed");
-  }
-
   function handleView() {
     if (alert.alertStatus === "new") {
       statusMutation.mutate("viewed");
@@ -48,34 +42,21 @@ export default function ScenarioAlertSection({ alert }: Props) {
   }
 
   return (
-    <div className="bg-[#F0FDF8] border border-[#1D9E75]/20 border-l-[3px] border-l-[#1D9E75] rounded-xl p-4 relative">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-1.5 mb-2">
-          <Sparkles className="h-3.5 w-3.5 text-[#1D9E75]" />
-          <span className="text-[11px] font-bold text-[#1D9E75] uppercase tracking-wide">New from your advisor</span>
-        </div>
-        <button
-          onClick={handleDismiss}
-          aria-label="Dismiss scenario alert"
-          className="text-[#64748B] hover:text-[#042C53] shrink-0"
-        >
-          <X className="h-4 w-4" />
-        </button>
+    <div className="bg-[#042C53] rounded-[24px] p-5 text-white mb-3.5">
+      <div className="font-mono text-[10px] tracking-[0.14em] uppercase text-[#7FCBAE] mb-2.5">
+        One thing to do
       </div>
-
-      <p className="text-sm font-semibold text-[#042C53] mb-1">
+      <div className="font-display text-base font-semibold leading-[1.35] mb-1.5">
         {alert.scenarioName ?? "Investment scenario"}
-      </p>
-      <p className="text-xs text-[#64748B] mb-3">{describeScenario(alert)}</p>
-
-      <div className="flex items-center gap-3">
-        <Link href={`/client/scenarios?highlight=${alert.id}`} onClick={handleView}>
-          <span className="text-sm font-medium text-[#1D9E75] hover:text-[#0F6E56]">View scenario →</span>
-        </Link>
-        <button onClick={handleDismiss} className="text-xs text-[#64748B] hover:text-[#042C53]">
-          Dismiss
-        </button>
       </div>
+      <div className="text-xs text-[#A9C0D6] leading-[1.5] mb-4">
+        {describeScenario(alert)}
+      </div>
+      <Link href={`/client/scenarios?highlight=${alert.id}`} onClick={handleView}>
+        <button className="w-full min-h-[44px] border-none rounded-[14px] bg-[#1D9E75] text-white font-sans text-sm font-semibold cursor-pointer hover:bg-[#17805F] transition-colors">
+          View scenario
+        </button>
+      </Link>
     </div>
   );
 }

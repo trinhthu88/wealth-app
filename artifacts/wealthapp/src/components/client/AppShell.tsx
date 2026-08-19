@@ -5,7 +5,7 @@ import { useProfile } from "@/hooks/useProfile";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard, PieChart, Calculator, Target,
-  Wallet, MessageSquare, FolderOpen, Menu, X, ChevronLeft, ChevronRight,
+  Wallet, MessageSquare, FolderOpen, Menu, X, ChevronLeft, ChevronRight, Activity
 } from "lucide-react";
 
 interface NavItem {
@@ -17,24 +17,26 @@ interface NavItem {
 // 7 destinations (down from 11) — Net Worth, Packages, Transactions, and Financial Plan
 // no longer stand on their own; see ClientDashboard, ClientPortfolio, and ClientGoals.
 const SIDEBAR_NAV: NavItem[] = [
-  { label: "Dashboard",           href: "/client/dashboard",  icon: LayoutDashboard },
-  { label: "Investment accounts", href: "/client/portfolio",  icon: PieChart },
-  { label: "Scenarios",           href: "/client/scenarios",  icon: Calculator },
-  { label: "Goals",               href: "/client/goals",      icon: Target },
-  { label: "Budget",              href: "/client/budget",     icon: Wallet },
-  { label: "Messages",            href: "/client/messages",   icon: MessageSquare },
-  { label: "Documents",           href: "/client/documents",  icon: FolderOpen },
+  { label: "Dashboard",           href: "/client/dashboard",    icon: LayoutDashboard },
+  { label: "Investment accounts", href: "/client/portfolio",    icon: PieChart },
+  { label: "Scenarios",           href: "/client/scenarios",    icon: Calculator },
+  { label: "Health score",        href: "/client/health-score", icon: Activity },
+  { label: "Goals",               href: "/client/goals",        icon: Target },
+  { label: "Budget",              href: "/client/budget",       icon: Wallet },
+  { label: "Messages",            href: "/client/messages",     icon: MessageSquare },
+  { label: "Documents",           href: "/client/documents",    icon: FolderOpen },
 ];
 
 const BOTTOM_NAV_PRIMARY: NavItem[] = [
-  { label: "Home",     href: "/client/dashboard", icon: LayoutDashboard },
-  { label: "Accounts", href: "/client/portfolio", icon: PieChart },
-  { label: "Goals",    href: "/client/goals",     icon: Target },
-  { label: "Budget",   href: "/client/budget",    icon: Wallet },
+  { label: "Home",      href: "/client/dashboard",    icon: LayoutDashboard },
+  { label: "Accounts",  href: "/client/portfolio",    icon: PieChart },
+  { label: "Scenarios", href: "/client/scenarios",    icon: Calculator },
+  { label: "Health",    href: "/client/health-score", icon: Activity },
 ];
 
 const BOTTOM_NAV_MORE: NavItem[] = [
-  { label: "Scenarios", href: "/client/scenarios", icon: Calculator },
+  { label: "Goals",     href: "/client/goals",     icon: Target },
+  { label: "Budget",    href: "/client/budget",    icon: Wallet },
   { label: "Messages",  href: "/client/messages",  icon: MessageSquare },
   { label: "Documents", href: "/client/documents", icon: FolderOpen },
 ];
@@ -62,15 +64,15 @@ function BottomTab({ item }: { item: NavItem }) {
   const [active] = useRoute(item.href);
   const Icon = item.icon;
   return (
-    <Link href={item.href} className="flex-1">
+    <Link href={item.href} className="flex-1 border-none bg-transparent flex flex-col items-center justify-center gap-1.5 cursor-pointer outline-none">
       <div className={cn(
-        "flex flex-col items-center gap-1 py-2 transition-colors",
-        active ? "text-[#1D9E75]" : "text-slate-500"
+        "flex flex-col items-center gap-1.5 transition-colors",
+        active ? "text-[#1D9E75]" : "text-[#A8A095]"
       )}>
-        <div className={cn("p-2.5 rounded-xl transition-colors", active && "bg-[#1D9E75]/10")}>
-          <Icon className="h-5 w-5" />
+        <div className={cn("w-6 h-6 rounded-lg flex items-center justify-center transition-colors", active ? "bg-[#E6F5EE]" : "bg-[#FAF8F5]")}>
+          <Icon className="h-4 w-4" />
         </div>
-        <span className="text-[10px] font-medium leading-none">{item.label}</span>
+        <span className="text-[10px] font-semibold leading-none">{item.label}</span>
       </div>
     </Link>
   );
@@ -149,7 +151,7 @@ export default function ClientAppShell({ children }: { children: React.ReactNode
   );
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#F8FAFB]">
+    <div className="flex h-screen overflow-hidden bg-[#F2EFE9] font-sans">
       {/* Desktop sidebar */}
       <div className="hidden lg:flex lg:flex-col lg:shrink-0 relative z-30">
         {sidebar}
@@ -164,10 +166,10 @@ export default function ClientAppShell({ children }: { children: React.ReactNode
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Mobile header */}
-        <header className="lg:hidden h-14 border-b border-[#E2E8F0] bg-white/80 backdrop-blur flex items-center px-4 gap-3 shrink-0">
+        <header className="lg:hidden h-12 border-b border-[#E6E1D8] bg-[#F2EFE9] flex items-center px-4 gap-3 shrink-0">
           <div className="flex items-center gap-2">
-            <SolLogo size={24} />
-            <span className="font-bold text-[#042C53] text-base">tala</span>
+            <SolLogo size={20} />
+            <span className="font-bold text-[#042C53] text-sm font-mono tracking-widest uppercase">tala</span>
           </div>
           <div className="flex-1" />
           <UserButton appearance={{ elements: { avatarBox: "h-7 w-7" } }} />
@@ -178,20 +180,20 @@ export default function ClientAppShell({ children }: { children: React.ReactNode
         </main>
 
         {/* Mobile bottom nav */}
-        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-[#E2E8F0]" style={{ height: 64 }}>
-          <div className="flex items-stretch px-2 h-full">
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-[#FFFFFF] border-t border-[#E6E1D8]" style={{ height: 76 }}>
+          <div className="flex items-stretch px-2 h-full pb-[env(safe-area-inset-bottom)]">
             {BOTTOM_NAV_PRIMARY.map((item) => (
               <BottomTab key={item.href} item={item} />
             ))}
             {/* More button */}
             <button
-              className="flex-1 flex flex-col items-center justify-center gap-1 py-2 text-slate-500 hover:text-slate-700 transition-colors"
+              className="flex-1 flex flex-col items-center justify-center gap-1.5 py-1 text-[#A8A095] hover:text-[#1D9E75] transition-colors"
               onClick={() => setMoreOpen((v) => !v)}
             >
-              <div className="p-2.5 rounded-xl">
-                <Menu className="h-5 w-5" />
+              <div className="w-6 h-6 rounded-lg bg-[#FAF8F5] flex items-center justify-center transition-colors">
+                <Menu className="h-4 w-4" />
               </div>
-              <span className="text-[10px] font-medium leading-none">More</span>
+              <span className="text-[10px] font-semibold leading-none">More</span>
             </button>
           </div>
         </div>
