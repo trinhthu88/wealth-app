@@ -2,7 +2,9 @@ import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { getHoldingTypeConfig } from "@/lib/holdingTypeConfig";
 
-const CURRENCIES = ["USD", "VND", "EUR"] as const;
+// v1 is USD-only — no FX-rate handling exists anywhere downstream. Multi-currency
+// support is deferred; this is the file to bring the currency picker back in
+// (see NumberWithCurrency below) when it's built.
 
 export interface NewHolding {
   holdingType: string;
@@ -57,9 +59,8 @@ function TextInput({ value, onChange, placeholder, uppercase }: { value: string;
   );
 }
 
-function NumberWithCurrency({ value, onChange, currency, onCurrencyChange, placeholder, step }: {
+function NumberWithCurrency({ value, onChange, placeholder, step }: {
   value: string; onChange: (v: string) => void;
-  currency: string; onCurrencyChange: (v: string) => void;
   placeholder?: string; step?: string;
 }) {
   return (
@@ -73,20 +74,15 @@ function NumberWithCurrency({ value, onChange, currency, onCurrencyChange, place
         min={0}
         className="flex-1 px-3 py-2 rounded-lg border border-slate-200 text-sm text-[#042C53] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/20 focus:border-[#1D9E75]"
       />
-      <select
-        value={currency}
-        onChange={e => onCurrencyChange(e.target.value)}
-        className="px-2 py-2 rounded-lg border border-slate-200 text-sm text-[#042C53] bg-white focus:outline-none"
-      >
-        {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
-      </select>
+      <span className="px-3 py-2 rounded-lg border border-slate-200 text-sm text-slate-500 bg-slate-50 select-none">
+        USD
+      </span>
     </div>
   );
 }
 
-export default function HoldingMiniForm({ holdingType, defaultCurrency, onAdd, onCancel }: HoldingMiniFormProps) {
+export default function HoldingMiniForm({ holdingType, onAdd, onCancel }: HoldingMiniFormProps) {
   const [label, setLabel] = useState("");
-  const [currency, setCurrency] = useState(defaultCurrency);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -144,7 +140,7 @@ export default function HoldingMiniForm({ holdingType, defaultCurrency, onAdd, o
     setSaving(true);
 
     const holding: NewHolding = {
-      holdingType, label: label.trim(), currency,
+      holdingType, label: label.trim(), currency: "USD",
       ...(holdingType === "stock_etf" && {
         ticker: ticker.trim(), brokerPlatform: broker.trim() || undefined,
         unitsHeld: parseFloat(units), averageCostPrice: avgCost ? parseFloat(avgCost) : undefined,
@@ -197,7 +193,7 @@ export default function HoldingMiniForm({ holdingType, defaultCurrency, onAdd, o
             className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm text-[#042C53] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/20 focus:border-[#1D9E75]" />
         </Field>
         <Field label="Average cost price per unit">
-          <NumberWithCurrency value={avgCost} onChange={setAvgCost} currency={currency} onCurrencyChange={setCurrency} placeholder="0.00" />
+          <NumberWithCurrency value={avgCost} onChange={setAvgCost} placeholder="0.00" />
         </Field>
       </>)}
 
@@ -213,19 +209,20 @@ export default function HoldingMiniForm({ holdingType, defaultCurrency, onAdd, o
             className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm text-[#042C53] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/20 focus:border-[#1D9E75]" />
         </Field>
         <Field label="Average cost price">
-          <NumberWithCurrency value={avgCost} onChange={setAvgCost} currency={currency} onCurrencyChange={setCurrency} />
+          <NumberWithCurrency value={avgCost} onChange={setAvgCost} />
         </Field>
       </>)}
 
       {holdingType === "property" && (<>
         <Field label="Purchase price">
-          <NumberWithCurrency value={purchasePrice} onChange={setPurchasePrice} currency={currency} onCurrencyChange={setCurrency} />
+          <NumberWithCurrency value={purchasePrice} onChange={setPurchasePrice} />
         </Field>
         <Field label="Current estimated value">
-          <NumberWithCurrency value={currentValue} onChange={setCurrentValue} currency={currency} onCurrencyChange={v => setCurrency(v)} />
+          <NumberWithCurrency value={currentValue} onChange={setCurrentValue} />
+          <p className="text-xs text-slate-400">Enter the current USD-equivalent value. We don't yet convert other currencies automatically.</p>
         </Field>
         <Field label="Outstanding mortgage (optional)">
-          <NumberWithCurrency value={mortgage} onChange={setMortgage} currency={currency} onCurrencyChange={v => setCurrency(v)} placeholder="0" />
+          <NumberWithCurrency value={mortgage} onChange={setMortgage} placeholder="0" />
         </Field>
       </>)}
 
@@ -234,7 +231,7 @@ export default function HoldingMiniForm({ holdingType, defaultCurrency, onAdd, o
           <TextInput value={bankName} onChange={setBankName} placeholder="e.g. Techcombank, HSBC" />
         </Field>
         <Field label="Current balance">
-          <NumberWithCurrency value={balance} onChange={setBalance} currency={currency} onCurrencyChange={setCurrency} />
+          <NumberWithCurrency value={balance} onChange={setBalance} />
         </Field>
       </>)}
 
@@ -243,16 +240,18 @@ export default function HoldingMiniForm({ holdingType, defaultCurrency, onAdd, o
           <TextInput value={schemeName} onChange={setSchemeName} placeholder="e.g. UK workplace pension" />
         </Field>
         <Field label="Current balance">
-          <NumberWithCurrency value={pensionBalance} onChange={setPensionBalance} currency={currency} onCurrencyChange={setCurrency} />
+          <NumberWithCurrency value={pensionBalance} onChange={setPensionBalance} />
+          <p className="text-xs text-slate-400">Enter the current USD-equivalent value. We don't yet convert other currencies automatically.</p>
         </Field>
       </>)}
 
       {holdingType === "other" && (<>
         <Field label="Current value">
-          <NumberWithCurrency value={otherCurrentValue} onChange={setOtherCurrentValue} currency={currency} onCurrencyChange={setCurrency} />
+          <NumberWithCurrency value={otherCurrentValue} onChange={setOtherCurrentValue} />
+          <p className="text-xs text-slate-400">Enter the current USD-equivalent value. We don't yet convert other currencies automatically.</p>
         </Field>
         <Field label="Total invested (cost basis, optional)">
-          <NumberWithCurrency value={otherCostBasis} onChange={setOtherCostBasis} currency={currency} onCurrencyChange={v => setCurrency(v)} placeholder="0" />
+          <NumberWithCurrency value={otherCostBasis} onChange={setOtherCostBasis} placeholder="0" />
         </Field>
       </>)}
 

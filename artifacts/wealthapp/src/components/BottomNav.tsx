@@ -35,16 +35,9 @@ const TABS = [
       </svg>
     ),
   },
-  {
-    label: "Badges",
-    href: "/free/milestones",
-    icon: (active: boolean) => (
-      <svg width={26} height={26} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.2 : 1.8} strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="8" r="6" />
-        <path d="M8.21 13.89L7 23l5-3 5 3-1.21-9.12" />
-      </svg>
-    ),
-  },
+  // "Badges" removed as a standalone tab — folded into the Dashboard's compact
+  // achievements strip, which links out to /free/milestones (still routed, just
+  // no longer a top-level nav destination).
 ];
 
 function Tab({ href, icon, label }: { href: string; icon: (active: boolean) => React.ReactNode; label: string }) {

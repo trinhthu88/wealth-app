@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import AppShell from "@/components/AppShell";
 import FreeTierBanner from "@/components/FreeTierBanner";
 import GoalCard, { type Goal } from "@/components/GoalCard";
+import LockedGoalSlotCard from "@/components/LockedGoalSlotCard";
 import CurrencyInput from "@/components/CurrencyInput";
 import BottomNav from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
@@ -472,8 +473,11 @@ export default function GoalsPage() {
           );
         })}
 
-        {/* Upgrade CTA — contextual */}
-        {(() => {
+        {/* Locked 2nd goal slot — free users at the 1-goal cap */}
+        {profile?.role === "free_user" && goals.length >= 1 && <LockedGoalSlotCard />}
+
+        {/* Upgrade CTA — contextual (skip when the locked slot above already carries this message) */}
+        {!(profile?.role === "free_user" && goals.length >= 1) && (() => {
           const offTrackGoal = sortedGoals.find(g => {
             const p = g.id === topGoal?.id ? topGoalProjection : projections.get(g.id);
             return (p?.status ?? g.status) === "off_track";

@@ -7,6 +7,7 @@
 // ✗ BANNED:  Loading skeletons on onboarding screens
 
 import { useState, useEffect, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useUser } from "@clerk/react";
 import { toast } from "sonner";
@@ -76,6 +77,76 @@ export default function ClientOnboarding() {
     return DEFAULT_STATE;
   });
   const [saving, setSaving] = useState(false);
+  // If this user already has a goal (e.g. created via the free-tier pathway before
+  // upgrading), Screen6 edits it instead of creating a duplicate.
+  const [existingGoal, setExistingGoal] = useState<{ id: string; currentAmount: string | null } | null>(null);
+
+  // ── Bridge from free-tier pathway/goal data, so upgrading users aren't asked
+  // for the same information twice. Only fills fields still at their default —
+  // never overwrites a resumed in-progress onboarding session (localStorage,
+  // restored above) or anything the user has already typed on this pass.
+  const { data: pathwaySteps } = useQuery<Array<{ stepNumber: number; formData: Record<string, unknown> | null }>>({
+    queryKey: ["pathway"],
+    queryFn: () => apiFetch("/pathway"),
+    enabled: !!user?.id,
+  });
+  const { data: priorGoals } = useQuery<Array<{ id: string; title: string; goalType: string; targetAmount: string | null; currentAmount: string | null; targetDate: string | null; currency: string }>>({
+    queryKey: ["goals"],
+    queryFn: () => apiFetch("/goals"),
+    enabled: !!user?.id,
+  });
+
+  useEffect(() => {
+    if (!pathwaySteps) return;
+    const step1 = pathwaySteps.find(s => s.stepNumber === 1)?.formData;
+    const step2 = pathwaySteps.find(s => s.stepNumber === 2)?.formData;
+    const step3 = pathwaySteps.find(s => s.stepNumber === 3)?.formData;
+    setState(s => {
+      const next = { ...s };
+      if (step1) {
+        next.screen1 = {
+          ...next.screen1,
+          isExpat: next.screen1.isExpat === DEFAULT_STATE.screen1.isExpat && typeof step1.isExpat === "boolean" ? step1.isExpat : next.screen1.isExpat,
+          preferredCurrency: next.screen1.preferredCurrency === DEFAULT_STATE.screen1.preferredCurrency && typeof step1.currency === "string" ? (step1.currency as any) : next.screen1.preferredCurrency,
+        };
+      }
+      if (step2 && next.screen2.monthlyIncome === DEFAULT_STATE.screen2.monthlyIncome && typeof step2.income === "number") {
+        next.screen2 = { ...next.screen2, monthlyIncome: step2.income };
+      }
+      if (step3) {
+        const expenseKeys = ["housing", "food", "transport", "utilities", "entertainment", "other"] as const;
+        const stillDefault = expenseKeys.every(k => next.expenses[k] === DEFAULT_STATE.expenses[k]);
+        if (stillDefault) {
+          next.expenses = { ...next.expenses };
+          for (const k of expenseKeys) {
+            if (typeof step3[k] === "number") next.expenses[k] = step3[k] as number;
+          }
+        }
+      }
+      return next;
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathwaySteps]);
+
+  useEffect(() => {
+    const goal = priorGoals?.[0];
+    if (!goal) return;
+    setExistingGoal({ id: goal.id, currentAmount: goal.currentAmount });
+    setState(s => {
+      if (s.screen6.goalType !== DEFAULT_STATE.screen6.goalType) return s; // already filled — don't clobber
+      return {
+        ...s,
+        screen6: {
+          goalType: goal.goalType,
+          goalName: goal.title,
+          goalTargetAmount: goal.targetAmount ?? "",
+          goalCurrency: goal.currency ?? "USD",
+          goalTargetDate: goal.targetDate ? goal.targetDate.slice(0, 7) : "",
+        },
+      };
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [priorGoals]);
 
   // Restore toast
   useEffect(() => {
@@ -192,18 +263,38 @@ export default function ClientOnboarding() {
     setSaving(true);
     try {
       const targetDate = goalTargetDate ? goalTargetDate + "-01" : null;
-      await apiFetch("/goals", {
-        method: "POST",
-        body: JSON.stringify({
-          title: goalName || goalType,
-          goalType,
-          targetAmount: goalTargetAmount ? parseFloat(goalTargetAmount) : null,
-          targetDate,
-          currency: goalCurrency,
-          status: "on_track",
-          priority: "high",
-        }),
-      });
+      // If a goal already exists (e.g. created via the free-tier pathway before
+      // upgrading), edit it in place instead of creating a duplicate row — and
+      // carry its currentAmount through, since PUT /goals/:id defaults that field
+      // to 0 when omitted and would otherwise silently wipe existing progress.
+      if (existingGoal) {
+        await apiFetch(`/goals/${existingGoal.id}`, {
+          method: "PUT",
+          body: JSON.stringify({
+            title: goalName || goalType,
+            goalType,
+            targetAmount: goalTargetAmount ? parseFloat(goalTargetAmount) : null,
+            currentAmount: existingGoal.currentAmount ? parseFloat(existingGoal.currentAmount) : 0,
+            targetDate,
+            currency: goalCurrency,
+            status: "on_track",
+            priority: "high",
+          }),
+        });
+      } else {
+        await apiFetch("/goals", {
+          method: "POST",
+          body: JSON.stringify({
+            title: goalName || goalType,
+            goalType,
+            targetAmount: goalTargetAmount ? parseFloat(goalTargetAmount) : null,
+            targetDate,
+            currency: goalCurrency,
+            status: "on_track",
+            priority: "high",
+          }),
+        });
+      }
     } catch (e: any) {
       // Ignore duplicate error — goal may already exist if user resumed
       if (!e?.message?.includes("limit")) throw e;

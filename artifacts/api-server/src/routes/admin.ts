@@ -5,6 +5,7 @@ import {
   assetClassBenchmarksTable, advisedStrategyReturnsTable,
 } from "@workspace/db";
 import { requireAuth, requireRole } from "../middlewares/requireAuth";
+import { createUserWithProfile } from "../lib/createUserWithProfile";
 
 const router: IRouter = Router();
 const adminGuard = [requireAuth, requireRole("super_admin")];
@@ -25,59 +26,9 @@ router.get("/admin/users/:id", ...adminGuard, async (req, res): Promise<void> =>
 
 router.post("/admin/users", ...adminGuard, async (req, res): Promise<void> => {
   const { email, password, fullName, role, advisorId, riskProfile, status } = req.body;
-  if (!email || !password) { res.status(400).json({ error: "email and password required" }); return; }
-
-  const clerkSecretKey = process.env.CLERK_SECRET_KEY;
-  if (!clerkSecretKey) { res.status(500).json({ error: "CLERK_SECRET_KEY not configured" }); return; }
-
-  const nameParts = (fullName ?? "").trim().split(" ");
-  const firstName = nameParts[0] || "";
-  const lastName = nameParts.slice(1).join(" ") || "";
-
-  const clerkRes = await fetch("https://api.clerk.com/v1/users", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${clerkSecretKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      email_address: [email],
-      password,
-      first_name: firstName,
-      last_name: lastName,
-      skip_password_checks: true,
-      skip_password_requirement: false,
-    }),
-  });
-
-  if (!clerkRes.ok) {
-    const errBody = await clerkRes.json().catch(() => ({}));
-    const msg = (errBody as any).errors?.[0]?.long_message ?? (errBody as any).errors?.[0]?.message ?? "Failed to create user in Clerk";
-    res.status(400).json({ error: msg });
-    return;
-  }
-
-  const clerkUser = await clerkRes.json() as { id: string };
-
-  // Insert into our profiles table
-  const [profile] = await db.insert(profilesTable).values({
-    id: clerkUser.id,
-    email,
-    fullName: fullName || null,
-    role: role || "free_user",
-  }).returning();
-
-  // If investment_client, create client_profiles row
-  if (role === "investment_client") {
-    await db.insert(clientProfilesTable).values({
-      userId: clerkUser.id,
-      advisorId: advisorId || null,
-      riskProfile: riskProfile || null,
-      status: status || "prospect",
-    });
-  }
-
-  res.status(201).json(profile);
+  const result = await createUserWithProfile({ email, password, fullName, role, advisorId, riskProfile, status });
+  if (!result.ok) { res.status(result.httpStatus).json({ error: result.error }); return; }
+  res.status(201).json(result.profile);
 });
 
 router.put("/admin/users/:id", ...adminGuard, async (req, res): Promise<void> => {

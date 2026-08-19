@@ -45,6 +45,7 @@ export default function OtherForm({ initial, onSubmit, submitLabel }: Props) {
       </Field>
       <Field label="Current estimated value" required error={errors.value}>
         <AmountWithCurrency amount={currentValue} onAmountChange={setCurrentValue} currency={currency} onCurrencyChange={setCurrency} />
+        <p className="text-xs text-slate-400">Enter the current USD-equivalent value. We don't yet convert other currencies automatically.</p>
       </Field>
       <Field label="Original amount invested (cost basis)">
         <AmountWithCurrency amount={costBasis} onAmountChange={setCostBasis} currency={currency} onCurrencyChange={setCurrency} />

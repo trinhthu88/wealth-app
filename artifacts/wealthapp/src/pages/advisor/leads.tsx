@@ -12,7 +12,7 @@ import { Plus, Star, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-interface Lead { id: string; email: string; firstName: string | null; source: string | null; status: string; quizResult: unknown; healthScore: number | null; notes: string | null; createdAt: string; }
+interface Lead { id: string; email: string; firstName: string | null; source: string | null; status: string; quizResult: unknown; healthScore: number | null; notes: string | null; createdAt: string; convertedUserId: string | null; }
 
 const STATUS_COLORS: Record<string, string> = {
   new: "bg-blue-100 text-blue-700",
@@ -28,6 +28,8 @@ export default function AdvisorLeads() {
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState("all");
   const [form, setForm] = useState({ email: "", firstName: "", source: "", status: "new", notes: "" });
+  const [convertTarget, setConvertTarget] = useState<Lead | null>(null);
+  const [convertPassword, setConvertPassword] = useState("");
 
   const { data: leads = [], isLoading } = useQuery<Lead[]>({ queryKey: ["leads"], queryFn: () => apiFetch<Lead[]>("/leads") });
 
@@ -41,8 +43,25 @@ export default function AdvisorLeads() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["leads"] }),
   });
 
+  const convert = useMutation({
+    mutationFn: ({ id, password }: { id: string; password: string }) =>
+      apiFetch(`/leads/${id}/convert`, { method: "POST", body: JSON.stringify({ password }) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      setConvertTarget(null);
+      setConvertPassword("");
+      toast.success("Lead converted to client");
+    },
+    onError: (e: Error) => toast.error(e.message || "Failed to convert lead"),
+  });
+
   const filtered = filter === "all" ? leads : leads.filter(l => l.status === filter);
   const f = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setForm(p => ({ ...p, [k]: e.target.value }));
+
+  function handleStatusChange(lead: Lead, newStatus: string) {
+    if (newStatus === "converted") { setConvertTarget(lead); return; }
+    update.mutate({ id: lead.id, status: newStatus });
+  }
 
   return (
     <AppShell>
@@ -107,14 +126,42 @@ export default function AdvisorLeads() {
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
                   <span className={cn("text-xs px-2.5 py-1 rounded-full font-medium", STATUS_COLORS[l.status] ?? "bg-muted text-muted-foreground")}>{l.status}</span>
-                  <select value={l.status} onChange={e => update.mutate({ id: l.id, status: e.target.value })} className="h-7 px-2 border border-input rounded text-xs bg-background">
-                    {STATUSES.map(s => <option key={s}>{s}</option>)}
-                  </select>
+                  {l.convertedUserId ? (
+                    <span className="text-xs text-muted-foreground">Client account created</span>
+                  ) : (
+                    <select value={l.status} onChange={e => handleStatusChange(l, e.target.value)} className="h-7 px-2 border border-input rounded text-xs bg-background">
+                      {STATUSES.map(s => <option key={s}>{s}</option>)}
+                    </select>
+                  )}
                 </div>
               </div>
             ))}
           </div>
         )}
+
+      <Dialog open={!!convertTarget} onOpenChange={(v) => { if (!v) { setConvertTarget(null); setConvertPassword(""); } }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Convert to client</DialogTitle></DialogHeader>
+          {convertTarget && (
+            <div className="space-y-3 pt-2">
+              <p className="text-sm text-muted-foreground">
+                Creates a real investment_client account for <strong>{convertTarget.firstName ? `${convertTarget.firstName} — ` : ""}{convertTarget.email}</strong>, linked back to this lead.
+              </p>
+              <div>
+                <Label>Temporary password</Label>
+                <Input type="password" placeholder="Set an initial password" value={convertPassword} onChange={e => setConvertPassword(e.target.value)} />
+              </div>
+              <Button
+                className="w-full"
+                disabled={!convertPassword || convert.isPending}
+                onClick={() => convert.mutate({ id: convertTarget.id, password: convertPassword })}
+              >
+                {convert.isPending ? "Converting…" : "Create client account"}
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }

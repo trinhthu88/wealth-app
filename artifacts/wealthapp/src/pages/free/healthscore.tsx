@@ -1,10 +1,11 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import AppShell from "@/components/AppShell";
 import HealthScoreRing from "@/components/HealthScoreRing";
 import BenchmarkCard from "@/components/BenchmarkCard";
 import BottomNav from "@/components/BottomNav";
+import WeeklyTipCard from "@/components/WeeklyTipCard";
 import { apiFetch } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
 import { toast } from "sonner";
@@ -12,6 +13,9 @@ import { RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LineChart, Line, ResponsiveContainer, Tooltip } from "recharts";
 import { useProfile } from "@/hooks/useProfile";
+import { generateWeeklyTip, getAgeBenchmarkSavingsRate } from "@/lib/tipEngine";
+import { getStreak, getRatesFromStorage } from "@/lib/milestones";
+import { calculateProjection } from "@/lib/goalProjection";
 
 interface HealthScore {
   overallScore: number;
@@ -23,6 +27,7 @@ interface HealthScore {
   insights: Record<string, unknown> | null;
 }
 interface Pathway { stepNumber: number; status: string; }
+interface Goal { id: string; title: string; status: string; targetAmount: string | null; currentAmount: string | null; targetDate?: string | null; }
 interface BudgetEntry { income: string | null; housing: string | null; food: string | null; transport: string | null; utilities: string | null; entertainment: string | null; other: string | null; }
 interface BudgetTx { id: string; periodMonth: string; amount: string; type: string; }
 interface AssetItem { id: string; valueUsd: string; category: string; }
@@ -100,6 +105,8 @@ export default function HealthScorePage() {
 
   // Animated ring score: starts at 0, animates to actual after mount
   const [ringScore, setRingScore] = useState(0);
+  const [streakWeeks, setStreakWeeks] = useState(0);
+  useEffect(() => { setStreakWeeks(getStreak().weeks); }, []);
 
   // ── Queries ───────────────────────────────────────────────────────────────
   const { data: score, isLoading } = useQuery<HealthScore>({
@@ -141,6 +148,12 @@ export default function HealthScorePage() {
   const { data: liabilities = [] } = useQuery<Liability[]>({
     queryKey: ["liabilities"],
     queryFn: () => apiFetch<Liability[]>("/liabilities"),
+    retry: false,
+  });
+
+  const { data: goals = [] } = useQuery<Goal[]>({
+    queryKey: ["goals"],
+    queryFn: () => apiFetch<Goal[]>("/goals"),
     retry: false,
   });
 
@@ -287,6 +300,42 @@ export default function HealthScorePage() {
   // Profile age (stored as (profile as any).age from pathway step 1)
   const profileAge = (profile as any)?.age as number | null | undefined ?? null;
 
+  // ── "What would improve this" — one prioritized next action, reusing the same
+  // tip engine the dashboard uses for its weekly insight (not shown here today).
+  const { savingsRate: lsSavRate, investmentRate: lsInvRate } = getRatesFromStorage();
+  const savRatePct = profile?.savingsRatePercent ? parseFloat(profile.savingsRatePercent) : lsSavRate;
+  const invRatePct = profile?.investmentRatePercent ? parseFloat(profile.investmentRatePercent) : lsInvRate;
+  const benchmarkSavingsRate = getAgeBenchmarkSavingsRate(profileAge ?? null);
+  const topGoal = goals[0] ?? null;
+  const goalCurrentAmount = parseFloat(topGoal?.currentAmount ?? "0") + savingsBalance + investmentBalance;
+
+  const projection = useMemo(() => {
+    if (!topGoal?.targetDate || !topGoal.targetAmount) return undefined;
+    return calculateProjection({
+      currentAmount: goalCurrentAmount,
+      targetAmount: parseFloat(topGoal.targetAmount ?? "0"),
+      targetDate: topGoal.targetDate,
+      monthlyCashSaved: liveMonthlySaved,
+      savingsBalance,
+      savingsRatePercent: savRatePct,
+      investmentValue: investmentBalance,
+      investmentRatePercent: invRatePct,
+    });
+  }, [topGoal, goalCurrentAmount, savingsBalance, investmentBalance, savRatePct, invRatePct]);
+
+  const goalStatus = projection?.status ?? topGoal?.status ?? "on_track";
+
+  const weeklyTip = useMemo(() => generateWeeklyTip({
+    effectiveSavingsRate,
+    healthScore: overall,
+    goal: topGoal ? { title: topGoal.title, monthlyShortfall: projection?.monthlyShortfall } : null,
+    goalStatus,
+    ageBenchmarkSavingsRate: benchmarkSavingsRate,
+    streakWeeks,
+    isExpat: profile?.isExpat ?? false,
+    investmentRatePercent: invRatePct,
+  }), [effectiveSavingsRate, overall, topGoal, goalStatus, projection, benchmarkSavingsRate, streakWeeks, profile?.isExpat, invRatePct]);
+
   // Personalised insights from API
   const insights = (() => {
     if (!score?.insights) return [];
@@ -428,6 +477,14 @@ export default function HealthScorePage() {
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* ── What would improve this — one clear next action ─────────────── */}
+        {score && (
+          <div>
+            <p className="text-xs font-medium text-muted-foreground mb-3">What would improve this</p>
+            <WeeklyTipCard tip={weeklyTip} />
           </div>
         )}
 

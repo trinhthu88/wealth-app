@@ -4,7 +4,9 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { apiFetch } from "@/lib/api";
 import { AlertTriangle } from "lucide-react";
 
-const CURRENCIES = ["USD", "VND", "EUR"] as const;
+// v1 is USD-only — no FX-rate handling exists anywhere downstream (benchmarks,
+// projections, totals). Multi-currency support is deferred; when it's built, this
+// is the file to bring the currency picker back in (see AmountWithCurrency below).
 
 export function Field({ label, required, children, error }: {
   label: string; required?: boolean; children: React.ReactNode; error?: string;
@@ -66,20 +68,19 @@ export function NumberInput({ value, onChange, placeholder, step = "any", min = 
   );
 }
 
-export function AmountWithCurrency({ amount, onAmountChange, currency, onCurrencyChange }: {
+// `currency`/`onCurrencyChange` are accepted but not surfaced as a picker (v1 is
+// USD-only, see comment above) — callers still pass "USD" through unchanged so the
+// wiring is ready to reactivate once multi-currency support exists.
+export function AmountWithCurrency({ amount, onAmountChange }: {
   amount: string; onAmountChange: (v: string) => void;
   currency: string; onCurrencyChange: (v: string) => void;
 }) {
   return (
     <div className="flex gap-2">
       <NumberInput value={amount} onChange={onAmountChange} className="flex-1" />
-      <select
-        value={currency}
-        onChange={e => onCurrencyChange(e.target.value)}
-        className="px-3 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#042C53] bg-white focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/30"
-      >
-        {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
-      </select>
+      <span className="px-3 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-slate-500 bg-slate-50 select-none">
+        USD
+      </span>
     </div>
   );
 }

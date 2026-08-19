@@ -58,6 +58,7 @@ export default function PropertyForm({ initial, onSubmit, submitLabel }: Props) 
       <Field label="Current estimated value" required error={errors.currentValue}>
         <AmountWithCurrency amount={currentValue} onAmountChange={setCurrentValue} currency={currency} onCurrencyChange={setCurrency} />
         <p className="text-xs text-slate-400">Your best estimate of what it would sell for today.</p>
+        <p className="text-xs text-slate-400">Enter the current USD-equivalent value. We don't yet convert other currencies automatically.</p>
       </Field>
       <Field label="Outstanding mortgage">
         <AmountWithCurrency amount={mortgage} onAmountChange={setMortgage} currency={currency} onCurrencyChange={setCurrency} />

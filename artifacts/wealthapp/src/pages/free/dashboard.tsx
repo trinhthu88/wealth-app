@@ -459,15 +459,23 @@ export default function FreeDashboard() {
             </div>
           </div>
 
-          {/* Milestones */}
-          {(earnedMilestones.length > 0 || !!newlyEarned) && (
-            <div>
-              <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.11em", textTransform: "uppercase", color: "#A8A095", marginBottom: 8 }}>
+          {/* Milestones — compact strip, always visible (folded in from the old standalone Badges nav item) */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.11em", textTransform: "uppercase", color: "#A8A095" }}>
                 Your achievements
               </p>
-              <MilestoneChips earnedKeys={earnedMilestones} newlyEarned={newlyEarned} />
+              <Link href="/free/milestones" className="text-xs font-medium text-primary hover:underline">
+                View all →
+              </Link>
             </div>
-          )}
+            {earnedMilestones.length === 0 && !newlyEarned && (
+              <p className="text-xs text-muted-foreground mb-2">
+                {streakWeeks > 0 ? `${streakWeeks}-week streak — keep going to earn your first badge.` : "Check in weekly to start your streak and earn your first badge."}
+              </p>
+            )}
+            <MilestoneChips earnedKeys={earnedMilestones} newlyEarned={newlyEarned} />
+          </div>
 
           {/* Smart Upgrade Cards */}
           <SmartUpgradeCard
