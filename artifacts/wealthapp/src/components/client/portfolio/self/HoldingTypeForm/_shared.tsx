@@ -288,7 +288,7 @@ export function SymbolSearchInput({ value, onChange, onSelect, symbolType, place
         {fetching ? (
           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs animate-pulse">…</span>
         ) : selected && value ? (
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[#1D9E75] text-xs">✓</span>
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 h-2 w-2 rounded-full bg-[#1D9E75]" aria-label="Selected" />
         ) : (
           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none">▾</span>
         )}

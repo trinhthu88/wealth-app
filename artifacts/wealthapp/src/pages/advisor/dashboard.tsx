@@ -42,7 +42,7 @@ export default function AdvisorDashboard() {
 
   return (
     <AppShell>
-      <PageHeader title={`${greeting}, ${firstName}!`} subtitle="Here's your advisory practice overview." />
+      <PageHeader title={`${greeting}, ${firstName}.`} subtitle="Here's your advisory practice overview." eyebrow="Workspace" />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <StatCard label="Total AUM" value={fmtUSD(totalAUM)} sub={`${activeClients.length} active clients`} icon={TrendingUp} color="teal" />
@@ -52,29 +52,29 @@ export default function AdvisorDashboard() {
       </div>
 
       <div className="grid md:grid-cols-2 gap-6 mb-6">
-        <div className="bg-card border border-card-border rounded-xl p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold">Recent Clients</h3>
-            <Link href="/advisor/clients">
-              <Button variant="ghost" size="sm" className="text-primary">All clients <ArrowRight className="ml-1 h-3.5 w-3.5" /></Button>
+        <div className="bg-surface rounded-[26px] p-6 shadow-[0_2px_14px_rgba(20,52,42,0.06)]">
+          <div className="flex items-center justify-between mb-5">
+            <h3 className="font-display text-[20px] font-semibold text-forest">Recent Clients</h3>
+            <Link href="/advisor/clients" className="text-[14px] font-medium text-green hover:text-forest transition-colors flex items-center">
+              All clients <ArrowRight className="ml-1 h-3.5 w-3.5" />
             </Link>
           </div>
           {clients.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-6 text-center">No clients assigned yet.</p>
+            <p className="text-[14px] text-ink-40 py-6 text-center">No clients assigned yet.</p>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-1">
               {clients.slice(0, 5).map(c => (
-                <Link key={c.id} href={`/advisor/clients/${c.id}`} className="flex items-center justify-between py-2 hover:bg-muted/50 rounded-lg px-2 -mx-2 transition-colors">
+                <Link key={c.id} href={`/advisor/clients/${c.id}`} className="flex items-center justify-between py-2.5 hover:bg-paper rounded-[16px] px-3 -mx-3 transition-colors">
                   <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary">
+                    <div className="h-10 w-10 rounded-full bg-green-tint flex items-center justify-center text-[15px] font-semibold text-green shrink-0">
                       {(c.fullName ?? c.email)[0].toUpperCase()}
                     </div>
                     <div>
-                      <div className="font-medium text-sm">{c.fullName ?? c.email}</div>
-                      <div className="text-xs text-muted-foreground">{c.portfolioValue > 0 ? fmtUSD(c.portfolioValue) : c.email}</div>
+                      <div className="font-medium text-forest text-[15px]">{c.fullName ?? c.email}</div>
+                      <div className="text-[13px] text-ink-40">{c.portfolioValue > 0 ? fmtUSD(c.portfolioValue) : c.email}</div>
                     </div>
                   </div>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${c.status === "active" ? "bg-emerald-100 text-emerald-700" : c.status === "prospect" ? "bg-blue-100 text-blue-700" : "bg-muted text-muted-foreground"}`}>
+                  <span className={`text-[13px] px-3 py-1 rounded-full font-medium ${c.status === "active" ? "bg-green-tint text-green" : c.status === "prospect" ? "bg-sun-tint text-amber-ink" : "bg-hairline text-ink-60"}`}>
                     {c.status ?? "—"}
                   </span>
                 </Link>
@@ -83,32 +83,32 @@ export default function AdvisorDashboard() {
           )}
         </div>
 
-        <div className="bg-card border border-card-border rounded-xl p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold">Upcoming Tasks</h3>
-            <Link href="/advisor/tasks">
-              <Button variant="ghost" size="sm" className="text-primary">All tasks <ArrowRight className="ml-1 h-3.5 w-3.5" /></Button>
+        <div className="bg-surface rounded-[26px] p-6 shadow-[0_2px_14px_rgba(20,52,42,0.06)]">
+          <div className="flex items-center justify-between mb-5">
+            <h3 className="font-display text-[20px] font-semibold text-forest">Upcoming Tasks</h3>
+            <Link href="/advisor/tasks" className="text-[14px] font-medium text-green hover:text-forest transition-colors flex items-center">
+              All tasks <ArrowRight className="ml-1 h-3.5 w-3.5" />
             </Link>
           </div>
           {pendingTasks.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-6 text-center">No pending tasks.</p>
+            <p className="text-[14px] text-ink-40 py-6 text-center">No pending tasks.</p>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-1">
               {pendingTasks.slice(0, 5).map(t => {
                 const isOverdue = t.dueDate && new Date(t.dueDate) < new Date();
                 return (
-                  <div key={t.id} className="flex items-start gap-3 py-2">
-                    <div className={`h-2 w-2 rounded-full mt-1.5 shrink-0 ${t.priority === "high" ? "bg-red-500" : t.priority === "medium" ? "bg-amber-400" : "bg-muted-foreground"}`} />
+                  <div key={t.id} className="flex items-start gap-3 py-2.5 px-3 -mx-3">
+                    <div className={`h-2.5 w-2.5 rounded-full mt-1.5 shrink-0 ${t.priority === "high" ? "bg-clay" : t.priority === "medium" ? "bg-sun" : "bg-ink-20"}`} />
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm">{t.title}</div>
+                      <div className="font-medium text-forest text-[15px]">{t.title}</div>
                       {t.dueDate && (
-                        <div className={`flex items-center gap-1 text-xs mt-0.5 ${isOverdue ? "text-red-500" : "text-muted-foreground"}`}>
-                          <Calendar className="h-3 w-3" />{new Date(t.dueDate).toLocaleDateString()}
+                        <div className={`flex items-center gap-1.5 text-[13px] mt-1 ${isOverdue ? "text-clay font-medium" : "text-ink-40"}`}>
+                          <Calendar className="h-3.5 w-3.5" />{new Date(t.dueDate).toLocaleDateString()}
                           {isOverdue && " (overdue)"}
                         </div>
                       )}
                     </div>
-                    <span className="text-xs text-muted-foreground shrink-0">{t.status}</span>
+                    <span className="text-[13px] text-ink-40 shrink-0 capitalize">{t.status.replace("_", " ")}</span>
                   </div>
                 );
               })}
@@ -119,18 +119,18 @@ export default function AdvisorDashboard() {
 
       {/* AUM Breakdown */}
       {clients.length > 0 && (
-        <div className="bg-card border border-card-border rounded-xl p-5 mb-6">
-          <h3 className="font-semibold mb-4">Client AUM Overview</h3>
-          <div className="space-y-2">
+        <div className="bg-surface rounded-[26px] p-6 mb-6 shadow-[0_2px_14px_rgba(20,52,42,0.06)]">
+          <h3 className="font-display text-[20px] font-semibold text-forest mb-5">Client AUM Overview</h3>
+          <div className="space-y-4">
             {clients.filter(c => c.portfolioValue > 0).sort((a, b) => b.portfolioValue - a.portfolioValue).slice(0, 6).map(c => {
               const pct = totalAUM > 0 ? (c.portfolioValue / totalAUM) * 100 : 0;
               return (
-                <div key={c.id} className="flex items-center gap-3">
-                  <div className="w-32 truncate text-sm">{c.fullName ?? c.email}</div>
-                  <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                    <div className="h-2 bg-primary rounded-full" style={{ width: `${pct}%` }} />
+                <div key={c.id} className="flex items-center gap-4">
+                  <div className="w-32 truncate text-[15px] font-medium text-forest">{c.fullName ?? c.email}</div>
+                  <div className="flex-1 h-[6px] bg-track rounded-full overflow-hidden">
+                    <div className="h-full bg-green rounded-full transition-all duration-1000 ease-out" style={{ width: `${pct}%` }} />
                   </div>
-                  <div className="text-sm font-medium w-24 text-right">{fmtUSD(c.portfolioValue)}</div>
+                  <div className="text-[15px] font-semibold text-forest w-24 text-right tabular-nums">{fmtUSD(c.portfolioValue)}</div>
                 </div>
               );
             })}
@@ -139,16 +139,18 @@ export default function AdvisorDashboard() {
       )}
 
       {newLeads.length > 0 && (
-        <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-xl p-5">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold text-amber-800 dark:text-amber-200">New Leads ({newLeads.length})</h3>
-            <Link href="/advisor/leads"><Button variant="ghost" size="sm">View all</Button></Link>
+        <div className="bg-sun-tint border border-[#FBE5C5] rounded-[26px] p-6 shadow-[0_2px_14px_rgba(20,52,42,0.04)]">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-display text-[20px] font-semibold text-amber-ink">New Leads ({newLeads.length})</h3>
+            <Link href="/advisor/leads">
+              <Button variant="ghost" size="sm" className="text-amber-ink hover:bg-sun/20">View all</Button>
+            </Link>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-3">
             {newLeads.slice(0, 3).map(l => (
-              <div key={l.id} className="flex items-center justify-between text-sm">
-                <span className="font-medium">{l.firstName ? `${l.firstName} —` : ""} {l.email}</span>
-                <span className="text-xs text-muted-foreground">{new Date(l.createdAt).toLocaleDateString()}</span>
+              <div key={l.id} className="flex items-center justify-between text-[15px]">
+                <span className="font-medium text-amber-ink">{l.firstName ? `${l.firstName} —` : ""} {l.email}</span>
+                <span className="text-[13px] text-amber-ink/70">{new Date(l.createdAt).toLocaleDateString()}</span>
               </div>
             ))}
           </div>

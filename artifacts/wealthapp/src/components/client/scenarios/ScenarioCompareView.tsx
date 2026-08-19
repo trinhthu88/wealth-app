@@ -48,16 +48,16 @@ export default function ScenarioCompareView({ current, saved, onSaveCurrent, onC
   const xTicks = chartData.filter((d: any) => d.month % 12 === 0).map((d: any) => d.month);
 
   return (
-    <div className="bg-white border border-[#E2E8F0] rounded-xl p-4 space-y-4">
+    <div className="bg-surface border border-hairline rounded-[26px] p-5 space-y-4 shadow-[0_2px_14px_rgba(20,52,42,.06)]">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold text-[#042C53]">Compare scenarios</p>
-        <button onClick={onClose} className="text-sm text-slate-500 hover:text-slate-700">Close ×</button>
+        <p className="text-[14px] font-semibold text-forest">Compare scenarios</p>
+        <button onClick={onClose} className="text-[13px] text-ink-40 hover:text-forest">Close ×</button>
       </div>
 
       <div className="h-[220px]">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--hairline)" />
             <XAxis
               dataKey="month"
               ticks={xTicks}
@@ -66,16 +66,16 @@ export default function ScenarioCompareView({ current, saved, onSaveCurrent, onC
                 d.setMonth(d.getMonth() + m);
                 return d.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
               }}
-              tick={{ fontSize: 10, fill: "#94A3B8" }}
+              tick={{ fontSize: 10, fill: "var(--ink-40)" }}
               axisLine={false}
               tickLine={false}
             />
-            <YAxis tickFormatter={fmtY} tick={{ fontSize: 10, fill: "#94A3B8" }} axisLine={false} tickLine={false} width={48} />
+            <YAxis tickFormatter={fmtY} tick={{ fontSize: 10, fill: "var(--ink-40)" }} axisLine={false} tickLine={false} width={48} />
             <Tooltip
               formatter={(v: number) => [fmtY(v), ""]}
-              contentStyle={{ fontSize: 12, borderRadius: 8 }}
+              contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid var(--hairline)" }}
             />
-            <Line type="monotone" dataKey="baseline" stroke="#94A3B8" strokeDasharray="4 2" strokeWidth={1.5} dot={false} name="Baseline" />
+            <Line type="monotone" dataKey="baseline" stroke="var(--ink-30)" strokeDasharray="4 2" strokeWidth={1.5} dot={false} name="Baseline" />
             <Line type="monotone" dataKey="current" stroke={COLORS[0]} strokeWidth={2} dot={false} name="Current" />
             {savedResults.map((_, j) => (
               <Line key={j} type="monotone" dataKey={`saved_${j}`} stroke={COLORS[j + 1]} strokeWidth={2} dot={false} name={saved[j]?.scenarioName ?? `Saved ${j + 1}`} />
@@ -86,33 +86,33 @@ export default function ScenarioCompareView({ current, saved, onSaveCurrent, onC
 
       {/* Summary table */}
       <div className="overflow-x-auto">
-        <table className="w-full text-xs">
+        <table className="w-full text-[13px]">
           <thead>
-            <tr className="border-b border-slate-100">
-              <th className="text-left py-1.5 text-slate-400 font-medium">Scenario</th>
-              <th className="text-right py-1.5 text-slate-400 font-medium">Final value</th>
-              <th className="text-right py-1.5 text-slate-400 font-medium">vs baseline</th>
+            <tr className="border-b border-hairline">
+              <th className="text-left py-2 text-ink-40 font-semibold">Scenario</th>
+              <th className="text-right py-2 text-ink-40 font-semibold">Final value</th>
+              <th className="text-right py-2 text-ink-40 font-semibold">vs baseline</th>
             </tr>
           </thead>
           <tbody>
-            <tr className="border-b border-slate-50">
-              <td className="py-1.5 flex items-center gap-1.5">
+            <tr className="border-b border-hairline">
+              <td className="py-2 flex items-center gap-2">
                 <div className="h-2.5 w-2.5 rounded-full" style={{ background: COLORS[0] }} />
-                <span className="font-medium text-[#042C53]">Current (unsaved)</span>
+                <span className="font-semibold text-forest">Current (unsaved)</span>
               </td>
-              <td className="py-1.5 text-right font-medium">{fmtY(current.scenarioFinalValue)}</td>
-              <td className={`py-1.5 text-right font-medium ${current.deltaValue >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+              <td className="py-2 text-right font-semibold text-forest">{fmtY(current.scenarioFinalValue)}</td>
+              <td className={`py-2 text-right font-semibold ${current.deltaValue >= 0 ? "text-green" : "text-clay"}`}>
                 {current.deltaValue >= 0 ? "+" : ""}{fmtY(current.deltaValue)}
               </td>
             </tr>
             {savedResults.map((sr, j) => (
-              <tr key={j} className="border-b border-slate-50">
-                <td className="py-1.5 flex items-center gap-1.5">
+              <tr key={j} className="border-b border-hairline">
+                <td className="py-2 flex items-center gap-2">
                   <div className="h-2.5 w-2.5 rounded-full" style={{ background: COLORS[j + 1] }} />
-                  <span>{saved[j]?.scenarioName ?? `Saved ${j + 1}`}</span>
+                  <span className="text-forest">{saved[j]?.scenarioName ?? `Saved ${j + 1}`}</span>
                 </td>
-                <td className="py-1.5 text-right font-medium">{fmtY(sr.scenarioFinalValue)}</td>
-                <td className={`py-1.5 text-right font-medium ${sr.deltaValue >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+                <td className="py-2 text-right font-semibold text-forest">{fmtY(sr.scenarioFinalValue)}</td>
+                <td className={`py-2 text-right font-semibold ${sr.deltaValue >= 0 ? "text-green" : "text-clay"}`}>
                   {sr.deltaValue >= 0 ? "+" : ""}{fmtY(sr.deltaValue)}
                 </td>
               </tr>

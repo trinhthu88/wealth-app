@@ -1,17 +1,20 @@
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Pencil, TrendingUp } from "lucide-react";
+import { PlusCircle, Pencil, TrendingUp, Home, Umbrella, Shield, Rocket, CreditCard, Target, GraduationCap, Plane, Car, Briefcase } from "lucide-react";
 import type { ProjectionResult } from "@/lib/goalProjection";
+import React from "react";
 
-const GOAL_EMOJI: Record<string, string> = {
-  property: "🏠", home_purchase: "🏠",
-  retirement: "🌴",
-  emergency_fund: "🛡️",
-  fi: "🚀", financial_independence: "🚀",
-  debt: "💳", debt_payoff: "💳",
-  other: "🎯", education: "🎓",
-  travel: "✈️", vehicle: "🚗", business: "💼",
+const GOAL_ICON: Record<string, React.ElementType> = {
+  property: Home, home_purchase: Home,
+  retirement: Umbrella,
+  emergency_fund: Shield,
+  fi: Rocket, financial_independence: Rocket,
+  debt: CreditCard, debt_payoff: CreditCard,
+  education: GraduationCap,
+  travel: Plane, vehicle: Car, business: Briefcase,
+  other: Target, investment: TrendingUp,
 };
+
 
 export interface Goal {
   id: string;
@@ -115,7 +118,7 @@ export default function GoalCard({ goal, projection, onContribute, onEdit, accou
   const totalTowardGoal = storedCurrent + (accountsBalance ?? 0);
   const target = parseFloat(goal.targetAmount ?? "0");
   const pct = target > 0 ? Math.min(100, Math.round((totalTowardGoal / target) * 100)) : 0;
-  const emoji = GOAL_EMOJI[goal.goalType] ?? "🎯";
+  const Icon = GOAL_ICON[goal.goalType] ?? Target;
   const status: string = projection?.status ?? goal.status;
   const isAchieved = status === "achieved" || (target > 0 && current >= target);
   const growthAmount = projection?.monthlyGrowthFromReturns ?? 0;
@@ -131,8 +134,8 @@ export default function GoalCard({ goal, projection, onContribute, onEdit, accou
     return (
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
-          <div className="h-12 w-12 rounded-xl flex items-center justify-center text-2xl bg-white/60" aria-hidden="true">
-            {emoji}
+          <div className="h-12 w-12 rounded-xl flex items-center justify-center text-2xl bg-white/60 text-primary" aria-hidden="true">
+            <Icon className="h-6 w-6" />
           </div>
           <div>
             <div className="font-semibold">{goal.title}</div>
@@ -173,7 +176,7 @@ export default function GoalCard({ goal, projection, onContribute, onEdit, accou
   if (isAchieved) {
     return (
       <div className="bg-gradient-to-br from-primary/10 to-emerald-50 border border-primary/30 rounded-2xl p-5 space-y-4">
-        <Header badge={<span className="text-xs bg-primary text-white px-2.5 py-1 rounded-full font-semibold whitespace-nowrap">🎉 Achieved!</span>} />
+        <Header badge={<span className="text-xs bg-primary text-white px-2.5 py-1 rounded-full font-semibold whitespace-nowrap"> Achieved!</span>} />
         <ProgressSection barClass="bg-primary" />
         <p className="text-sm text-primary font-medium text-center py-1">Goal reached — {fmt(current)} saved!</p>
       </div>
@@ -183,7 +186,7 @@ export default function GoalCard({ goal, projection, onContribute, onEdit, accou
   if (status === "on_track") {
     return (
       <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 space-y-4">
-        <Header badge={<span className="text-xs bg-emerald-100 text-emerald-800 border border-emerald-200 px-2.5 py-1 rounded-full font-semibold whitespace-nowrap">✓ On track</span>} />
+        <Header badge={<span className="text-xs bg-emerald-100 text-emerald-800 border border-emerald-200 px-2.5 py-1 rounded-full font-semibold whitespace-nowrap"> On track</span>} />
         <ProgressSection barClass="bg-emerald-500" />
         <GrowthChip amount={growthAmount} bgClass="bg-emerald-100" textClass="text-emerald-800" />
         {projection && <BreakdownCard projection={projection} currentMonthlyPace={currentMonthlyPace} />}
@@ -195,7 +198,7 @@ export default function GoalCard({ goal, projection, onContribute, onEdit, accou
   if (status === "almost") {
     return (
       <div className="bg-amber-50 border border-amber-300 rounded-2xl p-5 space-y-4">
-        <Header badge={<span className="text-xs bg-amber-100 text-amber-800 border border-amber-200 px-2.5 py-1 rounded-full font-semibold whitespace-nowrap">⚠ Almost there</span>} />
+        <Header badge={<span className="text-xs bg-amber-100 text-amber-800 border border-amber-200 px-2.5 py-1 rounded-full font-semibold whitespace-nowrap"> Almost there</span>} />
         <ProgressSection barClass="bg-amber-500" />
         <GrowthChip amount={growthAmount} bgClass="bg-amber-100" textClass="text-amber-800" />
         {projection && <BreakdownCard projection={projection} currentMonthlyPace={currentMonthlyPace} />}

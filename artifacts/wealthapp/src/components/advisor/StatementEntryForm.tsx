@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, X, Loader2 } from "lucide-react";
+import { Plus, X, Loader2, CalendarClock, Briefcase, Layers3 } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -7,9 +7,9 @@ import { cn } from "@/lib/utils";
 type Mode = "new_plan" | "new_statement";
 
 const PLAN_TYPES = [
-  { id: "rsp", label: "Regular Savings Plan", emoji: "💸" },
-  { id: "lump_sum", label: "Lump Sum", emoji: "💼" },
-  { id: "combination", label: "Both", emoji: "🔄" },
+  { id: "rsp", label: "Regular Savings Plan", icon: CalendarClock },
+  { id: "lump_sum", label: "Lump Sum", icon: Briefcase },
+  { id: "combination", label: "Both", icon: Layers3 },
 ];
 
 const TX_DESCRIPTIONS = [
@@ -144,11 +144,15 @@ export default function StatementEntryForm({ mode, clientId, planId, existingNet
           <div className="space-y-3">
             <p className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Plan terms</p>
             <div className="flex gap-2">
-              {PLAN_TYPES.map(pt => (
-                <button key={pt.id} onClick={() => setPlanType(pt.id)} className={cn("flex-1 py-2 rounded-lg border text-xs font-medium transition-all", planType === pt.id ? "border-[#1D9E75] bg-[#1D9E75]/10 text-[#1D9E75]" : "border-slate-200 text-slate-600 hover:border-[#1D9E75]/40")}>
-                  {pt.emoji} {pt.label}
-                </button>
-              ))}
+              {PLAN_TYPES.map(pt => {
+                const Icon = pt.icon;
+                return (
+                  <button key={pt.id} onClick={() => setPlanType(pt.id)} className={cn("flex flex-1 items-center justify-center gap-1.5 py-2 rounded-lg border text-xs font-medium transition-all", planType === pt.id ? "border-[#1D9E75] bg-[#1D9E75]/10 text-[#1D9E75]" : "border-slate-200 text-slate-600 hover:border-[#1D9E75]/40")}>
+                    <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                    <span>{pt.label}</span>
+                  </button>
+                );
+              })}
             </div>
             <div className="grid grid-cols-3 gap-2">
               {(["USD", "VND", "EUR"] as const).map(c => (
@@ -212,7 +216,7 @@ export default function StatementEntryForm({ mode, clientId, planId, existingNet
               <div className="flex justify-between"><span>Entered closing:</span><span className="font-mono">${n(closingValue).toLocaleString("en-US", { maximumFractionDigits: 0 })}</span></div>
               <div className="flex justify-between font-semibold border-t border-current/20 mt-1 pt-1">
                 <span>Difference:</span>
-                <span className="font-mono">${diff.toLocaleString("en-US", { maximumFractionDigits: 0 })} {diff <= 1 ? "✓" : "⚠"}</span>
+                <span className="font-mono">${diff.toLocaleString("en-US", { maximumFractionDigits: 0 })} · {diff <= 1 ? "Balanced" : "Review"}</span>
               </div>
               {diff > 1 && <p className="text-xs mt-1">Values don't reconcile — check your entries.</p>}
             </div>

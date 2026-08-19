@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import MilestoneCard from "./MilestoneCard";
 import type { PlanMilestone } from "@/hooks/usePlan";
+import { Check } from "lucide-react";
 
 interface Props {
   milestones: PlanMilestone[];
@@ -14,7 +15,7 @@ function DotIndicator({ status, isNext }: { status: string; isNext: boolean }) {
   if (group === "completed") {
     return (
       <div className="h-5 w-5 rounded-full bg-[#1D9E75] flex items-center justify-center shrink-0">
-        <span className="text-white text-[10px] font-bold">✓</span>
+        <Check className="h-3 w-3 text-white" aria-hidden="true" />
       </div>
     );
   }

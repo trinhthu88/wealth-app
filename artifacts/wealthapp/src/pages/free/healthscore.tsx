@@ -9,7 +9,7 @@ import WeeklyTipCard from "@/components/WeeklyTipCard";
 import { apiFetch } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
 import { toast } from "sonner";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, TrendingUp, ShieldAlert, CreditCard, Landmark } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LineChart, Line, ResponsiveContainer, Tooltip } from "recharts";
 import { useProfile } from "@/hooks/useProfile";
@@ -259,7 +259,7 @@ export default function HealthScorePage() {
   const dimensions = [
     {
       label: "Savings rate",
-      emoji: "💰",
+      icon: TrendingUp,
       score: srScore,
       badge: srBadge,
       detail: effectiveSavingsRate > 0 ? `${Math.round(effectiveSavingsRate)}% of income saved` : "No income data yet",
@@ -267,7 +267,7 @@ export default function HealthScorePage() {
     },
     {
       label: "Emergency fund",
-      emoji: "🛡️",
+      icon: ShieldAlert,
       score: efScore,
       badge: efBadge,
       detail: emergencyMonths >= 0.1
@@ -277,17 +277,17 @@ export default function HealthScorePage() {
     },
     {
       label: "Debt load",
-      emoji: "💳",
+      icon: CreditCard,
       score: dlScore,
       badge: dlBadge,
       detail: totalDebt > 0
         ? `${sym}${Math.round(totalDebt).toLocaleString()} total debt`
-        : "Debt-free ✓",
+        : "Debt-free",
       tip: dlTip,
     },
     {
       label: "Investment activity",
-      emoji: "📈",
+      icon: Landmark,
       score: invScore,
       badge: invBadge,
       detail: investmentBalance > 0
@@ -445,9 +445,9 @@ export default function HealthScorePage() {
                   <div className="bg-white rounded-2xl p-4" style={{ boxShadow: "0 2px 8px rgba(15,23,42,0.05)" }}>
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2.5">
-                        <div className="h-9 w-9 rounded-xl flex items-center justify-center text-lg"
-                          style={{ background: badge.bg }} aria-hidden="true">
-                          {dim.emoji}
+                        <div className="h-9 w-9 rounded-xl flex items-center justify-center"
+                          style={{ background: badge.bg, color: badge.color }} aria-hidden="true">
+                          <dim.icon className="w-5 h-5" />
                         </div>
                         <div>
                           <p style={{ fontSize: 13, fontWeight: 600, color: "#2D2A24" }}>{dim.label}</p>
@@ -481,7 +481,7 @@ export default function HealthScorePage() {
                   {dim.tip && (
                     <div className="mt-1.5 mx-1 rounded-xl px-3 py-2.5 flex items-start gap-2"
                       style={{ background: "#FEF9ED", border: "1px solid #F5D88A" }}>
-                      <span style={{ fontSize: 13, flexShrink: 0, marginTop: 1 }} aria-hidden="true">💡</span>
+                      <span style={{ fontSize: 13, flexShrink: 0, marginTop: 1 }} aria-hidden="true"></span>
                       <p style={{ fontSize: 12, color: "#7A5A00", lineHeight: 1.5 }}>{dim.tip}</p>
                     </div>
                   )}

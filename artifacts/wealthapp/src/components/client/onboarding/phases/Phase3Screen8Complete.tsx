@@ -43,7 +43,7 @@ export default function Phase3Screen8Complete({
 
         <div>
           <h1 className="text-2xl font-bold text-[#042C53]">
-            {isTrackA ? "You're all set! 🎉" : "Your tracker is ready! 🎉"}
+            {isTrackA ? "You're all set!" : "Your tracker is ready!"}
           </h1>
           <p className="text-sm text-slate-500 mt-1">
             {isTrackA

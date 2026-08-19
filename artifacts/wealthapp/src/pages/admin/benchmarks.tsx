@@ -43,35 +43,34 @@ function EditableCagrRow<T extends { id: string; label: string; updatedAt: strin
 
   return (
     <>
-      <tr className={cn("border-b border-border last:border-0 transition-colors", editing ? "bg-primary/5" : "hover:bg-muted/30")}>
-        <td className="px-4 py-3">
-          <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-mono">{keyValue}</span>
-          <span className="ml-2 text-xs text-muted-foreground">{keyLabel}</span>
+      <tr className={cn("border-b border-hairline last:border-0 transition-colors", editing ? "bg-paper" : "hover:bg-paper")}>
+        <td className="px-5 py-4">
+          <span className="text-[12px] bg-sun-tint text-amber-ink px-2 py-1 rounded-[8px] font-medium tracking-wide uppercase">{keyValue.replace(/_/g, ' ')}</span>
+          <span className="ml-3 text-[13px] text-ink-40">{keyLabel}</span>
         </td>
-        <td className="px-4 py-3">{row.label}</td>
-        <td className="px-4 py-3 text-right font-semibold">{String(row[valueField])}%</td>
-        <td className="px-4 py-3 text-xs text-muted-foreground">{new Date(row.updatedAt).toLocaleDateString()}</td>
-        <td className="px-4 py-3">
-          <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setEditing(v => !v)}>
-            <DollarSign className="h-3.5 w-3.5 mr-1" />
+        <td className="px-5 py-4 text-[15px] font-medium text-forest">{row.label}</td>
+        <td className="px-5 py-4 text-right font-semibold text-[16px] text-forest tabular-nums">{String(row[valueField])}%</td>
+        <td className="px-5 py-4 text-[13px] text-ink-40 tabular-nums">{new Date(row.updatedAt).toLocaleDateString()}</td>
+        <td className="px-5 py-4 text-right">
+          <Button size="sm" variant="ghost" className="h-8 text-[13px] text-green hover:text-forest" onClick={() => setEditing(v => !v)}>
             {editing ? "Cancel" : "Edit"}
           </Button>
         </td>
       </tr>
       {editing && (
-        <tr className="border-b border-border bg-primary/5">
-          <td colSpan={5} className="px-4 py-3">
-            <div className="flex items-end gap-3 flex-wrap">
+        <tr className="border-b border-hairline bg-paper">
+          <td colSpan={5} className="px-5 py-4">
+            <div className="flex items-end gap-4 flex-wrap">
               <div>
-                <label className="text-xs font-medium block mb-1">Label</label>
-                <Input className="w-56 h-8 text-sm" value={label} onChange={e => setLabel(e.target.value)} />
+                <label className="text-[12px] font-medium text-ink-60 block mb-1.5">Label</label>
+                <Input className="w-64 h-10 rounded-[10px] border-hairline bg-surface px-3 focus-visible:ring-green" value={label} onChange={e => setLabel(e.target.value)} />
               </div>
               <div>
-                <label className="text-xs font-medium block mb-1">{valueLabel} (%)</label>
-                <Input className="w-24 h-8 text-sm" type="number" step="0.1" value={value} onChange={e => setValue(e.target.value)} />
+                <label className="text-[12px] font-medium text-ink-60 block mb-1.5">{valueLabel} (%)</label>
+                <Input className="w-28 h-10 rounded-[10px] border-hairline bg-surface px-3 focus-visible:ring-green" type="number" step="0.1" value={value} onChange={e => setValue(e.target.value)} />
               </div>
-              <Button size="sm" className="h-8" disabled={!label || !value} onClick={() => { onSave(row.id, label, value); setEditing(false); }}>
-                Save
+              <Button size="sm" className="h-10 px-5 rounded-[10px] bg-green text-surface hover:bg-green-300" disabled={!label || !value} onClick={() => { onSave(row.id, label, value); setEditing(false); }}>
+                Save Changes
               </Button>
             </div>
           </td>
@@ -109,25 +108,25 @@ export default function AdminBenchmarks() {
   return (
     <AppShell>
       <PageHeader
-        title="Expected-Return Benchmarks"
+        title="Expected Returns"
         subtitle="Asset-class benchmarks for self-tracked holdings, and advised target strategy returns for the 'bring under management' comparison"
       />
 
-      <div className="space-y-8 mt-2">
+      <div className="space-y-10 mt-2">
         <div>
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Asset class benchmarks (10yr CAGR)</h2>
+          <h2 className="tala-eyebrow text-ink-40 mb-4">Asset class benchmarks (10yr CAGR)</h2>
           {benchmarksLoading ? (
-            <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-14 bg-muted rounded-xl animate-pulse" />)}</div>
+            <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-16 bg-surface rounded-[26px] animate-pulse" />)}</div>
           ) : (
-            <div className="bg-card border border-card-border rounded-xl overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="border-b border-border bg-muted/50">
+            <div className="bg-surface rounded-[26px] shadow-[0_2px_14px_rgba(20,52,42,0.06)] overflow-hidden">
+              <table className="w-full text-left">
+                <thead>
                   <tr>
-                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Asset class</th>
-                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Label</th>
-                    <th className="text-right px-4 py-3 font-medium text-muted-foreground">10yr CAGR</th>
-                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Updated</th>
-                    <th className="px-4 py-3" />
+                    <th className="px-5 py-4 font-sans text-[13px] font-medium text-ink-40 border-b border-hairline">Asset class</th>
+                    <th className="px-5 py-4 font-sans text-[13px] font-medium text-ink-40 border-b border-hairline">Label</th>
+                    <th className="px-5 py-4 font-sans text-[13px] font-medium text-ink-40 border-b border-hairline text-right">10yr CAGR</th>
+                    <th className="px-5 py-4 font-sans text-[13px] font-medium text-ink-40 border-b border-hairline">Updated</th>
+                    <th className="px-5 py-4 border-b border-hairline" />
                   </tr>
                 </thead>
                 <tbody>
@@ -149,19 +148,19 @@ export default function AdminBenchmarks() {
         </div>
 
         <div>
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Advised target strategy returns</h2>
+          <h2 className="tala-eyebrow text-ink-40 mb-4">Advised target strategy returns</h2>
           {strategiesLoading ? (
-            <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-14 bg-muted rounded-xl animate-pulse" />)}</div>
+            <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-16 bg-surface rounded-[26px] animate-pulse" />)}</div>
           ) : (
-            <div className="bg-card border border-card-border rounded-xl overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="border-b border-border bg-muted/50">
+            <div className="bg-surface rounded-[26px] shadow-[0_2px_14px_rgba(20,52,42,0.06)] overflow-hidden">
+              <table className="w-full text-left">
+                <thead>
                   <tr>
-                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Plan type</th>
-                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Label</th>
-                    <th className="text-right px-4 py-3 font-medium text-muted-foreground">Target return</th>
-                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Updated</th>
-                    <th className="px-4 py-3" />
+                    <th className="px-5 py-4 font-sans text-[13px] font-medium text-ink-40 border-b border-hairline">Plan type</th>
+                    <th className="px-5 py-4 font-sans text-[13px] font-medium text-ink-40 border-b border-hairline">Label</th>
+                    <th className="px-5 py-4 font-sans text-[13px] font-medium text-ink-40 border-b border-hairline text-right">Target return</th>
+                    <th className="px-5 py-4 font-sans text-[13px] font-medium text-ink-40 border-b border-hairline">Updated</th>
+                    <th className="px-5 py-4 border-b border-hairline" />
                   </tr>
                 </thead>
                 <tbody>

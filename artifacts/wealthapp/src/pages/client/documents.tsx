@@ -81,7 +81,7 @@ export default function ClientDocuments() {
           body: JSON.stringify({ content: body }),
         });
       }
-      toast.success("Document request sent to your advisor ✓");
+      toast.success("Document request sent to your advisor");
       setRequestOpen(false);
       setRequestNotes("");
       setRequestType("Annual report");

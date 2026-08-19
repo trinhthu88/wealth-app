@@ -9,10 +9,10 @@ function fmtUsd(v: number, compact = false) {
 
 function StatCard({ label, value, sub, valueColor }: { label: string; value: string; sub?: string; valueColor?: string }) {
   return (
-    <div className="bg-slate-50 border border-[#E2E8F0] rounded-xl p-3">
-      <p className="text-[11px] font-medium text-[#64748B] uppercase tracking-wide mb-1">{label}</p>
-      <p className={cn("text-lg font-semibold text-[#042C53]", valueColor)}>{value}</p>
-      {sub && <p className="text-xs text-[#64748B] mt-0.5">{sub}</p>}
+    <div className="bg-surface border border-hairline rounded-[20px] p-[16px]">
+      <p className="text-[12.5px] font-semibold text-ink-40 mb-1">{label}</p>
+      <p className={cn("text-[19px] font-semibold font-display text-forest", valueColor)}>{value}</p>
+      {sub && <p className="text-[13px] text-ink-40 mt-1">{sub}</p>}
     </div>
   );
 }
@@ -25,7 +25,7 @@ interface Props {
 export default function ScenarioSummaryStats({ result, horizonYears }: Props) {
   const { params, baselineFinalValue, scenarioFinalValue, deltaValue, deltaPct } = result;
   const isDelta = deltaValue >= 0;
-  const deltaColor = isDelta ? "text-emerald-600" : "text-red-500";
+  const deltaColor = isDelta ? "text-green" : "text-clay";
 
   function fourthCard() {
     switch (params.type) {
@@ -38,7 +38,7 @@ export default function ScenarioSummaryStats({ result, horizonYears }: Props) {
             label="Extra contribution"
             value={`+${fmtUsd(extraTotal, true)} total`}
             sub={`${fmtUsd(returnOnExtra, true)} growth on extra`}
-            valueColor={isDelta ? "text-emerald-600" : undefined}
+            valueColor={isDelta ? "text-green" : undefined}
           />
         );
       }
@@ -57,7 +57,7 @@ export default function ScenarioSummaryStats({ result, horizonYears }: Props) {
             label="Saved per month"
             value={fmtUsd(savedPerMonth, true)}
             sub={`Long-term cost: ${fmtUsd(Math.abs(deltaValue), true)} less`}
-            valueColor="text-amber-600"
+            valueColor="text-sun-deep"
           />
         );
       }
@@ -68,7 +68,7 @@ export default function ScenarioSummaryStats({ result, horizonYears }: Props) {
             label="Missed contributions"
             value={fmtUsd(missed, true)}
             sub={`Long-term cost: ${fmtUsd(Math.abs(deltaValue), true)} less`}
-            valueColor="text-amber-600"
+            valueColor="text-sun-deep"
           />
         );
       }
@@ -79,16 +79,16 @@ export default function ScenarioSummaryStats({ result, horizonYears }: Props) {
             label="Value at bottom"
             value={fmtUsd(droppedVal, true)}
             sub={`Recovery: ${params.recoveryMonths} months`}
-            valueColor="text-red-500"
+            valueColor="text-clay"
           />
         );
       }
       case "retire_earlier":
         return (
-          <div className="bg-[#1D9E75]/5 border border-[#1D9E75]/20 rounded-xl p-3 col-span-2 sm:col-span-1">
-            <p className="text-[11px] font-medium text-[#1D9E75] uppercase tracking-wide mb-1">Required monthly</p>
-            <p className="text-lg font-semibold text-[#042C53]">{fmtUsd(result.requiredMonthly ?? 0)}/mo</p>
-            <p className="text-xs text-[#64748B] mt-0.5">
+          <div className="bg-green-tint border border-green-300 rounded-[20px] p-[16px] col-span-2 sm:col-span-1">
+            <p className="text-[12.5px] font-semibold text-green mb-1">Required monthly</p>
+            <p className="text-[19px] font-semibold font-display text-forest">{fmtUsd(result.requiredMonthly ?? 0)}/mo</p>
+            <p className="text-[13px] text-ink-60 mt-1">
               +{fmtUsd(result.extraMonthly ?? 0)}/mo more ·{" "}
               {result.yearsSavedOrLost != null
                 ? `${result.yearsSavedOrLost > 0 ? result.yearsSavedOrLost.toFixed(1) + " yrs sooner" : "same timeframe"}`

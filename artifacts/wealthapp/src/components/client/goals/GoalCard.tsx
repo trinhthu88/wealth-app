@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { MoreHorizontal, Link as LinkIcon, TrendingUp, CheckCircle2, Pencil, Pause, Trash2 } from "lucide-react";
+import { MoreHorizontal, Link as LinkIcon, TrendingUp, CheckCircle2, Pencil, Pause, Trash2, Palmtree, Home, GraduationCap, Rocket, Briefcase, Globe, Coins, Shield, Target } from "lucide-react";
 import { Link } from "wouter";
 import GoalStatusBadge from "./GoalStatusBadge";
 import GoalProgressBar from "./GoalProgressBar";
@@ -11,10 +11,10 @@ import type { EnrichedGoal } from "@/hooks/useGoals";
 import type { AdvisedPlan } from "@/hooks/useAdvisedPlans";
 import type { ClientHolding } from "@/hooks/useClientHoldings";
 
-const GOAL_EMOJIS: Record<string, string> = {
-  retire: "🌴", property: "🏠", education: "📚", fire: "🚀",
-  business: "💼", emigrate: "🌍", wealth: "💰", emergency: "🛡️",
-  other: "🎯",
+const GOAL_ICONS: Record<string, React.ElementType> = {
+  retire: Palmtree, property: Home, education: GraduationCap, fire: Rocket,
+  business: Briefcase, emigrate: Globe, wealth: Coins, emergency: Shield,
+  other: Target,
 };
 
 function monthsAway(date: string): string {
@@ -47,7 +47,7 @@ export default function GoalCard({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmComplete, setConfirmComplete] = useState(false);
 
-  const emoji = GOAL_EMOJIS[goal.goalType] ?? "🎯";
+  const Icon = GOAL_ICONS[goal.goalType] || Target;
   const hasTarget = goal.targetAmountNum != null && goal.targetAmountNum > 0;
 
   // Build linked holdings display string
@@ -73,7 +73,7 @@ export default function GoalCard({
     <div className="bg-white border border-[#E2E8F0] rounded-xl p-4 space-y-3">
       {/* Top row */}
       <div className="flex items-start gap-3">
-        <span className="text-2xl shrink-0">{emoji}</span>
+        <Icon className="w-6 h-6 text-[#1D9E75] shrink-0 mt-0.5" />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <h3 className="text-sm font-semibold text-[#042C53] truncate">{goal.title}</h3>

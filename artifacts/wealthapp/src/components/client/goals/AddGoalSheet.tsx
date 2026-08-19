@@ -1,16 +1,17 @@
 import { useState } from "react";
 import BottomSheet from "@/components/client/BottomSheet";
 import { cn } from "@/lib/utils";
+import { Palmtree, Home, GraduationCap, Rocket, Briefcase, Globe, Coins, Shield } from "lucide-react";
 
 const GOAL_TYPES = [
-  { id: "retire",    emoji: "🌴", label: "Retire comfortably",      defaultTitle: "Comfortable retirement"    },
-  { id: "property",  emoji: "🏠", label: "Buy property",            defaultTitle: "Buy my home"               },
-  { id: "education", emoji: "📚", label: "Children's education",    defaultTitle: "Children's education fund" },
-  { id: "fire",      emoji: "🚀", label: "Financial independence",  defaultTitle: "Financial independence"    },
-  { id: "business",  emoji: "💼", label: "Build a business",        defaultTitle: "Build my business"         },
-  { id: "emigrate",  emoji: "🌍", label: "Emigrate",               defaultTitle: "Move abroad"               },
-  { id: "wealth",    emoji: "💰", label: "Wealth preservation",     defaultTitle: "Wealth preservation"       },
-  { id: "emergency", emoji: "🛡️", label: "Emergency fund",          defaultTitle: "Emergency fund"            },
+  { id: "retire",    icon: Palmtree, label: "Retire comfortably",      defaultTitle: "Comfortable retirement"    },
+  { id: "property",  icon: Home, label: "Buy property",            defaultTitle: "Buy my home"               },
+  { id: "education", icon: GraduationCap, label: "Children's education",    defaultTitle: "Children's education fund" },
+  { id: "fire",      icon: Rocket, label: "Financial independence",  defaultTitle: "Financial independence"    },
+  { id: "business",  icon: Briefcase, label: "Build a business",        defaultTitle: "Build my business"         },
+  { id: "emigrate",  icon: Globe, label: "Emigrate",               defaultTitle: "Move abroad"               },
+  { id: "wealth",    icon: Coins, label: "Wealth preservation",     defaultTitle: "Wealth preservation"       },
+  { id: "emergency", icon: Shield, label: "Emergency fund",          defaultTitle: "Emergency fund"            },
 ];
 
 const CURRENCIES = ["USD", "VND", "EUR"] as const;
@@ -97,7 +98,7 @@ export default function AddGoalSheet({ isOpen, onClose, onSave }: Props) {
                     : "border-slate-200 hover:border-[#1D9E75]/30"
                 )}
               >
-                <span className="text-2xl">{t.emoji}</span>
+                <t.icon className={cn("w-6 h-6 mb-1", selectedType === t.id ? "text-[#1D9E75]" : "text-slate-600")} />
                 <span className="text-xs font-medium text-[#042C53] leading-tight">{t.label}</span>
               </button>
             ))}

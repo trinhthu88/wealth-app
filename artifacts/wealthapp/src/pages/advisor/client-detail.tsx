@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
 import AppShell from "@/components/AppShell";
-import PageHeader from "@/components/PageHeader";
 import { apiFetch } from "@/lib/api";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -10,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import CurrencyInput from "@/components/CurrencyInput";
 import { useProfile } from "@/hooks/useProfile";
-import { ArrowLeft, Plus, Check, X, Edit2, Save, Send, MessageCircle, TrendingUp } from "lucide-react";
+import { ArrowLeft, Plus, Check, X, Save, MessageCircle, TrendingUp } from "lucide-react";
 import { fmtCurrency } from "@/lib/portfolioCalculations";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -165,7 +164,6 @@ export default function AdvisorClientDetail() {
     refetchInterval: activeTab === "messages" ? 3000 : false,
   });
 
-  // Auto-scroll to bottom when messages change
   useEffect(() => {
     if (activeTab === "messages") {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -222,11 +220,6 @@ export default function AdvisorClientDetail() {
     onSuccess: () => { refetchPkgs(); toast.success("Snapshot updated"); },
   });
 
-  const updatePkgMut = useMutation({
-    mutationFn: ({ pkgId, data }: any) => apiFetch(`/packages/${pkgId}`, { method: "PUT", body: JSON.stringify(data) }),
-    onSuccess: () => { refetchPkgs(); toast.success("Package updated"); },
-  });
-
   const [internalNotes, setInternalNotes] = useState(clientProfile?.advisorInternalNotes ?? "");
 
   const allocTotal = allocDrafts.reduce((s, a) => s + (a.weightPercent || 0), 0);
@@ -234,114 +227,121 @@ export default function AdvisorClientDetail() {
 
   return (
     <AppShell>
-      <div className="mb-4">
-        <Link href="/advisor/clients" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+      <div className="mb-6">
+        <Link href="/advisor/clients" className="inline-flex items-center gap-2 text-[13px] font-medium text-ink-40 hover:text-forest transition-colors">
           <ArrowLeft className="h-4 w-4" /> Back to clients
         </Link>
       </div>
 
-      <div className="mb-5">
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-xl font-bold">{profile?.fullName ?? "Client"}</h1>
-            <p className="text-sm text-muted-foreground">{profile?.email}</p>
-          </div>
-          <span className={cn("text-xs px-2.5 py-1 rounded-full font-medium capitalize",
-            clientProfile?.status === "active" ? "bg-emerald-100 text-emerald-700" :
-            clientProfile?.status === "prospect" ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-600")}>
-            {clientProfile?.status ?? "—"}
-          </span>
+      <div className="mb-8 flex items-start justify-between">
+        <div>
+          <h1 className="font-display text-[32px] font-semibold text-forest leading-none mb-2">{profile?.fullName ?? "Client"}</h1>
+          <p className="text-[14px] text-ink-60">{profile?.email}</p>
         </div>
+        <span className={cn("text-[12px] px-3 py-1 rounded-[8px] font-medium tracking-wide uppercase",
+          clientProfile?.status === "active" ? "bg-green-tint text-green" :
+          clientProfile?.status === "prospect" ? "bg-sun-tint text-amber-ink" : "bg-surface border border-hairline text-ink-60")}>
+          {clientProfile?.status?.replace(/_/g, " ") ?? "—"}
+        </span>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
-        <div className="bg-card border border-card-border rounded-xl p-3 text-center">
-          <div className="font-bold text-lg">{fmtCurrency(totalValue)}</div>
-          <div className="text-xs text-muted-foreground">Portfolio</div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="bg-surface border border-hairline rounded-[26px] p-5 text-center shadow-[0_2px_14px_rgba(20,52,42,0.04)]">
+          <div className="font-display text-[24px] font-semibold text-forest tabular-nums leading-none mb-1">{fmtCurrency(totalValue)}</div>
+          <div className="text-[12px] text-ink-40 tracking-wide uppercase">Portfolio</div>
         </div>
-        <div className="bg-card border border-card-border rounded-xl p-3 text-center">
-          <div className="font-bold text-lg">{packages.length}</div>
-          <div className="text-xs text-muted-foreground">Packages</div>
+        <div className="bg-surface border border-hairline rounded-[26px] p-5 text-center shadow-[0_2px_14px_rgba(20,52,42,0.04)]">
+          <div className="font-display text-[24px] font-semibold text-forest tabular-nums leading-none mb-1">{packages.length}</div>
+          <div className="text-[12px] text-ink-40 tracking-wide uppercase">Packages</div>
         </div>
-        <div className="bg-card border border-card-border rounded-xl p-3 text-center">
-          <div className="font-bold text-lg">{goals.length}</div>
-          <div className="text-xs text-muted-foreground">Goals</div>
+        <div className="bg-surface border border-hairline rounded-[26px] p-5 text-center shadow-[0_2px_14px_rgba(20,52,42,0.04)]">
+          <div className="font-display text-[24px] font-semibold text-forest tabular-nums leading-none mb-1">{goals.length}</div>
+          <div className="text-[12px] text-ink-40 tracking-wide uppercase">Goals</div>
         </div>
-        <div className="bg-card border border-card-border rounded-xl p-3 text-center">
-          <div className="font-bold text-sm">{clientProfile?.kycStatus ?? "—"}</div>
-          <div className="text-xs text-muted-foreground">KYC</div>
+        <div className="bg-surface border border-hairline rounded-[26px] p-5 text-center shadow-[0_2px_14px_rgba(20,52,42,0.04)]">
+          <div className="font-display text-[20px] font-semibold text-forest leading-none mb-1">{clientProfile?.kycStatus?.replace(/_/g, " ") ?? "—"}</div>
+          <div className="text-[12px] text-ink-40 tracking-wide uppercase">KYC</div>
         </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="mb-4 flex-wrap">
-          <TabsTrigger value="packages">Packages</TabsTrigger>
-          <TabsTrigger value="transactions">Transactions</TabsTrigger>
-          <TabsTrigger value="profile">Profile</TabsTrigger>
-          <TabsTrigger value="goals">Goals</TabsTrigger>
-          <TabsTrigger value="tasks">Tasks</TabsTrigger>
-          <TabsTrigger value="messages">
-            <MessageCircle className="h-3.5 w-3.5 mr-1" />Messages
+        <TabsList className="mb-6 bg-surface border border-hairline rounded-full p-1 w-full justify-start h-auto flex-wrap overflow-x-auto gap-1">
+          <TabsTrigger value="packages" className="rounded-full px-4 py-2 text-[13px] font-medium data-[state=active]:bg-forest data-[state=active]:text-paper data-[state=active]:shadow-none transition-colors">Packages</TabsTrigger>
+          <TabsTrigger value="transactions" className="rounded-full px-4 py-2 text-[13px] font-medium data-[state=active]:bg-forest data-[state=active]:text-paper data-[state=active]:shadow-none transition-colors">Transactions</TabsTrigger>
+          <TabsTrigger value="profile" className="rounded-full px-4 py-2 text-[13px] font-medium data-[state=active]:bg-forest data-[state=active]:text-paper data-[state=active]:shadow-none transition-colors">Profile</TabsTrigger>
+          <TabsTrigger value="goals" className="rounded-full px-4 py-2 text-[13px] font-medium data-[state=active]:bg-forest data-[state=active]:text-paper data-[state=active]:shadow-none transition-colors">Goals</TabsTrigger>
+          <TabsTrigger value="tasks" className="rounded-full px-4 py-2 text-[13px] font-medium data-[state=active]:bg-forest data-[state=active]:text-paper data-[state=active]:shadow-none transition-colors">Tasks</TabsTrigger>
+          <TabsTrigger value="messages" className="rounded-full px-4 py-2 text-[13px] font-medium data-[state=active]:bg-forest data-[state=active]:text-paper data-[state=active]:shadow-none transition-colors">
+            <MessageCircle className="h-4 w-4 mr-1.5 inline-block" />Messages
           </TabsTrigger>
-          <TabsTrigger value="investment-plans">
-            <TrendingUp className="h-3.5 w-3.5 mr-1" />Investment Plans
+          <TabsTrigger value="investment-plans" className="rounded-full px-4 py-2 text-[13px] font-medium data-[state=active]:bg-forest data-[state=active]:text-paper data-[state=active]:shadow-none transition-colors">
+            <TrendingUp className="h-4 w-4 mr-1.5 inline-block" />Plans
           </TabsTrigger>
-          <TabsTrigger value="kyc">KYC</TabsTrigger>
+          <TabsTrigger value="kyc" className="rounded-full px-4 py-2 text-[13px] font-medium data-[state=active]:bg-forest data-[state=active]:text-paper data-[state=active]:shadow-none transition-colors">KYC</TabsTrigger>
         </TabsList>
 
         {/* ── Packages ── */}
         <TabsContent value="packages">
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div className="flex justify-end">
-              <Button size="sm" onClick={() => setShowNewPkg(true)}>
-                <Plus className="h-4 w-4 mr-1" /> Create package
+              <Button onClick={() => setShowNewPkg(true)} className="rounded-full px-5 bg-forest text-paper hover:bg-forest-700 h-10">
+                <Plus className="h-4 w-4 mr-2" /> Create package
               </Button>
             </div>
 
             {showNewPkg && (
-              <div className="bg-card border-2 border-primary/20 rounded-2xl p-5 space-y-4">
-                <h3 className="font-semibold">New Investment Package</h3>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1 col-span-2">
-                    <label className="text-xs font-medium">Package nickname</label>
-                    <Input value={newPkg.nickname} onChange={(e) => setNewPkg((p) => ({ ...p, nickname: e.target.value }))} placeholder="e.g. Retirement Fund" />
+              <div className="bg-surface border border-green rounded-[26px] p-6 shadow-xl space-y-5">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-display text-[20px] font-semibold text-forest">New Investment Package</h3>
+                  <button onClick={() => setShowNewPkg(false)} className="h-8 w-8 rounded-full hover:bg-paper flex items-center justify-center transition-colors">
+                    <X className="h-5 w-5 text-ink-40" />
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5 col-span-2">
+                    <label className="text-[13px] font-medium text-ink-60 block">Package nickname</label>
+                    <Input className="h-11 rounded-[12px] border-hairline bg-paper px-4 focus-visible:ring-green" value={newPkg.nickname} onChange={(e) => setNewPkg((p) => ({ ...p, nickname: e.target.value }))} placeholder="e.g. Retirement Fund" />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium">Type</label>
-                    <select className="w-full border border-border rounded-lg px-3 py-2 text-sm" value={newPkg.type} onChange={(e) => setNewPkg((p) => ({ ...p, type: e.target.value }))}>
+                  <div className="space-y-1.5">
+                    <label className="text-[13px] font-medium text-ink-60 block">Type</label>
+                    <select className="w-full h-11 border border-hairline bg-paper rounded-[12px] px-4 text-[14px] text-forest focus:outline-none focus:ring-2 focus:ring-green" value={newPkg.type} onChange={(e) => setNewPkg((p) => ({ ...p, type: e.target.value }))}>
                       <option value="rsp">RSP (Monthly)</option>
                       <option value="lump_sum">Lump Sum</option>
                       <option value="combination">Both</option>
                     </select>
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium">Expected annual return %</label>
-                    <Input type="number" step="0.1" value={newPkg.expectedAnnualReturn} onChange={(e) => setNewPkg((p) => ({ ...p, expectedAnnualReturn: parseFloat(e.target.value) }))} />
+                  <div className="space-y-1.5">
+                    <label className="text-[13px] font-medium text-ink-60 block">Expected annual return %</label>
+                    <Input className="h-11 rounded-[12px] border-hairline bg-paper px-4 focus-visible:ring-green" type="number" step="0.1" value={newPkg.expectedAnnualReturn} onChange={(e) => setNewPkg((p) => ({ ...p, expectedAnnualReturn: parseFloat(e.target.value) }))} />
                   </div>
                   {(newPkg.type === "rsp" || newPkg.type === "combination") && (
-                    <div className="space-y-1 col-span-2">
-                      <label className="text-xs font-medium">Monthly amount (USD)</label>
-                      <CurrencyInput value={newPkg.monthlyAmount} onChange={(v) => setNewPkg((p) => ({ ...p, monthlyAmount: v }))} currency="USD" />
+                    <div className="space-y-1.5 col-span-2">
+                      <label className="text-[13px] font-medium text-ink-60 block">Monthly amount (USD)</label>
+                      <div className="h-11">
+                         <CurrencyInput value={newPkg.monthlyAmount} onChange={(v) => setNewPkg((p) => ({ ...p, monthlyAmount: v }))} currency="USD" />
+                      </div>
                     </div>
                   )}
                   {(newPkg.type === "lump_sum" || newPkg.type === "combination") && (
-                    <div className="space-y-1 col-span-2">
-                      <label className="text-xs font-medium">Lump sum amount (USD)</label>
-                      <CurrencyInput value={newPkg.lumpSumAmount} onChange={(v) => setNewPkg((p) => ({ ...p, lumpSumAmount: v }))} currency="USD" />
+                    <div className="space-y-1.5 col-span-2">
+                      <label className="text-[13px] font-medium text-ink-60 block">Lump sum amount (USD)</label>
+                      <div className="h-11">
+                        <CurrencyInput value={newPkg.lumpSumAmount} onChange={(v) => setNewPkg((p) => ({ ...p, lumpSumAmount: v }))} currency="USD" />
+                      </div>
                     </div>
                   )}
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium">Start date</label>
-                    <Input type="date" value={newPkg.startDate} onChange={(e) => setNewPkg((p) => ({ ...p, startDate: e.target.value }))} />
+                  <div className="space-y-1.5">
+                    <label className="text-[13px] font-medium text-ink-60 block">Start date</label>
+                    <Input className="h-11 rounded-[12px] border-hairline bg-paper px-4 focus-visible:ring-green" type="date" value={newPkg.startDate} onChange={(e) => setNewPkg((p) => ({ ...p, startDate: e.target.value }))} />
                   </div>
-                  <div className="space-y-1 col-span-2">
-                    <label className="text-xs font-medium">Advisor notes</label>
-                    <Textarea value={newPkg.advisorNotes} onChange={(e) => setNewPkg((p) => ({ ...p, advisorNotes: e.target.value }))} rows={2} />
+                  <div className="space-y-1.5 col-span-2">
+                    <label className="text-[13px] font-medium text-ink-60 block">Advisor notes</label>
+                    <Textarea className="rounded-[12px] border-hairline bg-paper px-4 py-3 focus-visible:ring-green" value={newPkg.advisorNotes} onChange={(e) => setNewPkg((p) => ({ ...p, advisorNotes: e.target.value }))} rows={2} />
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => setShowNewPkg(false)}>Cancel</Button>
-                  <Button size="sm" disabled={createPkgMut.isPending} onClick={() =>
+                <div className="flex gap-3 mt-6">
+                  <Button variant="outline" className="flex-1 rounded-full h-11 border-hairline text-forest hover:bg-paper" onClick={() => setShowNewPkg(false)}>Cancel</Button>
+                  <Button className="flex-1 rounded-full h-11 bg-green text-surface hover:bg-green-300" disabled={createPkgMut.isPending} onClick={() =>
                     createPkgMut.mutate({
                       userId: id,
                       nickname: newPkg.nickname,
@@ -369,31 +369,31 @@ export default function AdvisorClientDetail() {
               const activeAllocs = pkg.allocations.filter(a => a.isActive);
 
               return (
-                <div key={pkg.id} className="bg-card border border-card-border rounded-2xl overflow-hidden">
-                  <div className="p-4 border-b border-border">
-                    <div className="flex items-start justify-between mb-2">
+                <div key={pkg.id} className="bg-surface border border-hairline rounded-[26px] overflow-hidden shadow-[0_2px_14px_rgba(20,52,42,0.06)]">
+                  <div className="p-6 border-b border-hairline">
+                    <div className="flex items-start justify-between mb-4">
                       <div>
-                        <div className="font-semibold">{pkg.nickname}</div>
-                        <div className="text-xs text-muted-foreground capitalize">{pkg.type.replace(/_/g, " ")} · {pkg.status}</div>
+                        <div className="font-display text-[20px] font-semibold text-forest mb-1">{pkg.nickname}</div>
+                        <div className="text-[13px] text-ink-60 capitalize tracking-wide uppercase">{pkg.type.replace(/_/g, " ")} · {pkg.status}</div>
                       </div>
                       <div className="text-right">
-                        <div className="font-bold text-lg">{fmtCurrency(val)}</div>
-                        <div className={`text-xs ${ret >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+                        <div className="font-display text-[24px] font-semibold text-forest tabular-nums">{fmtCurrency(val)}</div>
+                        <div className={cn("text-[14px] font-semibold tabular-nums mt-1", ret >= 0 ? "text-green" : "text-clay")}>
                           {ret >= 0 ? "+" : ""}{fmtCurrency(ret)} ({ret >= 0 ? "+" : ""}{retPct.toFixed(1)}%)
                         </div>
                       </div>
                     </div>
                     <div className="flex gap-2 flex-wrap">
-                      <Button size="sm" variant="outline" onClick={() => {
+                      <Button size="sm" variant="outline" className="rounded-full h-9 px-4 text-[13px] border-hairline text-forest hover:bg-paper" onClick={() => {
                         setEditAllocPkg(isEditingAlloc ? null : pkg.id);
                         setAllocDrafts(activeAllocs.map(a => ({ fundId: a.fundId, weightPercent: parseFloat(a.weightPercent), unitsHeld: parseFloat(a.unitsHeld) })));
                       }}>
                         {isEditingAlloc ? "Cancel edit" : "Edit allocation"}
                       </Button>
-                      <Button size="sm" variant="outline" onClick={() => setShowTxForm(showTxForm === pkg.id ? null : pkg.id)}>
+                      <Button size="sm" variant="outline" className="rounded-full h-9 px-4 text-[13px] border-hairline text-forest hover:bg-paper" onClick={() => setShowTxForm(showTxForm === pkg.id ? null : pkg.id)}>
                         {showTxForm === pkg.id ? "Cancel" : "Add transaction"}
                       </Button>
-                      <Button size="sm" variant="outline" onClick={() => {
+                      <Button size="sm" variant="outline" className="rounded-full h-9 px-4 text-[13px] border-hairline text-forest hover:bg-paper" onClick={() => {
                         const snapDate = new Date().toISOString().split("T")[0];
                         const totalV = prompt("Enter current total value (USD):");
                         const totalI = prompt("Enter total invested to date (USD):");
@@ -408,80 +408,82 @@ export default function AdvisorClientDetail() {
                   </div>
 
                   {isEditingAlloc && (
-                    <div className="p-4 bg-primary/5 border-b border-border">
-                      <div className="text-sm font-medium mb-3">Edit Fund Allocations</div>
-                      <div className="space-y-2 mb-3">
+                    <div className="p-6 bg-paper border-b border-hairline">
+                      <div className="text-[15px] font-semibold text-forest mb-4">Edit Fund Allocations</div>
+                      <div className="space-y-3 mb-5">
                         {allocDrafts.map((a, i) => (
-                          <div key={i} className="flex gap-2 items-center">
-                            <select className="flex-1 border border-border rounded-lg px-2 py-1.5 text-sm" value={a.fundId}
+                          <div key={i} className="flex gap-3 items-center">
+                            <select className="flex-1 h-10 border border-hairline rounded-[10px] px-3 text-[14px] bg-surface focus:outline-none focus:ring-2 focus:ring-green text-forest" value={a.fundId}
                               onChange={(e) => setAllocDrafts(d => d.map((x, j) => j === i ? { ...x, fundId: e.target.value } : x))}>
                               <option value="">Select fund</option>
                               {allFunds.map((f) => <option key={f.id} value={f.id}>{f.name} ({f.ticker})</option>)}
                             </select>
-                            <Input type="number" className="w-20" placeholder="Wt%" value={a.weightPercent}
+                            <Input type="number" className="w-24 h-10 rounded-[10px] border-hairline bg-surface px-3" placeholder="Wt%" value={a.weightPercent}
                               onChange={(e) => setAllocDrafts(d => d.map((x, j) => j === i ? { ...x, weightPercent: parseFloat(e.target.value) || 0 } : x))} />
-                            <Input type="number" className="w-24" placeholder="Units" value={a.unitsHeld}
+                            <Input type="number" className="w-28 h-10 rounded-[10px] border-hairline bg-surface px-3" placeholder="Units" value={a.unitsHeld}
                               onChange={(e) => setAllocDrafts(d => d.map((x, j) => j === i ? { ...x, unitsHeld: parseFloat(e.target.value) || 0 } : x))} />
-                            <button onClick={() => setAllocDrafts(d => d.filter((_, j) => j !== i))}><X className="h-4 w-4 text-muted-foreground" /></button>
+                            <button className="h-10 w-10 flex items-center justify-center rounded-[10px] bg-surface border border-hairline hover:bg-clay-tint hover:text-clay hover:border-clay-tint transition-colors" onClick={() => setAllocDrafts(d => d.filter((_, j) => j !== i))}><X className="h-4 w-4 text-ink-40" /></button>
                           </div>
                         ))}
                       </div>
-                      <div className={cn("text-xs font-medium mb-2", allocValid ? "text-emerald-600" : "text-amber-600")}>
+                      <div className={cn("text-[13px] font-semibold tracking-wide uppercase mb-4", allocValid ? "text-green" : "text-amber-ink")}>
                         Total weight: {allocTotal.toFixed(1)}%
                         {!allocValid && allocDrafts.length > 0 && " — must equal 100%"}
-                        {allocValid && " ✓"}
+                        {allocValid && " — Valid"}
                       </div>
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline" onClick={() => setAllocDrafts(d => [...d, { fundId: "", weightPercent: 0, unitsHeld: 0 }])}>
-                          <Plus className="h-4 w-4 mr-1" /> Add fund
+                      <div className="flex gap-3">
+                        <Button size="sm" variant="outline" className="rounded-full h-10 px-5 border-hairline text-forest hover:bg-surface" onClick={() => setAllocDrafts(d => [...d, { fundId: "", weightPercent: 0, unitsHeld: 0 }])}>
+                          <Plus className="h-4 w-4 mr-2" /> Add fund
                         </Button>
-                        <Button size="sm" disabled={updateAllocMut.isPending || (!allocValid && allocDrafts.length > 0)}
+                        <Button size="sm" className="rounded-full h-10 px-6 bg-green text-surface hover:bg-green-300" disabled={updateAllocMut.isPending || (!allocValid && allocDrafts.length > 0)}
                           onClick={() => updateAllocMut.mutate({ pkgId: pkg.id, allocations: allocDrafts.filter(a => a.fundId) })}>
-                          {updateAllocMut.isPending ? "Saving…" : <><Check className="h-4 w-4 mr-1" /> Save allocation</>}
+                          {updateAllocMut.isPending ? "Saving…" : <><Check className="h-4 w-4 mr-2" /> Save allocation</>}
                         </Button>
                       </div>
                     </div>
                   )}
 
                   {showTxForm === pkg.id && (
-                    <div className="p-4 bg-amber-50 border-b border-border space-y-3">
-                      <div className="text-sm font-medium">Record Transaction</div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                          <label className="text-xs font-medium">Type</label>
-                          <select className="w-full border border-border rounded-lg px-2 py-1.5 text-sm" value={txDraft.transactionType}
+                    <div className="p-6 bg-sun-tint border-b border-[#FBE5C5] space-y-4">
+                      <div className="text-[16px] font-semibold text-amber-ink mb-2">Record Transaction</div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <label className="text-[13px] font-medium text-amber-ink/80 block">Type</label>
+                          <select className="w-full h-11 border border-[#FBE5C5] rounded-[12px] px-4 text-[14px] bg-surface text-forest focus:outline-none capitalize" value={txDraft.transactionType}
                             onChange={(e) => setTxDraft(d => ({ ...d, transactionType: e.target.value }))}>
                             {TX_TYPES.map((t) => <option key={t} value={t}>{t.replace(/_/g, " ")}</option>)}
                           </select>
                         </div>
-                        <div className="space-y-1">
-                          <label className="text-xs font-medium">Date</label>
-                          <Input type="date" value={txDraft.transactionDate} onChange={(e) => setTxDraft(d => ({ ...d, transactionDate: e.target.value }))} />
+                        <div className="space-y-1.5">
+                          <label className="text-[13px] font-medium text-amber-ink/80 block">Date</label>
+                          <Input className="h-11 rounded-[12px] border-[#FBE5C5] bg-surface px-4 text-forest" type="date" value={txDraft.transactionDate} onChange={(e) => setTxDraft(d => ({ ...d, transactionDate: e.target.value }))} />
                         </div>
-                        <div className="space-y-1 col-span-2">
-                          <label className="text-xs font-medium">Amount (USD)</label>
-                          <CurrencyInput value={txDraft.amountUsd} onChange={(v) => setTxDraft(d => ({ ...d, amountUsd: v }))} currency="USD" />
+                        <div className="space-y-1.5 col-span-2">
+                          <label className="text-[13px] font-medium text-amber-ink/80 block">Amount (USD)</label>
+                          <div className="h-11">
+                            <CurrencyInput value={txDraft.amountUsd} onChange={(v) => setTxDraft(d => ({ ...d, amountUsd: v }))} currency="USD" />
+                          </div>
                         </div>
-                        <div className="space-y-1">
-                          <label className="text-xs font-medium">Fund (optional)</label>
-                          <select className="w-full border border-border rounded-lg px-2 py-1.5 text-sm" value={txDraft.fundId}
+                        <div className="space-y-1.5">
+                          <label className="text-[13px] font-medium text-amber-ink/80 block">Fund (optional)</label>
+                          <select className="w-full h-11 border border-[#FBE5C5] rounded-[12px] px-4 text-[14px] bg-surface text-forest focus:outline-none" value={txDraft.fundId}
                             onChange={(e) => setTxDraft(d => ({ ...d, fundId: e.target.value }))}>
                             <option value="">— No specific fund —</option>
                             {allFunds.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
                           </select>
                         </div>
-                        <div className="space-y-1">
-                          <label className="text-xs font-medium">Units (optional)</label>
-                          <Input placeholder="e.g. 12.5" value={txDraft.units} onChange={(e) => setTxDraft(d => ({ ...d, units: e.target.value }))} />
+                        <div className="space-y-1.5">
+                          <label className="text-[13px] font-medium text-amber-ink/80 block">Units (optional)</label>
+                          <Input className="h-11 rounded-[12px] border-[#FBE5C5] bg-surface px-4 text-forest" placeholder="e.g. 12.5" value={txDraft.units} onChange={(e) => setTxDraft(d => ({ ...d, units: e.target.value }))} />
                         </div>
-                        <div className="space-y-1 col-span-2">
-                          <label className="text-xs font-medium">Notes</label>
-                          <Input placeholder="Optional note" value={txDraft.notes} onChange={(e) => setTxDraft(d => ({ ...d, notes: e.target.value }))} />
+                        <div className="space-y-1.5 col-span-2">
+                          <label className="text-[13px] font-medium text-amber-ink/80 block">Notes</label>
+                          <Input className="h-11 rounded-[12px] border-[#FBE5C5] bg-surface px-4 text-forest" placeholder="Optional note" value={txDraft.notes} onChange={(e) => setTxDraft(d => ({ ...d, notes: e.target.value }))} />
                         </div>
                       </div>
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm" onClick={() => setShowTxForm(null)}>Cancel</Button>
-                        <Button size="sm" disabled={createTxMut.isPending} onClick={() =>
+                      <div className="flex gap-3 mt-6">
+                        <Button variant="outline" className="flex-1 rounded-full h-11 border-[#FBE5C5] text-amber-ink hover:bg-surface/50" onClick={() => setShowTxForm(null)}>Cancel</Button>
+                        <Button className="flex-1 rounded-full h-11 bg-amber-ink text-surface hover:bg-sun-deep" disabled={createTxMut.isPending} onClick={() =>
                           createTxMut.mutate({
                             pkgId: pkg.id,
                             data: { ...txDraft, fundId: txDraft.fundId || undefined, units: txDraft.units || undefined, pricePerUnitUsd: txDraft.pricePerUnitUsd || undefined }
@@ -494,14 +496,14 @@ export default function AdvisorClientDetail() {
                   )}
 
                   {activeAllocs.length > 0 && (
-                    <div className="p-4">
-                      <div className="text-xs font-medium text-muted-foreground mb-2">Current allocation</div>
-                      <div className="space-y-1.5">
+                    <div className="p-6">
+                      <div className="tala-eyebrow text-ink-40 mb-4">Current allocation</div>
+                      <div className="space-y-2">
                         {activeAllocs.map((a) => (
-                          <div key={a.id} className="flex items-center gap-2 text-sm">
-                            <span className="flex-1 text-xs">{a.fund?.name ?? a.fundId}</span>
-                            <span className="font-medium text-xs">{parseFloat(a.weightPercent).toFixed(1)}%</span>
-                            <span className="text-muted-foreground text-xs">{parseFloat(a.unitsHeld).toFixed(4)} units</span>
+                          <div key={a.id} className="flex items-center gap-3 text-[14px]">
+                            <span className="flex-1 text-forest font-medium">{a.fund?.name ?? a.fundId}</span>
+                            <span className="font-semibold text-forest tabular-nums">{parseFloat(a.weightPercent).toFixed(1)}%</span>
+                            <span className="text-ink-40 tabular-nums w-24 text-right">{parseFloat(a.unitsHeld).toFixed(4)} units</span>
                           </div>
                         ))}
                       </div>
@@ -512,7 +514,10 @@ export default function AdvisorClientDetail() {
             })}
 
             {packages.length === 0 && !showNewPkg && (
-              <div className="text-center py-10 text-sm text-muted-foreground">No packages yet. Create one for this client.</div>
+              <div className="text-center py-16 bg-surface rounded-[26px] shadow-[0_2px_14px_rgba(20,52,42,0.06)]">
+                <p className="text-[14px] text-ink-40 mb-2">No packages yet.</p>
+                <p className="text-[14px] text-ink-60">Create one for this client to start managing their investments.</p>
+              </div>
             )}
           </div>
         </TabsContent>
@@ -520,27 +525,27 @@ export default function AdvisorClientDetail() {
         {/* ── Transactions ── */}
         <TabsContent value="transactions">
           {allTxs.length === 0 ? (
-            <div className="text-center py-10 text-sm text-muted-foreground">No transactions yet.</div>
+            <div className="text-center py-16 bg-surface rounded-[26px] shadow-[0_2px_14px_rgba(20,52,42,0.06)] text-[14px] text-ink-40">No transactions yet.</div>
           ) : (
-            <div className="bg-card border border-card-border rounded-2xl overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="border-b border-border bg-muted/40">
+            <div className="bg-surface rounded-[26px] overflow-hidden shadow-[0_2px_14px_rgba(20,52,42,0.06)]">
+              <table className="w-full text-left">
+                <thead className="border-b border-hairline">
                   <tr>
-                    <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">Date</th>
-                    <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">Type</th>
-                    <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">Package</th>
-                    <th className="text-right px-4 py-2.5 font-medium text-muted-foreground">Amount</th>
+                    <th className="px-5 py-4 font-sans text-[13px] font-medium text-ink-40 border-b border-hairline">Date</th>
+                    <th className="px-5 py-4 font-sans text-[13px] font-medium text-ink-40 border-b border-hairline">Type</th>
+                    <th className="px-5 py-4 font-sans text-[13px] font-medium text-ink-40 border-b border-hairline">Package</th>
+                    <th className="px-5 py-4 font-sans text-[13px] font-medium text-ink-40 border-b border-hairline text-right">Amount</th>
                   </tr>
                 </thead>
                 <tbody>
                   {allTxs.map((tx) => {
                     const isOut = ["withdrawal", "fee_charged"].includes(tx.transactionType);
                     return (
-                      <tr key={tx.id} className="border-b border-border last:border-0">
-                        <td className="px-4 py-2.5 text-muted-foreground text-xs">{tx.transactionDate}</td>
-                        <td className="px-4 py-2.5 capitalize text-xs">{tx.transactionType.replace(/_/g, " ")}</td>
-                        <td className="px-4 py-2.5 text-xs text-muted-foreground">{tx.package?.nickname ?? "—"}</td>
-                        <td className={`px-4 py-2.5 text-right font-semibold ${isOut ? "text-red-500" : "text-emerald-600"}`}>
+                      <tr key={tx.id} className="border-b border-hairline last:border-0 hover:bg-paper transition-colors">
+                        <td className="px-5 py-4 text-ink-60 text-[14px] tabular-nums">{tx.transactionDate}</td>
+                        <td className="px-5 py-4 capitalize text-[14px] text-forest font-medium">{tx.transactionType.replace(/_/g, " ")}</td>
+                        <td className="px-5 py-4 text-[14px] text-ink-60">{tx.package?.nickname ?? "—"}</td>
+                        <td className={cn("px-5 py-4 text-right font-semibold text-[15px] tabular-nums", isOut ? "text-clay" : "text-green")}>
                           {isOut ? "-" : "+"}{fmtCurrency(parseFloat(tx.amountUsd))}
                         </td>
                       </tr>
@@ -555,151 +560,153 @@ export default function AdvisorClientDetail() {
         {/* ── Profile ── */}
         <TabsContent value="profile">
           {clientProfile && (
-            <div className="space-y-4">
-              <div className="bg-card border border-card-border rounded-xl p-4 space-y-4">
-                <h3 className="font-semibold text-sm">Client Status</h3>
-                <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-6">
+              <div className="bg-surface border border-hairline rounded-[26px] p-6 shadow-[0_2px_14px_rgba(20,52,42,0.04)] space-y-5">
+                <h3 className="font-display text-[20px] font-semibold text-forest">Client Status</h3>
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-xs font-medium text-muted-foreground">Status</label>
-                    <select className="w-full mt-1 border border-border rounded-lg px-3 py-2 text-sm"
+                    <label className="text-[13px] font-medium text-ink-60 block mb-1.5">Status</label>
+                    <select className="w-full h-11 border border-hairline rounded-[12px] bg-paper px-4 text-[14px] text-forest focus:outline-none focus:ring-2 focus:ring-green capitalize"
                       value={clientProfile.status}
                       onChange={(e) => updateCPMut.mutate({ status: e.target.value })}>
-                      {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+                      {STATUS_OPTIONS.map(o => <option key={o} value={o}>{o.replace(/_/g, " ")}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-muted-foreground">KYC Status</label>
-                    <select className="w-full mt-1 border border-border rounded-lg px-3 py-2 text-sm"
-                      value={clientProfile.kycStatus}
-                      onChange={(e) => updateCPMut.mutate({ kycStatus: e.target.value })}>
-                      {KYC_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+                    <label className="text-[13px] font-medium text-ink-60 block mb-1.5">Risk Profile</label>
+                    <select className="w-full h-11 border border-hairline rounded-[12px] bg-paper px-4 text-[14px] text-forest focus:outline-none focus:ring-2 focus:ring-green capitalize"
+                      value={clientProfile.riskProfile ?? ""}
+                      onChange={(e) => updateCPMut.mutate({ riskProfile: e.target.value || null })}>
+                      <option value="">Unknown</option>
+                      <option value="conservative">Conservative</option>
+                      <option value="moderate">Moderate</option>
+                      <option value="balanced">Balanced</option>
+                      <option value="growth">Growth</option>
+                      <option value="aggressive">Aggressive</option>
                     </select>
                   </div>
                 </div>
-                <div className="grid grid-cols-3 gap-3 text-sm">
-                  <div><span className="text-xs text-muted-foreground block">Risk profile</span>{clientProfile.riskProfile ?? "—"}</div>
-                  <div><span className="text-xs text-muted-foreground block">Risk score</span>{clientProfile.riskScore ?? "—"}</div>
-                  <div><span className="text-xs text-muted-foreground block">Style</span>{clientProfile.investmentStyle ?? "—"}</div>
+              </div>
+
+              <div className="bg-surface border border-hairline rounded-[26px] p-6 shadow-[0_2px_14px_rgba(20,52,42,0.04)] space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-display text-[20px] font-semibold text-forest">Advisor Internal Notes</h3>
+                  <Button size="sm" className="rounded-full h-9 px-4 bg-green text-surface hover:bg-green-300"
+                    onClick={() => updateCPMut.mutate({ advisorInternalNotes: internalNotes })}
+                    disabled={updateCPMut.isPending || internalNotes === clientProfile.advisorInternalNotes}>
+                    <Save className="h-4 w-4 mr-2" /> Save Notes
+                  </Button>
                 </div>
-                {clientProfile.indicativeAmount && (
-                  <div className="text-sm"><span className="text-xs text-muted-foreground block">Indicative amount</span>{fmtCurrency(parseFloat(clientProfile.indicativeAmount))}</div>
-                )}
-                {clientProfile.preCallNotes && (
-                  <div><span className="text-xs text-muted-foreground block">Pre-call notes</span><p className="text-sm mt-1 bg-muted/50 rounded-lg p-3">{clientProfile.preCallNotes}</p></div>
-                )}
-              </div>
-              <div className="bg-card border border-card-border rounded-xl p-4">
-                <h3 className="font-semibold text-sm mb-3">Internal Notes (advisor only)</h3>
                 <Textarea
-                  value={internalNotes || clientProfile.advisorInternalNotes || ""}
+                  className="w-full rounded-[16px] border-hairline bg-paper px-5 py-4 text-[14px] text-forest focus-visible:ring-green min-h-[150px] resize-y"
+                  placeholder="Private notes (not visible to client)…"
+                  value={internalNotes}
                   onChange={(e) => setInternalNotes(e.target.value)}
-                  rows={4}
-                  placeholder="Private notes visible only to you…"
                 />
-                <Button size="sm" className="mt-2" onClick={() => updateCPMut.mutate({ advisorInternalNotes: internalNotes })}>
-                  <Save className="h-4 w-4 mr-1" /> Save notes
-                </Button>
               </div>
+
+              {clientProfile.preCallNotes && (
+                <div className="bg-paper border border-hairline rounded-[26px] p-6 space-y-3">
+                  <h3 className="font-semibold text-forest text-[15px]">Pre-call Notes (from prospect form)</h3>
+                  <div className="text-[14px] text-ink-60 whitespace-pre-wrap">{clientProfile.preCallNotes}</div>
+                </div>
+              )}
             </div>
           )}
         </TabsContent>
 
         {/* ── Goals ── */}
         <TabsContent value="goals">
-          {goals.length === 0 ? <p className="text-center text-muted-foreground py-8 text-sm">No goals yet.</p> : (
-            <div className="space-y-3">
-              {goals.map((g) => {
-                const prog = g.targetAmount && g.currentAmount ? (parseFloat(g.currentAmount) / parseFloat(g.targetAmount)) * 100 : 0;
-                return (
-                  <div key={g.id} className="bg-card border border-card-border rounded-xl p-4">
-                    <div className="flex justify-between mb-2">
-                      <span className="font-medium">{g.title}</span>
-                      <span className="text-xs text-muted-foreground">{g.targetDate ?? "—"}</span>
+          {goals.length === 0 ? (
+            <div className="text-center py-16 bg-surface rounded-[26px] shadow-[0_2px_14px_rgba(20,52,42,0.06)] text-[14px] text-ink-40">No goals found.</div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2">
+              {goals.map((g) => (
+                <div key={g.id} className="bg-surface border border-hairline rounded-[26px] p-6 shadow-[0_2px_14px_rgba(20,52,42,0.06)]">
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h4 className="font-display text-[20px] font-semibold text-forest mb-1">{g.title}</h4>
+                      <p className="text-[13px] text-ink-40 tracking-wide uppercase capitalize">{g.goalType.replace(/_/g, " ")}</p>
                     </div>
-                    <div className="h-1.5 bg-muted rounded-full">
-                      <div className="h-1.5 bg-primary rounded-full" style={{ width: `${Math.min(100, prog)}%` }} />
-                    </div>
-                    <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                      <span>{Math.round(prog)}% funded</span>
-                      {g.targetAmount && <span>Target: {fmtCurrency(parseFloat(g.targetAmount))}</span>}
-                    </div>
+                    <span className={cn("text-[11px] px-2 py-0.5 rounded-[4px] font-medium tracking-wide uppercase", g.status === "completed" ? "bg-green-tint text-green" : g.status === "in_progress" ? "bg-sun-tint text-amber-ink" : "bg-surface border border-hairline text-ink-60")}>
+                      {g.status.replace(/_/g, " ")}
+                    </span>
                   </div>
-                );
-              })}
+                  {g.targetAmount && (
+                    <div className="mt-4 pt-4 border-t border-hairline">
+                      <div className="flex justify-between text-[13px] mb-2">
+                        <span className="text-ink-60">Progress</span>
+                        <span className="font-medium text-forest tabular-nums">{fmtCurrency(parseFloat(g.currentAmount || "0"))} / {fmtCurrency(parseFloat(g.targetAmount))}</span>
+                      </div>
+                      <div className="h-2 w-full bg-paper rounded-full overflow-hidden">
+                        <div className="h-full bg-green rounded-full"
+                          style={{ width: `${Math.min(100, (parseFloat(g.currentAmount || "0") / parseFloat(g.targetAmount)) * 100)}%` }} />
+                      </div>
+                    </div>
+                  )}
+                  {g.targetDate && (
+                    <p className="text-[13px] text-ink-40 mt-4 tabular-nums">Target: {new Date(g.targetDate).toLocaleDateString()}</p>
+                  )}
+                </div>
+              ))}
             </div>
           )}
         </TabsContent>
 
         {/* ── Tasks ── */}
         <TabsContent value="tasks">
-          {tasks.length === 0 ? <p className="text-center text-muted-foreground py-8 text-sm">No tasks.</p> : (
-            <div className="space-y-2">
-              {["todo", "in_progress", "done"].map(statusGroup => {
-                const groupTasks = tasks.filter(t => t.status === statusGroup);
-                if (groupTasks.length === 0) return null;
-                return (
-                  <div key={statusGroup}>
-                    <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1.5 mt-3 first:mt-0">
-                      {statusGroup.replace(/_/g, " ")}
-                    </div>
-                    <div className="space-y-1.5">
-                      {groupTasks.map((t) => (
-                        <div key={t.id} className="bg-card border border-card-border rounded-lg px-4 py-3 flex items-center justify-between">
-                          <div>
-                            <div className="font-medium text-sm">{t.title}</div>
-                            {t.dueDate && <div className="text-xs text-muted-foreground">Due: {new Date(t.dueDate).toLocaleDateString()}</div>}
-                          </div>
-                          <span className={cn("text-xs px-2 py-0.5 rounded-full font-medium",
-                            t.priority === "high" ? "bg-red-100 text-red-700" : t.priority === "medium" ? "bg-amber-100 text-amber-700" : "bg-muted text-muted-foreground")}>
-                            {t.priority}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
+          {tasks.length === 0 ? (
+            <div className="text-center py-16 bg-surface rounded-[26px] shadow-[0_2px_14px_rgba(20,52,42,0.06)] text-[14px] text-ink-40">No tasks for this client.</div>
+          ) : (
+            <div className="space-y-3">
+              {tasks.map((t) => (
+                <div key={t.id} className="bg-surface border border-hairline rounded-[20px] p-5 flex items-center justify-between shadow-[0_2px_14px_rgba(20,52,42,0.04)]">
+                  <div>
+                    <h4 className={cn("font-medium text-[16px]", t.status === "completed" ? "text-ink-40 line-through" : "text-forest")}>{t.title}</h4>
+                    {t.dueDate && <p className="text-[13px] text-ink-40 mt-1 tabular-nums">Due: {new Date(t.dueDate).toLocaleDateString()}</p>}
                   </div>
-                );
-              })}
+                  <div className="flex items-center gap-3">
+                    <span className={cn("text-[11px] px-2 py-0.5 rounded-[4px] font-medium tracking-wide uppercase", t.priority === "high" ? "bg-clay-tint text-clay" : t.priority === "medium" ? "bg-sun-tint text-amber-ink" : "bg-surface border border-hairline text-ink-60")}>
+                      {t.priority}
+                    </span>
+                    <span className={cn("text-[11px] px-2 py-0.5 rounded-[4px] font-medium tracking-wide uppercase", t.status === "completed" ? "bg-green-tint text-green" : "bg-surface border border-hairline text-ink-60")}>
+                      {t.status.replace(/_/g, " ")}
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </TabsContent>
 
         {/* ── Messages ── */}
         <TabsContent value="messages">
-          <div className="bg-card border border-card-border rounded-2xl overflow-hidden flex flex-col" style={{ height: "520px" }}>
-            {/* Header */}
-            <div className="px-4 py-3 border-b border-border bg-muted/30 flex items-center gap-3">
-              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary">
-                {(profile?.fullName ?? profile?.email ?? "C")[0].toUpperCase()}
+          <div className="flex flex-col h-[600px] border border-hairline rounded-[26px] bg-surface overflow-hidden shadow-[0_2px_14px_rgba(20,52,42,0.06)]">
+            <div className="p-4 border-b border-hairline bg-paper flex items-center gap-3 shrink-0">
+              <div className="h-10 w-10 rounded-full bg-sun-tint flex items-center justify-center text-amber-ink font-bold text-[15px]">
+                {profile?.fullName?.[0]?.toUpperCase() ?? "C"}
               </div>
               <div>
-                <div className="font-medium text-sm">{profile?.fullName ?? "Client"}</div>
-                <div className="text-xs text-muted-foreground">{profile?.email}</div>
+                <h3 className="font-semibold text-[15px] text-forest">{profile?.fullName ?? "Client"}</h3>
+                <p className="text-[12px] text-ink-40">Direct chat</p>
               </div>
             </div>
 
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
-              {!conversation ? (
-                <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
-                  Loading conversation…
-                </div>
-              ) : messages.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-center gap-2">
-                  <MessageCircle className="h-10 w-10 text-muted-foreground/30" />
-                  <p className="text-sm text-muted-foreground">No messages yet. Start the conversation.</p>
-                </div>
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {messages.length === 0 ? (
+                <div className="h-full flex items-center justify-center text-[14px] text-ink-40">No messages yet. Start the conversation.</div>
               ) : (
-                messages.map(msg => {
-                  const isMine = msg.senderId === advisorId;
+                messages.map((m) => {
+                  const isMe = m.senderRole === "advisor";
                   return (
-                    <div key={msg.id} className={cn("flex", isMine ? "justify-end" : "justify-start")}>
-                      <div className={cn("max-w-[75%] rounded-2xl px-4 py-2.5 text-sm",
-                        isMine ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-muted text-foreground rounded-bl-sm")}>
-                        <p className="leading-relaxed">{msg.content}</p>
-                        <p className={cn("text-xs mt-1", isMine ? "text-primary-foreground/70" : "text-muted-foreground")}>
-                          {new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                        </p>
+                    <div key={m.id} className={cn("flex flex-col max-w-[75%]", isMe ? "ml-auto items-end" : "items-start")}>
+                      <div className={cn("px-5 py-3 rounded-[20px] text-[15px] leading-relaxed shadow-sm",
+                        isMe ? "bg-forest text-paper rounded-br-[4px]" : "bg-paper border border-hairline text-forest rounded-bl-[4px]")}>
+                        {m.content}
                       </div>
+                      <span className="text-[11px] text-ink-40 mt-1.5 tabular-nums px-1">
+                        {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
                     </div>
                   );
                 })
@@ -707,49 +714,63 @@ export default function AdvisorClientDetail() {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input */}
-            <div className="px-4 py-3 border-t border-border bg-background">
-              <div className="flex items-center gap-2">
+            <div className="p-4 border-t border-hairline bg-paper shrink-0">
+              <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="flex gap-3">
                 <Input
-                  placeholder={conversation ? "Type a message…" : "Loading…"}
+                  className="flex-1 h-12 rounded-full border-hairline bg-surface px-5 focus-visible:ring-green text-[15px]"
+                  placeholder="Type a message…"
                   value={messageInput}
-                  disabled={!conversation}
-                  onChange={e => setMessageInput(e.target.value)}
-                  onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-                  className="flex-1"
+                  onChange={(e) => setMessageInput(e.target.value)}
                 />
-                <Button size="sm" className="h-9 px-3" disabled={!messageInput.trim() || !conversation || sendMsgMut.isPending} onClick={handleSend}>
-                  <Send className="h-4 w-4" />
+                <Button type="submit" disabled={!messageInput.trim() || sendMsgMut.isPending} className="h-12 w-12 rounded-full p-0 bg-green text-surface hover:bg-green-300 shrink-0 shadow-md">
+                  <MessageCircle className="h-5 w-5" />
                 </Button>
-              </div>
+              </form>
             </div>
           </div>
         </TabsContent>
 
-        {/* ── KYC ── */}
-        <TabsContent value="kyc">
-          {kycdocs.length === 0 ? <p className="text-center text-muted-foreground py-8 text-sm">No KYC documents submitted.</p> : (
-            <div className="space-y-2">
-              {kycdocs.map((d) => (
-                <div key={d.id} className="bg-card border border-card-border rounded-lg px-4 py-3 flex items-center justify-between">
-                  <div>
-                    <div className="font-medium text-sm capitalize">{d.documentType.replace(/_/g, " ")}</div>
-                    <div className="text-xs text-muted-foreground">{d.fileName ?? ""} · {new Date(d.createdAt).toLocaleDateString()}</div>
-                  </div>
-                  <span className={cn("text-xs px-2.5 py-1 rounded-full font-medium",
-                    d.status === "approved" ? "bg-green-100 text-green-700" : d.status === "rejected" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700")}>
-                    {d.status}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-
         {/* ── Investment Plans ── */}
         <TabsContent value="investment-plans">
-          {profile && <AdvisedPlanManager clientId={profile.id} />}
+          <AdvisedPlanManager clientId={id} />
         </TabsContent>
+
+        {/* ── KYC ── */}
+        <TabsContent value="kyc">
+          <div className="space-y-6">
+            <div className="bg-surface border border-hairline rounded-[26px] p-6 shadow-[0_2px_14px_rgba(20,52,42,0.04)]">
+              <h3 className="font-display text-[20px] font-semibold text-forest mb-4">KYC Status</h3>
+              <select className="w-64 h-11 border border-hairline rounded-[12px] bg-paper px-4 text-[14px] text-forest focus:outline-none focus:ring-2 focus:ring-green capitalize"
+                value={clientProfile?.kycStatus ?? "not_started"}
+                onChange={(e) => updateCPMut.mutate({ kycStatus: e.target.value })}>
+                {KYC_OPTIONS.map(o => <option key={o} value={o}>{o.replace(/_/g, " ")}</option>)}
+              </select>
+            </div>
+
+            <h3 className="font-display text-[20px] font-semibold text-forest">Uploaded Documents</h3>
+            {kycdocs.length === 0 ? (
+              <div className="text-center py-12 bg-surface rounded-[26px] shadow-[0_2px_14px_rgba(20,52,42,0.06)] text-[14px] text-ink-40">No documents uploaded.</div>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2">
+                {kycdocs.map(d => (
+                  <div key={d.id} className="bg-surface border border-hairline rounded-[20px] p-5 shadow-[0_2px_14px_rgba(20,52,42,0.04)]">
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <div className="font-semibold text-[15px] text-forest capitalize">{d.documentType.replace(/_/g, " ")}</div>
+                        <div className="text-[13px] text-ink-40 mt-0.5">{d.fileName ?? "Unnamed document"}</div>
+                      </div>
+                      <span className={cn("text-[11px] px-2 py-0.5 rounded-[4px] font-medium tracking-wide uppercase", d.status === "approved" ? "bg-green-tint text-green" : d.status === "rejected" ? "bg-clay-tint text-clay" : "bg-sun-tint text-amber-ink")}>
+                        {d.status}
+                      </span>
+                    </div>
+                    <div className="text-[12px] text-ink-40 tabular-nums">Uploaded: {new Date(d.createdAt).toLocaleDateString()}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </TabsContent>
+
       </Tabs>
     </AppShell>
   );

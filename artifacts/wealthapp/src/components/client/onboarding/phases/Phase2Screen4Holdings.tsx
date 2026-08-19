@@ -1,17 +1,17 @@
 import { useState } from "react";
-import { X, Plus } from "lucide-react";
+import { X, Plus, TrendingUp, Bitcoin, Home, Landmark, Shield, MoreHorizontal } from "lucide-react";
 import HoldingMiniForm, { type NewHolding } from "../HoldingMiniForm";
 import HoldingTypeBadge from "@/components/client/HoldingTypeBadge";
 import { getHoldingTypeConfig } from "@/lib/holdingTypeConfig";
 import { formatCurrency } from "@/lib/currencyUtils";
 
 const HOLDING_TYPES = [
-  { type: "stock_etf", emoji: "📈", label: "Stocks\n& ETFs" },
-  { type: "crypto",   emoji: "₿",  label: "Crypto" },
-  { type: "property", emoji: "🏠", label: "Property" },
-  { type: "cash",     emoji: "🏦", label: "Cash &\nSavings" },
-  { type: "pension",  emoji: "🛡",  label: "Pension" },
-  { type: "other",    emoji: "···", label: "Other" },
+  { type: "stock_etf", icon: TrendingUp, label: "Stocks\n& ETFs" },
+  { type: "crypto",   icon: Bitcoin,  label: "Crypto" },
+  { type: "property", icon: Home, label: "Property" },
+  { type: "cash",     icon: Landmark, label: "Cash &\nSavings" },
+  { type: "pension",  icon: Shield,  label: "Pension" },
+  { type: "other",    icon: MoreHorizontal, label: "Other" },
 ];
 
 function getDisplayValue(h: NewHolding): number {
@@ -49,7 +49,7 @@ export default function Phase2Screen4Holdings({ isTrackA, addedHoldings, preferr
       <div>
         <p className="text-xs font-medium text-slate-500 mb-2">Select type to add</p>
         <div className="grid grid-cols-3 gap-2.5">
-          {HOLDING_TYPES.map(({ type, emoji, label }) => {
+          {HOLDING_TYPES.map(({ type, icon: Icon, label }) => {
             const cfg = getHoldingTypeConfig(type);
             const isOpen = openType === type;
             return (
@@ -63,7 +63,7 @@ export default function Phase2Screen4Holdings({ isTrackA, addedHoldings, preferr
                     : "border-slate-200 hover:border-[#1D9E75]/30"
                 }`}
               >
-                <span className="text-xl leading-none">{emoji}</span>
+                <Icon className="w-6 h-6 text-slate-600 mb-1" />
                 <span className="text-[11px] font-medium text-slate-600 leading-tight whitespace-pre-line">
                   {label}
                 </span>

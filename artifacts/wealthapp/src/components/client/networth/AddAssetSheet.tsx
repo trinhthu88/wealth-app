@@ -1,14 +1,15 @@
 import { useState } from "react";
 import BottomSheet from "@/components/client/BottomSheet";
+import { Home, Landmark, Shield, Briefcase, MoreHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ManualAsset } from "@/hooks/useNetWorthItems";
 
 const ASSET_CATEGORIES = [
-  { value: "property",   label: "🏠 Property",       placeholder: "e.g. Hanoi apartment" },
-  { value: "cash",       label: "🏦 Cash & savings",  placeholder: "e.g. Techcombank savings" },
-  { value: "pension",    label: "🛡 Pension",          placeholder: "e.g. UK workplace pension" },
-  { value: "business",  label: "💼 Business",         placeholder: "e.g. Stake in XYZ Ltd" },
-  { value: "other_asset",label: "··· Other",           placeholder: "e.g. Art collection, Gold" },
+  { value: "property",   icon: Home, label: "Property",       placeholder: "e.g. Hanoi apartment" },
+  { value: "cash",       icon: Landmark, label: "Cash & savings",  placeholder: "e.g. Techcombank savings" },
+  { value: "pension",    icon: Shield, label: "Pension",          placeholder: "e.g. UK workplace pension" },
+  { value: "business",  icon: Briefcase, label: "Business",         placeholder: "e.g. Stake in XYZ Ltd" },
+  { value: "other_asset",icon: MoreHorizontal, label: "Other",           placeholder: "e.g. Art collection, Gold" },
 ];
 
 const CURRENCIES = ["USD", "VND", "EUR"] as const;
@@ -75,12 +76,13 @@ export default function AddAssetSheet({ isOpen, onClose, onSave }: Props) {
                 key={cat.value}
                 onClick={() => setCategory(cat.value)}
                 className={cn(
-                  "px-3 py-1.5 rounded-lg text-sm border transition-all",
+                  "px-3 py-1.5 rounded-lg text-sm border transition-all flex items-center gap-1.5",
                   category === cat.value
                     ? "border-[#1D9E75] bg-[#1D9E75]/10 text-[#1D9E75] font-medium"
                     : "border-slate-200 text-slate-600 hover:border-[#1D9E75]/40"
                 )}
               >
+                <cat.icon className="w-4 h-4" />
                 {cat.label}
               </button>
             ))}

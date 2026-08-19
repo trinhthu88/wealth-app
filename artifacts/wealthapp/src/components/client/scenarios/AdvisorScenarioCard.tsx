@@ -40,31 +40,31 @@ export default function AdvisorScenarioCard({ run, onLoad, onViewed }: Props) {
   }
 
   return (
-    <div className="bg-[#F0FDF8] border border-[#1D9E75]/20 border-l-[3px] border-l-[#1D9E75] rounded-xl overflow-hidden">
+    <div className="bg-green-tint border border-green-300 border-l-[3px] border-l-green rounded-[16px] overflow-hidden">
       <button
         className="w-full flex items-center justify-between px-3 py-3 text-left"
         onClick={handleExpand}
       >
         <div className="flex items-center gap-2 min-w-0">
-          <Sparkles className="h-3.5 w-3.5 text-[#1D9E75] shrink-0" />
-          <span className="text-xs font-semibold text-[#1D9E75] truncate">
+          <Sparkles className="h-3.5 w-3.5 text-green shrink-0" />
+          <span className="text-[13px] font-semibold text-green truncate">
             {TYPE_LABELS[run.scenarioType] ?? run.scenarioType}
           </span>
           {run.alertStatus === "new" && (
-            <span className="h-1.5 w-1.5 rounded-full bg-[#1D9E75] shrink-0" />
+            <span className="h-1.5 w-1.5 rounded-full bg-green shrink-0" />
           )}
         </div>
-        {expanded ? <ChevronUp className="h-4 w-4 text-[#1D9E75] shrink-0" /> : <ChevronDown className="h-4 w-4 text-[#1D9E75] shrink-0" />}
+        {expanded ? <ChevronUp className="h-4 w-4 text-green shrink-0" /> : <ChevronDown className="h-4 w-4 text-green shrink-0" />}
       </button>
       {expanded && (
         <div className="px-3 pb-3 space-y-2">
           {run.scenarioName && (
-            <p className="text-sm font-semibold text-[#042C53]">{run.scenarioName}</p>
+            <p className="text-[14px] font-semibold text-forest">{run.scenarioName}</p>
           )}
-          <p className="text-xs text-[#64748B]">{describeScenario(run)}</p>
+          <p className="text-[13px] text-ink-40">{describeScenario(run)}</p>
           <button
             onClick={() => onLoad(run)}
-            className="text-sm font-medium text-[#1D9E75] hover:text-[#0F6E56]"
+            className="text-[13px] font-semibold text-green hover:text-forest"
           >
             Load this →
           </button>

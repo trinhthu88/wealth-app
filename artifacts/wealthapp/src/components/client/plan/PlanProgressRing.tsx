@@ -40,17 +40,17 @@ export default function PlanProgressRing({
       <div className="flex flex-wrap gap-2">
         {completedCount > 0 && (
           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">
-            ✓ {completedCount} Complete
+            {completedCount} Complete
           </span>
         )}
         {inProgressCount > 0 && (
           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-[#1D9E75]/10 text-[#1D9E75]">
-            → {inProgressCount} In progress
+            {inProgressCount} In progress
           </span>
         )}
         {upcomingCount > 0 && (
           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-slate-100 text-slate-500">
-            ○ {upcomingCount} Upcoming
+            {upcomingCount} Upcoming
           </span>
         )}
         {totalCount === 0 && (

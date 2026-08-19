@@ -175,7 +175,7 @@ export function useGoals() {
         notes: data.notes ?? null,
       }),
     }),
-    onSuccess: () => { invalidate(); toast.success("Goal added ✓"); },
+    onSuccess: () => { invalidate(); toast.success("Goal added"); },
     onError: (e: Error) => toast.error(e.message || "Failed to add goal"),
   });
 
@@ -198,7 +198,7 @@ export function useGoals() {
         currentAmount: data.currentAmount != null ? String(data.currentAmount) : "0",
       }),
     }),
-    onSuccess: () => { invalidate(); toast.success("Goal updated ✓"); },
+    onSuccess: () => { invalidate(); toast.success("Goal updated"); },
     onError: () => toast.error("Failed to update goal"),
   });
 
@@ -207,7 +207,7 @@ export function useGoals() {
       apiFetch(`/goals/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
     onSuccess: (_, vars) => {
       invalidate();
-      if (vars.status === "completed") toast.success("Goal marked complete 🎉");
+      if (vars.status === "completed") toast.success("Goal marked complete");
       else if (vars.status === "cancelled") toast.success("Goal removed.");
       else toast.success("Goal updated.");
     },
@@ -220,7 +220,7 @@ export function useGoals() {
       method: "POST",
       body: JSON.stringify({ sourceType, sourceId, allocationPct }),
     }),
-    onSuccess: () => { invalidate(); toast.success("Investment linked ✓"); },
+    onSuccess: () => { invalidate(); toast.success("Investment linked"); },
     onError: (e: Error) => {
       if (e.message?.includes("already linked")) {
         toast.error("This investment is already linked to this goal.");

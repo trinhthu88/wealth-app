@@ -1,14 +1,15 @@
 import { cn } from "@/lib/utils";
+import { Palmtree, Home, GraduationCap, Rocket, Briefcase, Globe, Coins, Shield } from "lucide-react";
 
 const GOAL_TYPES = [
-  { id: "retire",     emoji: "🌴", label: "Retire comfortably",      defaultName: "Comfortable retirement" },
-  { id: "property",   emoji: "🏠", label: "Buy property",             defaultName: "Buy my home" },
-  { id: "education",  emoji: "📚", label: "Children's education",     defaultName: "Children's education fund" },
-  { id: "fire",       emoji: "🚀", label: "Financial independence",   defaultName: "Financial independence" },
-  { id: "business",   emoji: "💼", label: "Build a business",         defaultName: "Build my business" },
-  { id: "emigrate",   emoji: "🌍", label: "Emigrate",                 defaultName: "Emigration fund" },
-  { id: "wealth",     emoji: "💰", label: "Wealth preservation",      defaultName: "Wealth preservation" },
-  { id: "emergency",  emoji: "🛡",  label: "Emergency fund",           defaultName: "Emergency fund" },
+  { id: "retire",     icon: Palmtree, label: "Retire comfortably",      defaultName: "Comfortable retirement" },
+  { id: "property",   icon: Home, label: "Buy property",             defaultName: "Buy my home" },
+  { id: "education",  icon: GraduationCap, label: "Children's education",     defaultName: "Children's education fund" },
+  { id: "fire",       icon: Rocket, label: "Financial independence",   defaultName: "Financial independence" },
+  { id: "business",   icon: Briefcase, label: "Build a business",         defaultName: "Build my business" },
+  { id: "emigrate",   icon: Globe, label: "Emigrate",                 defaultName: "Emigration fund" },
+  { id: "wealth",     icon: Coins, label: "Wealth preservation",      defaultName: "Wealth preservation" },
+  { id: "emergency",  icon: Shield,  label: "Emergency fund",           defaultName: "Emergency fund" },
 ];
 
 const CURRENCIES = ["USD", "VND", "EUR"] as const;
@@ -66,7 +67,7 @@ export default function Phase3Screen6Goal({ data, preferredCurrency, onChange }:
                 : "border-slate-200 hover:border-[#1D9E75]/30"
             )}
           >
-            <span className="text-xl shrink-0">{gt.emoji}</span>
+            <gt.icon className={cn("w-5 h-5 shrink-0", data.goalType === gt.id ? "text-[#1D9E75]" : "text-slate-600")} />
             <span className="text-sm font-medium text-[#042C53] leading-tight">{gt.label}</span>
           </button>
         ))}

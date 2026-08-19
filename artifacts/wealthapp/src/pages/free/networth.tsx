@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import CurrencyInput from "@/components/CurrencyInput";
 import { apiFetch } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
-import { Plus, Trash2, X, ChevronDown } from "lucide-react";
+import { Plus, Trash2, X, ChevronDown, Landmark, PiggyBank, TrendingUp, Briefcase, Home, FileText, CreditCard, Wallet, AlertCircle, Car, GraduationCap } from "lucide-react";
 import { toast } from "sonner";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { useProfile } from "@/hooks/useProfile";
@@ -17,23 +17,23 @@ interface Asset { id: string; name: string; category: string; valueUsd: string; 
 interface Liability { id: string; name: string; category: string; balanceUsd: string; interestRatePercent: string | null; }
 
 // Free-tier: exactly 5 asset categories
-const ASSET_CAT_INFO: Record<string, { label: string; emoji: string; color: string; bg: string }> = {
-  cash:        { label: "Cash",        emoji: "💵", color: "#4ADE80", bg: "rgba(74,222,128,0.15)" },
-  savings:     { label: "Savings",     emoji: "🏦", color: "#60A5FA", bg: "rgba(96,165,250,0.15)" },
-  investment:  { label: "Investment",  emoji: "📈", color: "#A78BFA", bg: "rgba(167,139,250,0.15)" },
-  business:    { label: "Business",    emoji: "💼", color: "#FB923C", bg: "rgba(251,146,60,0.15)" },
-  real_estate: { label: "Real Estate", emoji: "🏠", color: "#F472B6", bg: "rgba(244,114,182,0.15)" },
+const ASSET_CAT_INFO: Record<string, { label: string; icon: React.ElementType; color: string; bg: string }> = {
+  cash:        { label: "Cash",        icon: Landmark, color: "#4ADE80", bg: "rgba(74,222,128,0.15)" },
+  savings:     { label: "Savings",     icon: PiggyBank, color: "#60A5FA", bg: "rgba(96,165,250,0.15)" },
+  investment:  { label: "Investment",  icon: TrendingUp, color: "#A78BFA", bg: "rgba(167,139,250,0.15)" },
+  business:    { label: "Business",    icon: Briefcase, color: "#FB923C", bg: "rgba(251,146,60,0.15)" },
+  real_estate: { label: "Real Estate", icon: Home, color: "#F472B6", bg: "rgba(244,114,182,0.15)" },
 };
 // Fallback for any legacy categories still in DB
-const ASSET_CAT_FALLBACK = { label: "Other", emoji: "📦", color: "#A8A095", bg: "rgba(168,160,149,0.12)" };
+const ASSET_CAT_FALLBACK = { label: "Other", icon: FileText, color: "#A8A095", bg: "rgba(168,160,149,0.12)" };
 
-const LIABILITY_CAT_INFO: Record<string, { label: string; emoji: string }> = {
-  mortgage:     { label: "Mortgage",        emoji: "🏠" },
-  car_loan:     { label: "Car Loan",        emoji: "🚗" },
-  student_loan: { label: "Student Loan",    emoji: "🎓" },
-  credit_card:  { label: "Credit Card",     emoji: "💳" },
-  personal_loan:{ label: "Personal Loan",   emoji: "🏦" },
-  other:        { label: "Other Debt",      emoji: "📦" },
+const LIABILITY_CAT_INFO: Record<string, { label: string; icon: React.ElementType }> = {
+  mortgage:     { label: "Mortgage",        icon: Home },
+  car_loan:     { label: "Car Loan",        icon: Car },
+  student_loan: { label: "Student Loan",    icon: GraduationCap },
+  credit_card:  { label: "Credit Card",     icon: CreditCard },
+  personal_loan:{ label: "Personal Loan",   icon: Wallet },
+  other:        { label: "Other Debt",      icon: AlertCircle },
 };
 
 const ASSET_CATS = Object.keys(ASSET_CAT_INFO); // exactly the 5 free-tier categories
@@ -166,7 +166,7 @@ export default function NetWorthPage() {
                 </p>
                 {netWorth < 0 && (
                   <div className="rounded-[12px] px-3 py-2 mb-3 flex items-center gap-2" style={{ background: "#FEEAE8", border: "1px solid rgba(216,107,90,0.2)" }}>
-                    <span style={{ fontSize: 13 }}>⚠️</span>
+                    <AlertCircle className="h-4 w-4 shrink-0 text-[#B85544]" aria-hidden="true" />
                     <p style={{ fontSize: 12, color: "#B85544" }}>Your liabilities currently exceed your assets.</p>
                   </div>
                 )}
@@ -209,7 +209,7 @@ export default function NetWorthPage() {
                   style={{ background: "#E6F5EE", border: "1px solid rgba(29,158,117,0.25)" }}
                 >
                   <div className="flex items-center gap-2">
-                    <span className="text-lg">💵</span>
+                    <span className="text-lg"></span>
                     <Plus className="h-3.5 w-3.5" style={{ color: "#1D9E75" }} />
                     <p style={{ fontSize: 13, fontWeight: 600, color: "#0F6E56" }}>Add an asset</p>
                   </div>
@@ -230,7 +230,7 @@ export default function NetWorthPage() {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3 flex-1 min-w-0">
                               <div className="flex-shrink-0 flex items-center justify-center rounded-xl" style={{ width: 38, height: 38, background: info.bg }}>
-                                <span style={{ fontSize: 18 }}>{info.emoji}</span>
+                                <info.icon className="w-5 h-5" style={{ color: info.color }} />
                               </div>
                               <div className="min-w-0">
                                 <p style={{ fontSize: 13, fontWeight: 600, color: "#042C53" }} className="truncate">{a.name}</p>
@@ -285,7 +285,7 @@ export default function NetWorthPage() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <div style={{ width: 8, height: 8, borderRadius: "50%", background: c.color, flexShrink: 0 }} />
-                          <span style={{ fontSize: 16 }}>{c.emoji}</span>
+                          <c.icon className="w-4 h-4 text-muted-foreground" />
                           <span style={{ fontSize: 13, color: "#2D2A24" }}>{c.label}</span>
                         </div>
                         <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, fontWeight: 600, color: c.color }}>
@@ -307,7 +307,7 @@ export default function NetWorthPage() {
                   style={{ background: "#FEEAE8", border: "1px solid rgba(216,107,90,0.25)" }}
                 >
                   <div className="flex items-center gap-2">
-                    <span className="text-lg">💳</span>
+                    <span className="text-lg"></span>
                     <Plus className="h-3.5 w-3.5" style={{ color: "#D86B5A" }} />
                     <p style={{ fontSize: 13, fontWeight: 600, color: "#B85544" }}>Add a liability</p>
                   </div>
@@ -322,13 +322,13 @@ export default function NetWorthPage() {
                 ) : (
                   <div className="bg-white rounded-[20px] overflow-hidden" style={{ boxShadow: "0 4px 14px rgba(15,23,42,0.06)" }}>
                     {liabilities.map((l, idx) => {
-                      const info = LIABILITY_CAT_INFO[l.category] ?? { label: l.category, emoji: "📦" };
+                      const info = LIABILITY_CAT_INFO[l.category] ?? { label: l.category, icon: AlertCircle };
                       return (
                         <div key={l.id} style={{ padding: "14px 18px", borderBottom: idx < liabilities.length - 1 ? "1px solid #F2EFE9" : "none" }}>
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3 flex-1 min-w-0">
                               <div className="flex-shrink-0 flex items-center justify-center rounded-xl" style={{ width: 38, height: 38, background: "#FEEAE8" }}>
-                                <span style={{ fontSize: 18 }}>{info.emoji}</span>
+                                <info.icon className="w-5 h-5 text-[#D86B5A]" />
                               </div>
                               <div className="min-w-0">
                                 <p style={{ fontSize: 13, fontWeight: 600, color: "#042C53" }} className="truncate">{l.name}</p>
@@ -406,7 +406,7 @@ export default function NetWorthPage() {
                       value={aForm.category} onChange={e => setAForm(f => ({ ...f, category: e.target.value }))}
                       className="w-full border border-border rounded-xl px-4 py-2.5 text-sm bg-background outline-none focus:ring-2 focus:ring-primary appearance-none pr-10"
                     >
-                      {ASSET_CATS.map(c => <option key={c} value={c}>{ASSET_CAT_INFO[c].emoji} {ASSET_CAT_INFO[c].label}</option>)}
+                      {ASSET_CATS.map(c => <option key={c} value={c}>{ASSET_CAT_INFO[c].label}</option>)}
                     </select>
                     <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                   </div>
@@ -457,7 +457,7 @@ export default function NetWorthPage() {
                       value={lForm.category} onChange={e => setLForm(f => ({ ...f, category: e.target.value }))}
                       className="w-full border border-border rounded-xl px-4 py-2.5 text-sm bg-background outline-none focus:ring-2 focus:ring-primary appearance-none pr-10"
                     >
-                      {LIABILITY_CATS.map(c => <option key={c} value={c}>{LIABILITY_CAT_INFO[c]?.emoji} {LIABILITY_CAT_INFO[c]?.label ?? c}</option>)}
+                      {LIABILITY_CATS.map(c => <option key={c} value={c}>{LIABILITY_CAT_INFO[c]?.label ?? c}</option>)}
                     </select>
                     <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                   </div>

@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { useGoals } from "@/hooks/useGoals";
-import { cn } from "@/lib/utils";
+import { AlertTriangle, ArrowRight, CheckCircle2, Target } from "lucide-react";
 
 function fmtUsd(n: number) {
   return `$${Math.round(Math.abs(n)).toLocaleString()}`;
@@ -27,11 +27,11 @@ export default function GoalFundingGaps({ totalMonthlyInvestments }: Props) {
   if (goalsWith.length === 0) {
     return (
       <div className="space-y-2">
-        <p className="text-xs font-semibold text-[#64748B] uppercase tracking-wide">Goal funding</p>
-        <p className="text-xs text-slate-400">
+        <p className="tala-eyebrow text-ink-40">Goal funding</p>
+        <p className="text-xs text-ink-40">
           Set targets on your goals to see funding gaps.{" "}
-          <Link href="/client/goals" className="text-[#1D9E75] font-medium hover:underline">
-            Go to goals →
+          <Link href="/client/goals" className="inline-flex items-center gap-1 font-semibold text-green hover:text-forest">
+            Go to goals <ArrowRight className="h-3 w-3" aria-hidden="true" />
           </Link>
         </p>
       </div>
@@ -49,10 +49,13 @@ export default function GoalFundingGaps({ totalMonthlyInvestments }: Props) {
 
   return (
     <div className="space-y-3">
-      <p className="text-xs font-semibold text-[#64748B] uppercase tracking-wide">Goal funding</p>
+      <p className="tala-eyebrow text-ink-40">Goal funding</p>
 
       {allFunded && (
-        <p className="text-xs text-emerald-600 font-medium">All goals funded at current contribution rate ✓</p>
+        <p className="flex items-center gap-1.5 text-xs font-semibold text-green">
+          <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+          All goals funded at the current contribution rate
+        </p>
       )}
 
       {goalsWith.map(goal => {
@@ -65,45 +68,46 @@ export default function GoalFundingGaps({ totalMonthlyInvestments }: Props) {
         const isFunded = invested >= needed;
         const fundedPct = needed > 0 ? Math.min(100, (invested / needed) * 100) : 100;
 
-        const GOAL_EMOJIS: Record<string, string> = {
-          retire: "🌴", property: "🏠", education: "📚", fire: "🚀",
-          business: "💼", emigrate: "🌍", wealth: "💰", emergency: "🛡️", other: "🎯",
-        };
-
         return (
-          <div key={goal.id} className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2">
-            <div className="flex items-center gap-1.5">
-              <span className="text-base">{GOAL_EMOJIS[goal.goalType] ?? "🎯"}</span>
-              <p className="text-xs font-semibold text-[#042C53] truncate">{goal.title}</p>
+          <div key={goal.id} className="space-y-2 rounded-[18px] border border-hairline bg-paper p-3.5">
+            <div className="flex items-center gap-2">
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-green-tint text-green">
+                <Target className="h-4 w-4" aria-hidden="true" />
+              </span>
+              <p className="truncate text-xs font-semibold text-forest">{goal.title}</p>
             </div>
 
-            <div className="flex items-center justify-between text-[11px] text-slate-500">
+            <div className="flex items-center justify-between text-[11px] text-ink-40">
               <span>Needs: {fmtUsd(needed)}/mo</span>
-              <span className={isFunded ? "text-emerald-600 font-medium" : "text-amber-600 font-medium"}>
+              <span className={isFunded ? "text-green font-semibold" : "text-amber-ink font-semibold"}>
                 Invested: {fmtUsd(invested)}/mo
               </span>
             </div>
 
-            <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
+            <div className="h-2 bg-track rounded-full overflow-hidden">
               <div
                 className="h-full rounded-full transition-none"
                 style={{
                   width: `${fundedPct}%`,
-                  background: isFunded ? "#1D9E75" : fundedPct >= 50 ? "#F59E0B" : "#EF4444",
+                  background: isFunded ? "var(--green)" : fundedPct >= 50 ? "var(--sun)" : "var(--clay)",
                 }}
               />
             </div>
 
             {isFunded ? (
-              <p className="text-[11px] text-emerald-600 font-medium">Funded ✓</p>
+              <p className="flex items-center gap-1 text-[11px] font-semibold text-green">
+                <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" /> Funded
+              </p>
             ) : (
               <div className="flex items-center justify-between">
-                <p className="text-[11px] text-amber-600 font-medium">Gap: {fmtUsd(gap)}/mo ⚠</p>
+                <p className="flex items-center gap-1 text-[11px] font-semibold text-amber-ink">
+                  <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" /> Gap: {fmtUsd(gap)}/mo
+                </p>
                 <Link
                   href={`/client/scenarios?goalId=${goal.id}&type=increase_monthly`}
-                  className="text-[11px] text-[#1D9E75] font-medium hover:underline"
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-green hover:text-forest"
                 >
-                  Close this gap →
+                  Close this gap <ArrowRight className="h-3 w-3" aria-hidden="true" />
                 </Link>
               </div>
             )}

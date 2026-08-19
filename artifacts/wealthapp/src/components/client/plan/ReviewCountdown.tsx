@@ -26,7 +26,7 @@ export default function ReviewCountdown({ nextReviewDate, daysUntilReview, isRev
             <p className={`text-sm mt-0.5 ${isReviewOverdue ? "text-amber-600" : "text-slate-500"}`}>
               {formatDate(nextReviewDate)} ·{" "}
               {isReviewOverdue
-                ? `Overdue by ${Math.abs(daysUntilReview!)} days ⚠`
+                ? `Overdue by ${Math.abs(daysUntilReview!)} days`
                 : `${daysUntilReview} days away`}
             </p>
           ) : (

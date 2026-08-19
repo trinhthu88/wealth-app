@@ -1,3 +1,15 @@
+import {
+  Home,
+  Zap,
+  Bus,
+  Shield,
+  Utensils,
+  Film,
+  ShoppingBag,
+  HeartPulse,
+  BookOpen,
+  MoreHorizontal
+} from "lucide-react";
 import InvestmentContributionRow from "./InvestmentContributionRow";
 import type { InvestmentContribution } from "@/hooks/useClientBudget";
 import { cn } from "@/lib/utils";
@@ -21,16 +33,16 @@ export interface BudgetFormState {
 }
 
 const EXPENSE_CATEGORIES = [
-  { key: "housing",       icon: "🏠", label: "Housing (rent / mortgage)" },
-  { key: "utilities",     icon: "⚡", label: "Utilities & bills"          },
-  { key: "transport",     icon: "🚌", label: "Transport"                  },
-  { key: "insurance",     icon: "🛡", label: "Insurance"                  },
-  { key: "foodDining",    icon: "🍜", label: "Food & dining"              },
-  { key: "entertainment", icon: "🎬", label: "Entertainment"              },
-  { key: "shopping",      icon: "🛍", label: "Shopping"                   },
-  { key: "health",        icon: "❤️", label: "Health"                     },
-  { key: "education",     icon: "📚", label: "Education"                  },
-  { key: "otherExpenses", icon: "···", label: "Other expenses"            },
+  { key: "housing",       icon: <Home className="w-4 h-4 text-forest mr-2" />, label: "Housing (rent / mortgage)" },
+  { key: "utilities",     icon: <Zap className="w-4 h-4 text-forest mr-2" />, label: "Utilities & bills"          },
+  { key: "transport",     icon: <Bus className="w-4 h-4 text-forest mr-2" />, label: "Transport"                  },
+  { key: "insurance",     icon: <Shield className="w-4 h-4 text-forest mr-2" />, label: "Insurance"                  },
+  { key: "foodDining",    icon: <Utensils className="w-4 h-4 text-forest mr-2" />, label: "Food & dining"              },
+  { key: "entertainment", icon: <Film className="w-4 h-4 text-forest mr-2" />, label: "Entertainment"              },
+  { key: "shopping",      icon: <ShoppingBag className="w-4 h-4 text-forest mr-2" />, label: "Shopping"                   },
+  { key: "health",        icon: <HeartPulse className="w-4 h-4 text-forest mr-2" />, label: "Health"                     },
+  { key: "education",     icon: <BookOpen className="w-4 h-4 text-forest mr-2" />, label: "Education"                  },
+  { key: "otherExpenses", icon: <MoreHorizontal className="w-4 h-4 text-forest mr-2" />, label: "Other expenses"            },
 ] as const;
 
 type ExpenseKey = typeof EXPENSE_CATEGORIES[number]["key"];
@@ -58,12 +70,12 @@ interface Props {
 function NumberInput({
   label, value, onChange, placeholder, readOnly,
 }: {
-  label: string; value: string; onChange: (v: string) => void;
+  label: React.ReactNode; value: string; onChange: (v: string) => void;
   placeholder?: string; readOnly?: boolean;
 }) {
   return (
     <div className="space-y-1">
-      <label className="text-xs font-medium text-slate-500">{label}</label>
+      <label className="flex items-center text-xs font-medium text-ink-40">{label}</label>
       <input
         type="number"
         value={value}
@@ -73,20 +85,20 @@ function NumberInput({
         readOnly={readOnly}
         style={{ MozAppearance: "textfield" } as React.CSSProperties}
         className={cn(
-          "w-full px-3 py-2 rounded-lg border text-sm text-[#042C53] focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/30 focus:border-[#1D9E75] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
+          "w-full min-h-11 px-3 py-2 rounded-xl border text-sm text-forest focus:outline-none focus:ring-2 focus:ring-green/30 focus:border-green [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
           readOnly
-            ? "bg-slate-50 border-slate-200 text-slate-400 cursor-default"
-            : "border-[#E2E8F0] bg-white"
+            ? "bg-paper border-hairline text-ink-30 cursor-default"
+            : "border-hairline bg-surface"
         )}
       />
     </div>
   );
 }
 
-function SectionHeader({ title, total, totalColor = "text-slate-600" }: { title: string; total: number; totalColor?: string }) {
+function SectionHeader({ title, total, totalColor = "text-ink-60" }: { title: string; total: number; totalColor?: string }) {
   return (
     <div className="flex items-center justify-between mb-3">
-      <h3 className="text-sm font-semibold text-[#042C53]">{title}</h3>
+      <h3 className="font-display text-base font-semibold text-forest">{title}</h3>
       <span className={cn("text-sm font-semibold", totalColor)}>
         ${Math.round(total).toLocaleString()}
       </span>
@@ -107,11 +119,11 @@ export default function BudgetInputForm({
     <div className="space-y-6">
       {/* Read-only banner */}
       {isReadOnly && (
-        <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5">
-          <p className="text-sm text-slate-500">Viewing past month — read only</p>
+        <div className="flex items-center justify-between bg-paper border border-hairline rounded-xl px-4 py-2.5">
+          <p className="text-sm text-ink-40">Viewing past month — read only</p>
           <button
             onClick={onEditThisMonth}
-            className="text-sm text-[#1D9E75] font-medium hover:text-[#0F6E56]"
+            className="text-sm text-green font-semibold hover:text-forest"
           >
             Edit this month
           </button>
@@ -120,7 +132,7 @@ export default function BudgetInputForm({
 
       {/* INCOME */}
       <div>
-        <SectionHeader title="Income" total={incomeTotal} totalColor="text-[#1D9E75]" />
+        <SectionHeader title="Income" total={incomeTotal} totalColor="text-green" />
         <div className="space-y-3">
           <NumberInput label="Primary income (take-home, after tax)" value={form.primaryIncome} onChange={v => onChange("primaryIncome", v)} readOnly={isReadOnly} />
           <NumberInput label="Secondary income" value={form.secondaryIncome} onChange={v => onChange("secondaryIncome", v)} placeholder="Freelance, consulting…" readOnly={isReadOnly} />
@@ -131,12 +143,12 @@ export default function BudgetInputForm({
 
       {/* EXPENSES */}
       <div>
-        <SectionHeader title="Monthly expenses" total={expenseTotal} totalColor="text-red-500" />
+        <SectionHeader title="Monthly expenses" total={expenseTotal} totalColor="text-clay" />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {EXPENSE_CATEGORIES.map(cat => (
             <NumberInput
               key={cat.key}
-              label={`${cat.icon} ${cat.label}`}
+              label={<>{cat.icon}{cat.label}</>}
               value={form[cat.key as keyof BudgetFormState]}
               onChange={v => onChange(cat.key as keyof BudgetFormState, v)}
               readOnly={isReadOnly}
@@ -147,8 +159,8 @@ export default function BudgetInputForm({
 
       {/* INVESTMENT CONTRIBUTIONS */}
       <div>
-        <SectionHeader title="Investment contributions" total={investTotal} totalColor="text-[#1D9E75]" />
-        <p className="text-xs text-slate-400 mb-3">Fixed monthly amounts going into your investments.</p>
+        <SectionHeader title="Investment contributions" total={investTotal} totalColor="text-green" />
+        <p className="text-xs text-ink-30 mb-3">Fixed monthly amounts going into your investments.</p>
         <div className="space-y-2">
           {syncedContributions.map(c => (
             <InvestmentContributionRow key={c.source_id} contribution={c} />
@@ -162,7 +174,7 @@ export default function BudgetInputForm({
           />
         </div>
         {investTotal > 0 && (
-          <p className="text-sm font-semibold text-[#1D9E75] mt-3">
+          <p className="text-sm font-semibold text-green mt-3">
             Total monthly investments: ${Math.round(investTotal).toLocaleString()}
           </p>
         )}
@@ -173,7 +185,7 @@ export default function BudgetInputForm({
         <button
           onClick={onSave}
           disabled={isReadOnly || saving}
-          className="w-full py-3 rounded-xl bg-[#1D9E75] text-white font-semibold text-sm hover:bg-[#0F6E56] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="w-full min-h-11 py-3 rounded-xl bg-forest text-paper font-semibold text-sm hover:bg-forest-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {saving ? "Saving…" : "Save budget"}
         </button>

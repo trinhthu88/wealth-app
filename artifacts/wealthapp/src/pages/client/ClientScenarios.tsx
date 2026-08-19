@@ -99,25 +99,28 @@ export default function ClientScenarios() {
     <ClientAppShell>
       <div className="max-w-[1100px] mx-auto">
         <div className="flex items-center justify-between mb-3">
-          <h1 className="text-xl font-bold text-[#042C53]">Scenario Planner</h1>
+          <div>
+            <h1 className="font-display text-[30px] font-semibold text-forest tracking-[-0.02em] mb-1">What if</h1>
+            <div className="text-[14px] text-ink-40">Move a lever, watch your goals move</div>
+          </div>
           {mode === "advised" && (selectedSource || selectedType || currentResult) && (
             <button
               onClick={handleReset}
-              className="text-sm text-slate-500 hover:text-[#042C53] transition-colors"
+              className="text-sm text-ink-40 hover:text-forest transition-colors"
             >
               ← New scenario
             </button>
           )}
         </div>
 
-        <div className="flex gap-1 bg-slate-100 rounded-xl p-1 w-fit mb-5">
+        <div className="flex gap-1 bg-track rounded-xl p-1 w-fit mb-[22px]">
           {MODES.map(m => (
             <button
               key={m.id}
               onClick={() => setMode(m.id)}
               className={cn(
-                "px-4 py-1.5 rounded-lg text-sm font-medium transition-all",
-                mode === m.id ? "bg-white text-[#042C53] shadow-sm" : "text-slate-500 hover:text-slate-700"
+                "px-4 py-1.5 rounded-lg text-sm font-semibold transition-all",
+                mode === m.id ? "bg-surface text-forest shadow-sm" : "text-ink-40 hover:text-ink-60"
               )}
             >
               {m.label}
@@ -152,15 +155,15 @@ export default function ClientScenarios() {
           {/* Main panel */}
           <div className="flex-1 min-w-0 space-y-5">
             {!selectedSource || !selectedType ? (
-              <div className="flex flex-col items-center justify-center py-16 text-center bg-white border border-[#E2E8F0] rounded-xl">
-                <BarChart2 className="h-10 w-10 text-slate-300 mb-3" />
-                <p className="text-sm font-medium text-slate-500">Choose a source and scenario type</p>
-                <p className="text-xs text-slate-400 mt-1">to see your projection</p>
+              <div className="flex flex-col items-center justify-center py-16 text-center bg-surface border border-hairline rounded-[26px] shadow-[0_2px_14px_rgba(20,52,42,.06)]">
+                <BarChart2 className="h-10 w-10 text-green/40 mb-3" />
+                <p className="text-sm font-semibold text-forest">Choose a source and scenario type</p>
+                <p className="text-xs text-ink-30 mt-1">to see your projection</p>
               </div>
             ) : (
               <>
                 {/* Input panel */}
-                <div className="bg-white border border-[#E2E8F0] rounded-xl p-4">
+                <div className="bg-surface rounded-[26px] p-[20px_22px] shadow-[0_2px_14px_rgba(20,52,42,.06)]">
                   <ScenarioInputPanel
                     source={selectedSource}
                     scenarioType={selectedType}

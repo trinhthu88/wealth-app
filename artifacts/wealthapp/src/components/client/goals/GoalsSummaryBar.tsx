@@ -22,7 +22,7 @@ export default function GoalsSummaryBar({ totalActive, onTrack, atRisk, offTrack
       {allOnTrack ? (
         <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">
           <CheckCircle2 className="h-3.5 w-3.5" />
-          All on track 🎉
+          All on track
         </span>
       ) : (
         <>

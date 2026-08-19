@@ -17,12 +17,12 @@ interface Props {
 }
 
 const TYPE_LABELS: Record<string, string> = {
-  increase_monthly: "📈 Increase monthly contribution",
-  add_lump_sum: "💰 Add a lump sum",
-  reduce_monthly: "📉 Reduce monthly contribution",
-  pause_contributions: "⏸ Pause contributions",
-  market_drop: "⚡ Market drop stress test",
-  retire_earlier: "🎯 Reach goal sooner",
+  increase_monthly: "Increase monthly contribution",
+  add_lump_sum: "Add a lump sum",
+  reduce_monthly: "Reduce monthly contribution",
+  pause_contributions: "Pause contributions",
+  market_drop: "Market drop stress test",
+  retire_earlier: "Reach goal sooner",
 };
 
 export default function ScenarioInputPanel({ source, scenarioType, goals, onRun, runScenario }: Props) {

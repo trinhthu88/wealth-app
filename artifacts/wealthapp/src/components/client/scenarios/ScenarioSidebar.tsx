@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Trash2, Sparkles } from "lucide-react";
+import { ChevronDown, ChevronRight, Trash2, Sparkles, TrendingUp, PiggyBank, TrendingDown, Pause, Zap, Target } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AdvisorScenarioCard from "./AdvisorScenarioCard";
 import type { ScenarioRun } from "@/hooks/useScenarios";
@@ -16,12 +16,12 @@ export type ScenarioSource = {
 };
 
 const SCENARIO_TYPES = [
-  { type: "increase_monthly",    emoji: "📈", label: "Increase monthly contribution",  sub: "What if I contribute more?" },
-  { type: "add_lump_sum",        emoji: "💰", label: "Add a lump sum",                 sub: "What if I invest extra now?" },
-  { type: "reduce_monthly",      emoji: "📉", label: "Reduce monthly contribution",    sub: "What if I contribute less?" },
-  { type: "pause_contributions", emoji: "⏸",  label: "Pause contributions",            sub: "What if I stop for a while?" },
-  { type: "market_drop",         emoji: "⚡", label: "Market drop stress test",        sub: "What if markets fall?" },
-  { type: "retire_earlier",      emoji: "🎯", label: "Reach goal sooner",              sub: "What monthly do I need?" },
+  { type: "increase_monthly",    icon: <TrendingUp className="w-4 h-4 text-green" />, label: "Increase monthly contribution",  sub: "What if I contribute more?" },
+  { type: "add_lump_sum",        icon: <PiggyBank className="w-4 h-4 text-sun-deep" />, label: "Add a lump sum",                 sub: "What if I invest extra now?" },
+  { type: "reduce_monthly",      icon: <TrendingDown className="w-4 h-4 text-clay" />, label: "Reduce monthly contribution",    sub: "What if I contribute less?" },
+  { type: "pause_contributions", icon: <Pause className="w-4 h-4 text-ink-40" />,  label: "Pause contributions",            sub: "What if I stop for a while?" },
+  { type: "market_drop",         icon: <Zap className="w-4 h-4 text-clay" />, label: "Market drop stress test",        sub: "What if markets fall?" },
+  { type: "retire_earlier",      icon: <Target className="w-4 h-4 text-forest" />, label: "Reach goal sooner",              sub: "What monthly do I need?" },
 ];
 
 interface Props {
@@ -135,12 +135,15 @@ export default function ScenarioSidebar({
                 key={st.type}
                 onClick={() => onSelectType(st.type)}
                 className={cn(
-                  "w-full text-left px-3 py-2.5 rounded-xl border-2 transition-all",
-                  selectedType === st.type ? "border-[#1D9E75] bg-[#1D9E75]/5" : "border-slate-200 hover:border-[#1D9E75]/30"
+                  "w-full text-left px-3 py-2.5 rounded-[16px] border-2 transition-all bg-surface",
+                  selectedType === st.type ? "border-green bg-green-tint text-forest" : "border-hairline hover:border-green-300 text-forest"
                 )}
               >
-                <p className="text-sm font-medium text-[#042C53]">{st.emoji} {st.label}</p>
-                <p className="text-xs text-slate-400">{st.sub}</p>
+                <div className="flex items-center gap-2 mb-1">
+                  {st.icon}
+                  <p className="text-[14.5px] font-semibold text-forest">{st.label}</p>
+                </div>
+                <p className="text-[13px] text-ink-40 pl-6">{st.sub}</p>
               </button>
             ))}
           </div>

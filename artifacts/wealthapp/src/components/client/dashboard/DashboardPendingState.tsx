@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { Hourglass, TrendingUp, Target, MessageSquare } from "lucide-react";
+import { Hourglass, TrendingUp, Target, MessageSquare, Check } from "lucide-react";
 
 interface Props {
   advisorName?: string | null;
@@ -32,7 +32,7 @@ export default function DashboardPendingState({ advisorName }: Props) {
           ].map((step, i) => (
             <div key={i} className="flex items-center gap-3">
               <div className={`h-5 w-5 rounded-full flex items-center justify-center shrink-0 text-xs font-bold ${step.done ? "bg-[#1D9E75] text-white" : "border-2 border-slate-200"}`}>
-                {step.done ? "✓" : ""}
+                {step.done ? <Check className="h-3 w-3" aria-hidden="true" /> : null}
               </div>
               <span className={`text-sm ${step.done ? "text-[#042C53] font-medium" : "text-[#64748B]"}`}>
                 {step.label}

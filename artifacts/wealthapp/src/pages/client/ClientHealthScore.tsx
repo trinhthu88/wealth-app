@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import { apiFetch } from "@/lib/api";
 import ClientAppShell from "@/components/client/AppShell";
 import { useUser } from "@clerk/react";
+import { cn } from "@/lib/utils";
 
 interface HealthScore {
   id: string;
@@ -23,85 +24,82 @@ export default function ClientHealthScore() {
     enabled,
   });
 
-  const score = health?.overallScore ?? 72;
+  const score = health?.overallScore ?? 0;
   const radius = 48;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (score / 100) * circumference;
 
   const factors = [
-    { label: "Contribution consistency", score: health?.savingsScore ?? 88, color: "#1D9E75" },
-    { label: "Goal funding", score: health?.goalsScore ?? 71, color: "#1D9E75" },
-    { label: "Diversification", score: health?.netWorthScore ?? 64, color: "#F5B947" },
-    { label: "Cash resilience", score: health?.budgetScore ?? 42, color: "#D86B5A" },
+    { label: "Contribution consistency", score: health?.savingsScore ?? 0, color: "var(--green)" },
+    { label: "Goal funding", score: health?.goalsScore ?? 0, color: "var(--green)" },
+    { label: "Diversification", score: health?.netWorthScore ?? 0, color: "var(--sun)" },
+    { label: "Cash resilience", score: health?.budgetScore ?? 0, color: "var(--clay)" },
   ];
+  const lowestFactor = factors.reduce((lowest, factor) => factor.score < lowest.score ? factor : lowest, factors[0]);
 
   return (
     <ClientAppShell>
-      <div className="max-w-[900px] mx-auto pb-6">
-        <h1 className="font-display text-[22px] font-bold text-[#042C53] tracking-[-0.02em] mb-4.5">
+      <div className="space-y-[14px]">
+        <h1 className="font-display text-[30px] font-semibold text-forest tracking-[-0.02em] mb-[14px]">
           Financial health
         </h1>
 
         {isLoading ? (
-          <div className="h-48 bg-[#E6E1D8]/30 rounded-[24px] animate-pulse" />
+          <div className="animate-pulse space-y-6">
+            <div className="h-48 bg-surface rounded-[32px]" />
+            <div className="h-64 bg-surface rounded-[26px]" />
+          </div>
+        ) : !health || health.overallScore == null ? (
+          <div className="rounded-[28px] bg-surface p-8 text-center shadow-[0_2px_14px_rgba(20,52,42,.06)]">
+            <h2 className="font-display text-[22px] font-semibold text-forest">Your health score is not ready yet</h2>
+            <p className="mx-auto mt-2 max-w-md text-[14px] leading-relaxed text-ink-40">
+              Add your current budget, goals, and portfolio details so tala can calculate a useful score.
+            </p>
+            <Link href="/client/budget" className="mt-5 inline-flex min-h-11 items-center rounded-full bg-forest px-5 text-[14px] font-semibold text-paper">
+              Update financial details
+            </Link>
+          </div>
         ) : (
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <div className="bg-white border border-[#E6E1D8] rounded-[24px] p-5 sm:p-6 flex items-center gap-5 shadow-[0_4px_14px_rgba(4,44,83,.06)]">
-              <div className="relative w-[116px] h-[116px] shrink-0">
-                <svg width="116" height="116" viewBox="0 0 116 116" className="-rotate-90">
-                  <circle cx="58" cy="58" r="48" fill="none" stroke="#F2EFE9" strokeWidth="12" />
-                  <circle cx="58" cy="58" r="48" fill="none" stroke="#1D9E75" strokeWidth="12" strokeLinecap="round"
-                    strokeDasharray={circumference} strokeDashoffset={offset} />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <div className="font-display text-[32px] font-bold text-[#042C53] tracking-[-0.03em] leading-none">
-                    {Math.round(score)}
-                  </div>
-                  <div className="text-[10px] text-[#6B6459] mt-0.5">out of 100</div>
-                </div>
+            <div className="bg-surface rounded-[32px] p-[24px_22px] shadow-[0_2px_14px_rgba(20,52,42,.06)] mb-[16px] text-center relative">
+              <svg viewBox="0 0 200 130" className="w-full h-[150px]">
+                <path d="M20 118 A80 80 0 0 1 180 118" fill="none" stroke="var(--track)" strokeWidth="16" strokeLinecap="round"></path>
+                <path d="M20 118 A80 80 0 0 1 180 118" fill="none" stroke="var(--green)" strokeWidth="16" strokeLinecap="round" strokeDasharray="251" strokeDashoffset={251 - (score / 100) * 251} className="transition-all duration-1000 ease-out"></path>
+              </svg>
+              <div className="font-display text-[52px] font-semibold text-forest tracking-[-0.03em] -mt-[38px]">
+                {Math.round(score)}
               </div>
-              <div>
-                <div className="inline-block text-[11px] font-semibold text-[#0F6E56] bg-[#E6F5EE] px-2.5 py-1.25 rounded-full">
-                  Solid
-                </div>
-                <div className="text-[13px] leading-[1.5] text-[#2D2A24] mt-2.5 text-pretty">
-                  Up 4 points since May, mostly from steady contributions.
-                </div>
+              <div className="text-[15px] font-semibold text-green mb-1">
+                {score >= 70 ? "Strong" : score >= 50 ? "Solid" : "Needs attention"}
+              </div>
+              <div className="text-[14px] text-ink-40 leading-[1.5] text-pretty">
+                Your score reflects the financial information currently tracked in tala.
               </div>
             </div>
 
-            <div className="mt-3.5 bg-[#042C53] rounded-[24px] p-5 text-white">
-              <div className="font-mono text-[10px] tracking-[0.14em] uppercase text-[#7FCBAE] mb-2.5">
-                Raise it by 8 points
-              </div>
-              <div className="font-display text-base font-semibold leading-[1.35] mb-2">
-                Build your cash buffer to three months of expenses
-              </div>
-              <div className="text-xs text-[#A9C0D6] leading-[1.5]">
-                You hold $6,200 in cash against monthly expenses of $4,300. Adding $6,700 would cover three months and lift resilience from 42 to 74.
-              </div>
-              <Link href="/client/portfolio">
-                <button className="mt-4 min-h-[44px] w-full border-none rounded-[14px] bg-[#1D9E75] text-white font-sans text-sm font-semibold cursor-pointer hover:bg-[#17805F] transition-colors">
-                  Set up the buffer
-                </button>
-              </Link>
-            </div>
-
-            <div className="mt-3.5 bg-white border border-[#E6E1D8] rounded-[20px] p-4.5">
-              <div className="font-mono text-[10px] tracking-[0.14em] uppercase text-[#6B6459] mb-3.5">
-                What makes up the score
-              </div>
+            <div className="bg-surface rounded-[26px] p-[8px_20px] shadow-[0_2px_14px_rgba(20,52,42,.06)]">
               {factors.map((f, i) => (
-                <div key={i} className="mb-3.5 last:mb-0">
-                  <div className="flex justify-between items-center text-xs text-[#2D2A24] mb-1.5">
-                    <span>{f.label}</span>
-                    <span className="font-mono text-[#6B6459]">{f.score}/100</span>
+                <div key={i} className={cn("py-[14px]", i < factors.length - 1 && "border-b border-hairline")}>
+                  <div className="flex justify-between items-center mb-[8px]">
+                    <span className="text-[15px] font-semibold text-forest">{f.label}</span>
+                    <span className="text-[14px] font-semibold" style={{ color: f.color }}>
+                      {f.score >= 80 ? "Excellent" : f.score >= 60 ? "Good" : "Watch"} · {f.score}%
+                    </span>
                   </div>
-                  <div className="h-1.5 rounded-full bg-[#F2EFE9] overflow-hidden">
+                  <div className="h-[6px] rounded-full bg-track overflow-hidden">
                     <div className="h-full rounded-full transition-all duration-1000 ease-out" style={{ width: `${f.score}%`, backgroundColor: f.color }} />
                   </div>
                 </div>
               ))}
+            </div>
+
+            <div className="mt-[14px] bg-forest rounded-[22px] p-[16px_18px] text-[14px] text-green-tint leading-[1.5] text-pretty">
+              Improving <strong className="text-sun font-semibold">{lowestFactor.label.toLowerCase()}</strong> is your clearest next step.
+              <div className="mt-3">
+                <Link href="/client/portfolio" className="inline-flex py-2 px-4 rounded-[14px] bg-green text-white font-sans text-sm font-semibold cursor-pointer hover:bg-forest-700 transition-colors">
+                  Set up the buffer
+                </Link>
+              </div>
             </div>
           </div>
         )}

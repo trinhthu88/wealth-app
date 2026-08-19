@@ -4,6 +4,7 @@ import AppShell from "@/components/AppShell";
 import BottomNav from "@/components/BottomNav";
 import Sol from "@/components/Sol";
 import { MILESTONES, getEarnedMilestones, getStreak } from "@/lib/milestones";
+import { Target, Flame } from "lucide-react";
 
 export default function MilestonesPage() {
   const [earnedKeys, setEarnedKeys] = useState<string[]>([]);
@@ -34,7 +35,7 @@ export default function MilestonesPage() {
               className="flex items-center gap-1.5 rounded-full px-3 py-1.5"
               style={{ background: "#FEF3D6" }}
             >
-              <span aria-hidden="true">🔥</span>
+              <Flame className="h-4 w-4 text-amber-600" aria-hidden="true" />
               <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, fontWeight: 700, color: "#C8881C" }}>
                 {streakWeeks} weeks
               </span>
@@ -96,7 +97,7 @@ export default function MilestonesPage() {
                       background: isStreakBadge(m.key) ? "#FEF3D6" : "#E6F5EE",
                     }}
                   >
-                    <span style={{ fontSize: 26 }} aria-hidden="true">{m.emoji}</span>
+                    <Target className="h-6 w-6 text-primary" aria-hidden="true" />
                   </div>
                   <p style={{ fontSize: 11, fontWeight: 600, color: "#042C53", lineHeight: 1.3 }}>{m.label}</p>
                   <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: "#1D9E75", marginTop: 3 }}>
@@ -125,7 +126,7 @@ export default function MilestonesPage() {
                     className="mx-auto flex items-center justify-center rounded-[12px] mb-2"
                     style={{ width: 52, height: 52, background: "rgba(245,185,71,0.2)" }}
                   >
-                    <span style={{ fontSize: 26 }} aria-hidden="true">{m.emoji}</span>
+                    <Target className="h-6 w-6 text-primary" aria-hidden="true" />
                   </div>
                   <p style={{ fontSize: 11, fontWeight: 600, color: "#C8881C", lineHeight: 1.3 }}>{m.label}</p>
                   <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: "#C8881C", marginTop: 3 }}>
@@ -154,7 +155,7 @@ export default function MilestonesPage() {
                     className="mx-auto flex items-center justify-center rounded-[12px] mb-2"
                     style={{ width: 52, height: 52, background: "#F2EFE9" }}
                   >
-                    <span style={{ fontSize: 26, filter: "grayscale(1)" }} aria-hidden="true">{m.emoji}</span>
+                    <Target className="h-6 w-6 text-muted-foreground" aria-hidden="true" />
                   </div>
                   <p style={{ fontSize: 11, fontWeight: 600, color: "#042C53", lineHeight: 1.3 }}>{m.label}</p>
                   <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: "#A8A095", marginTop: 3 }}>
@@ -181,7 +182,7 @@ export default function MilestonesPage() {
               {MILESTONES.slice(0, 3).map(m => (
                 <div key={m.key} className="bg-white rounded-[20px] text-center" style={{ padding: "12px 8px", boxShadow: "0 4px 14px rgba(15,23,42,0.04)", opacity: 0.5 }}>
                   <div className="mx-auto flex items-center justify-center rounded-[12px] mb-2" style={{ width: 52, height: 52, background: "#F2EFE9" }}>
-                    <span style={{ fontSize: 26, filter: "grayscale(1)" }} aria-hidden="true">{m.emoji}</span>
+                    <Target className="h-6 w-6 text-muted-foreground" aria-hidden="true" />
                   </div>
                   <p style={{ fontSize: 11, fontWeight: 600, color: "#042C53", lineHeight: 1.3 }}>{m.label}</p>
                   <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: "#A8A095", marginTop: 3 }}>Earn it</p>

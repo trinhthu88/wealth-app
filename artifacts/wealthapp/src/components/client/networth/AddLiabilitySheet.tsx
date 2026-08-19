@@ -1,13 +1,14 @@
 import { useState } from "react";
 import BottomSheet from "@/components/client/BottomSheet";
+import { Home, Wallet, CreditCard, Briefcase, MoreHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const LIABILITY_CATEGORIES = [
-  { value: "mortgage",         label: "🏠 Mortgage",       placeholder: "e.g. Home loan — VietinBank" },
-  { value: "personal_loan",    label: "💳 Personal loan",  placeholder: "e.g. Car loan" },
-  { value: "credit_card",      label: "💳 Credit card",    placeholder: "e.g. Techcombank Visa" },
-  { value: "business_debt",    label: "💼 Business debt",  placeholder: "e.g. Business overdraft" },
-  { value: "other_liability",  label: "··· Other",          placeholder: "e.g. Family loan" },
+  { value: "mortgage",         icon: Home, label: "Mortgage",       placeholder: "e.g. Home loan — VietinBank" },
+  { value: "personal_loan",    icon: Wallet, label: "Personal loan",  placeholder: "e.g. Car loan" },
+  { value: "credit_card",      icon: CreditCard, label: "Credit card",    placeholder: "e.g. Techcombank Visa" },
+  { value: "business_debt",    icon: Briefcase, label: "Business debt",  placeholder: "e.g. Business overdraft" },
+  { value: "other_liability",  icon: MoreHorizontal, label: "Other",          placeholder: "e.g. Family loan" },
 ];
 
 const CURRENCIES = ["USD", "VND", "EUR"] as const;
@@ -83,12 +84,13 @@ export default function AddLiabilitySheet({ isOpen, onClose, onSave }: Props) {
                 key={cat.value}
                 onClick={() => setCategory(cat.value)}
                 className={cn(
-                  "px-3 py-1.5 rounded-lg text-sm border transition-all",
+                  "px-3 py-1.5 rounded-lg text-sm border transition-all flex items-center gap-1.5",
                   category === cat.value
                     ? "border-red-400 bg-red-50 text-red-600 font-medium"
                     : "border-slate-200 text-slate-600 hover:border-red-300"
                 )}
               >
+                <cat.icon className="w-4 h-4" />
                 {cat.label}
               </button>
             ))}

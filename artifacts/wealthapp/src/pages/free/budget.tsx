@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
 import { toast } from "sonner";
-import { ChevronLeft, ChevronRight, Pencil, Check, Plus, Trash2, X, RefreshCw, ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronLeft, ChevronRight, Pencil, Check, Plus, Trash2, X, RefreshCw, ChevronDown, ChevronUp, Home, Utensils, Bus, Zap, Ticket, MoreHorizontal, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useProfile } from "@/hooks/useProfile";
 
@@ -17,22 +17,22 @@ interface BudgetEntry { id?: string; periodMonth: string; currency: string; inco
 interface BudgetTransaction { id: string; periodMonth: string; description: string; amount: string; type: string; category: string; transactionDate: string; isRecurring: boolean; }
 
 const CATS = [
-  { key: "housing" as const, emoji: "🏠", label: "Housing" },
-  { key: "food" as const, emoji: "🍜", label: "Food" },
-  { key: "transport" as const, emoji: "🚗", label: "Transport" },
-  { key: "utilities" as const, emoji: "💡", label: "Utilities" },
-  { key: "entertainment" as const, emoji: "🎮", label: "Entertainment" },
-  { key: "other" as const, emoji: "📦", label: "Other" },
+  { key: "housing" as const, icon: Home, label: "Housing" },
+  { key: "food" as const, icon: Utensils, label: "Food" },
+  { key: "transport" as const, icon: Bus, label: "Transport" },
+  { key: "utilities" as const, icon: Zap, label: "Utilities" },
+  { key: "entertainment" as const, icon: Ticket, label: "Entertainment" },
+  { key: "other" as const, icon: MoreHorizontal, label: "Other" },
 ];
 
 const TX_CATS = [
-  { value: "income", label: "Income", emoji: "💵" },
-  { value: "housing", label: "Housing", emoji: "🏠" },
-  { value: "food", label: "Food", emoji: "🍜" },
-  { value: "transport", label: "Transport", emoji: "🚗" },
-  { value: "utilities", label: "Utilities", emoji: "💡" },
-  { value: "entertainment", label: "Entertainment", emoji: "🎮" },
-  { value: "other", label: "Other", emoji: "📦" },
+  { value: "income", label: "Income", icon: Wallet },
+  { value: "housing", label: "Housing", icon: Home },
+  { value: "food", label: "Food", icon: Utensils },
+  { value: "transport", label: "Transport", icon: Bus },
+  { value: "utilities", label: "Utilities", icon: Zap },
+  { value: "entertainment", label: "Entertainment", icon: Ticket },
+  { value: "other", label: "Other", icon: MoreHorizontal },
 ];
 
 type BudgetForm = { income: number; housing: number; food: number; transport: number; utilities: number; entertainment: number; other: number; };
@@ -296,7 +296,10 @@ export default function BudgetPage() {
   const nextMonth = () => { const d = new Date(viewDate); d.setMonth(d.getMonth() + 1); if (d <= now) setViewDate(d); };
 
   const fmt = (n: number) => `${sym}${Math.abs(n).toLocaleString()}`;
-  const catEmoji = (cat: string) => TX_CATS.find(c => c.value === cat)?.emoji ?? "📦";
+  const catIcon = (cat: string) => {
+    const CatIcon = TX_CATS.find(c => c.value === cat)?.icon || MoreHorizontal;
+    return <CatIcon className="w-4 h-4 text-muted-foreground" />;
+  };
   const catLabel = (cat: string) => TX_CATS.find(c => c.value === cat)?.label ?? cat;
 
   const grouped = groupByDate(transactions);
@@ -394,7 +397,7 @@ export default function BudgetPage() {
             style={{ background: "#E6F5EE", border: "1px solid rgba(29,158,117,0.25)" }}
           >
             <div className="flex items-center gap-2 mb-1.5">
-              <span className="text-lg">💵</span>
+              <span className="text-lg"></span>
               <Plus className="h-3.5 w-3.5" style={{ color: "#1D9E75" }} />
             </div>
             <p style={{ fontSize: 13, fontWeight: 600, color: "#0F6E56" }}>Log Income</p>
@@ -406,7 +409,7 @@ export default function BudgetPage() {
             style={{ background: "#FEEAE8", border: "1px solid rgba(216,107,90,0.25)" }}
           >
             <div className="flex items-center gap-2 mb-1.5">
-              <span className="text-lg">🧾</span>
+              <span className="text-lg"></span>
               <Plus className="h-3.5 w-3.5" style={{ color: "#D86B5A" }} />
             </div>
             <p style={{ fontSize: 13, fontWeight: 600, color: "#B85544" }}>Log Expense</p>
@@ -424,8 +427,8 @@ export default function BudgetPage() {
               <div className="flex items-center justify-between">
                 <p className="text-sm font-semibold">
                   {editingTxId
-                    ? (txType === "income" ? "✏️ Edit Income" : "✏️ Edit Expense")
-                    : (txType === "income" ? "💵 Log Income" : "🧾 Log Expense")}
+                    ? (txType === "income" ? "Edit Income" : "Edit Expense")
+                    : (txType === "income" ? "Log Income" : "Log Expense")}
                 </p>
                 <button onClick={closeTxForm} className="flex items-center justify-center text-muted-foreground hover:text-foreground" aria-label="Close form" style={{ minWidth: 36, minHeight: 36 }}><X className="h-4 w-4" /></button>
               </div>
@@ -477,10 +480,10 @@ export default function BudgetPage() {
                 <div className="flex flex-wrap gap-2">
                   {TX_CATS.filter(c => c.value !== "income").map(c => (
                     <button key={c.value} onClick={() => setTxForm(f => ({ ...f, category: c.value }))}
-                      className={cn("rounded-full px-3 text-xs border transition-colors flex items-center gap-1",
+                      className={cn("rounded-full px-3 text-xs border transition-colors flex items-center gap-1.5",
                         txForm.category === c.value ? "bg-primary/10 border-primary text-primary" : "border-border text-muted-foreground hover:border-primary/50")}
                       style={{ minHeight: 36 }}>
-                      {c.emoji} {c.label}
+                      <c.icon className="w-3.5 h-3.5" /> {c.label}
                     </button>
                   ))}
                 </div>
@@ -498,7 +501,7 @@ export default function BudgetPage() {
                 <div>
                   <span className="font-medium">Recurring</span>
                   {txForm.isRecurring
-                    ? <span className="text-xs text-primary ml-2">↻ Copies automatically next month</span>
+                    ? <span className="text-xs text-primary ml-2 inline-flex items-center gap-1"><RefreshCw className="w-3 h-3" /> Copies automatically next month</span>
                     : <span className="text-xs text-muted-foreground ml-2">One-off entry</span>}
                 </div>
               </label>
@@ -543,12 +546,16 @@ export default function BudgetPage() {
                       </div>
                       {txs.map((tx) => (
                         <div key={tx.id} className="flex items-center gap-3 px-4 py-3 border-t border-border first:border-0">
-                          <span className="text-xl flex-shrink-0">{catEmoji(tx.category)}</span>
+                          <span className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-muted/50">
+                            {catIcon(tx.category)}
+                          </span>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1.5">
                               <p className="text-sm font-medium truncate">{tx.description}</p>
                               {tx.isRecurring && (
-                                <span className="flex-shrink-0 text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium">↻</span>
+                                <span className="flex-shrink-0 flex items-center justify-center bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium">
+                                  <RefreshCw className="w-3 h-3" />
+                                </span>
                               )}
                             </div>
                             <p className="text-xs text-muted-foreground">{catLabel(tx.category)}</p>
@@ -603,7 +610,7 @@ export default function BudgetPage() {
               </div>
             ) : (
               <div className="rounded-2xl border border-dashed border-border p-8 text-center">
-                <p className="text-2xl mb-2">📋</p>
+                <p className="text-2xl mb-2"></p>
                 <p className="text-sm font-medium mb-1">No transactions yet for {monthLabel(viewDate)}</p>
                 <p className="text-xs text-muted-foreground">Tap "Log Income" or "Log Expense" above to start tracking.</p>
               </div>
@@ -680,7 +687,7 @@ export default function BudgetPage() {
                   <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-t border-border">
                     <div className={cn("border-b border-border", editingIncome && "bg-muted/30")}>
                       <button onClick={() => setEditingIncome(v => !v)} className="w-full flex items-center justify-between px-4 py-3.5 text-left">
-                        <div className="flex items-center gap-3"><span className="text-lg">💵</span><span className="font-medium text-sm">Income</span></div>
+                        <div className="flex items-center gap-3"><span className="text-lg"></span><span className="font-medium text-sm">Income</span></div>
                         <div className="flex items-center gap-2">
                           <span className={cn("text-sm font-semibold", form.income > 0 ? "text-emerald-600" : "text-muted-foreground")}>
                             {form.income > 0 ? `${sym}${form.income.toLocaleString()}` : "Set amount"}
@@ -700,7 +707,7 @@ export default function BudgetPage() {
                     {CATS.map((cat) => (
                       <div key={cat.key} className={cn("border-b border-border last:border-0", editingCat === cat.key && "bg-muted/30")}>
                         <button onClick={() => setEditingCat(editingCat === cat.key ? null : cat.key)} className="w-full flex items-center justify-between px-4 py-3.5 text-left">
-                          <div className="flex items-center gap-3"><span className="text-lg">{cat.emoji}</span><span className="font-medium text-sm">{cat.label}</span></div>
+                          <div className="flex items-center gap-3"><cat.icon className="w-5 h-5 text-muted-foreground" /><span className="font-medium text-sm">{cat.label}</span></div>
                           <div className="flex items-center gap-2">
                             <span className={cn("text-sm font-semibold", form[cat.key] > 0 ? "text-red-500" : "text-muted-foreground")}>
                               {form[cat.key] > 0 ? `${sym}${form[cat.key].toLocaleString()}` : "—"}

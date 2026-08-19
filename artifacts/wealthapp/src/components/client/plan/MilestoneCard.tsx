@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { MessageSquare, ChevronDown, ChevronUp } from "lucide-react";
+import { MessageSquare, ChevronDown, ChevronUp, Target } from "lucide-react";
 import MilestoneComments from "./MilestoneComments";
 import AddCommentForm from "./AddCommentForm";
 import { useMilestoneComments } from "@/hooks/useMilestoneComments";
@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import type { PlanMilestone } from "@/hooks/usePlan";
 
 const STATUS_BADGES: Record<string, { label: string; className: string }> = {
-  completed:   { label: "Completed ✓",  className: "bg-emerald-50 text-emerald-700 border border-emerald-200" },
+  completed:   { label: "Completed",  className: "bg-emerald-50 text-emerald-700 border border-emerald-200" },
   in_progress: { label: "In progress",  className: "bg-[#1D9E75]/10 text-[#1D9E75] border border-[#1D9E75]/20" },
   active:      { label: "In progress",  className: "bg-[#1D9E75]/10 text-[#1D9E75] border border-[#1D9E75]/20" },
   upcoming:    { label: "Upcoming",     className: "bg-slate-100 text-slate-500 border border-slate-200" },
@@ -84,9 +84,9 @@ export default function MilestoneCard({ step, isNext, statusGroup }: Props) {
       {step.linkedGoal && (
         <Link
           href="/client/goals"
-          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#1D9E75]/10 text-[#1D9E75] text-xs font-medium hover:bg-[#1D9E75]/20 transition-colors"
+          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#1D9E75]/10 text-[#1D9E75] text-xs font-medium hover:bg-[#1D9E75]/20 transition-colors"
         >
-          🎯 {step.linkedGoal.title}
+          <Target className="h-3.5 w-3.5" /> {step.linkedGoal.title}
         </Link>
       )}
 

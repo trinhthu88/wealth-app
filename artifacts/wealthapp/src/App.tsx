@@ -57,9 +57,9 @@ const NotFound = lazy(() => import("@/pages/not-found"));
 
 function PageLoader() {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-4">
-      <Sol size="md" animate="pulse" />
-      <p className="text-sm text-muted-foreground font-medium">Loading…</p>
+    <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-paper">
+      <Sol size="md" animate="breathe" />
+      <p className="text-sm text-ink-40 font-medium">Loading…</p>
     </div>
   );
 }
@@ -85,44 +85,43 @@ const clerkAppearance = {
   options: {
     logoPlacement: "inside" as const,
     logoLinkUrl: basePath || "/",
-    logoImageUrl: `${window.location.origin}${basePath}/logo.svg`,
   },
   variables: {
-    colorPrimary: "#1D9E75",
-    colorForeground: "#042C53",
-    colorMutedForeground: "#64748b",
-    colorDanger: "#ef4444",
-    colorBackground: "#ffffff",
-    colorInput: "#f8fafc",
-    colorInputForeground: "#042C53",
-    colorNeutral: "#e2e8f0",
-    fontFamily: "Inter, sans-serif",
-    borderRadius: "0.75rem",
+    colorPrimary: "#1D9E75", // green
+    colorForeground: "#14342A", // forest
+    colorMutedForeground: "#7A8B82", // ink-40
+    colorDanger: "#E8663D", // clay
+    colorBackground: "#FDF6EC", // paper
+    colorInput: "#FFFFFF", // surface
+    colorInputForeground: "#14342A", // forest
+    colorNeutral: "#F2E9DB", // hairline
+    fontFamily: "Figtree, sans-serif",
+    borderRadius: "26px",
   },
   elements: {
     rootBox: "w-full flex justify-center",
-    cardBox: "bg-white rounded-2xl w-[440px] max-w-full overflow-hidden shadow-xl",
-    card: "!shadow-none !border-0 !bg-transparent !rounded-none",
+    cardBox: "bg-surface rounded-[32px] w-[440px] max-w-full overflow-hidden shadow-[0_2px_14px_rgba(20,52,42,0.06)] border-0",
+    card: "!shadow-none !border-0 !bg-transparent !rounded-none p-6 md:p-8",
     footer: "!shadow-none !border-0 !bg-transparent !rounded-none",
-    headerTitle: "font-bold",
-    headerSubtitle: "text-slate-500",
-    socialButtonsBlockButtonText: "font-medium",
-    formFieldLabel: "font-medium",
-    footerActionLink: "text-[#1D9E75] font-medium",
-    footerActionText: "text-slate-500",
-    dividerText: "text-slate-400",
-    identityPreviewEditButton: "text-[#1D9E75]",
-    formFieldSuccessText: "text-[#1D9E75]",
+    headerTitle: "font-display font-semibold text-[30px] tracking-[-0.02em]",
+    headerSubtitle: "text-ink-40 text-[14px]",
+    socialButtonsBlockButtonText: "font-semibold text-[15px]",
+    formFieldLabel: "font-semibold text-[15px] text-forest",
+    footerActionLink: "text-green font-semibold",
+    footerActionText: "text-ink-40",
+    dividerText: "text-ink-40",
+    identityPreviewEditButton: "text-green",
+    formFieldSuccessText: "text-green",
     alertText: "",
-    logoBox: "mb-2",
-    logoImage: "h-10 w-auto",
-    socialButtonsBlockButton: "border border-slate-200 hover:bg-slate-50",
-    formButtonPrimary: "bg-[#1D9E75] hover:opacity-90 text-white",
-    formFieldInput: "border-slate-200 bg-slate-50",
-    footerAction: "bg-slate-50",
-    dividerLine: "bg-slate-200",
+    logoBox: "mb-4",
+    logoImage: "h-12 w-auto",
+    socialButtonsBlockButton: "border-hairline hover:bg-hairline/50 rounded-2xl h-12",
+    formButtonPrimary: "bg-green hover:bg-forest text-white rounded-2xl h-12 font-semibold text-[15px] transition-colors",
+    formFieldInput: "border-hairline bg-surface rounded-xl h-12 px-4 focus:ring-green focus:border-green",
+    footerAction: "bg-surface pt-4 border-t border-hairline",
+    dividerLine: "bg-hairline",
     alert: "",
-    otpCodeFieldInput: "border-slate-200",
+    otpCodeFieldInput: "border-hairline rounded-xl",
     formFieldRow: "",
     main: "",
   },
@@ -170,12 +169,7 @@ function ClerkQueryClientCacheInvalidator() {
 function ProtectedRoute({ component: C, role }: { component: React.ComponentType; role?: string[] }) {
   const { isLoaded, isSignedIn } = useUser();
   const { profile } = useProfile();
-  if (!isLoaded) return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-4">
-      <Sol size="md" animate="pulse" />
-      <p className="text-sm text-muted-foreground font-medium">Loading…</p>
-    </div>
-  );
+  if (!isLoaded) return <PageLoader />;
   if (!isSignedIn) return <Redirect to="/sign-in" />;
   if (role && profile && !role.includes(profile.role)) return <Redirect to="/" />;
   return <C />;
@@ -186,18 +180,14 @@ function RoleRedirect() {
   const isInvestmentClient = profile?.role === "investment_client";
   const { onboardingTrackComplete, isLoading: trackLoading } = useOnboardingTrackComplete(isInvestmentClient);
 
-  if (isLoading || trackLoading) return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="animate-pulse text-muted-foreground">Loading…</div>
-    </div>
-  );
+  if (isLoading || trackLoading) return <PageLoader />;
   if (!profile) return <Redirect to="/sign-in" />;
   return <Redirect to={resolveRoleRedirectPath(profile.role, onboardingTrackComplete)} />;
 }
 
 function SignInPage() {
   return (
-    <div className="flex min-h-[100dvh] items-center justify-center bg-background px-4">
+    <div className="flex min-h-[100dvh] items-center justify-center bg-paper px-4">
       <SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} fallbackRedirectUrl={`${basePath}/dashboard`} />
     </div>
   );
@@ -205,7 +195,7 @@ function SignInPage() {
 
 function SignUpPage() {
   return (
-    <div className="flex min-h-[100dvh] items-center justify-center bg-background px-4">
+    <div className="flex min-h-[100dvh] items-center justify-center bg-paper px-4">
       <SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={`${basePath}/sign-in`} fallbackRedirectUrl={`${basePath}/dashboard`} />
     </div>
   );

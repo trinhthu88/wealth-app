@@ -12,7 +12,7 @@ import { apiFetch } from "@/lib/api";
 import { useProfile } from "@/hooks/useProfile";
 import { queryClient } from "@/lib/queryClient";
 import { toast } from "sonner";
-import { X, Phone } from "lucide-react";
+import { X, Phone, TrendingUp, BarChart3, Target } from "lucide-react";
 import { generateWeeklyTip, getAgeBenchmarkSavingsRate } from "@/lib/tipEngine";
 import {
   checkAndAwardMilestones,
@@ -372,7 +372,7 @@ export default function FreeDashboard() {
                   Consistency is your superpower.
                 </p>
               </div>
-              <span style={{ fontSize: 26 }}>🔥</span>
+              <span className="text-amber-500 bg-white/50 p-2 rounded-full"><TrendingUp className="h-5 w-5" /></span>
             </div>
           )}
 
@@ -500,8 +500,8 @@ export default function FreeDashboard() {
           {/* Quick actions */}
           <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
             {[
-              { icon: "📊", label: "Update budget", href: "/free/budget" },
-              { icon: "🎯", label: "Add to goal", href: "/free/goals" },
+              { icon: "", label: "Update budget", href: "/free/budget" },
+              { icon: "", label: "Add to goal", href: "/free/goals" },
             ].map((a, i) => (
               <Link key={i} href={a.href}>
                 <div className="flex items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2 cursor-pointer transition-colors"

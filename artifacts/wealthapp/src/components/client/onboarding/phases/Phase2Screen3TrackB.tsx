@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { TrendingUp, Sprout } from "lucide-react";
 
 interface Props {
   hasExistingInvestments: boolean | null;
@@ -25,7 +26,7 @@ export default function Phase2Screen3TrackB({ hasExistingInvestments, onChange }
               : "border-slate-200 hover:border-[#1D9E75]/40"
           )}
         >
-          <span className="text-3xl">📈</span>
+          <TrendingUp className="w-8 h-8 text-[#1D9E75]" />
           <div>
             <p className="font-semibold text-[#042C53] text-sm">Yes, I have investments</p>
             <p className="text-xs text-slate-500 mt-0.5">I'll add them now</p>
@@ -43,7 +44,7 @@ export default function Phase2Screen3TrackB({ hasExistingInvestments, onChange }
               : "border-slate-200 hover:border-[#1D9E75]/40"
           )}
         >
-          <span className="text-3xl">🌱</span>
+          <Sprout className="w-8 h-8 text-[#1D9E75]" />
           <div>
             <p className="font-semibold text-[#042C53] text-sm">Not yet — I'm starting fresh</p>
             <p className="text-xs text-slate-500 mt-0.5">Let's build from here</p>

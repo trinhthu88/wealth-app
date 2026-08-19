@@ -4,8 +4,7 @@ import AppShell from "@/components/AppShell";
 import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { apiFetch } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
 import { Plus, Star, Calendar } from "lucide-react";
@@ -15,11 +14,11 @@ import { cn } from "@/lib/utils";
 interface Lead { id: string; email: string; firstName: string | null; source: string | null; status: string; quizResult: unknown; healthScore: number | null; notes: string | null; createdAt: string; convertedUserId: string | null; }
 
 const STATUS_COLORS: Record<string, string> = {
-  new: "bg-blue-100 text-blue-700",
-  contacted: "bg-amber-100 text-amber-700",
-  qualified: "bg-purple-100 text-purple-700",
-  converted: "bg-green-100 text-green-700",
-  lost: "bg-muted text-muted-foreground",
+  new: "bg-sun-tint text-amber-ink",
+  contacted: "bg-surface border border-hairline text-ink-60",
+  qualified: "bg-green-tint text-green",
+  converted: "bg-forest text-paper",
+  lost: "bg-clay-tint text-clay-ink",
 };
 
 const STATUSES = ["new", "contacted", "qualified", "converted", "lost"];
@@ -70,67 +69,89 @@ export default function AdvisorLeads() {
         subtitle={`${leads.length} total leads`}
         action={
           <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-2" />Add Lead</Button></DialogTrigger>
-            <DialogContent className="max-w-sm">
-              <DialogHeader><DialogTitle>Add Lead</DialogTitle></DialogHeader>
-              <div className="space-y-3 pt-2">
-                <div><Label>Email</Label><Input type="email" placeholder="john@example.com" value={form.email} onChange={f("email")} /></div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div><Label>First Name</Label><Input placeholder="John" value={form.firstName} onChange={f("firstName")} /></div>
-                  <div><Label>Source</Label><Input placeholder="Website, Referral…" value={form.source} onChange={f("source")} /></div>
+            <DialogTrigger asChild>
+              <Button className="rounded-full px-5 bg-forest text-paper hover:bg-forest-700">
+                <Plus className="h-4 w-4 mr-2" /> Add Lead
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-sm bg-surface rounded-[28px] p-6 border-none shadow-2xl">
+              <DialogHeader>
+                <DialogTitle className="font-display text-[20px] font-semibold text-forest">Add Lead</DialogTitle>
+                <DialogDescription className="sr-only">Add a prospective investment client to the lead pipeline.</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 pt-2">
+                <div>
+                  <label className="text-[13px] font-medium text-ink-60 block mb-1.5">Email</label>
+                  <Input className="h-11 rounded-[12px] border-hairline bg-paper px-4 focus-visible:ring-green" type="email" placeholder="john@example.com" value={form.email} onChange={f("email")} />
                 </div>
-                <div><Label>Status</Label>
-                  <select value={form.status} onChange={f("status")} className="w-full h-9 px-3 border border-input rounded-md text-sm bg-background">
-                    {STATUSES.map(s => <option key={s}>{s}</option>)}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[13px] font-medium text-ink-60 block mb-1.5">First Name</label>
+                    <Input className="h-11 rounded-[12px] border-hairline bg-paper px-4 focus-visible:ring-green" placeholder="John" value={form.firstName} onChange={f("firstName")} />
+                  </div>
+                  <div>
+                    <label className="text-[13px] font-medium text-ink-60 block mb-1.5">Source</label>
+                    <Input className="h-11 rounded-[12px] border-hairline bg-paper px-4 focus-visible:ring-green" placeholder="Website, Referral…" value={form.source} onChange={f("source")} />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[13px] font-medium text-ink-60 block mb-1.5">Status</label>
+                  <select value={form.status} onChange={f("status")} className="w-full h-11 border border-hairline bg-paper rounded-[12px] px-4 text-[14px] text-forest focus:outline-none focus:ring-2 focus:ring-green capitalize">
+                    {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
-                <div><Label>Notes</Label><Input placeholder="Additional context…" value={form.notes} onChange={f("notes")} /></div>
-                <Button className="w-full" onClick={() => add.mutate(form)} disabled={!form.email || add.isPending}>{add.isPending ? "Adding…" : "Add Lead"}</Button>
+                <div>
+                  <label className="text-[13px] font-medium text-ink-60 block mb-1.5">Notes</label>
+                  <Input className="h-11 rounded-[12px] border-hairline bg-paper px-4 focus-visible:ring-green" placeholder="Additional context…" value={form.notes} onChange={f("notes")} />
+                </div>
+                <Button className="w-full rounded-full h-11 bg-green text-surface hover:bg-green-300 mt-2" onClick={() => add.mutate(form)} disabled={!form.email || add.isPending}>
+                  {add.isPending ? "Adding…" : "Add Lead"}
+                </Button>
               </div>
             </DialogContent>
           </Dialog>
         }
       />
 
-      <div className="flex gap-2 mb-4 flex-wrap">
+      <div className="flex gap-2 mb-6 flex-wrap">
         {["all", ...STATUSES].map(s => (
-          <button key={s} onClick={() => setFilter(s)} className={cn("px-3 py-1.5 rounded-full text-xs font-medium border transition-colors capitalize", filter === s ? "bg-primary text-white border-primary" : "bg-card border-border text-muted-foreground hover:border-primary/50")}>
+          <button key={s} onClick={() => setFilter(s)} className={cn("px-4 py-2 rounded-full text-[13px] font-medium transition-colors capitalize border", filter === s ? "bg-forest text-paper border-forest" : "bg-surface border-hairline text-ink-60 hover:bg-paper")}>
             {s === "all" ? `All (${leads.length})` : `${s} (${leads.filter(l => l.status === s).length})`}
           </button>
         ))}
       </div>
 
-      {isLoading ? <div className="space-y-3">{Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-16 bg-muted rounded-xl animate-pulse" />)}</div>
+      {isLoading ? <div className="space-y-3">{Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-20 bg-surface rounded-[26px] animate-pulse" />)}</div>
         : filtered.length === 0 ? (
-          <div className="bg-card border border-card-border rounded-xl p-16 text-center">
-            <Star className="h-14 w-14 text-muted-foreground/30 mx-auto mb-4" />
-            <h3 className="font-semibold mb-2">No leads</h3>
-            <p className="text-muted-foreground text-sm">Leads from the public quiz and sign-ups will appear here.</p>
+          <div className="bg-surface rounded-[26px] p-16 text-center shadow-[0_2px_14px_rgba(20,52,42,0.06)]">
+            <Star className="h-14 w-14 text-ink-20 mx-auto mb-4" />
+            <h3 className="font-display text-[20px] font-semibold text-forest mb-2">No leads</h3>
+            <p className="text-[14px] text-ink-40">Leads from the public quiz and sign-ups will appear here.</p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {filtered.map(l => (
-              <div key={l.id} className="bg-card border border-card-border rounded-xl px-5 py-4 flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary">
+              <div key={l.id} className="bg-surface rounded-[26px] px-6 py-5 flex items-center justify-between gap-4 shadow-[0_2px_14px_rgba(20,52,42,0.06)]">
+                <div className="flex items-center gap-4">
+                  <div className="h-12 w-12 rounded-[16px] bg-sun-tint flex items-center justify-center text-[16px] font-semibold text-amber-ink shrink-0">
                     {(l.firstName ?? l.email)[0].toUpperCase()}
                   </div>
                   <div>
-                    <div className="font-medium text-sm">{l.firstName ? `${l.firstName} — ` : ""}{l.email}</div>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      {l.source && <span className="text-xs text-muted-foreground">{l.source}</span>}
-                      {l.healthScore && <span className="text-xs text-primary font-medium">Score: {l.healthScore}</span>}
-                      <span className="flex items-center gap-1 text-xs text-muted-foreground"><Calendar className="h-3 w-3" />{new Date(l.createdAt).toLocaleDateString()}</span>
+                    <div className="font-medium text-[16px] text-forest">{l.firstName ? `${l.firstName} — ` : ""}{l.email}</div>
+                    <div className="flex items-center gap-3 mt-1">
+                      {l.source && <span className="text-[13px] text-ink-60">{l.source}</span>}
+                      {l.healthScore && <span className="text-[13px] text-green font-medium">Score: {l.healthScore}</span>}
+                      <span className="flex items-center gap-1.5 text-[13px] text-ink-40 tabular-nums"><Calendar className="h-3.5 w-3.5" />{new Date(l.createdAt).toLocaleDateString()}</span>
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 shrink-0">
-                  <span className={cn("text-xs px-2.5 py-1 rounded-full font-medium", STATUS_COLORS[l.status] ?? "bg-muted text-muted-foreground")}>{l.status}</span>
+                <div className="flex items-center gap-4 shrink-0">
+                  <span className={cn("text-[13px] px-3 py-1 rounded-full font-medium capitalize", STATUS_COLORS[l.status] ?? "bg-surface border border-hairline text-ink-60")}>{l.status}</span>
                   {l.convertedUserId ? (
-                    <span className="text-xs text-muted-foreground">Client account created</span>
+                    <span className="text-[13px] text-ink-40 italic">Client account created</span>
                   ) : (
-                    <select value={l.status} onChange={e => handleStatusChange(l, e.target.value)} className="h-7 px-2 border border-input rounded text-xs bg-background">
-                      {STATUSES.map(s => <option key={s}>{s}</option>)}
+                    <select value={l.status} onChange={e => handleStatusChange(l, e.target.value)} className="h-9 px-3 border border-hairline bg-paper rounded-[12px] text-[13px] text-forest focus:outline-none focus:ring-2 focus:ring-green capitalize">
+                      {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
                   )}
                 </div>
@@ -140,19 +161,22 @@ export default function AdvisorLeads() {
         )}
 
       <Dialog open={!!convertTarget} onOpenChange={(v) => { if (!v) { setConvertTarget(null); setConvertPassword(""); } }}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Convert to client</DialogTitle></DialogHeader>
+        <DialogContent className="max-w-sm bg-surface rounded-[28px] p-6 border-none shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="font-display text-[20px] font-semibold text-forest">Convert to client</DialogTitle>
+            <DialogDescription className="sr-only">Create an investment client account from this lead.</DialogDescription>
+          </DialogHeader>
           {convertTarget && (
-            <div className="space-y-3 pt-2">
-              <p className="text-sm text-muted-foreground">
-                Creates a real investment_client account for <strong>{convertTarget.firstName ? `${convertTarget.firstName} — ` : ""}{convertTarget.email}</strong>, linked back to this lead.
+            <div className="space-y-4 pt-2">
+              <p className="text-[14px] text-ink-60 leading-relaxed">
+                Creates a real investment client account for <strong className="text-forest">{convertTarget.firstName ? `${convertTarget.firstName} — ` : ""}{convertTarget.email}</strong>, linked back to this lead.
               </p>
               <div>
-                <Label>Temporary password</Label>
-                <Input type="password" placeholder="Set an initial password" value={convertPassword} onChange={e => setConvertPassword(e.target.value)} />
+                <label className="text-[13px] font-medium text-ink-60 block mb-1.5">Temporary password</label>
+                <Input className="h-11 rounded-[12px] border-hairline bg-paper px-4 focus-visible:ring-green" type="password" placeholder="Set an initial password" value={convertPassword} onChange={e => setConvertPassword(e.target.value)} />
               </div>
               <Button
-                className="w-full"
+                className="w-full rounded-full h-11 bg-green text-surface hover:bg-green-300 mt-2"
                 disabled={!convertPassword || convert.isPending}
                 onClick={() => convert.mutate({ id: convertTarget.id, password: convertPassword })}
               >

@@ -66,7 +66,7 @@ export function useScenarios() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["scenario-runs"] });
-      toast.success("Scenario saved ✓");
+      toast.success("Scenario saved");
     },
     onError: (e: Error) => {
       if (e.message === "limit") {

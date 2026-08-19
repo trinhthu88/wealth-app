@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, TrendingUp, BarChart3, FolderHeart, Bitcoin, Coins, FileText, Home, Landmark, Shield, MoreHorizontal } from "lucide-react";
 import BottomSheet from "@/components/client/BottomSheet";
 import { getHoldingTypeConfig, HOLDING_TYPE_CONFIG } from "@/lib/holdingTypeConfig";
 import StockEtfForm from "./HoldingTypeForm/StockEtfForm";
@@ -20,17 +20,17 @@ interface Props {
   onAdd: (data: Record<string, unknown>) => Promise<void>;
 }
 
-const EMOJI_MAP: Record<string, string> = {
-  stock_etf: "📈",
-  etf: "📊",
-  mutual_fund: "🗂️",
-  crypto: "₿",
-  commodity: "🪙",
-  bond: "📄",
-  property: "🏠",
-  cash: "🏦",
-  pension: "🛡",
-  other: "···",
+const ICON_MAP: Record<string, React.ElementType> = {
+  stock_etf: TrendingUp,
+  etf: BarChart3,
+  mutual_fund: FolderHeart,
+  crypto: Bitcoin,
+  commodity: Coins,
+  bond: FileText,
+  property: Home,
+  cash: Landmark,
+  pension: Shield,
+  other: MoreHorizontal,
 };
 
 export default function AddHoldingSheet({ isOpen, onClose, onAdd }: Props) {
@@ -65,7 +65,10 @@ export default function AddHoldingSheet({ isOpen, onClose, onAdd }: Props) {
                 )}
               >
                 <div className="flex items-center justify-between w-full">
-                  <span className="text-xl">{EMOJI_MAP[cfg.type] ?? "💼"}</span>
+                  {(() => {
+                    const Icon = ICON_MAP[cfg.type] || MoreHorizontal;
+                    return <Icon className="w-6 h-6 text-slate-700" />;
+                  })()}
                   {cfg.priceSource === "api" && (
                     <span className="text-[9px] font-semibold text-emerald-600 bg-emerald-100 border border-emerald-200 px-1.5 py-0.5 rounded-full">LIVE</span>
                   )}

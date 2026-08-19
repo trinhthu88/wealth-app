@@ -37,7 +37,7 @@ export default function AdminDashboard() {
 
   return (
     <AppShell>
-      <PageHeader title="Admin Dashboard" subtitle="Platform overview and management." />
+      <PageHeader title="Admin Dashboard" subtitle="Platform overview and management." eyebrow="Administration" />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <StatCard label="Total AUM" value={fmtUSD(totalAUM)} sub={`${activeClients.length} active clients`} icon={TrendingUp} color="teal" />
@@ -48,31 +48,31 @@ export default function AdminDashboard() {
 
       <div className="grid md:grid-cols-2 gap-6 mb-6">
         {/* Advisor Workload */}
-        <div className="bg-card border border-card-border rounded-xl p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold">Advisor Workload</h3>
-            <Link href="/admin/clients">
-              <Button variant="ghost" size="sm" className="text-primary">All clients <ArrowRight className="ml-1 h-3.5 w-3.5" /></Button>
+        <div className="bg-surface rounded-[26px] p-6 shadow-[0_2px_14px_rgba(20,52,42,0.06)]">
+          <div className="flex items-center justify-between mb-5">
+            <h3 className="font-display text-[20px] font-semibold text-forest">Advisor Workload</h3>
+            <Link href="/admin/clients" className="text-[14px] font-medium text-green hover:text-forest transition-colors flex items-center">
+              All clients <ArrowRight className="ml-1 h-3.5 w-3.5" />
             </Link>
           </div>
           {advisorLoad.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">No advisors found.</p>
+            <p className="text-[14px] text-ink-40 py-4 text-center">No advisors found.</p>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-1">
               {advisorLoad.slice(0, 6).map(a => (
-                <div key={a.id} className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-2.5">
-                    <div className="h-7 w-7 rounded-full bg-blue-100 flex items-center justify-center text-xs font-bold text-blue-700">
+                <div key={a.id} className="flex items-center justify-between px-3 py-2 -mx-3 rounded-[16px] hover:bg-paper transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-[14px] bg-sun-tint flex items-center justify-center text-[15px] font-bold text-amber-ink shrink-0">
                       {(a.fullName ?? a.email)[0].toUpperCase()}
                     </div>
                     <div>
-                      <div className="font-medium">{a.fullName ?? a.email}</div>
-                      <div className="text-xs text-muted-foreground">{a.clientCount} clients</div>
+                      <div className="font-medium text-forest text-[15px]">{a.fullName ?? a.email}</div>
+                      <div className="text-[13px] text-ink-40">{a.clientCount} clients</div>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="font-semibold">{fmtUSD(a.aum)}</div>
-                    <div className="text-xs text-muted-foreground">AUM</div>
+                    <div className="font-semibold text-forest tabular-nums text-[15px]">{fmtUSD(a.aum)}</div>
+                    <div className="text-[13px] text-ink-40">AUM</div>
                   </div>
                 </div>
               ))}
@@ -81,42 +81,42 @@ export default function AdminDashboard() {
         </div>
 
         {/* Role Distribution */}
-        <div className="bg-card border border-card-border rounded-xl p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold">Role Distribution</h3>
+        <div className="bg-surface rounded-[26px] p-6 shadow-[0_2px_14px_rgba(20,52,42,0.06)] flex flex-col">
+          <div className="flex items-center justify-between mb-5">
+            <h3 className="font-display text-[20px] font-semibold text-forest">Role Distribution</h3>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-4">
             {[
-              { label: "Super Admins", count: users.filter(u => u.role === "super_admin").length, total: users.length, color: "bg-primary" },
-              { label: "Advisors", count: advisors.filter(a => a.role === "advisor").length, total: users.length, color: "bg-blue-500" },
-              { label: "Investment Clients", count: clients.length, total: users.length, color: "bg-purple-500" },
-              { label: "Free Users", count: freeUsers.length, total: users.length, color: "bg-muted-foreground" },
+              { label: "Super Admins", count: users.filter(u => u.role === "super_admin").length, total: users.length, color: "bg-forest" },
+              { label: "Advisors", count: advisors.filter(a => a.role === "advisor").length, total: users.length, color: "bg-green" },
+              { label: "Investment Clients", count: clients.length, total: users.length, color: "bg-sun-deep" },
+              { label: "Free Users", count: freeUsers.length, total: users.length, color: "bg-ink-30" },
             ].map(r => (
               <div key={r.label}>
-                <div className="flex justify-between text-sm mb-1">
-                  <span>{r.label}</span>
-                  <span className="font-medium">{r.count}</span>
+                <div className="flex justify-between text-[14px] mb-1.5">
+                  <span className="text-ink-60">{r.label}</span>
+                  <span className="font-medium text-forest tabular-nums">{r.count}</span>
                 </div>
-                <div className="h-1.5 bg-muted rounded-full">
-                  <div className={`h-1.5 rounded-full ${r.color}`} style={{ width: `${r.total > 0 ? (r.count / r.total) * 100 : 0}%` }} />
+                <div className="h-2 bg-track rounded-full overflow-hidden">
+                  <div className={`h-full rounded-full ${r.color}`} style={{ width: `${r.total > 0 ? (r.count / r.total) * 100 : 0}%` }} />
                 </div>
               </div>
             ))}
           </div>
 
           {/* Recent Users */}
-          <div className="mt-4 pt-4 border-t border-border">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-muted-foreground">Recent signups</span>
-              <Link href="/admin/users">
-                <Button variant="ghost" size="sm" className="h-6 text-xs text-primary px-1">Manage</Button>
+          <div className="mt-auto pt-6">
+            <div className="flex items-center justify-between mb-3 border-t border-hairline pt-4">
+              <span className="tala-eyebrow text-ink-40">Recent signups</span>
+              <Link href="/admin/users" className="text-[13px] font-medium text-green hover:text-forest transition-colors">
+                Manage
               </Link>
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               {users.slice(0, 4).map(u => (
-                <div key={u.id} className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground truncate">{u.fullName ?? u.email}</span>
-                  <span className={`px-2 py-0.5 rounded-full font-medium ${u.role === "advisor" ? "bg-blue-100 text-blue-700" : u.role === "investment_client" ? "bg-purple-100 text-purple-700" : "bg-muted text-muted-foreground"}`}>
+                <div key={u.id} className="flex items-center justify-between text-[14px]">
+                  <span className="text-ink-60 truncate">{u.fullName ?? u.email}</span>
+                  <span className={`px-2 py-0.5 rounded-full text-[12px] font-medium capitalize ${u.role === "advisor" ? "bg-green-tint text-green" : u.role === "investment_client" ? "bg-sun-tint text-amber-ink" : "bg-hairline text-ink-60"}`}>
                     {u.role.replace(/_/g, " ")}
                   </span>
                 </div>
@@ -128,25 +128,25 @@ export default function AdminDashboard() {
 
       {/* Quick links */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <Link href="/admin/clients" className="bg-card border border-card-border rounded-xl p-4 flex items-center gap-3 hover:shadow-sm transition-shadow">
-          <div className="h-10 w-10 rounded-xl bg-purple-100 flex items-center justify-center shrink-0"><UserCheck className="h-5 w-5 text-purple-600" /></div>
-          <div><div className="font-semibold text-sm">All Clients</div><div className="text-xs text-muted-foreground">{clients.length} investment clients</div></div>
+        <Link href="/admin/clients" className="bg-surface rounded-[20px] p-5 flex flex-col gap-3 shadow-[0_2px_14px_rgba(20,52,42,0.06)] hover:shadow-[0_4px_20px_rgba(20,52,42,0.08)] transition-shadow">
+          <div className="h-10 w-10 rounded-[14px] bg-sun-tint flex items-center justify-center shrink-0"><UserCheck className="h-5 w-5 text-amber-ink" /></div>
+          <div><div className="font-semibold text-forest text-[15px]">All Clients</div><div className="text-[13px] text-ink-40">{clients.length} investment clients</div></div>
         </Link>
-        <Link href="/admin/prices" className="bg-card border border-card-border rounded-xl p-4 flex items-center gap-3 hover:shadow-sm transition-shadow">
-          <div className="h-10 w-10 rounded-xl bg-green-100 flex items-center justify-center shrink-0"><DollarSign className="h-5 w-5 text-green-600" /></div>
-          <div><div className="font-semibold text-sm">Fund Prices</div><div className="text-xs text-muted-foreground">Manage prices</div></div>
+        <Link href="/admin/prices" className="bg-surface rounded-[20px] p-5 flex flex-col gap-3 shadow-[0_2px_14px_rgba(20,52,42,0.06)] hover:shadow-[0_4px_20px_rgba(20,52,42,0.08)] transition-shadow">
+          <div className="h-10 w-10 rounded-[14px] bg-green-tint flex items-center justify-center shrink-0"><DollarSign className="h-5 w-5 text-green" /></div>
+          <div><div className="font-semibold text-forest text-[15px]">Fund Prices</div><div className="text-[13px] text-ink-40">Manage prices</div></div>
         </Link>
-        <Link href="/admin/benchmarks" className="bg-card border border-card-border rounded-xl p-4 flex items-center gap-3 hover:shadow-sm transition-shadow">
-          <div className="h-10 w-10 rounded-xl bg-teal-100 flex items-center justify-center shrink-0"><TrendingUp className="h-5 w-5 text-teal-600" /></div>
-          <div><div className="font-semibold text-sm">Return Benchmarks</div><div className="text-xs text-muted-foreground">Expected returns</div></div>
+        <Link href="/admin/benchmarks" className="bg-surface rounded-[20px] p-5 flex flex-col gap-3 shadow-[0_2px_14px_rgba(20,52,42,0.06)] hover:shadow-[0_4px_20px_rgba(20,52,42,0.08)] transition-shadow">
+          <div className="h-10 w-10 rounded-[14px] bg-paper border border-hairline flex items-center justify-center shrink-0"><TrendingUp className="h-5 w-5 text-forest" /></div>
+          <div><div className="font-semibold text-forest text-[15px]">Benchmarks</div><div className="text-[13px] text-ink-40">Expected returns</div></div>
         </Link>
-        <Link href="/admin/blog" className="bg-card border border-card-border rounded-xl p-4 flex items-center gap-3 hover:shadow-sm transition-shadow">
-          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0"><BookOpen className="h-5 w-5 text-primary" /></div>
-          <div><div className="font-semibold text-sm">Blog</div><div className="text-xs text-muted-foreground">{posts.length} articles</div></div>
+        <Link href="/admin/blog" className="bg-surface rounded-[20px] p-5 flex flex-col gap-3 shadow-[0_2px_14px_rgba(20,52,42,0.06)] hover:shadow-[0_4px_20px_rgba(20,52,42,0.08)] transition-shadow">
+          <div className="h-10 w-10 rounded-[14px] bg-paper border border-hairline flex items-center justify-center shrink-0"><BookOpen className="h-5 w-5 text-forest" /></div>
+          <div><div className="font-semibold text-forest text-[15px]">Blog</div><div className="text-[13px] text-ink-40">{posts.length} articles</div></div>
         </Link>
-        <Link href="/advisor/leads" className="bg-card border border-card-border rounded-xl p-4 flex items-center gap-3 hover:shadow-sm transition-shadow">
-          <div className="h-10 w-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0"><Star className="h-5 w-5 text-amber-600" /></div>
-          <div><div className="font-semibold text-sm">Leads</div><div className="text-xs text-muted-foreground">{leads.length} total</div></div>
+        <Link href="/advisor/leads" className="bg-surface rounded-[20px] p-5 flex flex-col gap-3 shadow-[0_2px_14px_rgba(20,52,42,0.06)] hover:shadow-[0_4px_20px_rgba(20,52,42,0.08)] transition-shadow">
+          <div className="h-10 w-10 rounded-[14px] bg-clay-tint flex items-center justify-center shrink-0"><Star className="h-5 w-5 text-clay-ink" /></div>
+          <div><div className="font-semibold text-forest text-[15px]">Leads</div><div className="text-[13px] text-ink-40">{leads.length} total</div></div>
         </Link>
       </div>
     </AppShell>

@@ -1,5 +1,6 @@
 import { formatCurrency } from "@/lib/currencyUtils";
 import { cn } from "@/lib/utils";
+import { Home, Utensils, Bus, Zap, Ticket, MoreHorizontal } from "lucide-react";
 import type { AdvisedPlan } from "@/hooks/useAdvisedPlans";
 
 export interface ExpenseData {
@@ -12,12 +13,12 @@ export interface ExpenseData {
 }
 
 const EXPENSE_ROWS = [
-  { key: "housing",       emoji: "🏠", label: "Housing (rent / mortgage)" },
-  { key: "food",          emoji: "🍜", label: "Food & dining" },
-  { key: "transport",     emoji: "🚌", label: "Transport" },
-  { key: "utilities",     emoji: "⚡", label: "Utilities & bills" },
-  { key: "entertainment", emoji: "🎬", label: "Entertainment & lifestyle" },
-  { key: "other",         emoji: "···", label: "Other expenses" },
+  { key: "housing",       icon: Home, label: "Housing (rent / mortgage)" },
+  { key: "food",          icon: Utensils, label: "Food & dining" },
+  { key: "transport",     icon: Bus, label: "Transport" },
+  { key: "utilities",     icon: Zap, label: "Utilities & bills" },
+  { key: "entertainment", icon: Ticket, label: "Entertainment & lifestyle" },
+  { key: "other",         icon: MoreHorizontal, label: "Other expenses" },
 ] as const;
 
 interface Props {
@@ -65,15 +66,17 @@ export default function Phase3Screen7Budget({ monthlyIncome, incomeCurrency, isT
 
       {/* Expense rows */}
       <div className="space-y-3">
-        {EXPENSE_ROWS.map(({ key, emoji, label }) => (
-          <div key={key} className="flex items-center gap-3">
-            <span className="w-6 text-center text-lg shrink-0">{emoji}</span>
-            <label className="flex-1 text-sm text-[#042C53]">{label}</label>
+        {EXPENSE_ROWS.map((r) => (
+          <div key={r.key} className="flex items-center gap-3">
+            <div className="w-6 flex items-center justify-center shrink-0">
+              <r.icon className="w-4 h-4 text-slate-400" />
+            </div>
+            <label className="flex-1 text-sm text-[#042C53]">{r.label}</label>
             <input
               type="number"
               min={0}
-              value={expenses[key] || ""}
-              onChange={e => onExpenseChange(key, parseFloat(e.target.value) || 0)}
+              value={expenses[r.key] || ""}
+              onChange={e => onExpenseChange(r.key, parseFloat(e.target.value) || 0)}
               placeholder="0"
               className="w-28 px-3 py-2 rounded-lg border border-slate-200 text-sm text-right text-[#042C53] placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/20 focus:border-[#1D9E75]"
             />

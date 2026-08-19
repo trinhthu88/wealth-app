@@ -59,7 +59,7 @@ export default function RequestReviewSheet({
         method: "POST",
         body: JSON.stringify({ advisorId, message: message.trim() }),
       });
-      toast.success(`Review request sent to ${advisorName ?? "your advisor"} ✓`);
+      toast.success(`Review request sent to ${advisorName ?? "your advisor"}`);
       onClose();
       setTimeout(() => navigate("/client/messages"), 1500);
     } catch {

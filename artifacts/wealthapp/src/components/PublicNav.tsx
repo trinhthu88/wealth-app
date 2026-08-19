@@ -1,27 +1,15 @@
 import { Link } from "wouter";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { useUser, UserButton } from "@clerk/react";
 import { useProfile } from "@/hooks/useProfile";
+import Sol from "./Sol";
 
 function SolWordmark() {
   return (
     <div className="flex items-center gap-2.5">
-      <svg width="28" height="28" viewBox="0 0 100 100" fill="none">
-        <circle cx="50" cy="50" r="22" fill="#1D9E75" />
-        <g stroke="#1D9E75" strokeWidth="6" strokeLinecap="round">
-          <line x1="50" y1="6" x2="50" y2="18" />
-          <line x1="50" y1="82" x2="50" y2="94" />
-          <line x1="6" y1="50" x2="18" y2="50" />
-          <line x1="82" y1="50" x2="94" y2="50" />
-          <line x1="20" y1="20" x2="28" y2="28" />
-          <line x1="72" y1="72" x2="80" y2="80" />
-          <line x1="80" y1="20" x2="72" y2="28" />
-          <line x1="28" y1="72" x2="20" y2="80" />
-        </g>
-      </svg>
-      <span style={{ fontFamily: "'Sora', sans-serif" }} className="text-xl font-bold tracking-tight text-foreground">
+      <Sol size="xs" animate="idle" showRays={false} />
+      <span className="font-display text-[24px] font-semibold tracking-[-0.02em] text-forest">
         tala
       </span>
     </div>
@@ -40,48 +28,52 @@ export default function PublicNav() {
     : "/free/dashboard";
 
   return (
-    <nav className="sticky top-0 z-50 bg-[#FAF8F5]/90 backdrop-blur border-b border-border">
-      <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+    <nav className="sticky top-0 z-50 bg-paper/90 backdrop-blur-sm border-b border-hairline">
+      <div className="max-w-6xl mx-auto px-6 h-[72px] flex items-center justify-between">
         <Link href="/" className="hover:opacity-85 transition-opacity">
           <SolWordmark />
         </Link>
 
-        <div className="hidden md:flex items-center gap-6 text-sm font-medium text-muted-foreground">
-          <Link href="/tools" className="hover:text-foreground transition-colors">Free Tools</Link>
-          <Link href="/blog" className="hover:text-foreground transition-colors">Insights</Link>
+        <div className="hidden md:flex items-center gap-8 text-[15px] font-semibold text-ink-40">
+          <Link href="/tools" className="hover:text-forest transition-colors">Free Tools</Link>
+          <Link href="/blog" className="hover:text-forest transition-colors">Insights</Link>
           {isSignedIn ? (
             <>
-              <Link href={dashLink} className="hover:text-foreground transition-colors">My Dashboard</Link>
-              <UserButton />
+              <Link href={dashLink} className="hover:text-green transition-colors">My Dashboard</Link>
+              <UserButton appearance={{ elements: { avatarBox: "h-9 w-9" } }} />
             </>
           ) : (
-            <>
-              <Link href="/sign-in">
-                <Button variant="ghost" size="sm" className="font-medium">Sign In</Button>
+            <div className="flex items-center gap-4">
+              <Link href="/sign-in" className="text-forest hover:text-green transition-colors">
+                Sign In
               </Link>
-              <Link href="/sign-up">
-                <Button size="sm" className="rounded-full px-5 font-semibold">Get Started</Button>
+              <Link href="/sign-up" className="bg-green text-white px-5 py-2.5 rounded-xl hover:bg-forest transition-colors">
+                Get Started
               </Link>
-            </>
+            </div>
           )}
         </div>
 
-        <button className="md:hidden text-foreground/70" onClick={() => setOpen(v => !v)}>
-          {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        <button className="md:hidden text-forest p-2 -mr-2" onClick={() => setOpen(v => !v)}>
+          {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
         </button>
       </div>
 
       {open && (
-        <div className="md:hidden border-t border-border bg-[#FAF8F5] px-4 py-4 space-y-2">
-          <Link href="/tools" className="block py-2 text-sm font-medium" onClick={() => setOpen(false)}>Free Tools</Link>
-          <Link href="/blog" className="block py-2 text-sm font-medium" onClick={() => setOpen(false)}>Insights</Link>
+        <div className="md:hidden border-t border-hairline bg-surface px-6 py-4 space-y-2 shadow-lg absolute left-0 right-0">
+          <Link href="/tools" className="block py-3 text-[16px] font-semibold text-forest" onClick={() => setOpen(false)}>Free Tools</Link>
+          <Link href="/blog" className="block py-3 text-[16px] font-semibold text-forest" onClick={() => setOpen(false)}>Insights</Link>
           {isSignedIn ? (
-            <Link href={dashLink} className="block py-2 text-sm font-medium" onClick={() => setOpen(false)}>My Dashboard</Link>
+            <Link href={dashLink} className="block py-3 text-[16px] font-semibold text-green" onClick={() => setOpen(false)}>My Dashboard</Link>
           ) : (
-            <>
-              <Link href="/sign-in"><Button variant="ghost" className="w-full" onClick={() => setOpen(false)}>Sign In</Button></Link>
-              <Link href="/sign-up"><Button className="w-full rounded-full font-semibold" onClick={() => setOpen(false)}>Get Started Free</Button></Link>
-            </>
+            <div className="pt-4 flex flex-col gap-3">
+              <Link href="/sign-in" className="flex items-center justify-center w-full h-12 rounded-xl border border-hairline text-forest font-semibold" onClick={() => setOpen(false)}>
+                Sign In
+              </Link>
+              <Link href="/sign-up" className="flex items-center justify-center w-full h-12 rounded-xl bg-green text-white font-semibold" onClick={() => setOpen(false)}>
+                Get Started Free
+              </Link>
+            </div>
           )}
         </div>
       )}

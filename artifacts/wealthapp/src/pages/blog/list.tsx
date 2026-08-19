@@ -36,7 +36,7 @@ export default function BlogListPage() {
                     <div className="h-44 bg-cover bg-center" style={{ backgroundImage: `url(${post.coverImageUrl})` }} />
                   ) : (
                     <div className="h-44 bg-gradient-to-br from-primary/20 to-accent flex items-center justify-center">
-                      <span className="text-4xl">📈</span>
+                      <span className="text-4xl"></span>
                     </div>
                   )}
                   <div className="p-5">

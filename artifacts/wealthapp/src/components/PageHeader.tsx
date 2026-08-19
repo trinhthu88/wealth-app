@@ -10,21 +10,23 @@ interface PageHeaderProps {
 
 export default function PageHeader({ title, subtitle, eyebrow, action, className }: PageHeaderProps) {
   return (
-    <div className={cn("flex items-start justify-between gap-4", className)} style={{ marginBottom: 18 }}>
+    <div className={cn("flex items-start justify-between gap-4 mb-6", className)}>
       <div>
         {eyebrow && (
-          <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: "#A8A095", marginBottom: 3 }}>
+          <p className="tala-eyebrow text-ink-40 mb-1.5">
             {eyebrow}
           </p>
         )}
-        <h1 style={{ fontFamily: "'Sora', sans-serif", fontSize: 22, fontWeight: 700, color: "#042C53", letterSpacing: "-0.02em", lineHeight: 1.2 }}>
+        <h1 className="font-display text-[30px] font-semibold text-forest tracking-[-0.02em] leading-tight">
           {title}
         </h1>
         {subtitle && (
-          <p style={{ fontSize: 13, color: "#6B6459", marginTop: 4, lineHeight: 1.5 }}>{subtitle}</p>
+          <p className="text-[14px] text-ink-60 mt-1.5 leading-relaxed max-w-2xl text-pretty">
+            {subtitle}
+          </p>
         )}
       </div>
-      {action && <div className="shrink-0">{action}</div>}
+      {action && <div className="shrink-0 pt-1">{action}</div>}
     </div>
   );
 }

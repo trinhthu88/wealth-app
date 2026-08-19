@@ -28,21 +28,21 @@ interface Client {
 interface Advisor { id: string; email: string; fullName: string | null; }
 
 const KYC_COLORS: Record<string, string> = {
-  not_submitted: "bg-muted text-muted-foreground",
-  not_started: "bg-muted text-muted-foreground",
-  pending: "bg-amber-100 text-amber-700",
-  submitted: "bg-amber-100 text-amber-700",
-  approved: "bg-green-100 text-green-700",
-  rejected: "bg-red-100 text-red-700",
+  not_submitted: "bg-surface border border-hairline text-ink-60",
+  not_started: "bg-surface border border-hairline text-ink-60",
+  pending: "bg-sun-tint text-amber-ink",
+  submitted: "bg-sun-tint text-amber-ink",
+  approved: "bg-green-tint text-green",
+  rejected: "bg-clay-tint text-clay-ink",
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  prospect: "bg-blue-100 text-blue-700",
-  active: "bg-emerald-100 text-emerald-700",
-  active_prospect: "bg-teal-100 text-teal-700",
-  pending: "bg-amber-100 text-amber-700",
-  paused: "bg-slate-100 text-slate-600",
-  churned: "bg-red-100 text-red-700",
+  prospect: "bg-sun-tint text-amber-ink",
+  active: "bg-green-tint text-green",
+  active_prospect: "bg-green-tint text-green",
+  pending: "bg-sun-tint text-amber-ink",
+  paused: "bg-surface border border-hairline text-ink-60",
+  churned: "bg-clay-tint text-clay-ink",
 };
 
 const STATUS_FILTERS = ["all", "prospect", "active", "pending", "paused", "churned"];
@@ -92,37 +92,39 @@ export default function AdvisorClients() {
         title="My Clients"
         subtitle={`${clients.length} clients · ${fmtUSD(totalAUM)} total AUM`}
         action={
-          <Button size="sm" onClick={() => setShowAddModal(true)}>
-            <Plus className="h-4 w-4 mr-1" /> Add client
+          <Button onClick={() => setShowAddModal(true)} className="rounded-full px-5 bg-forest text-paper hover:bg-forest-700">
+            <Plus className="h-4 w-4 mr-2" /> Add client
           </Button>
         }
       />
 
       {/* Add Client Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-card border border-card-border rounded-2xl p-6 w-full max-w-md shadow-xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-forest-900/40 backdrop-blur-sm p-4">
+          <div className="bg-surface rounded-[28px] p-6 w-full max-w-md shadow-2xl">
             <div className="flex items-center justify-between mb-5">
-              <h2 className="font-semibold text-lg">Add New Client</h2>
-              <button onClick={() => setShowAddModal(false)}><X className="h-5 w-5 text-muted-foreground" /></button>
+              <h2 className="font-display text-[20px] font-semibold text-forest">Add New Client</h2>
+              <button onClick={() => setShowAddModal(false)} className="h-8 w-8 rounded-full hover:bg-paper flex items-center justify-center transition-colors">
+                <X className="h-5 w-5 text-ink-40" />
+              </button>
             </div>
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div>
-                <label className="text-xs font-medium">Full name</label>
-                <Input className="mt-1" placeholder="Nguyen Van A" value={form.fullName} onChange={e => setForm(f => ({ ...f, fullName: e.target.value }))} />
+                <label className="text-[13px] font-medium text-ink-60 block mb-1.5">Full name</label>
+                <Input className="h-11 rounded-[12px] border-hairline bg-paper px-4 focus-visible:ring-green" placeholder="Nguyen Van A" value={form.fullName} onChange={e => setForm(f => ({ ...f, fullName: e.target.value }))} />
               </div>
               <div>
-                <label className="text-xs font-medium">Email address</label>
-                <Input className="mt-1" type="email" placeholder="client@email.com" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+                <label className="text-[13px] font-medium text-ink-60 block mb-1.5">Email address</label>
+                <Input className="h-11 rounded-[12px] border-hairline bg-paper px-4 focus-visible:ring-green" type="email" placeholder="client@email.com" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
               </div>
               <div>
-                <label className="text-xs font-medium">Temporary password</label>
-                <Input className="mt-1" type="password" placeholder="Min 8 characters" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} />
+                <label className="text-[13px] font-medium text-ink-60 block mb-1.5">Temporary password</label>
+                <Input className="h-11 rounded-[12px] border-hairline bg-paper px-4 focus-visible:ring-green" type="password" placeholder="Min 8 characters" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs font-medium">Risk profile</label>
-                  <select className="w-full mt-1 border border-border rounded-lg px-3 py-2 text-sm" value={form.riskProfile} onChange={e => setForm(f => ({ ...f, riskProfile: e.target.value }))}>
+                  <label className="text-[13px] font-medium text-ink-60 block mb-1.5">Risk profile</label>
+                  <select className="w-full h-11 border border-hairline bg-paper rounded-[12px] px-4 text-[14px] text-forest focus:outline-none focus:ring-2 focus:ring-green" value={form.riskProfile} onChange={e => setForm(f => ({ ...f, riskProfile: e.target.value }))}>
                     <option value="">— Select —</option>
                     <option value="conservative">Conservative</option>
                     <option value="moderate">Moderate</option>
@@ -130,8 +132,8 @@ export default function AdvisorClients() {
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-medium">Initial status</label>
-                  <select className="w-full mt-1 border border-border rounded-lg px-3 py-2 text-sm" value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
+                  <label className="text-[13px] font-medium text-ink-60 block mb-1.5">Initial status</label>
+                  <select className="w-full h-11 border border-hairline bg-paper rounded-[12px] px-4 text-[14px] text-forest focus:outline-none focus:ring-2 focus:ring-green" value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
                     <option value="prospect">Prospect</option>
                     <option value="active">Active</option>
                     <option value="pending">Pending</option>
@@ -139,9 +141,9 @@ export default function AdvisorClients() {
                 </div>
               </div>
             </div>
-            <div className="flex gap-2 mt-5">
-              <Button variant="outline" className="flex-1" onClick={() => setShowAddModal(false)}>Cancel</Button>
-              <Button className="flex-1" disabled={createMut.isPending || !form.email || !form.password}
+            <div className="flex gap-3 mt-8">
+              <Button variant="outline" className="flex-1 rounded-full h-11 border-hairline text-forest hover:bg-paper" onClick={() => setShowAddModal(false)}>Cancel</Button>
+              <Button className="flex-1 rounded-full h-11 bg-green text-surface hover:bg-green-300" disabled={createMut.isPending || !form.email || !form.password}
                 onClick={() => createMut.mutate({ email: form.email, password: form.password, fullName: form.fullName || undefined, role: "investment_client", riskProfile: form.riskProfile || undefined, status: form.status })}>
                 {createMut.isPending ? "Creating…" : "Create client"}
               </Button>
@@ -151,13 +153,13 @@ export default function AdvisorClients() {
       )}
 
       {/* Search + Filter */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-4">
-        <Input placeholder="Search clients by name or email…" value={search} onChange={e => setSearch(e.target.value)} className="max-w-sm" />
-        <div className="flex gap-1.5 flex-wrap">
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        <Input placeholder="Search clients by name or email…" value={search} onChange={e => setSearch(e.target.value)} className="max-w-sm h-11 rounded-full border-hairline bg-surface px-5 focus-visible:ring-green" />
+        <div className="flex gap-2 flex-wrap items-center">
           {STATUS_FILTERS.map(s => (
             <button key={s} onClick={() => setStatusFilter(s)}
-              className={cn("text-xs px-3 py-1.5 rounded-full font-medium border transition-colors capitalize",
-                statusFilter === s ? "bg-primary text-primary-foreground border-primary" : "border-border bg-muted/40 text-muted-foreground hover:bg-muted")}>
+              className={cn("text-[13px] px-4 py-2 rounded-full font-medium transition-colors capitalize border",
+                statusFilter === s ? "bg-forest text-paper border-forest" : "bg-surface border-hairline text-ink-60 hover:bg-paper")}>
               {s === "all" ? `All (${clients.length})` : `${s} (${clients.filter(c => c.status === s).length})`}
             </button>
           ))}
@@ -165,57 +167,57 @@ export default function AdvisorClients() {
       </div>
 
       {isLoading ? (
-        <div className="space-y-3">{Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-16 bg-muted rounded-xl animate-pulse" />)}</div>
+        <div className="space-y-3">{Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-[72px] bg-surface rounded-[26px] animate-pulse" />)}</div>
       ) : filtered.length === 0 ? (
-        <div className="bg-card border border-card-border rounded-xl p-16 text-center">
-          <Users className="h-14 w-14 text-muted-foreground/30 mx-auto mb-4" />
-          <h3 className="font-semibold mb-2">{search ? "No matching clients" : "No clients yet"}</h3>
-          <p className="text-muted-foreground text-sm">{search ? "Try a different search term." : "Add clients using the button above."}</p>
+        <div className="bg-surface rounded-[26px] p-16 text-center shadow-[0_2px_14px_rgba(20,52,42,0.06)]">
+          <Users className="h-14 w-14 text-ink-20 mx-auto mb-4" />
+          <h3 className="font-display text-[20px] font-semibold text-forest mb-2">{search ? "No matching clients" : "No clients yet"}</h3>
+          <p className="text-[14px] text-ink-40">{search ? "Try a different search term." : "Add clients using the button above."}</p>
         </div>
       ) : (
-        <div className="bg-card border border-card-border rounded-xl overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="border-b border-border bg-muted/50">
+        <div className="bg-surface rounded-[26px] shadow-[0_2px_14px_rgba(20,52,42,0.06)] overflow-hidden">
+          <table className="w-full text-left">
+            <thead>
               <tr>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Client</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Status</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">KYC</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden md:table-cell">Risk</th>
-                <th className="text-right px-4 py-3 font-medium text-muted-foreground hidden md:table-cell">Portfolio</th>
-                <th className="text-right px-4 py-3 font-medium text-muted-foreground hidden lg:table-cell">Packages</th>
-                <th className="px-4 py-3" />
+                <th className="px-5 py-4 font-sans text-[13px] font-medium text-ink-40 border-b border-hairline">Client</th>
+                <th className="px-5 py-4 font-sans text-[13px] font-medium text-ink-40 border-b border-hairline">Status</th>
+                <th className="px-5 py-4 font-sans text-[13px] font-medium text-ink-40 border-b border-hairline">KYC</th>
+                <th className="px-5 py-4 font-sans text-[13px] font-medium text-ink-40 border-b border-hairline hidden md:table-cell">Risk</th>
+                <th className="px-5 py-4 font-sans text-[13px] font-medium text-ink-40 border-b border-hairline hidden md:table-cell text-right">Portfolio</th>
+                <th className="px-5 py-4 font-sans text-[13px] font-medium text-ink-40 border-b border-hairline hidden lg:table-cell text-right">Packages</th>
+                <th className="px-5 py-4 border-b border-hairline" />
               </tr>
             </thead>
             <tbody>
               {filtered.map(c => (
-                <tr key={c.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
-                  <td className="px-4 py-3">
+                <tr key={c.id} className="border-b border-hairline last:border-0 hover:bg-paper transition-colors group">
+                  <td className="px-5 py-3">
                     <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary shrink-0">
+                      <div className="h-10 w-10 rounded-full bg-green-tint flex items-center justify-center text-[15px] font-semibold text-green shrink-0">
                         {(c.fullName ?? c.email)[0].toUpperCase()}
                       </div>
                       <div>
-                        <div className="font-medium">{c.fullName ?? "—"}</div>
-                        <div className="text-xs text-muted-foreground">{c.email}</div>
+                        <div className="font-medium text-[15px] text-forest">{c.fullName ?? "—"}</div>
+                        <div className="text-[13px] text-ink-40">{c.email}</div>
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3">
-                    <span className={cn("text-xs px-2 py-0.5 rounded-full font-medium capitalize", STATUS_COLORS[c.status ?? "prospect"] ?? "bg-muted text-muted-foreground")}>
+                  <td className="px-5 py-3">
+                    <span className={cn("text-[13px] px-3 py-1 rounded-full font-medium capitalize inline-block", STATUS_COLORS[c.status ?? "prospect"] ?? "bg-surface border border-hairline text-ink-60")}>
                       {(c.status ?? "—").replace(/_/g, " ")}
                     </span>
                   </td>
-                  <td className="px-4 py-3">
-                    <span className={cn("text-xs px-2 py-0.5 rounded-full font-medium", KYC_COLORS[c.kycStatus ?? "not_submitted"] ?? "bg-muted text-muted-foreground")}>
+                  <td className="px-5 py-3">
+                    <span className={cn("text-[13px] px-3 py-1 rounded-full font-medium inline-block", KYC_COLORS[c.kycStatus ?? "not_submitted"] ?? "bg-surface border border-hairline text-ink-60")}>
                       {(c.kycStatus ?? "not started").replace(/_/g, " ")}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground capitalize hidden md:table-cell">{c.riskProfile ?? "—"}</td>
-                  <td className="px-4 py-3 text-right font-medium hidden md:table-cell">{c.portfolioValue > 0 ? fmtUSD(c.portfolioValue) : "—"}</td>
-                  <td className="px-4 py-3 text-right text-muted-foreground hidden lg:table-cell">{c.packagesCount}</td>
-                  <td className="px-4 py-3">
-                    <Link href={`/advisor/clients/${c.id}`} className="text-primary hover:text-primary/80 flex items-center gap-1 text-xs font-medium justify-end">
-                      View <ArrowRight className="h-3.5 w-3.5" />
+                  <td className="px-5 py-3 text-[14px] text-ink-60 capitalize hidden md:table-cell">{c.riskProfile ?? "—"}</td>
+                  <td className="px-5 py-3 text-[15px] text-forest font-semibold text-right tabular-nums hidden md:table-cell">{c.portfolioValue > 0 ? fmtUSD(c.portfolioValue) : "—"}</td>
+                  <td className="px-5 py-3 text-[14px] text-ink-60 text-right tabular-nums hidden lg:table-cell">{c.packagesCount}</td>
+                  <td className="px-5 py-3 text-right">
+                    <Link href={`/advisor/clients/${c.id}`} className="text-[14px] font-medium text-green hover:text-forest flex items-center gap-1.5 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                      View <ArrowRight className="h-4 w-4" />
                     </Link>
                   </td>
                 </tr>

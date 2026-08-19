@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
 import { toast } from "sonner";
-import { Lock, X, TrendingUp, Plus, Trash2, ChevronDown } from "lucide-react";
+import { Lock, X, TrendingUp, Plus, Trash2, ChevronDown, Home, Palmtree, ShieldAlert, Rocket, CreditCard, GraduationCap, Plane, Car, Briefcase, Landmark, Target } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
 import { calculateProjection, applyMonthlyGrowth } from "@/lib/goalProjection";
 import type { ProjectionResult } from "@/lib/goalProjection";
@@ -26,17 +26,17 @@ const EXPENSE_KEYS = ["housing", "food", "transport", "utilities", "entertainmen
 const AUTO_UPDATE_STORAGE_KEY = "goal_auto_update_month";
 
 const GOAL_TYPES = [
-  { value: "home_purchase",          label: "Home Purchase",           emoji: "🏠" },
-  { value: "retirement",             label: "Retirement",              emoji: "🌴" },
-  { value: "emergency_fund",         label: "Emergency Fund",          emoji: "🛡️" },
-  { value: "financial_independence", label: "Financial Independence",  emoji: "🚀" },
-  { value: "debt_payoff",            label: "Debt Payoff",             emoji: "💳" },
-  { value: "education",              label: "Education",               emoji: "🎓" },
-  { value: "travel",                 label: "Travel",                  emoji: "✈️" },
-  { value: "vehicle",                label: "Vehicle",                 emoji: "🚗" },
-  { value: "business",               label: "Business",                emoji: "💼" },
-  { value: "investment",             label: "Investment",              emoji: "📈" },
-  { value: "other",                  label: "Other",                   emoji: "🎯" },
+  { value: "home_purchase",          label: "Home Purchase",           icon: Home },
+  { value: "retirement",             label: "Retirement",              icon: Palmtree },
+  { value: "emergency_fund",         label: "Emergency Fund",          icon: ShieldAlert },
+  { value: "financial_independence", label: "Financial Independence",  icon: Rocket },
+  { value: "debt_payoff",            label: "Debt Payoff",             icon: CreditCard },
+  { value: "education",              label: "Education",               icon: GraduationCap },
+  { value: "travel",                 label: "Travel",                  icon: Plane },
+  { value: "vehicle",                label: "Vehicle",                 icon: Car },
+  { value: "business",               label: "Business",                icon: Briefcase },
+  { value: "investment",             label: "Investment",              icon: Landmark },
+  { value: "other",                  label: "Other",                   icon: Target },
 ];
 
 const STATUS_ORDER: Record<string, number> = { off_track: 0, almost: 1, on_track: 2, achieved: 3 };
@@ -248,7 +248,7 @@ export default function GoalsPage() {
     mutationFn: (body: object) => apiFetch("/goals", { method: "POST", body: JSON.stringify(body) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["goals"] });
-      toast.success("Goal added! 🎯");
+      toast.success("Goal added!");
       closeGoalForm();
     },
     onError: () => toast.error("Failed to add goal"),
@@ -350,7 +350,7 @@ export default function GoalsPage() {
     return (
       <AppShell>
         <div className="pb-20 md:pb-0 flex flex-col items-center justify-center min-h-[60vh] text-center gap-4">
-          <span className="text-5xl">🎯</span>
+          <Target className="w-12 h-12 text-primary" />
           <h2 className="text-xl font-semibold">Set your first financial goal</h2>
           <p className="text-muted-foreground text-sm max-w-xs">A clear goal with a target date is the foundation of every great financial plan.</p>
           <Button onClick={openAddForm}>Add your first goal →</Button>
@@ -584,7 +584,7 @@ function GoalFormSheet({ form, setForm, errors, editingGoal, onClose, onSubmit, 
                 className="w-full border border-border rounded-xl px-4 py-2.5 text-sm bg-card outline-none focus:ring-2 focus:ring-primary appearance-none pr-10"
               >
                 {GOAL_TYPES.map(t => (
-                  <option key={t.value} value={t.value}>{t.emoji} {t.label}</option>
+                  <option key={t.value} value={t.value}>{t.label}</option>
                 ))}
               </select>
               <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />

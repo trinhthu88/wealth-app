@@ -3,7 +3,7 @@
 // ✗ BANNED:  Page-load stagger on any section
 // ✗ BANNED:  Skeleton shimmer on individual input fields
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import ClientAppShell from "@/components/client/AppShell";
 import BudgetMonthSelector from "@/components/client/budget/BudgetMonthSelector";
 import BudgetInputForm, { type BudgetFormState } from "@/components/client/budget/BudgetInputForm";
@@ -12,7 +12,7 @@ import SurplusCTA from "@/components/client/budget/SurplusCTA";
 import GoalFundingGaps from "@/components/client/budget/GoalFundingGaps";
 import BudgetHistoryChart from "@/components/client/budget/BudgetHistoryChart";
 import BudgetTrackBCTA from "@/components/client/budget/BudgetTrackBCTA";
-import { useClientBudget, computeTotals, type InvestmentContribution } from "@/hooks/useClientBudget";
+import { useClientBudget, type InvestmentContribution } from "@/hooks/useClientBudget";
 import { useClientHoldings } from "@/hooks/useClientHoldings";
 
 function monthLabel(dateStr: string) {
@@ -53,6 +53,7 @@ function n(s: string) { return parseFloat(s) || 0; }
 
 export default function ClientBudget() {
   const { holdings } = useClientHoldings();
+  const hasSyncedContributions = useRef(false);
 
   // Handle ?month= URL param
   const urlMonth = (() => {
@@ -71,7 +72,6 @@ export default function ClientBudget() {
     saving,
     saveMonth,
     syncInvestmentContributions,
-    currentMonthStr: hookCurrentMonth,
   } = useClientBudget(selectedMonth);
 
   const [form, setForm] = useState<BudgetFormState>({ ...EMPTY_FORM });
@@ -94,8 +94,10 @@ export default function ClientBudget() {
 
   // Auto-sync on mount
   useEffect(() => {
+    if (hasSyncedContributions.current) return;
+    hasSyncedContributions.current = true;
     syncInvestmentContributions().catch(() => {});
-  }, []);
+  }, [syncInvestmentContributions]);
 
   // Warn on unsaved changes
   useEffect(() => {
@@ -177,12 +179,18 @@ export default function ClientBudget() {
     setIsReadOnly(false);
   }
 
+  const [daysLeft] = useState(() => {
+    const now = new Date();
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    return lastDay.getDate() - now.getDate();
+  });
+
   if (loading) {
     return (
       <ClientAppShell>
-        <div className="max-w-[960px] mx-auto space-y-4">
-          <div className="h-8 bg-slate-100 animate-pulse rounded-xl w-64" />
-          <div className="h-48 bg-slate-100 animate-pulse rounded-xl" />
+        <div className="space-y-[14px]">
+          <div className="h-48 bg-surface animate-pulse rounded-[28px]" />
+          <div className="h-64 bg-surface animate-pulse rounded-[26px]" />
         </div>
       </ClientAppShell>
     );
@@ -190,27 +198,34 @@ export default function ClientBudget() {
 
   return (
     <ClientAppShell>
-      <div className="max-w-[960px] mx-auto space-y-6">
+      <div className="space-y-[14px] pb-12">
         {/* Header */}
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <h1 className="text-xl font-bold text-[#042C53]">Budget</h1>
-          {isDirty && (
-            <span className="text-xs text-amber-600 font-medium">Unsaved changes</span>
-          )}
+        <div className="mb-2">
+          <div className="flex items-center justify-between mb-1">
+            <h1 className="font-display text-[30px] font-semibold text-forest tracking-[-0.02em]">
+              {monthLabel(selectedMonth)}
+            </h1>
+            {isDirty && (
+              <span className="text-[12px] text-clay font-medium bg-clay-tint px-2.5 py-0.5 rounded-full">Unsaved changes</span>
+            )}
+          </div>
+          <div className="text-[14px] text-ink-40">{daysLeft} days left in the month</div>
         </div>
 
         {/* Month selector */}
-        <BudgetMonthSelector
-          selectedMonth={selectedMonth}
-          months={months}
-          onChange={handleMonthChange}
-        />
+        <div className="mb-[20px]">
+          <BudgetMonthSelector
+            selectedMonth={selectedMonth}
+            months={months}
+            onChange={handleMonthChange}
+          />
+        </div>
 
         {/* Main 2-col layout */}
-        <div className="flex flex-col lg:flex-row gap-6">
+        <div className="flex flex-col lg:flex-row gap-[14px]">
           {/* Input form (left) */}
           <div className="flex-1 min-w-0">
-            <div className="bg-white border border-[#E2E8F0] rounded-xl p-4 sm:p-5">
+            <div className="bg-surface rounded-[28px] p-[22px] shadow-[0_2px_14px_rgba(20,52,42,.06)]">
               <BudgetInputForm
                 form={form}
                 onChange={handleChange}
@@ -225,23 +240,27 @@ export default function ClientBudget() {
           </div>
 
           {/* Summary panel (right) */}
-          <div className="lg:w-[340px] lg:shrink-0 space-y-4">
-            <BudgetSummaryPanel
-              selectedMonthLabel={monthLabel(selectedMonth)}
-              income={income}
-              expenses={expenses}
-              investments={totalInvestments}
-            />
+          <div className="lg:w-[340px] lg:shrink-0 space-y-[14px]">
+            <div className="bg-surface rounded-[28px] p-[22px] shadow-[0_2px_14px_rgba(20,52,42,.06)]">
+              <BudgetSummaryPanel
+                selectedMonthLabel={monthLabel(selectedMonth)}
+                income={income}
+                expenses={expenses}
+                investments={totalInvestments}
+              />
+            </div>
 
             {/* Surplus CTA */}
-            <SurplusCTA
-              surplus={surplus}
-              monthKey={selectedMonth.slice(0, 7)}
-            />
+            <div className="bg-surface rounded-[28px] p-[22px] shadow-[0_2px_14px_rgba(20,52,42,.06)]">
+              <SurplusCTA
+                surplus={surplus}
+                monthKey={selectedMonth.slice(0, 7)}
+              />
+            </div>
 
             {/* Goal funding gaps */}
             {totalInvestments > 0 && (
-              <div className="bg-white border border-[#E2E8F0] rounded-xl p-4">
+              <div className="bg-surface rounded-[28px] p-[22px] shadow-[0_2px_14px_rgba(20,52,42,.06)]">
                 <GoalFundingGaps totalMonthlyInvestments={totalInvestments} />
               </div>
             )}
@@ -249,7 +268,9 @@ export default function ClientBudget() {
         </div>
 
         {/* History chart */}
-        <BudgetHistoryChart months={months} />
+        <div className="bg-surface rounded-[28px] p-[22px] shadow-[0_2px_14px_rgba(20,52,42,.06)]">
+          <BudgetHistoryChart months={months} />
+        </div>
 
         {/* Track B CTA */}
         <BudgetTrackBCTA surplus={surplus} />

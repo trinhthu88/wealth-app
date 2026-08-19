@@ -11,7 +11,7 @@ import CurrencyInput from "@/components/CurrencyInput";
 import RewardReveal from "@/components/RewardReveal";
 import BottomNav from "@/components/BottomNav";
 import Sol from "@/components/Sol";
-import { ArrowLeft, Check, Edit2 } from "lucide-react";
+import { ArrowLeft, Check, Edit2, ShieldAlert, Briefcase, Car, GraduationCap, Home, Palmtree, Rocket, Plane, Target, Utensils, Bus, Zap, Ticket, MoreHorizontal, CreditCard, Building, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { saveRatesToStorage } from "@/lib/milestones";
 
@@ -29,14 +29,14 @@ type FormData = {
 
 const LIFE_STAGES = ["Just starting", "Building career", "Growing family", "Established", "Pre-retirement"];
 const INCOME_TYPES = ["Salary", "Freelance", "Business", "Rental", "Other"];
-const STABILITY = [{ label: "Very stable", icon: "🏢" }, { label: "Mostly stable", icon: "⚡" }, { label: "Variable", icon: "🌊" }];
+const STABILITY = [{ label: "Very stable", icon: Building }, { label: "Mostly stable", icon: Briefcase }, { label: "Variable", icon: TrendingUp }];
 const GOAL_OPTIONS = [
-  { type: "property", emoji: "🏠", name: "Buy property", desc: "Build your deposit" },
-  { type: "retirement", emoji: "🌴", name: "Retire comfortably", desc: "Build enough to stop working" },
-  { type: "emergency_fund", emoji: "🛡️", name: "Emergency fund", desc: "3-6 months of expenses" },
-  { type: "fi", emoji: "🚀", name: "Financial independence", desc: "Reach your FI number" },
-  { type: "debt", emoji: "💳", name: "Pay off debt", desc: "Become debt-free" },
-  { type: "other", emoji: "🎯", name: "Other goal", desc: "Something personal" },
+  { type: "property", icon: Home, name: "Buy property", desc: "Build your deposit" },
+  { type: "retirement", icon: Palmtree, name: "Retire comfortably", desc: "Build enough to stop working" },
+  { type: "emergency_fund", icon: ShieldAlert, name: "Emergency fund", desc: "3-6 months of expenses" },
+  { type: "fi", icon: Rocket, name: "Financial independence", desc: "Reach your FI number" },
+  { type: "debt", icon: CreditCard, name: "Pay off debt", desc: "Become debt-free" },
+  { type: "other", icon: Target, name: "Other goal", desc: "Something personal" },
 ];
 const RISK_QUESTIONS = [
   { q: "If your investments dropped 20%, you'd...", options: ["Sell everything immediately", "Feel anxious but hold on", "Stay calm and wait it out", "See it as a buying opportunity"] },
@@ -64,12 +64,12 @@ const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov
 const YEARS = Array.from({ length: 30 }, (_, i) => String(new Date().getFullYear() + 1 + i));
 
 const EXPENSE_CATS = [
-  { key: "housing" as const, emoji: "🏠", label: "Housing" },
-  { key: "food" as const, emoji: "🍜", label: "Food" },
-  { key: "transport" as const, emoji: "🚗", label: "Transport" },
-  { key: "utilities" as const, emoji: "💡", label: "Utilities" },
-  { key: "entertainment" as const, emoji: "🎮", label: "Entertainment" },
-  { key: "other" as const, emoji: "📦", label: "Other" },
+  { key: "housing" as const, icon: Home, label: "Housing" },
+  { key: "food" as const, icon: Utensils, label: "Food" },
+  { key: "transport" as const, icon: Bus, label: "Transport" },
+  { key: "utilities" as const, icon: Zap, label: "Utilities" },
+  { key: "entertainment" as const, icon: Ticket, label: "Entertainment" },
+  { key: "other" as const, icon: MoreHorizontal, label: "Other" },
 ];
 
 const slideVariants = {
@@ -313,7 +313,7 @@ export default function PathwayPage() {
       <div>
         <p className="text-sm font-medium mb-2">Living outside your home country?</p>
         <div className="grid grid-cols-2 gap-3">
-          {[{ label: "Yes 🌏", val: true }, { label: "No 🏠", val: false }].map(o => (
+          {[{ label: "Yes ", val: true }, { label: "No ", val: false }].map(o => (
             <button key={String(o.val)} onClick={() => setField("isExpat", o.val)} className={cn("rounded-xl border-2 p-4 text-sm font-medium transition-colors", form.isExpat === o.val ? "border-primary bg-primary/5" : "border-border hover:border-primary/50")}>
               {o.label}
             </button>
@@ -352,8 +352,8 @@ export default function PathwayPage() {
         <p className="text-sm font-medium mb-2">Income stability</p>
         <div className="grid grid-cols-3 gap-2">
           {STABILITY.map(s => (
-            <button key={s.label} onClick={() => setField("stability", s.label)} className={cn("rounded-xl border-2 p-3 text-center text-xs font-medium transition-colors", form.stability === s.label ? "border-primary bg-primary/5" : "border-border hover:border-primary/50")}>
-              <div className="text-xl mb-1">{s.icon}</div>{s.label}
+            <button key={s.label} onClick={() => setField("stability", s.label)} className={cn("rounded-xl border-2 p-3 text-center text-xs font-medium transition-colors", form.stability === s.label ? "border-primary bg-primary/5 text-primary" : "border-border text-muted-foreground hover:border-primary/50")}>
+              <div className="flex justify-center mb-1"><s.icon className="w-5 h-5" /></div>{s.label}
             </button>
           ))}
         </div>
@@ -368,7 +368,7 @@ export default function PathwayPage() {
         {EXPENSE_CATS.map((cat, i) => (
           <div key={cat.key} className={cn("border-b border-border last:border-0", expandedCat === cat.key && "bg-muted/30")}>
             <button onClick={() => setExpandedCat(expandedCat === cat.key ? null : cat.key)} className="w-full flex items-center justify-between px-4 py-3.5 text-left">
-              <div className="flex items-center gap-3"><span className="text-xl">{cat.emoji}</span><span className="font-medium text-sm">{cat.label}</span></div>
+              <div className="flex items-center gap-3"><cat.icon className="w-5 h-5 text-muted-foreground" /><span className="font-medium text-sm">{cat.label}</span></div>
               <span className={cn("text-sm font-semibold", form[cat.key] > 0 ? "text-primary" : "text-muted-foreground")}>{form[cat.key] > 0 ? `${form.currency === "VND" ? "₫" : "$"}${form[cat.key].toLocaleString()}` : "Tap to enter"}</span>
             </button>
             <AnimatePresence>
@@ -395,7 +395,7 @@ export default function PathwayPage() {
             <div className={cn("h-full rounded-full transition-all", savingsRate > 20 ? "bg-primary" : savingsRate > 10 ? "bg-amber-400" : "bg-red-400")} style={{ width: `${Math.max(0, Math.min(100, savingsRate))}%` }} />
           </div>
           <p className={cn("text-xs mt-1.5", savingsRate > 20 ? "text-primary" : savingsRate > 10 ? "text-amber-500" : "text-red-500")}>
-            {savingsRate > 20 ? "You're on track 🎉" : savingsRate > 10 ? "Getting there" : "Below recommended"}
+            {savingsRate > 20 ? "You're on track " : savingsRate > 10 ? "Getting there" : "Below recommended"}
           </p>
         </div>
       )}
@@ -410,9 +410,9 @@ export default function PathwayPage() {
           <motion.div key="grid" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} className="grid grid-cols-2 gap-3">
             {GOAL_OPTIONS.map(g => (
               <button key={g.type} onClick={() => { setField("goalType", g.type); setField("goalTitle", g.name); setGoalPanel(true); }}
-                className="rounded-[16px] p-4 text-center transition-colors active:scale-95"
+                className="rounded-[16px] p-4 text-center transition-colors active:scale-95 flex flex-col items-center"
                 style={{ border: form.goalType === g.type ? "2px solid #1D9E75" : "2px solid #E6E1D8", background: form.goalType === g.type ? "#E6F5EE" : "white" }}>
-                <div className="text-3xl mb-2">{g.emoji}</div>
+                <div className="mb-2"><g.icon className={cn("w-7 h-7", form.goalType === g.type ? "text-primary" : "text-muted-foreground")} /></div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: "#042C53" }}>{g.name}</div>
                 <div style={{ fontSize: 11, color: "#A8A095", marginTop: 2 }}>{g.desc}</div>
               </button>
@@ -421,7 +421,7 @@ export default function PathwayPage() {
         ) : (
           <motion.div key="detail" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} className="space-y-4">
             <button onClick={() => setGoalPanel(false)} className="text-sm text-primary flex items-center gap-1"><ArrowLeft className="h-3.5 w-3.5" />Choose different goal</button>
-            <div className="text-center py-2"><span className="text-4xl">{GOAL_OPTIONS.find(g => g.type === form.goalType)?.emoji}</span></div>
+            <div className="text-center py-2 flex justify-center">{(() => { const GI = GOAL_OPTIONS.find(g => g.type === form.goalType)?.icon; return GI ? <GI className="w-10 h-10 text-primary" /> : null; })()}</div>
             <div>
               <label className="text-sm font-medium block mb-1.5">Goal name</label>
               <input value={form.goalTitle} onChange={e => setField("goalTitle", e.target.value)} className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-card outline-none focus:ring-2 focus:ring-primary" />
@@ -449,10 +449,10 @@ export default function PathwayPage() {
     /* Step 5 */
     <div className="space-y-5">
       <StepHeading step={5} title="Let's complete your picture" sub="Approximate numbers are totally fine" />
-      <CurrencyInput value={form.savings} onChange={v => setField("savings", v)} currency={form.currency} label="💰 Total current savings" />
+      <CurrencyInput value={form.savings} onChange={v => setField("savings", v)} currency={form.currency} label=" Total current savings" />
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className="text-sm font-medium">📈 Investments</label>
+          <label className="text-sm font-medium"> Investments</label>
           <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
             <input type="checkbox" checked={form.noInvestments} onChange={e => { setField("noInvestments", e.target.checked); if (e.target.checked) setField("investments", 0); }} className="rounded" />
             I don't have investments yet
@@ -462,7 +462,7 @@ export default function PathwayPage() {
       </div>
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className="text-sm font-medium">💸 Total debts</label>
+          <label className="text-sm font-medium"> Total debts</label>
           <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
             <input type="checkbox" checked={form.debtFree} onChange={e => { setField("debtFree", e.target.checked); if (e.target.checked) setField("debts", 0); }} className="rounded" />
             I'm debt-free
@@ -473,7 +473,7 @@ export default function PathwayPage() {
 
       {/* Interest rate inputs */}
       <div className="bg-card border border-card-border rounded-2xl p-4 space-y-4">
-        <p className="text-sm font-medium">💹 Your money growth rates</p>
+        <p className="text-sm font-medium"> Your money growth rates</p>
         <div>
           <label className="text-xs text-muted-foreground block mb-1.5">Annual savings interest rate (%)</label>
           <input
@@ -496,7 +496,7 @@ export default function PathwayPage() {
         </div>
         {monthlyReturnsPreview > 0 && (
           <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 text-sm text-emerald-800 font-medium">
-            💰 Your money will grow approx. ${monthlyReturnsPreview.toFixed(0)}/month from returns alone
+             Your money will grow approx. ${monthlyReturnsPreview.toFixed(0)}/month from returns alone
           </div>
         )}
       </div>
@@ -641,8 +641,8 @@ export default function PathwayPage() {
 
   if (showReward) {
     const messages = {
-      1: { title: "Income logged! 💰", desc: "Step 2 complete — let's track your expenses next", nextStep: 2 },
-      2: { title: "Goal set! 🎯", desc: "Step 4 complete — now let's see your full financial picture", nextStep: 4 },
+      1: { title: "Income logged!", desc: "Step 2 complete — let's track your expenses next", nextStep: 2 },
+      2: { title: "Goal set!", desc: "Step 4 complete — now let's see your full financial picture", nextStep: 4 },
     } as const;
     const msg = messages[showReward];
     return (
@@ -684,7 +684,7 @@ export default function PathwayPage() {
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-lg mx-auto px-4 py-6 pb-28 space-y-4">
             <div className="text-center mb-4">
-              <div className="text-4xl mb-3">🎉</div>
+              <div className="text-4xl mb-3"></div>
               <h1 style={{ fontFamily: "'Sora', sans-serif", fontSize: 22, fontWeight: 700, color: "#042C53" }}>
                 Your pathway is complete
               </h1>

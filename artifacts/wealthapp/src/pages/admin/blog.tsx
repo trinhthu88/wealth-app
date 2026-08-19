@@ -4,11 +4,10 @@ import AppShell from "@/components/AppShell";
 import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { apiFetch } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
-import { Plus, BookOpen, Edit2, Calendar } from "lucide-react";
+import { Plus, BookOpen, Edit2, Calendar, X } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -57,30 +56,54 @@ export default function AdminBlog() {
         subtitle="Create and manage financial insights articles."
         action={
           <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-2" />New Post</Button></DialogTrigger>
-            <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-              <DialogHeader><DialogTitle>Create Article</DialogTitle></DialogHeader>
-              <div className="space-y-3 pt-2">
-                <div><Label>Title</Label><Input placeholder="How to Build Wealth in SEA" value={form.title} onChange={e => { f("title")(e); setForm(p => ({ ...p, slug: autoSlug(e.target.value) })); }} /></div>
-                <div><Label>Slug</Label><Input value={form.slug} onChange={f("slug")} /></div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div><Label>Category</Label>
-                    <select value={form.category} onChange={f("category")} className="w-full h-9 px-3 border border-input rounded-md text-sm bg-background">
+            <DialogTrigger asChild>
+              <Button className="rounded-full px-5 bg-forest text-paper hover:bg-forest-700">
+                <Plus className="h-4 w-4 mr-2" /> New Post
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto bg-surface rounded-[28px] p-6 border-none shadow-2xl">
+              <DialogHeader>
+                <DialogTitle className="font-display text-[20px] font-semibold text-forest">Create Article</DialogTitle>
+                <DialogDescription className="sr-only">Draft and publish a financial insights article.</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 pt-2">
+                <div>
+                  <label className="text-[13px] font-medium text-ink-60 block mb-1.5">Title</label>
+                  <Input className="h-11 rounded-[12px] border-hairline bg-paper px-4 focus-visible:ring-green" placeholder="How to Build Wealth in SEA" value={form.title} onChange={e => { f("title")(e); setForm(p => ({ ...p, slug: autoSlug(e.target.value) })); }} />
+                </div>
+                <div>
+                  <label className="text-[13px] font-medium text-ink-60 block mb-1.5">Slug</label>
+                  <Input className="h-11 rounded-[12px] border-hairline bg-paper px-4 focus-visible:ring-green" value={form.slug} onChange={f("slug")} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[13px] font-medium text-ink-60 block mb-1.5">Category</label>
+                    <select value={form.category} onChange={f("category")} className="w-full h-11 border border-hairline bg-paper rounded-[12px] px-4 text-[14px] text-forest focus:outline-none focus:ring-2 focus:ring-green">
                       {CATEGORIES.map(c => <option key={c}>{c}</option>)}
                     </select>
                   </div>
-                  <div><Label>Status</Label>
-                    <select value={form.status} onChange={f("status")} className="w-full h-9 px-3 border border-input rounded-md text-sm bg-background">
+                  <div>
+                    <label className="text-[13px] font-medium text-ink-60 block mb-1.5">Status</label>
+                    <select value={form.status} onChange={f("status")} className="w-full h-11 border border-hairline bg-paper rounded-[12px] px-4 text-[14px] text-forest focus:outline-none focus:ring-2 focus:ring-green capitalize">
                       {["draft", "published"].map(s => <option key={s}>{s}</option>)}
                     </select>
                   </div>
                 </div>
-                <div><Label>Excerpt</Label><Input placeholder="Short summary…" value={form.excerpt} onChange={f("excerpt")} /></div>
-                <div><Label>Cover Image URL</Label><Input placeholder="https://…" value={form.coverImageUrl} onChange={f("coverImageUrl")} /></div>
-                <div><Label>Content (Markdown)</Label>
-                  <textarea value={form.contentMarkdown} onChange={f("contentMarkdown")} rows={8} placeholder="Write your article in Markdown…" className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-mono resize-none" />
+                <div>
+                  <label className="text-[13px] font-medium text-ink-60 block mb-1.5">Excerpt</label>
+                  <Input className="h-11 rounded-[12px] border-hairline bg-paper px-4 focus-visible:ring-green" placeholder="Short summary…" value={form.excerpt} onChange={f("excerpt")} />
                 </div>
-                <Button className="w-full" onClick={() => create.mutate(form)} disabled={!form.title || !form.slug || create.isPending}>{create.isPending ? "Creating…" : "Create Post"}</Button>
+                <div>
+                  <label className="text-[13px] font-medium text-ink-60 block mb-1.5">Cover Image URL</label>
+                  <Input className="h-11 rounded-[12px] border-hairline bg-paper px-4 focus-visible:ring-green" placeholder="https://…" value={form.coverImageUrl} onChange={f("coverImageUrl")} />
+                </div>
+                <div>
+                  <label className="text-[13px] font-medium text-ink-60 block mb-1.5">Content (Markdown)</label>
+                  <textarea value={form.contentMarkdown} onChange={f("contentMarkdown")} rows={8} placeholder="Write your article in Markdown…" className="w-full rounded-[12px] border border-hairline bg-paper px-4 py-3 text-[14px] font-mono focus:outline-none focus:ring-2 focus:ring-green resize-none" />
+                </div>
+                <Button className="w-full rounded-full h-11 bg-green text-surface hover:bg-green-300 mt-2" onClick={() => create.mutate(form)} disabled={!form.title || !form.slug || create.isPending}>
+                  {create.isPending ? "Creating…" : "Create Post"}
+                </Button>
               </div>
             </DialogContent>
           </Dialog>
@@ -89,56 +112,77 @@ export default function AdminBlog() {
 
       {editPost && (
         <Dialog open={!!editPost} onOpenChange={v => !v && setEditPost(null)}>
-          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-            <DialogHeader><DialogTitle>Edit Article</DialogTitle></DialogHeader>
-            <div className="space-y-3 pt-2">
-              <div><Label>Title</Label><Input value={form.title} onChange={f("title")} /></div>
-              <div><Label>Slug</Label><Input value={form.slug} onChange={f("slug")} /></div>
-              <div className="grid grid-cols-2 gap-3">
-                <div><Label>Category</Label>
-                  <select value={form.category} onChange={f("category")} className="w-full h-9 px-3 border border-input rounded-md text-sm bg-background">
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto bg-surface rounded-[28px] p-6 border-none shadow-2xl">
+            <DialogHeader>
+              <DialogTitle className="font-display text-[20px] font-semibold text-forest">Edit Article</DialogTitle>
+              <DialogDescription className="sr-only">Update this financial insights article.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 pt-2">
+              <div>
+                <label className="text-[13px] font-medium text-ink-60 block mb-1.5">Title</label>
+                <Input className="h-11 rounded-[12px] border-hairline bg-paper px-4 focus-visible:ring-green" value={form.title} onChange={f("title")} />
+              </div>
+              <div>
+                <label className="text-[13px] font-medium text-ink-60 block mb-1.5">Slug</label>
+                <Input className="h-11 rounded-[12px] border-hairline bg-paper px-4 focus-visible:ring-green" value={form.slug} onChange={f("slug")} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[13px] font-medium text-ink-60 block mb-1.5">Category</label>
+                  <select value={form.category} onChange={f("category")} className="w-full h-11 border border-hairline bg-paper rounded-[12px] px-4 text-[14px] text-forest focus:outline-none focus:ring-2 focus:ring-green">
                     {CATEGORIES.map(c => <option key={c}>{c}</option>)}
                   </select>
                 </div>
-                <div><Label>Status</Label>
-                  <select value={form.status} onChange={f("status")} className="w-full h-9 px-3 border border-input rounded-md text-sm bg-background">
+                <div>
+                  <label className="text-[13px] font-medium text-ink-60 block mb-1.5">Status</label>
+                  <select value={form.status} onChange={f("status")} className="w-full h-11 border border-hairline bg-paper rounded-[12px] px-4 text-[14px] text-forest focus:outline-none focus:ring-2 focus:ring-green capitalize">
                     {["draft", "published", "archived"].map(s => <option key={s}>{s}</option>)}
                   </select>
                 </div>
               </div>
-              <div><Label>Excerpt</Label><Input value={form.excerpt} onChange={f("excerpt")} /></div>
-              <div><Label>Content (Markdown)</Label>
-                <textarea value={form.contentMarkdown} onChange={f("contentMarkdown")} rows={8} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-mono resize-none" />
+              <div>
+                <label className="text-[13px] font-medium text-ink-60 block mb-1.5">Excerpt</label>
+                <Input className="h-11 rounded-[12px] border-hairline bg-paper px-4 focus-visible:ring-green" value={form.excerpt} onChange={f("excerpt")} />
               </div>
-              <Button className="w-full" onClick={() => update.mutate({ ...form, id: editPost.id })} disabled={update.isPending}>{update.isPending ? "Saving…" : "Save Changes"}</Button>
+              <div>
+                <label className="text-[13px] font-medium text-ink-60 block mb-1.5">Content (Markdown)</label>
+                <textarea value={form.contentMarkdown} onChange={f("contentMarkdown")} rows={8} className="w-full rounded-[12px] border border-hairline bg-paper px-4 py-3 text-[14px] font-mono focus:outline-none focus:ring-2 focus:ring-green resize-none" />
+              </div>
+              <Button className="w-full rounded-full h-11 bg-green text-surface hover:bg-green-300 mt-2" onClick={() => update.mutate({ ...form, id: editPost.id })} disabled={update.isPending}>
+                {update.isPending ? "Saving…" : "Save Changes"}
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
       )}
 
       {isLoading ? (
-        <div className="space-y-3">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-20 bg-muted rounded-xl animate-pulse" />)}</div>
+        <div className="space-y-4">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-24 bg-surface rounded-[26px] animate-pulse" />)}</div>
       ) : posts.length === 0 ? (
-        <div className="bg-card border border-card-border rounded-xl p-16 text-center">
-          <BookOpen className="h-14 w-14 text-muted-foreground/30 mx-auto mb-4" />
-          <h3 className="font-semibold mb-2">No posts yet</h3>
-          <p className="text-muted-foreground text-sm mb-5">Create your first financial insights article.</p>
-          <Button onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-2" />Create Post</Button>
+        <div className="bg-surface rounded-[26px] p-16 text-center shadow-[0_2px_14px_rgba(20,52,42,0.06)]">
+          <BookOpen className="h-14 w-14 text-ink-20 mx-auto mb-4" />
+          <h3 className="font-display text-[20px] font-semibold text-forest mb-2">No posts yet</h3>
+          <p className="text-[14px] text-ink-40 mb-6">Create your first financial insights article.</p>
+          <Button className="rounded-full px-5 bg-forest text-paper hover:bg-forest-700" onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-2" />Create Post</Button>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {posts.map(p => (
-            <div key={p.id} className="bg-card border border-card-border rounded-xl px-5 py-4 flex items-center gap-4">
-              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 text-lg">📝</div>
+            <div key={p.id} className="bg-surface rounded-[26px] px-6 py-5 flex items-center gap-5 shadow-[0_2px_14px_rgba(20,52,42,0.06)]">
+              <div className="h-14 w-14 rounded-[16px] bg-paper border border-hairline flex items-center justify-center shrink-0">
+                <BookOpen className="h-6 w-6 text-forest" />
+              </div>
               <div className="flex-1 min-w-0">
-                <div className="font-medium">{p.title}</div>
-                <div className="flex items-center gap-3 mt-0.5">
-                  {p.category && <span className="text-xs text-muted-foreground">{p.category}</span>}
-                  <span className={cn("text-xs px-2 py-0.5 rounded-full font-medium", p.status === "published" ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground")}>{p.status}</span>
-                  {p.publishedAt && <span className="flex items-center gap-1 text-xs text-muted-foreground"><Calendar className="h-3 w-3" />{new Date(p.publishedAt).toLocaleDateString()}</span>}
+                <div className="font-medium text-[16px] text-forest">{p.title}</div>
+                <div className="flex items-center gap-3 mt-1.5">
+                  {p.category && <span className="text-[13px] text-ink-60">{p.category}</span>}
+                  <span className={cn("text-[12px] px-2 py-0.5 rounded-[8px] font-medium tracking-wide uppercase", p.status === "published" ? "bg-green-tint text-green" : "bg-surface border border-hairline text-ink-60")}>{p.status}</span>
+                  {p.publishedAt && <span className="flex items-center gap-1.5 text-[13px] text-ink-40 tabular-nums"><Calendar className="h-3.5 w-3.5" />{new Date(p.publishedAt).toLocaleDateString()}</span>}
                 </div>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => openEdit(p)}><Edit2 className="h-4 w-4" /></Button>
+              <Button variant="ghost" size="sm" className="h-10 w-10 rounded-full text-ink-40 hover:text-green hover:bg-green-tint" onClick={() => openEdit(p)}>
+                <Edit2 className="h-4 w-4" />
+              </Button>
             </div>
           ))}
         </div>

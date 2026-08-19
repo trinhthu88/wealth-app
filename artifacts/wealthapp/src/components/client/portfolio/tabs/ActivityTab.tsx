@@ -226,7 +226,7 @@ export default function ActivityTab({ plans, selfHoldings }: Props) {
                       <p className="text-sm font-medium text-[#042C53]">{sym} · {h.label}</p>
                       <p className="text-xs text-slate-400">
                         ${h.currentPriceUsd?.toFixed(2) ?? "—"}
-                        {h.isPriceStale && " · ⚠ may be outdated"}
+                        {h.isPriceStale && " · may be outdated"}
                       </p>
                     </div>
                   </div>
