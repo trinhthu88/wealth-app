@@ -1,0 +1,1 @@
+- [Workflow termination signals](workflow-termination-signals.md) — exit 143 in managed artifact logs can indicate an external stop, not an application startup crash.
