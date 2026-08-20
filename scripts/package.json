@@ -6,6 +6,7 @@
   "scripts": {
     "hello": "tsx ./src/hello.ts",
     "seed-users": "tsx ./src/seed-users.ts",
+    "seed-demo-data": "tsx ./src/seed-demo-data.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
@@ -14,6 +15,8 @@
   },
   "dependencies": {
     "@types/pg": "^8.18.0",
+    "@workspace/db": "workspace:*",
+    "drizzle-orm": "catalog:",
     "pg": "^8.20.0",
     "postgres": "^3.4.9"
   }

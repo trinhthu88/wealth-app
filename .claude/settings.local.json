@@ -45,7 +45,9 @@
       "Bash(curl *)",
       "Bash(git add *)",
       "Bash(git commit *)",
-      "Bash(npx vitest *)"
+      "Bash(npx vitest *)",
+      "Bash(node *)",
+      "Bash(pnpm install *)"
     ]
   }
 }
