@@ -95,7 +95,7 @@ describe("GET /client/plan/coast-point", () => {
     }
   });
 
-  it("reports unavailable for a client with no retire-type goal", async () => {
+  it("reports unavailable for a client with no retirement-type goal", async () => {
     const otherId = `user_test_other_${RUN_ID}`;
     await db.insert(profilesTable).values({ id: otherId, email: `coast-point-other-${RUN_ID}@test.local`, role: "investment_client" });
     try {
@@ -103,6 +103,29 @@ describe("GET /client/plan/coast-point", () => {
       expect(res.body).toEqual({ available: false, reason: "no_retirement_goal" });
     } finally {
       await db.delete(profilesTable).where(eq(profilesTable.id, otherId));
+    }
+  });
+
+  // Regression: scripts/seed-demo-data.ts writes goalType "retirement" while the
+  // live "Add Goal" UI writes "retire" — a real account has been seen carrying
+  // both spellings. Matching only "retire" silently drops goals seeded this way.
+  it("also matches a goal seeded with the legacy goalType spelling 'retirement'", async () => {
+    const seedStyleId = `user_test_seedstyle_${RUN_ID}`;
+    await db.insert(profilesTable).values({ id: seedStyleId, email: `coast-point-seedstyle-${RUN_ID}@test.local`, role: "investment_client" });
+    const tenYearsOut = new Date();
+    tenYearsOut.setFullYear(tenYearsOut.getFullYear() + 10);
+    const [legacyGoal] = await db.insert(financialGoalsTable).values({
+      userId: seedStyleId, title: "Retirement at 60", goalType: "retirement",
+      targetAmount: "800000", targetDate: tenYearsOut.toISOString().slice(0, 10),
+      monthlyContribution: "500",
+    }).returning();
+    try {
+      const res = await request(app).get("/api/client/plan/coast-point").set(asUser(seedStyleId)).expect(200);
+      expect(res.body.available).toBe(true);
+      expect(res.body.goalId).toBe(legacyGoal.id);
+    } finally {
+      await db.delete(financialGoalsTable).where(eq(financialGoalsTable.id, legacyGoal.id));
+      await db.delete(profilesTable).where(eq(profilesTable.id, seedStyleId));
     }
   });
 });

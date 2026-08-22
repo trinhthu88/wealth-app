@@ -70,7 +70,10 @@
       "Bash(npx tsx *)",
       "Bash(printenv REPLIT_DEV_DOMAIN *)",
       "Bash(grep *)",
-      "Bash(python3 -c ' *)"
+      "Bash(python3 -c ' *)",
+      "Bash(kill 286)",
+      "Bash(PORT=8080 nohup node --enable-source-maps ./dist/index.mjs)",
+      "Bash(disown)"
     ]
   }
 }

@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { db, financialGoalsTable } from "@workspace/db";
 import { requireAuth } from "../middlewares/requireAuth";
 import { resolveBlendedRate } from "../lib/blendedRate";
@@ -7,20 +7,27 @@ import { solveCoastPoint } from "@workspace/goal-math";
 
 const router: IRouter = Router();
 
+// Two live conventions exist for a retirement goal's goalType, and they've
+// diverged: the current "Add Goal" UI (AddGoalSheet.tsx / Phase3Screen6Goal.tsx)
+// writes "retire", but demo/seed data (scripts/seed-demo-data.ts) writes
+// "retirement" — confirmed by a real account carrying both goalType values
+// across its retirement goals. Matching only one silently misses real goals
+// created via the other path, so this matches both until that divergence is
+// fixed at the source.
+const RETIREMENT_GOAL_TYPES = ["retire", "retirement"];
+
 // GET /client/plan/coast-point?extraMonthly=0
 // Real numbers only: blended rate from resolveBlendedRate(), retirement goal from
-// the client's own financial_goals row (goalType='retire' — the id used by the
-// investment-client "Add Goal" sheet, see AddGoalSheet.tsx's GOAL_TYPES; not the
-// string "retirement"), current value from the same holdings/plans just weighted
-// above. extraMonthly, if provided, re-solves with monthlyContribution bumped by
-// that amount so Sol can show a real "what if I added $X/month" comparison — never
-// an invented before/after pair.
+// the client's own financial_goals row, current value from the same holdings/plans
+// just weighted above. extraMonthly, if provided, re-solves with monthlyContribution
+// bumped by that amount so Sol can show a real "what if I added $X/month"
+// comparison — never an invented before/after pair.
 router.get("/client/plan/coast-point", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
   const extraMonthly = Math.max(0, parseFloat(String(req.query.extraMonthly ?? "0")) || 0);
 
   const [goal] = await db.select().from(financialGoalsTable)
-    .where(and(eq(financialGoalsTable.userId, userId), eq(financialGoalsTable.goalType, "retire")));
+    .where(and(eq(financialGoalsTable.userId, userId), inArray(financialGoalsTable.goalType, RETIREMENT_GOAL_TYPES)));
 
   if (!goal || !goal.targetAmount || !goal.targetDate) {
     res.json({ available: false, reason: "no_retirement_goal" });

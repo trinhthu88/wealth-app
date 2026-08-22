@@ -35,8 +35,11 @@ export function useCoastPoint() {
   const { allGoals } = useGoals();
   const enabled = isLoaded && !!user;
 
-  // "retire" matches AddGoalSheet.tsx's GOAL_TYPES id — not the string "retirement".
-  const retirementGoal = allGoals.find(g => g.goalType === "retire") ?? null;
+  // Two live goalType conventions exist for "retirement" — the current "Add
+  // Goal" UI writes "retire", but demo/seed data writes "retirement" (see the
+  // matching comment in api-server/src/routes/coastPoint.ts). Matching only
+  // one would silently miss real goals created via the other path.
+  const retirementGoal = allGoals.find(g => g.goalType === "retire" || g.goalType === "retirement") ?? null;
   const currentMonthly = retirementGoal ? parseFloat(retirementGoal.monthlyContribution) || 0 : 0;
   const extraMonthly = suggestedExtraMonthly(currentMonthly);
 
