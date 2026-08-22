@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { and, asc, eq, ne } from "drizzle-orm";
 import { db, leadsTable, profilesTable } from "@workspace/db";
-import { requireAuth, requireRole } from "../middlewares/requireAuth";
+import { requireAuth, requireRole, requireAdvisorOwnsLeadById } from "../middlewares/requireAuth";
 import { createUserWithProfile } from "../lib/createUserWithProfile";
 import { promoteLeadToClient } from "../lib/promoteLead";
 
@@ -9,17 +9,24 @@ const router: IRouter = Router();
 const leadGuard = [requireAuth, requireRole("advisor", "super_admin")];
 const superAdminGuard = [requireAuth, requireRole("super_admin")];
 
-// Was just requireAuth — any authenticated user, including a free_user with no
-// business seeing this, could read every lead's email/notes/health score.
-// Tightened to match the other leads endpoints below.
+// super_admin sees every lead — this is the assignment queue, so a super
+// admin needs visibility into the unassigned pool system-wide. An advisor
+// only sees leads assigned to them (including the unassigned pool would leak
+// every other advisor's prospective clients before a super_admin has routed
+// them).
 router.get("/leads", ...leadGuard, async (req, res): Promise<void> => {
-  res.json(await db.select().from(leadsTable));
+  const userRole = (req as any).userRole;
+  const userId = (req as any).userId;
+  if (userRole === "super_admin") {
+    res.json(await db.select().from(leadsTable));
+    return;
+  }
+  res.json(await db.select().from(leadsTable).where(eq(leadsTable.assignedAdvisorId, userId)));
 });
 
-// Same (unscoped across advisors) visibility as the list above — not
-// restricted to the assigned advisor, since GET /leads already exposes every
-// lead's full row to any advisor/super_admin today.
-router.get("/leads/:id", ...leadGuard, async (req, res): Promise<void> => {
+// Same scoping as the list above, via requireAdvisorOwnsLeadById: super_admin
+// sees any lead, an advisor only the leads assigned to them.
+router.get("/leads/:id", ...leadGuard, requireAdvisorOwnsLeadById(), async (req, res): Promise<void> => {
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const [lead] = await db.select().from(leadsTable).where(eq(leadsTable.id, rawId));
   if (!lead) { res.status(404).json({ error: "Not found" }); return; }

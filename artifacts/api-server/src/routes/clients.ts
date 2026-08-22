@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, inArray, desc } from "drizzle-orm";
-import { db, clientProfilesTable, profilesTable, clientPackagesTable, portfolioSnapshotsTable } from "@workspace/db";
+import { db, clientProfilesTable, profilesTable, clientPackagesTable, portfolioSnapshotsTable, advisedPlansTable } from "@workspace/db";
 import { requireAuth, requireRole, requireAdvisorOwnsClient } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
@@ -127,10 +127,17 @@ router.get("/advisor/clients", ...advisorGuard, async (req, res): Promise<void> 
     }
   }
 
+  // advised_plans, not client_packages, is what an advisor can actually create
+  // for a client now (see client-detail.tsx's Packages-tab removal) — the
+  // client-list "plans" count reflects that going-forward model.
+  const plans = await db.select({ userId: advisedPlansTable.userId })
+    .from(advisedPlansTable).where(inArray(advisedPlansTable.userId, clientIds));
+
   const result = clients.map(c => {
     const clientPkgs = packages.filter(p => p.userId === c.id);
     const portfolioValue = clientPkgs.reduce((sum, p) => sum + (latestSnap[p.id] ?? 0), 0);
-    return { ...c, portfolioValue, packagesCount: clientPkgs.length };
+    const plansCount = plans.filter(p => p.userId === c.id).length;
+    return { ...c, portfolioValue, plansCount };
   });
 
   res.json(result);

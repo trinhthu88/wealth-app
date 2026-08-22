@@ -15,7 +15,7 @@ interface Client {
   kycStatus: string | null;
   status: string | null;
   portfolioValue: number;
-  packagesCount: number;
+  plansCount: number;
 }
 interface Task { id: string; title: string; priority: string; status: string; dueDate: string | null; }
 interface Lead { id: string; email: string; firstName: string | null; status: string; createdAt: string; }
@@ -32,10 +32,13 @@ export default function AdvisorDashboard() {
 
   const pendingTasks = tasks.filter(t => t.status === "todo" || t.status === "in_progress");
   const overdueTasks = tasks.filter(t => t.dueDate && new Date(t.dueDate) < new Date() && t.status !== "done");
-  const newLeads = leads.filter(l => l.status === "unassigned");
+  // GET /leads only returns leads assigned to this advisor now (the
+  // unassigned pool is super_admin-only), so "active" is the working-pipeline
+  // signal here rather than "unassigned".
+  const activeLeads = leads.filter(l => l.status === "active");
   const totalAUM = clients.reduce((s, c) => s + (c.portfolioValue ?? 0), 0);
   const activeClients = clients.filter(c => c.status === "active");
-  const totalPackages = clients.reduce((s, c) => s + (c.packagesCount ?? 0), 0);
+  const totalPlans = clients.reduce((s, c) => s + (c.plansCount ?? 0), 0);
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
@@ -46,9 +49,9 @@ export default function AdvisorDashboard() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <StatCard label="Total AUM" value={fmtUSD(totalAUM)} sub={`${activeClients.length} active clients`} icon={TrendingUp} color="teal" />
-        <StatCard label="Clients" value={clients.length} sub={`${totalPackages} packages`} icon={Briefcase} color="navy" />
+        <StatCard label="Clients" value={clients.length} sub={`${totalPlans} plans`} icon={Briefcase} color="navy" />
         <StatCard label="Pending Tasks" value={pendingTasks.length} sub={overdueTasks.length > 0 ? `${overdueTasks.length} overdue` : "All current"} icon={ClipboardList} color={overdueTasks.length > 0 ? "red" : "navy"} />
-        <StatCard label="New Leads" value={newLeads.length} sub="Awaiting contact" icon={Star} color="amber" />
+        <StatCard label="Active Leads" value={activeLeads.length} sub="In your pipeline" icon={Star} color="amber" />
       </div>
 
       <div className="grid md:grid-cols-2 gap-6 mb-6">
@@ -138,16 +141,16 @@ export default function AdvisorDashboard() {
         </div>
       )}
 
-      {newLeads.length > 0 && (
+      {activeLeads.length > 0 && (
         <div className="bg-sun-tint border border-[#FBE5C5] rounded-[26px] p-6 shadow-[0_2px_14px_rgba(20,52,42,0.04)]">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-display text-[20px] font-semibold text-amber-ink">New Leads ({newLeads.length})</h3>
+            <h3 className="font-display text-[20px] font-semibold text-amber-ink">Active Leads ({activeLeads.length})</h3>
             <Link href="/advisor/leads">
               <Button variant="ghost" size="sm" className="text-amber-ink hover:bg-sun/20">View all</Button>
             </Link>
           </div>
           <div className="space-y-3">
-            {newLeads.slice(0, 3).map(l => (
+            {activeLeads.slice(0, 3).map(l => (
               <div key={l.id} className="flex items-center justify-between text-[15px]">
                 <span className="font-medium text-amber-ink">{l.firstName ? `${l.firstName} —` : ""} {l.email}</span>
                 <span className="text-[13px] text-amber-ink/70">{new Date(l.createdAt).toLocaleDateString()}</span>

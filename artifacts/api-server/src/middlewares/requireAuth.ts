@@ -194,6 +194,46 @@ export function requireAdvisorOwnsLead(paramName: string = "id") {
 }
 
 /**
+ * Must run after requireAuth + requireRole("advisor", "super_admin"). For routes
+ * keyed by a leads.id (req.params[paramName]) — checks ownership via the lead's
+ * own assignedAdvisorId, unlike requireAdvisorOwnsLead above which keys off
+ * leads.userId (only meaningful once a lead is linked to a real account). Use
+ * for GET/PUT /leads/:id and similar routes keyed by the lead record itself.
+ */
+export function requireAdvisorOwnsLeadById(paramName: string = "id") {
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const userId = (req as any).userId;
+    const userRole = (req as any).userRole;
+    const leadId = paramAsString(req.params[paramName]);
+    if (!leadId) {
+      res.status(400).json({ error: `Missing ${paramName} param` });
+      return;
+    }
+    const { db, leadsTable } = await import("@workspace/db");
+    const { eq } = await import("drizzle-orm");
+    const [lead] = await db
+      .select({ assignedAdvisorId: leadsTable.assignedAdvisorId })
+      .from(leadsTable)
+      .where(eq(leadsTable.id, leadId));
+    // A nonexistent lead and one the caller can't manage both 404, so an
+    // unauthorized caller can't use the response to enumerate valid lead IDs.
+    if (!lead) {
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
+    if (userRole === "super_admin") {
+      next();
+      return;
+    }
+    if (lead.assignedAdvisorId !== userId) {
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
+    next();
+  };
+}
+
+/**
  * Must run after requireAuth. For routes keyed by a client_packages.id (req.params[paramName]).
  * Grants access to: the client who owns the package, the advisor assigned to that client, or
  * super_admin. Use for read routes that clients and advisors both need.

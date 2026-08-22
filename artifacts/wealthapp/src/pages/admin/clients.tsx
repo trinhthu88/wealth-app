@@ -22,8 +22,8 @@ interface AdminClient {
   advisorId: string | null;
   advisorName: string | null;
   portfolioValue: number;
-  packagesCount: number;
-  activePackages: number;
+  plansCount: number;
+  activePlans: number;
 }
 
 interface Advisor { id: string; email: string; fullName: string | null; }
@@ -179,7 +179,7 @@ export default function AdminClients() {
                   <td className="px-5 py-3 text-[14px] text-ink-60 capitalize hidden md:table-cell">{c.riskProfile ?? "—"}</td>
                   <td className="px-5 py-3 text-right">
                     <div className="font-semibold text-forest text-[15px] tabular-nums">{c.portfolioValue > 0 ? fmtUSD(c.portfolioValue) : "—"}</div>
-                    <div className="text-[13px] text-ink-40">{c.packagesCount} pkg{c.packagesCount !== 1 ? "s" : ""}</div>
+                    <div className="text-[13px] text-ink-40">{c.plansCount} plan{c.plansCount !== 1 ? "s" : ""}</div>
                   </td>
                   <td className="px-5 py-3">
                     <Link href={`/advisor/clients/${c.id}`} className="text-[14px] font-medium text-green hover:text-forest flex items-center gap-1.5 justify-end opacity-0 group-hover:opacity-100 transition-opacity">

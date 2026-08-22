@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { eq, inArray, desc } from "drizzle-orm";
 import {
   db, profilesTable, clientProfilesTable, clientPackagesTable, portfolioSnapshotsTable,
-  assetClassBenchmarksTable, advisedStrategyReturnsTable,
+  assetClassBenchmarksTable, advisedStrategyReturnsTable, advisedPlansTable,
 } from "@workspace/db";
 import { requireAuth, requireRole } from "../middlewares/requireAuth";
 import { createUserWithProfile } from "../lib/createUserWithProfile";
@@ -138,16 +138,24 @@ router.get("/admin/clients", ...adminGuard, async (req, res): Promise<void> => {
     }
   }
 
+  // advised_plans, not client_packages, is what an advisor can actually create
+  // for a client now (see client-detail.tsx's Packages-tab removal) — "plans"/
+  // "active plans" here reflect that going-forward model. inforce is the
+  // advised_plans equivalent of a package's "active" status.
+  const plans = await db.select({ userId: advisedPlansTable.userId, status: advisedPlansTable.status })
+    .from(advisedPlansTable).where(inArray(advisedPlansTable.userId, clientIds));
+
   const result = clients.map(c => {
     const clientPkgs = packages.filter(p => p.userId === c.id);
-    const activePkgs = clientPkgs.filter(p => p.status === "active");
     const portfolioValue = clientPkgs.reduce((sum, p) => sum + (latestSnap[p.id] ?? 0), 0);
+    const clientPlans = plans.filter(p => p.userId === c.id);
+    const activePlans = clientPlans.filter(p => p.status === "inforce");
     return {
       ...c,
       advisorName: c.advisorId ? advisorMap[c.advisorId] ?? null : null,
       portfolioValue,
-      packagesCount: clientPkgs.length,
-      activePackages: activePkgs.length,
+      plansCount: clientPlans.length,
+      activePlans: activePlans.length,
     };
   });
 

@@ -12,6 +12,7 @@ const { eq } = await import("drizzle-orm");
 
 const RUN_ID = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const advisorId = `advisor-test-${RUN_ID}`;
+const otherAdvisorId = `advisor-other-test-${RUN_ID}`;
 
 function asUser(id: string) {
   return { "x-test-user-id": id };
@@ -20,11 +21,12 @@ function asUser(id: string) {
 let leadId: string;
 
 beforeAll(async () => {
-  await db.insert(profilesTable).values({
-    id: advisorId, email: `advisor-${RUN_ID}@test.local`, fullName: "Advisor", role: "advisor",
-  });
+  await db.insert(profilesTable).values([
+    { id: advisorId, email: `advisor-${RUN_ID}@test.local`, fullName: "Advisor", role: "advisor" },
+    { id: otherAdvisorId, email: `advisor-other-${RUN_ID}@test.local`, fullName: "Other Advisor", role: "advisor" },
+  ]);
   const [lead] = await db.insert(leadsTable).values({
-    email: `lead-${RUN_ID}@test.local`, firstName: "Lead Name", status: "unassigned",
+    email: `lead-${RUN_ID}@test.local`, firstName: "Lead Name", status: "active", assignedAdvisorId: advisorId,
   }).returning();
   leadId = lead.id;
 });
@@ -32,6 +34,7 @@ beforeAll(async () => {
 afterAll(async () => {
   await db.delete(leadsTable).where(eq(leadsTable.id, leadId));
   await db.delete(profilesTable).where(eq(profilesTable.id, advisorId));
+  await db.delete(profilesTable).where(eq(profilesTable.id, otherAdvisorId));
 });
 
 describe("GET /leads/:id", () => {
@@ -39,10 +42,14 @@ describe("GET /leads/:id", () => {
     await request(app).get(`/api/leads/${leadId}`).expect(401);
   });
 
-  it("returns the lead for any advisor (unscoped, matching GET /leads)", async () => {
+  it("returns the lead for the assigned advisor", async () => {
     const res = await request(app).get(`/api/leads/${leadId}`).set(asUser(advisorId)).expect(200);
     expect(res.body.id).toBe(leadId);
     expect(res.body.firstName).toBe("Lead Name");
+  });
+
+  it("404s for an advisor the lead isn't assigned to", async () => {
+    await request(app).get(`/api/leads/${leadId}`).set(asUser(otherAdvisorId)).expect(404);
   });
 
   it("404s for a nonexistent lead", async () => {
@@ -74,11 +81,11 @@ describe("PUT /leads/:id — advisor-editable subset only", () => {
     expect(res.body.status).toBe("cold");
     expect(res.body.email).toBe(`lead-${RUN_ID}@test.local`);
     expect(res.body.firstName).toBe("Lead Name");
-    expect(res.body.assignedAdvisorId).toBeNull();
+    expect(res.body.assignedAdvisorId).toBe(advisorId);
     expect(res.body.userId).toBeNull();
 
     const [row] = await db.select().from(leadsTable).where(eq(leadsTable.id, leadId));
     expect(row.email).toBe(`lead-${RUN_ID}@test.local`);
-    expect(row.assignedAdvisorId).toBeNull();
+    expect(row.assignedAdvisorId).toBe(advisorId);
   });
 });

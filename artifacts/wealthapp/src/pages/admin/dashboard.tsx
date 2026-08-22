@@ -10,7 +10,7 @@ import { Users, Star, BookOpen, ArrowRight, TrendingUp, DollarSign, UserCheck, B
 interface User { id: string; email: string; fullName: string | null; role: string; createdAt: string; }
 interface Lead { id: string; status: string; }
 interface BlogPost { id: string; status: string; title: string; }
-interface AdminClient { id: string; portfolioValue: number; packagesCount: number; activePackages: number; status: string | null; advisorId: string | null; advisorName: string | null; }
+interface AdminClient { id: string; portfolioValue: number; plansCount: number; activePlans: number; status: string | null; advisorId: string | null; advisorName: string | null; }
 
 const fmtUSD = (v: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(v);
 
@@ -25,7 +25,7 @@ export default function AdminDashboard() {
   const freeUsers = users.filter(u => u.role === "free_user");
 
   const totalAUM = adminClients.reduce((s, c) => s + (c.portfolioValue ?? 0), 0);
-  const totalActivePackages = adminClients.reduce((s, c) => s + (c.activePackages ?? 0), 0);
+  const totalActivePlans = adminClients.reduce((s, c) => s + (c.activePlans ?? 0), 0);
   const activeClients = adminClients.filter(c => c.status === "active");
 
   // Advisor workload
@@ -41,7 +41,7 @@ export default function AdminDashboard() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <StatCard label="Total AUM" value={fmtUSD(totalAUM)} sub={`${activeClients.length} active clients`} icon={TrendingUp} color="teal" />
-        <StatCard label="Active Packages" value={totalActivePackages} sub={`${clients.length} investment clients`} icon={Briefcase} color="navy" />
+        <StatCard label="Active Plans" value={totalActivePlans} sub={`${clients.length} investment clients`} icon={Briefcase} color="navy" />
         <StatCard label="Total Users" value={users.length} sub={`${advisors.length} advisors`} icon={Users} color="amber" />
         <StatCard label="Leads" value={leads.length} sub={`${leads.filter(l => l.status === "unassigned").length} unassigned`} icon={Star} color="teal" />
       </div>
