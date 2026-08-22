@@ -113,3 +113,48 @@ describe("PUT /advised-plans/:id/status", () => {
     expect(res.body.policyNumber).toBe("POL-123");
   });
 });
+
+describe("PUT /advised-plans/:id/contribution", () => {
+  let planId: string;
+
+  beforeAll(async () => {
+    const [plan] = await db.insert(advisedPlansTable).values({
+      userId: clientUserId, advisorId: advisorA, providerName: "Acme", productName: "RSP Plan",
+      planType: "rsp", status: "inforce", annualPremium: "1200",
+    }).returning();
+    planId = plan.id;
+  });
+
+  afterAll(async () => {
+    await db.delete(advisedPlansTable).where(eq(advisedPlansTable.id, planId));
+  });
+
+  it("404s an advisor who doesn't own the plan", async () => {
+    await request(app)
+      .put(`/api/advised-plans/${planId}/contribution`)
+      .set(asUser(advisorB))
+      .send({ annualPremium: 2400 })
+      .expect(404);
+  });
+
+  it("updates annualPremium without touching status or policyNumber", async () => {
+    const res = await request(app)
+      .put(`/api/advised-plans/${planId}/contribution`)
+      .set(asUser(advisorA))
+      .send({ annualPremium: 2400 })
+      .expect(200);
+    expect(res.body.annualPremium).toBe("2400");
+    expect(res.body.status).toBe("inforce");
+    expect(res.body.policyNumber).toBeNull();
+  });
+
+  it("sync-contributions reflects the updated premium on its next live read", async () => {
+    const res = await request(app)
+      .post("/api/client/budget/sync-contributions")
+      .set(asUser(clientUserId))
+      .expect(200);
+    const contribution = res.body.contributions.find((c: any) => c.source_id === planId);
+    expect(contribution).toBeTruthy();
+    expect(contribution.amount).toBe(200); // 2400 / 12
+  });
+});

@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, ChevronDown, ChevronRight, Pencil, Check, X } from "lucide-react";
 import { apiFetch } from "@/lib/api";
+import CurrencyInput from "@/components/CurrencyInput";
 import StatementEntryForm from "./StatementEntryForm";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -17,7 +18,15 @@ interface AdvisedPlan {
   latestNetContribution: string;
   planType: string;
   annualPremium: string;
+  initialPremium: string;
   currency: string;
+}
+
+// Not fmtCurrency from portfolioCalculations — that helper abbreviates values
+// over 1,000 with a hardcoded "$", which would mislabel a non-USD plan's
+// contribution. This always uses the plan's own currency, unabbreviated.
+function fmtPlanCurrency(n: number, currency: string) {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency, maximumFractionDigits: 0 }).format(n);
 }
 
 interface Statement {
@@ -46,6 +55,9 @@ function PlanCard({ plan, clientId }: { plan: AdvisedPlan; clientId: string }) {
   const qc = useQueryClient();
   const [stmtsOpen, setStmtsOpen] = useState(false);
   const [addingStatement, setAddingStatement] = useState(false);
+  const [editingContribution, setEditingContribution] = useState(false);
+  const [monthlyDraft, setMonthlyDraft] = useState(0);
+  const [lumpDraft, setLumpDraft] = useState(0);
 
   const { data: statements = [] } = useQuery<Statement[]>({
     queryKey: ["advisor-plan-statements", plan.id],
@@ -63,6 +75,17 @@ function PlanCard({ plan, clientId }: { plan: AdvisedPlan; clientId: string }) {
     onError: (e: any) => toast.error(e?.message ?? "Failed to update plan status"),
   });
 
+  const updateContributionMut = useMutation({
+    mutationFn: (data: { annualPremium?: number; initialPremium?: number }) =>
+      apiFetch(`/advised-plans/${plan.id}/contribution`, { method: "PUT", body: JSON.stringify(data) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["advisor-client-plans", clientId] });
+      setEditingContribution(false);
+      toast.success("Contribution updated");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Failed to update contribution"),
+  });
+
   function handleMarkInForce() {
     let policyNumber = plan.policyNumber;
     if (!policyNumber) {
@@ -73,10 +96,20 @@ function PlanCard({ plan, clientId }: { plan: AdvisedPlan; clientId: string }) {
     updateStatusMut.mutate({ status: "inforce", policyNumber });
   }
 
+  function toggleEditingContribution() {
+    if (!editingContribution) {
+      setMonthlyDraft(Math.round(n(plan.annualPremium) / 12));
+      setLumpDraft(n(plan.initialPremium));
+    }
+    setEditingContribution(v => !v);
+  }
+
   const cv = n(plan.latestAccountValue);
   const nc = n(plan.latestNetContribution);
   const gain = cv - nc;
   const isPos = gain >= 0;
+  const showsMonthly = plan.planType === "rsp" || plan.planType === "combination";
+  const showsLumpSum = plan.planType === "lump_sum" || plan.planType === "combination";
 
   return (
     <div className="bg-surface border border-hairline rounded-[24px] overflow-hidden shadow-[0_2px_14px_rgba(20,52,42,0.04)]">
@@ -107,6 +140,53 @@ function PlanCard({ plan, clientId }: { plan: AdvisedPlan; clientId: string }) {
           <div><p className="text-ink-60 mb-1">Net contribution</p><p className="font-semibold text-forest text-[15px] tabular-nums">${nc.toLocaleString("en-US", { maximumFractionDigits: 0 })}</p></div>
           <div><p className="text-ink-60 mb-1">Account value</p><p className="font-semibold text-forest text-[15px] tabular-nums">${cv.toLocaleString("en-US", { maximumFractionDigits: 0 })}</p></div>
           <div><p className="text-ink-60 mb-1">Gain / loss</p><p className={cn("font-semibold text-[15px] tabular-nums", isPos ? "text-green" : "text-clay")}>{isPos ? "+" : "-"}${Math.abs(gain).toLocaleString("en-US", { maximumFractionDigits: 0 })}</p></div>
+        </div>
+
+        <div className="mt-4 pt-4 border-t border-hairline">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px]">
+              {showsMonthly && (
+                <span className="text-ink-60">Monthly contribution <span className="font-semibold text-forest">{fmtPlanCurrency(n(plan.annualPremium) / 12, plan.currency)}</span></span>
+              )}
+              {showsLumpSum && (
+                <span className="text-ink-60">Lump sum <span className="font-semibold text-forest">{fmtPlanCurrency(n(plan.initialPremium), plan.currency)}</span></span>
+              )}
+            </div>
+            <button
+              onClick={toggleEditingContribution}
+              aria-label={editingContribution ? "Cancel editing contribution" : "Edit contribution"}
+              className="h-7 w-7 flex items-center justify-center rounded-lg text-ink-40 hover:text-green hover:bg-paper transition-colors shrink-0"
+            >
+              {editingContribution ? <X className="h-3.5 w-3.5" /> : <Pencil className="h-3.5 w-3.5" />}
+            </button>
+          </div>
+
+          {editingContribution && (
+            <div className="mt-3 space-y-3">
+              {showsMonthly && (
+                <div className="space-y-1.5">
+                  <label className="text-[12px] font-medium text-ink-60 block">Monthly contribution</label>
+                  <CurrencyInput value={monthlyDraft} onChange={setMonthlyDraft} currency={plan.currency} />
+                </div>
+              )}
+              {showsLumpSum && (
+                <div className="space-y-1.5">
+                  <label className="text-[12px] font-medium text-ink-60 block">Lump sum amount</label>
+                  <CurrencyInput value={lumpDraft} onChange={setLumpDraft} currency={plan.currency} />
+                </div>
+              )}
+              <button
+                onClick={() => updateContributionMut.mutate({
+                  ...(showsMonthly ? { annualPremium: monthlyDraft * 12 } : {}),
+                  ...(showsLumpSum ? { initialPremium: lumpDraft } : {}),
+                })}
+                disabled={updateContributionMut.isPending}
+                className="px-3 py-1.5 rounded-full bg-green text-surface text-[13px] font-medium flex items-center gap-1.5 hover:bg-green-300 transition-colors disabled:opacity-50"
+              >
+                <Check className="h-3.5 w-3.5" /> {updateContributionMut.isPending ? "Saving…" : "Save"}
+              </button>
+            </div>
+          )}
         </div>
 
         <button onClick={() => setStmtsOpen(v => !v)} className="mt-4 flex items-center gap-1.5 text-[13px] font-medium text-ink-40 hover:text-green transition-colors">

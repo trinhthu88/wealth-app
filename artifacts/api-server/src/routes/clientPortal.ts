@@ -302,6 +302,34 @@ router.put("/advised-plans/:id/status", requireAuth, requireRole("advisor", "sup
   res.json(updated);
 });
 
+// Edits a plan's current, going-forward contribution rate — annualPremium
+// (the RSP premium; the client-facing monthly figure is annualPremium / 12)
+// and/or initialPremium (the lump-sum amount). Deliberately separate from the
+// status route above: this never touches status/policyNumber, and a status
+// change never touches these fields. Also deliberately doesn't rewrite any
+// advised_plan_statements rows — those remain the historical record of what
+// was actually contributed; this only changes the rate applied going forward
+// (and is what POST /client/budget/sync-contributions reads live).
+router.put("/advised-plans/:id/contribution", requireAuth, requireRole("advisor", "super_admin"), requireAdvisorOwnsPlan("id"), async (req, res): Promise<void> => {
+  const id = req.params.id as string;
+  const { annualPremium, initialPremium } = req.body;
+  if (annualPremium == null && initialPremium == null) {
+    res.status(400).json({ error: "annualPremium or initialPremium required" });
+    return;
+  }
+
+  const [plan] = await db.select().from(advisedPlansTable).where(eq(advisedPlansTable.id, id));
+  if (!plan) { res.status(404).json({ error: "Not found" }); return; }
+
+  const [updated] = await db.update(advisedPlansTable).set({
+    ...(annualPremium != null ? { annualPremium: String(annualPremium) } : {}),
+    ...(initialPremium != null ? { initialPremium: String(initialPremium) } : {}),
+    updatedAt: new Date(),
+  }).where(eq(advisedPlansTable.id, id)).returning();
+
+  res.json(updated);
+});
+
 // ── Client self-entered holdings ──────────────────────────────────────────
 
 // Shared by the client's own route and the advisor-owns-lead route below —
