@@ -10,6 +10,9 @@
     "reset-demo-passwords": "tsx ./src/reset-demo-passwords.ts",
     "relink-demo-emails": "tsx ./src/relink-demo-emails.ts",
     "fix-goal-allocation-overflow": "tsx ./src/fix-goal-allocation-overflow.ts",
+    "migrate-leads-status": "tsx ./src/migrate-leads-status.ts",
+    "migrate-client-profiles-status": "tsx ./src/migrate-client-profiles-status.ts",
+    "migrate-kyc-to-documents": "tsx ./src/migrate-kyc-to-documents.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {

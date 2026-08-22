@@ -23,7 +23,11 @@ export const advisedPlansTable = pgTable("advised_plans", {
   initialPremium: numeric("initial_premium").notNull().default("0"),
   effectiveDate: date("effective_date"),
   maturityDate: date("maturity_date"),
-  status: text("status").notNull().default("inforce"),
+  // scenario (default — an advisor is modeling this for a lead, not a real
+  // holding yet) | inforce (requires a non-null policyNumber — enforced
+  // app-level where status is set to inforce, not a DB constraint) | matured |
+  // surrender.
+  status: text("status").notNull().default("scenario"),
 
   latestAccountValue: numeric("latest_account_value").notNull().default("0"),
   latestNetContribution: numeric("latest_net_contribution").notNull().default("0"),

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { TrendingUp, X } from "lucide-react";
 import { Link } from "wouter";
 import { useClientTrack } from "@/hooks/useClientTrack";
+import { useCreateLeadFromInterest } from "@/hooks/useCreateLeadFromInterest";
 import type { GoalStatus } from "@/hooks/useGoalProgress";
 
 interface Props {
@@ -15,9 +16,16 @@ export default function GoalScenarioCTA({ goalId, goalTitle, status }: Props) {
   const [dismissed, setDismissed] = useState(() =>
     localStorage.getItem(`goal_cta_dismissed_${goalId}`) === "1"
   );
+  const createLead = useCreateLeadFromInterest();
 
   if (loading || dismissed) return null;
   if (status !== "at_risk" && status !== "off_track") return null;
+
+  // These are in-app routes (wouter Link) — no page unload, so firing this
+  // without awaiting it doesn't risk the request being aborted.
+  function markInterest() {
+    createLead.mutate("goal_scenario_cta");
+  }
 
   function dismiss() {
     setDismissed(true);
@@ -33,6 +41,7 @@ export default function GoalScenarioCTA({ goalId, goalTitle, status }: Props) {
             This goal needs attention. Run a scenario to see how adjusting your investment could get you back on track.{" "}
             <Link
               href={`/client/scenarios?goalId=${goalId}&type=retire_earlier`}
+              onClick={markInterest}
               className="font-semibold text-[#1D9E75] hover:underline"
             >
               Model this goal →
@@ -41,7 +50,7 @@ export default function GoalScenarioCTA({ goalId, goalTitle, status }: Props) {
         ) : (
           <>
             An advised investment plan could help accelerate "{goalTitle}".{" "}
-            <Link href="/client/messages" className="font-semibold text-[#1D9E75] hover:underline">
+            <Link href="/client/messages" onClick={markInterest} className="font-semibold text-[#1D9E75] hover:underline">
               See how an advisor can help →
             </Link>
           </>

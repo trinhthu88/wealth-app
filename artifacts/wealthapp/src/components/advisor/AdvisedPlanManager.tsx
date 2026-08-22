@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, ChevronDown, ChevronRight } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import StatementEntryForm from "./StatementEntryForm";
@@ -30,12 +30,14 @@ interface Statement {
   createdAt: string;
 }
 
+// scenario | inforce | matured | surrender — see advisedPlans.ts's schema
+// comment. A plan starts as scenario and only becomes inforce once an advisor
+// explicitly flips it (requires a policyNumber, enforced server-side).
 const STATUS_COLORS: Record<string, string> = {
+  scenario: "bg-sun-tint text-amber-ink",
   inforce: "bg-green-tint text-green",
-  paid_up: "bg-surface border border-hairline text-forest",
-  lapsed: "bg-clay-tint text-clay-ink",
   matured: "bg-surface border border-hairline text-ink-60",
-  surrendered: "bg-clay-tint text-clay-ink",
+  surrender: "bg-clay-tint text-clay-ink",
 };
 
 function n(v: string | number | null | undefined) { return parseFloat(String(v ?? "0")) || 0; }
@@ -50,6 +52,26 @@ function PlanCard({ plan, clientId }: { plan: AdvisedPlan; clientId: string }) {
     queryFn: () => apiFetch(`/advisor/clients/${clientId}/advised-plans/${plan.id}/statements`),
     enabled: stmtsOpen,
   });
+
+  const updateStatusMut = useMutation({
+    mutationFn: (data: { status: string; policyNumber?: string }) =>
+      apiFetch(`/advised-plans/${plan.id}/status`, { method: "PUT", body: JSON.stringify(data) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["advisor-client-plans", clientId] });
+      toast.success("Plan is now in-force");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Failed to update plan status"),
+  });
+
+  function handleMarkInForce() {
+    let policyNumber = plan.policyNumber;
+    if (!policyNumber) {
+      const entered = prompt("Enter the policy number to mark this plan in-force:");
+      if (!entered) return;
+      policyNumber = entered;
+    }
+    updateStatusMut.mutate({ status: "inforce", policyNumber });
+  }
 
   const cv = n(plan.latestAccountValue);
   const nc = n(plan.latestNetContribution);
@@ -70,6 +92,11 @@ function PlanCard({ plan, clientId }: { plan: AdvisedPlan; clientId: string }) {
             <p className="text-[13px] text-ink-40 tracking-wide">{plan.providerName}{plan.policyNumber ? ` · ${plan.policyNumber}` : ""}</p>
           </div>
           <div className="flex gap-2 shrink-0">
+            {plan.status === "scenario" && (
+              <button onClick={handleMarkInForce} disabled={updateStatusMut.isPending} className="px-3 py-1.5 rounded-full bg-forest text-paper text-[13px] font-medium hover:bg-forest-700 transition-colors disabled:opacity-50">
+                {updateStatusMut.isPending ? "Updating…" : "Mark in-force"}
+              </button>
+            )}
             <button onClick={() => setAddingStatement(v => !v)} className="px-3 py-1.5 rounded-full bg-green text-surface text-[13px] font-medium flex items-center gap-1.5 hover:bg-green-300 transition-colors">
               <Plus className="h-3.5 w-3.5" /> Add statement
             </button>

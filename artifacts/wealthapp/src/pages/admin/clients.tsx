@@ -28,11 +28,10 @@ interface AdminClient {
 
 interface Advisor { id: string; email: string; fullName: string | null; }
 
+// Only active | paused | churned are ever set now — see the note in
+// advisor/clients.tsx's STATUS_COLORS for why "prospect"/"pending" are gone.
 const STATUS_COLORS: Record<string, string> = {
-  prospect: "bg-sun-tint text-amber-ink",
   active: "bg-green-tint text-green",
-  active_prospect: "bg-green-tint text-green",
-  pending: "bg-sun-tint text-amber-ink",
   paused: "bg-surface border border-hairline text-ink-60",
   churned: "bg-clay-tint text-clay-ink",
 };
@@ -45,7 +44,7 @@ const KYC_COLORS: Record<string, string> = {
   rejected: "bg-clay-tint text-clay-ink",
 };
 
-const STATUS_FILTERS = ["all", "prospect", "active", "pending", "paused", "churned"];
+const STATUS_FILTERS = ["all", "active", "paused", "churned"];
 
 const fmtUSD = (v: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(v);
 
@@ -182,7 +181,7 @@ export default function AdminClients() {
                     )}
                   </td>
                   <td className="px-5 py-3">
-                    <span className={cn("text-[13px] px-3 py-1 rounded-full font-medium capitalize", STATUS_COLORS[c.status ?? "prospect"] ?? "bg-surface border border-hairline text-ink-60")}>
+                    <span className={cn("text-[13px] px-3 py-1 rounded-full font-medium capitalize", STATUS_COLORS[c.status ?? "active"] ?? "bg-surface border border-hairline text-ink-60")}>
                       {(c.status ?? "—").replace(/_/g, " ")}
                     </span>
                   </td>

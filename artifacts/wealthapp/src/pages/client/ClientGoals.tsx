@@ -13,6 +13,7 @@ import { detectUnallocatedSources, pickNextSuggestion, type UnallocatedSource } 
 import { useSolProgressMovement } from "@/hooks/useSolProgressMovement";
 import { useEnsureOffTrackTask } from "@/hooks/useEnsureOffTrackTask";
 import { useClientTrack } from "@/hooks/useClientTrack";
+import { useCreateLeadFromInterest } from "@/hooks/useCreateLeadFromInterest";
 import PlanHeader from "@/components/client/plan/PlanHeader";
 import ReviewCountdown from "@/components/client/plan/ReviewCountdown";
 import PlanProgressRing from "@/components/client/plan/PlanProgressRing";
@@ -168,6 +169,7 @@ function GoalCardInline({ goal, plans, holdings, allLinks, allGoals, solSuggesti
 
   const [, setLocation] = useLocation();
   const { isTrackA } = useClientTrack();
+  const createLead = useCreateLeadFromInterest();
   const isOffTrack = isActive && goal.trackStatus === "off_track";
   const [offTrackDismissed, setOffTrackDismissed] = useState(() => localStorage.getItem(`sol_offtrack_dismissed_${goal.id}`) === "1");
   const showOffTrackCard = isOffTrack && !offTrackDismissed;
@@ -373,7 +375,10 @@ function GoalCardInline({ goal, plans, holdings, allLinks, allGoals, solSuggesti
             ...generateSolCopy({ type: "off_track", goalTitle: goal.title }),
             actionLabel: isTrackA ? "Run a scenario" : "See how an advisor can help",
           }}
-          onAccept={() => setLocation(isTrackA ? `/client/scenarios?goalId=${goal.id}&type=retire_earlier` : "/client/messages")}
+          onAccept={() => {
+            createLead.mutate("goal_scenario_cta"); // same CTA slot GoalScenarioCTA owns for at_risk
+            setLocation(isTrackA ? `/client/scenarios?goalId=${goal.id}&type=retire_earlier` : "/client/messages");
+          }}
           onDismiss={() => { localStorage.setItem(`sol_offtrack_dismissed_${goal.id}`, "1"); setOffTrackDismissed(true); }}
         />
       )}

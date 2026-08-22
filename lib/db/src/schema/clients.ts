@@ -3,11 +3,17 @@ import { pgTable, text, integer, numeric, timestamp, uuid, date, boolean } from 
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
+// status: active | paused | churned only — this table represents an
+// already-promoted client's account health, not the pre-client pipeline.
+// "prospect"/"pending" no longer belong here; that stage now lives on the
+// lead (see leads.ts) until the lead-status redesign's promotion transaction
+// (lead status → "client") creates this row with status = "active". Legacy
+// "prospect" rows are handled by scripts/src/migrate-client-profiles-status.ts.
 export const clientProfilesTable = pgTable("client_profiles", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: text("user_id").notNull().unique(),
   advisorId: text("advisor_id"),
-  status: text("status").notNull().default("prospect"),
+  status: text("status").notNull().default("active"),
   kycStatus: text("kyc_status").notNull().default("not_started"),
   riskProfile: text("risk_profile"),
   riskScore: integer("risk_score"),

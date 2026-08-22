@@ -1,13 +1,22 @@
 import { Router, type IRouter } from "express";
 import { eq, and, desc } from "drizzle-orm";
 import { db, assetsTable, liabilitiesTable, netWorthSnapshotsTable } from "@workspace/db";
-import { requireAuth } from "../middlewares/requireAuth";
+import { requireAuth, requireRole, requireAdvisorOwnsLead } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
 
+// Shared by the client's own routes below and the advisor-owns-lead route —
+// net worth data exists on a userId regardless of the account's current role.
+function getAssetsForUser(userId: string) {
+  return db.select().from(assetsTable).where(eq(assetsTable.userId, userId));
+}
+function getLiabilitiesForUser(userId: string) {
+  return db.select().from(liabilitiesTable).where(eq(liabilitiesTable.userId, userId));
+}
+
 router.get("/assets", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
-  res.json(await db.select().from(assetsTable).where(eq(assetsTable.userId, userId)));
+  res.json(await getAssetsForUser(userId));
 });
 
 router.post("/assets", requireAuth, async (req, res): Promise<void> => {
@@ -56,7 +65,7 @@ router.post("/assets/upsert-by-name", requireAuth, async (req, res): Promise<voi
 
 router.get("/liabilities", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
-  res.json(await db.select().from(liabilitiesTable).where(eq(liabilitiesTable.userId, userId)));
+  res.json(await getLiabilitiesForUser(userId));
 });
 
 router.post("/liabilities", requireAuth, async (req, res): Promise<void> => {
@@ -157,6 +166,16 @@ router.post("/client/networth/snapshot", requireAuth, async (req, res): Promise<
     }).returning();
     res.status(201).json(row);
   }
+});
+
+// Advisor read-only view of a lead's net worth (manually-entered assets and
+// liabilities) — same data a client sees on their own net worth page. No
+// advisor route for an already-promoted client exists yet; this is scoped to
+// leads specifically, per the lead pipeline redesign.
+router.get("/advisor/leads/:id/networth", requireAuth, requireRole("advisor", "super_admin"), requireAdvisorOwnsLead("id"), async (req, res): Promise<void> => {
+  const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const [assets, liabilities] = await Promise.all([getAssetsForUser(rawId), getLiabilitiesForUser(rawId)]);
+  res.json({ assets, liabilities });
 });
 
 export default router;

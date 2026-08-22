@@ -44,12 +44,14 @@ const AdvisorClients = lazy(() => import("@/pages/advisor/clients"));
 const AdvisorClientDetail = lazy(() => import("@/pages/advisor/client-detail"));
 const AdvisorTasks = lazy(() => import("@/pages/advisor/tasks"));
 const AdvisorLeads = lazy(() => import("@/pages/advisor/leads"));
+const AdvisorLeadDetail = lazy(() => import("@/pages/advisor/lead-detail"));
 
 const AdminDashboard = lazy(() => import("@/pages/admin/dashboard"));
 const AdminUsers = lazy(() => import("@/pages/admin/users"));
 const AdminBlog = lazy(() => import("@/pages/admin/blog"));
 const AdminFunds = lazy(() => import("@/pages/admin/funds"));
 const AdminClients = lazy(() => import("@/pages/admin/clients"));
+const AdminLeads = lazy(() => import("@/pages/admin/leads"));
 const AdminPrices = lazy(() => import("@/pages/admin/prices"));
 const AdminBenchmarks = lazy(() => import("@/pages/admin/benchmarks"));
 
@@ -244,10 +246,12 @@ function AppRoutes() {
       <Route path="/advisor/clients/:id" component={() => <ProtectedRoute component={AdvisorClientDetail} role={["advisor", "super_admin"]} />} />
       <Route path="/advisor/tasks" component={() => <ProtectedRoute component={AdvisorTasks} role={["advisor", "super_admin"]} />} />
       <Route path="/advisor/leads" component={() => <ProtectedRoute component={AdvisorLeads} role={["advisor", "super_admin"]} />} />
+      <Route path="/advisor/leads/:id" component={() => <ProtectedRoute component={AdvisorLeadDetail} role={["advisor", "super_admin"]} />} />
 
       <Route path="/admin/dashboard" component={() => <ProtectedRoute component={AdminDashboard} role={["super_admin"]} />} />
       <Route path="/admin/users" component={() => <ProtectedRoute component={AdminUsers} role={["super_admin"]} />} />
       <Route path="/admin/clients" component={() => <ProtectedRoute component={AdminClients} role={["super_admin"]} />} />
+      <Route path="/admin/leads" component={() => <ProtectedRoute component={AdminLeads} role={["super_admin"]} />} />
       <Route path="/admin/prices" component={() => <ProtectedRoute component={AdminPrices} role={["super_admin"]} />} />
       <Route path="/admin/benchmarks" component={() => <ProtectedRoute component={AdminBenchmarks} role={["super_admin"]} />} />
       <Route path="/admin/blog" component={() => <ProtectedRoute component={AdminBlog} role={["super_admin", "advisor"]} />} />

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { Link } from "wouter";
 import AppShell from "@/components/AppShell";
 import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -7,26 +8,30 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { apiFetch } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
-import { Plus, Star, Calendar } from "lucide-react";
+import { Plus, Star, Calendar, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 interface Lead { id: string; email: string; firstName: string | null; source: string | null; status: string; quizResult: unknown; healthScore: number | null; notes: string | null; createdAt: string; convertedUserId: string | null; }
 
+// unassigned (default) → active (assigned to an advisor) → cold | churned |
+// client. Pre-redesign values (new/contacted/qualified/lost/converted) are
+// remapped by scripts/src/migrate-leads-status.ts — see leads.ts's schema
+// comment for the full mapping.
 const STATUS_COLORS: Record<string, string> = {
-  new: "bg-sun-tint text-amber-ink",
-  contacted: "bg-surface border border-hairline text-ink-60",
-  qualified: "bg-green-tint text-green",
-  converted: "bg-forest text-paper",
-  lost: "bg-clay-tint text-clay-ink",
+  unassigned: "bg-sun-tint text-amber-ink",
+  active: "bg-green-tint text-green",
+  cold: "bg-surface border border-hairline text-ink-60",
+  churned: "bg-clay-tint text-clay-ink",
+  client: "bg-forest text-paper",
 };
 
-const STATUSES = ["new", "contacted", "qualified", "converted", "lost"];
+const STATUSES = ["unassigned", "active", "cold", "churned", "client"];
 
 export default function AdvisorLeads() {
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState("all");
-  const [form, setForm] = useState({ email: "", firstName: "", source: "", status: "new", notes: "" });
+  const [form, setForm] = useState({ email: "", firstName: "", source: "", status: "unassigned", notes: "" });
   const [convertTarget, setConvertTarget] = useState<Lead | null>(null);
   const [convertPassword, setConvertPassword] = useState("");
 
@@ -57,8 +62,11 @@ export default function AdvisorLeads() {
   const filtered = filter === "all" ? leads : leads.filter(l => l.status === filter);
   const f = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setForm(p => ({ ...p, [k]: e.target.value }));
 
+  // "client" here still only means the legacy anonymous-lead conversion dialog
+  // below (creates a brand-new account) — the lead pipeline redesign's real
+  // promotion transaction for an already-linked lead isn't built yet.
   function handleStatusChange(lead: Lead, newStatus: string) {
-    if (newStatus === "converted") { setConvertTarget(lead); return; }
+    if (newStatus === "client") { setConvertTarget(lead); return; }
     update.mutate({ id: lead.id, status: newStatus });
   }
 
@@ -154,6 +162,9 @@ export default function AdvisorLeads() {
                       {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
                   )}
+                  <Link href={`/advisor/leads/${l.id}`} className="flex items-center gap-1 text-[13px] font-medium text-green hover:text-forest transition-colors">
+                    View <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
                 </div>
               </div>
             ))}

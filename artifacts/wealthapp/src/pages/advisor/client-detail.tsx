@@ -9,11 +9,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import CurrencyInput from "@/components/CurrencyInput";
 import { useProfile } from "@/hooks/useProfile";
-import { ArrowLeft, Plus, Check, X, Save, MessageCircle, TrendingUp } from "lucide-react";
+import { ArrowLeft, Plus, Check, X, Save, MessageCircle, TrendingUp, FileText } from "lucide-react";
 import { fmtCurrency } from "@/lib/portfolioCalculations";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import AdvisedPlanManager from "@/components/advisor/AdvisedPlanManager";
+import DocumentsManager from "@/components/advisor/DocumentsManager";
 
 interface ClientProfile {
   id: string;
@@ -49,7 +50,6 @@ interface Goal {
 }
 
 interface Task { id: string; title: string; priority: string; status: string; dueDate: string | null; }
-interface KycDoc { id: string; documentType: string; status: string; fileName: string | null; createdAt: string; }
 
 interface PackageSummary {
   id: string;
@@ -86,7 +86,9 @@ interface Transaction {
 interface Conversation { id: string; clientId: string; advisorId: string; }
 interface Message { id: string; senderId: string; senderRole: string | null; content: string; createdAt: string; }
 
-const STATUS_OPTIONS = ["prospect", "pending", "active", "active_prospect", "paused", "churned"];
+// Only active | paused | churned belong on an already-promoted client's
+// account-health status now — see clients.ts's clientProfilesTable comment.
+const STATUS_OPTIONS = ["active", "paused", "churned"];
 const KYC_OPTIONS = ["not_started", "submitted", "approved", "rejected"];
 const TX_TYPES = ["initial_investment", "monthly_contribution", "top_up", "withdrawal", "dividend_reinvested", "fee_charged", "rebalance"];
 
@@ -117,12 +119,6 @@ export default function AdvisorClientDetail() {
   const { data: tasks = [] } = useQuery<Task[]>({
     queryKey: ["advisor-client-tasks", id],
     queryFn: () => apiFetch(`/advisor/clients/${id}/tasks`),
-    enabled: !!id,
-  });
-
-  const { data: kycdocs = [] } = useQuery<KycDoc[]>({
-    queryKey: ["advisor-client-kyc", id],
-    queryFn: () => apiFetch(`/advisor/clients/${id}/kyc`),
     enabled: !!id,
   });
 
@@ -240,7 +236,7 @@ export default function AdvisorClientDetail() {
         </div>
         <span className={cn("text-[12px] px-3 py-1 rounded-[8px] font-medium tracking-wide uppercase",
           clientProfile?.status === "active" ? "bg-green-tint text-green" :
-          clientProfile?.status === "prospect" ? "bg-sun-tint text-amber-ink" : "bg-surface border border-hairline text-ink-60")}>
+          clientProfile?.status === "churned" ? "bg-clay-tint text-clay-ink" : "bg-surface border border-hairline text-ink-60")}>
           {clientProfile?.status?.replace(/_/g, " ") ?? "—"}
         </span>
       </div>
@@ -277,7 +273,9 @@ export default function AdvisorClientDetail() {
           <TabsTrigger value="investment-plans" className="rounded-full px-4 py-2 text-[13px] font-medium data-[state=active]:bg-forest data-[state=active]:text-paper data-[state=active]:shadow-none transition-colors">
             <TrendingUp className="h-4 w-4 mr-1.5 inline-block" />Plans
           </TabsTrigger>
-          <TabsTrigger value="kyc" className="rounded-full px-4 py-2 text-[13px] font-medium data-[state=active]:bg-forest data-[state=active]:text-paper data-[state=active]:shadow-none transition-colors">KYC</TabsTrigger>
+          <TabsTrigger value="documents" className="rounded-full px-4 py-2 text-[13px] font-medium data-[state=active]:bg-forest data-[state=active]:text-paper data-[state=active]:shadow-none transition-colors">
+            <FileText className="h-4 w-4 mr-1.5 inline-block" />Documents
+          </TabsTrigger>
         </TabsList>
 
         {/* ── Packages ── */}
@@ -585,6 +583,15 @@ export default function AdvisorClientDetail() {
                       <option value="aggressive">Aggressive</option>
                     </select>
                   </div>
+                  <div>
+                    <label className="text-[13px] font-medium text-ink-60 block mb-1.5">KYC status</label>
+                    <select className="w-full h-11 border border-hairline rounded-[12px] bg-paper px-4 text-[14px] text-forest focus:outline-none focus:ring-2 focus:ring-green capitalize"
+                      value={clientProfile.kycStatus ?? "not_started"}
+                      onChange={(e) => updateCPMut.mutate({ kycStatus: e.target.value })}>
+                      {KYC_OPTIONS.map(o => <option key={o} value={o}>{o.replace(/_/g, " ")}</option>)}
+                    </select>
+                    <p className="text-[12px] text-ink-40 mt-1.5">A manual note, not a verification — actual KYC happens on the external investment platform.</p>
+                  </div>
                 </div>
               </div>
 
@@ -735,40 +742,10 @@ export default function AdvisorClientDetail() {
           <AdvisedPlanManager clientId={id} />
         </TabsContent>
 
-        {/* ── KYC ── */}
-        <TabsContent value="kyc">
-          <div className="space-y-6">
-            <div className="bg-surface border border-hairline rounded-[26px] p-6 shadow-[0_2px_14px_rgba(20,52,42,0.04)]">
-              <h3 className="font-display text-[20px] font-semibold text-forest mb-4">KYC Status</h3>
-              <select className="w-64 h-11 border border-hairline rounded-[12px] bg-paper px-4 text-[14px] text-forest focus:outline-none focus:ring-2 focus:ring-green capitalize"
-                value={clientProfile?.kycStatus ?? "not_started"}
-                onChange={(e) => updateCPMut.mutate({ kycStatus: e.target.value })}>
-                {KYC_OPTIONS.map(o => <option key={o} value={o}>{o.replace(/_/g, " ")}</option>)}
-              </select>
-            </div>
-
-            <h3 className="font-display text-[20px] font-semibold text-forest">Uploaded Documents</h3>
-            {kycdocs.length === 0 ? (
-              <div className="text-center py-12 bg-surface rounded-[26px] shadow-[0_2px_14px_rgba(20,52,42,0.06)] text-[14px] text-ink-40">No documents uploaded.</div>
-            ) : (
-              <div className="grid gap-4 md:grid-cols-2">
-                {kycdocs.map(d => (
-                  <div key={d.id} className="bg-surface border border-hairline rounded-[20px] p-5 shadow-[0_2px_14px_rgba(20,52,42,0.04)]">
-                    <div className="flex justify-between items-start mb-3">
-                      <div>
-                        <div className="font-semibold text-[15px] text-forest capitalize">{d.documentType.replace(/_/g, " ")}</div>
-                        <div className="text-[13px] text-ink-40 mt-0.5">{d.fileName ?? "Unnamed document"}</div>
-                      </div>
-                      <span className={cn("text-[11px] px-2 py-0.5 rounded-[4px] font-medium tracking-wide uppercase", d.status === "approved" ? "bg-green-tint text-green" : d.status === "rejected" ? "bg-clay-tint text-clay" : "bg-sun-tint text-amber-ink")}>
-                        {d.status}
-                      </span>
-                    </div>
-                    <div className="text-[12px] text-ink-40 tabular-nums">Uploaded: {new Date(d.createdAt).toLocaleDateString()}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+        {/* ── Documents (replaces the old KYC tab's verify/reject workflow —
+             kyc-category documents live here now, no separate approval state) ── */}
+        <TabsContent value="documents">
+          <DocumentsManager basePath={`/advisor/clients/${id}`} enabled={activeTab === "documents"} />
         </TabsContent>
 
       </Tabs>

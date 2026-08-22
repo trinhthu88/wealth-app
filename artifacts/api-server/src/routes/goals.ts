@@ -1,17 +1,23 @@
 import { Router, type IRouter } from "express";
 import { eq, and } from "drizzle-orm";
 import { db, financialGoalsTable, profilesTable, goalHoldingLinksTable } from "@workspace/db";
-import { requireAuth, requireRole, requireAdvisorOwnsClient } from "../middlewares/requireAuth";
+import { requireAuth, requireRole, requireAdvisorOwnsClient, requireAdvisorOwnsLead } from "../middlewares/requireAuth";
 import { getRemainingPct } from "../lib/goalAllocation";
 import { getProgressMovement } from "../lib/goalProgressSnapshot";
 import { ensureOffTrackTask } from "../lib/offTrackTasks";
 
 const router: IRouter = Router();
 
+// Shared by the client's own route, the advisor-owns-client route, and the
+// advisor-owns-lead route below — goals exist on a userId regardless of the
+// account's current role, so all three read the exact same rows.
+function getGoalsForUser(userId: string) {
+  return db.select().from(financialGoalsTable).where(eq(financialGoalsTable.userId, userId));
+}
+
 router.get("/goals", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
-  const goals = await db.select().from(financialGoalsTable).where(eq(financialGoalsTable.userId, userId));
-  res.json(goals);
+  res.json(await getGoalsForUser(userId));
 });
 
 router.post("/goals", requireAuth, async (req, res): Promise<void> => {
@@ -120,8 +126,14 @@ router.post("/goals/upsert-from-pathway", requireAuth, async (req, res): Promise
 
 router.get("/advisor/clients/:id/goals", requireAuth, requireRole("advisor", "super_admin"), requireAdvisorOwnsClient("id"), async (req, res): Promise<void> => {
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-  const goals = await db.select().from(financialGoalsTable).where(eq(financialGoalsTable.userId, rawId));
-  res.json(goals);
+  res.json(await getGoalsForUser(rawId));
+});
+
+// Same data, for a lead who's assigned to this advisor but not yet promoted —
+// the goal already exists on their userId regardless of role.
+router.get("/advisor/leads/:id/goals", requireAuth, requireRole("advisor", "super_admin"), requireAdvisorOwnsLead("id"), async (req, res): Promise<void> => {
+  const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  res.json(await getGoalsForUser(rawId));
 });
 
 // ── Goal holding links ────────────────────────────────────────────────────────

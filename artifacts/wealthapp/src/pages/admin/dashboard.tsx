@@ -43,7 +43,7 @@ export default function AdminDashboard() {
         <StatCard label="Total AUM" value={fmtUSD(totalAUM)} sub={`${activeClients.length} active clients`} icon={TrendingUp} color="teal" />
         <StatCard label="Active Packages" value={totalActivePackages} sub={`${clients.length} investment clients`} icon={Briefcase} color="navy" />
         <StatCard label="Total Users" value={users.length} sub={`${advisors.length} advisors`} icon={Users} color="amber" />
-        <StatCard label="Leads" value={leads.length} sub={`${leads.filter(l => l.status === "new").length} new`} icon={Star} color="teal" />
+        <StatCard label="Leads" value={leads.length} sub={`${leads.filter(l => l.status === "unassigned").length} unassigned`} icon={Star} color="teal" />
       </div>
 
       <div className="grid md:grid-cols-2 gap-6 mb-6">
@@ -144,9 +144,9 @@ export default function AdminDashboard() {
           <div className="h-10 w-10 rounded-[14px] bg-paper border border-hairline flex items-center justify-center shrink-0"><BookOpen className="h-5 w-5 text-forest" /></div>
           <div><div className="font-semibold text-forest text-[15px]">Blog</div><div className="text-[13px] text-ink-40">{posts.length} articles</div></div>
         </Link>
-        <Link href="/advisor/leads" className="bg-surface rounded-[20px] p-5 flex flex-col gap-3 shadow-[0_2px_14px_rgba(20,52,42,0.06)] hover:shadow-[0_4px_20px_rgba(20,52,42,0.08)] transition-shadow">
+        <Link href="/admin/leads" className="bg-surface rounded-[20px] p-5 flex flex-col gap-3 shadow-[0_2px_14px_rgba(20,52,42,0.06)] hover:shadow-[0_4px_20px_rgba(20,52,42,0.08)] transition-shadow">
           <div className="h-10 w-10 rounded-[14px] bg-clay-tint flex items-center justify-center shrink-0"><Star className="h-5 w-5 text-clay-ink" /></div>
-          <div><div className="font-semibold text-forest text-[15px]">Leads</div><div className="text-[13px] text-ink-40">{leads.length} total</div></div>
+          <div><div className="font-semibold text-forest text-[15px]">Leads</div><div className="text-[13px] text-ink-40">{leads.filter(l => l.status === "unassigned").length} unassigned</div></div>
         </Link>
       </div>
     </AppShell>

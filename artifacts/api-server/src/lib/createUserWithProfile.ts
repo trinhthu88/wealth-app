@@ -63,11 +63,14 @@ export async function createUserWithProfile(input: CreateUserInput): Promise<Cre
   }).returning();
 
   if (role === "investment_client") {
+    // client_profiles.status is account health for an already-promoted client
+    // now (active | paused | churned) — a row created here is one, so "active"
+    // is the only sensible default (see clients.ts's clientProfilesTable comment).
     await db.insert(clientProfilesTable).values({
       userId: clerkUser.id,
       advisorId: advisorId || null,
       riskProfile: riskProfile || null,
-      status: status || "prospect",
+      status: status || "active",
     });
   }
 

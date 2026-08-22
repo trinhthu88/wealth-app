@@ -52,11 +52,13 @@ router.put("/admin/users/:id", ...adminGuard, async (req, res): Promise<void> =>
     }
   }
 
-  // If role changed TO investment_client, auto-create client_profiles
+  // If role changed TO investment_client, auto-create client_profiles.
+  // status: "active" — this table is account health for an already-promoted
+  // client now, not the pre-client pipeline (see clients.ts's schema comment).
   if (role === "investment_client") {
     const existing = await db.select().from(clientProfilesTable).where(eq(clientProfilesTable.userId, id));
     if (existing.length === 0) {
-      await db.insert(clientProfilesTable).values({ userId: id, status: "prospect" });
+      await db.insert(clientProfilesTable).values({ userId: id, status: "active" });
     }
   }
 

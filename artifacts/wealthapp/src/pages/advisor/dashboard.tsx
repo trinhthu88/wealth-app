@@ -32,7 +32,7 @@ export default function AdvisorDashboard() {
 
   const pendingTasks = tasks.filter(t => t.status === "todo" || t.status === "in_progress");
   const overdueTasks = tasks.filter(t => t.dueDate && new Date(t.dueDate) < new Date() && t.status !== "done");
-  const newLeads = leads.filter(l => l.status === "new");
+  const newLeads = leads.filter(l => l.status === "unassigned");
   const totalAUM = clients.reduce((s, c) => s + (c.portfolioValue ?? 0), 0);
   const activeClients = clients.filter(c => c.status === "active");
   const totalPackages = clients.reduce((s, c) => s + (c.packagesCount ?? 0), 0);
@@ -74,7 +74,7 @@ export default function AdvisorDashboard() {
                       <div className="text-[13px] text-ink-40">{c.portfolioValue > 0 ? fmtUSD(c.portfolioValue) : c.email}</div>
                     </div>
                   </div>
-                  <span className={`text-[13px] px-3 py-1 rounded-full font-medium ${c.status === "active" ? "bg-green-tint text-green" : c.status === "prospect" ? "bg-sun-tint text-amber-ink" : "bg-hairline text-ink-60"}`}>
+                  <span className={`text-[13px] px-3 py-1 rounded-full font-medium ${c.status === "active" ? "bg-green-tint text-green" : c.status === "churned" ? "bg-clay-tint text-clay-ink" : "bg-hairline text-ink-60"}`}>
                     {c.status ?? "—"}
                   </span>
                 </Link>

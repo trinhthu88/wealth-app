@@ -36,16 +36,17 @@ const KYC_COLORS: Record<string, string> = {
   rejected: "bg-clay-tint text-clay-ink",
 };
 
+// Only active | paused | churned are ever set now — client_profiles.status
+// represents an already-promoted client's account health (see lib/db/src/schema/clients.ts).
+// "prospect"/"pending" belonged to the pre-promotion pipeline, which now lives
+// entirely on the lead (see leads.ts / the advisor lead-detail page).
 const STATUS_COLORS: Record<string, string> = {
-  prospect: "bg-sun-tint text-amber-ink",
   active: "bg-green-tint text-green",
-  active_prospect: "bg-green-tint text-green",
-  pending: "bg-sun-tint text-amber-ink",
   paused: "bg-surface border border-hairline text-ink-60",
   churned: "bg-clay-tint text-clay-ink",
 };
 
-const STATUS_FILTERS = ["all", "prospect", "active", "pending", "paused", "churned"];
+const STATUS_FILTERS = ["all", "active", "paused", "churned"];
 
 const fmtUSD = (v: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(v);
 
@@ -53,7 +54,7 @@ export default function AdvisorClients() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [showAddModal, setShowAddModal] = useState(false);
-  const [form, setForm] = useState({ email: "", password: "", fullName: "", riskProfile: "", status: "prospect" });
+  const [form, setForm] = useState({ email: "", password: "", fullName: "", riskProfile: "", status: "active" });
 
   const { data: clients = [], isLoading } = useQuery<Client[]>({
     queryKey: ["advisor-clients"],
@@ -71,7 +72,7 @@ export default function AdvisorClients() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["advisor-clients"] });
       setShowAddModal(false);
-      setForm({ email: "", password: "", fullName: "", riskProfile: "", status: "prospect" });
+      setForm({ email: "", password: "", fullName: "", riskProfile: "", status: "active" });
       toast.success("Client created successfully");
     },
     onError: (e: any) => toast.error(e?.message ?? "Failed to create client"),
@@ -134,9 +135,9 @@ export default function AdvisorClients() {
                 <div>
                   <label className="text-[13px] font-medium text-ink-60 block mb-1.5">Initial status</label>
                   <select className="w-full h-11 border border-hairline bg-paper rounded-[12px] px-4 text-[14px] text-forest focus:outline-none focus:ring-2 focus:ring-green" value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
-                    <option value="prospect">Prospect</option>
                     <option value="active">Active</option>
-                    <option value="pending">Pending</option>
+                    <option value="paused">Paused</option>
+                    <option value="churned">Churned</option>
                   </select>
                 </div>
               </div>
@@ -203,7 +204,7 @@ export default function AdvisorClients() {
                     </div>
                   </td>
                   <td className="px-5 py-3">
-                    <span className={cn("text-[13px] px-3 py-1 rounded-full font-medium capitalize inline-block", STATUS_COLORS[c.status ?? "prospect"] ?? "bg-surface border border-hairline text-ink-60")}>
+                    <span className={cn("text-[13px] px-3 py-1 rounded-full font-medium capitalize inline-block", STATUS_COLORS[c.status ?? "active"] ?? "bg-surface border border-hairline text-ink-60")}>
                       {(c.status ?? "—").replace(/_/g, " ")}
                     </span>
                   </td>

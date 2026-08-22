@@ -8,7 +8,7 @@ import {
   financialPlansTable, planMilestonesTable, milestoneCommentsTable,
   conversationsTable, messagesTable, advisedStrategyReturnsTable,
 } from "@workspace/db";
-import { requireAuth, requireRole, requireAdvisorOwnsClient } from "../middlewares/requireAuth";
+import { requireAuth, requireRole, requireAdvisorOwnsClient, requireAdvisorOwnsLead, requireAdvisorOwnsClientOrLead, requireAdvisorOwnsPlan } from "../middlewares/requireAuth";
 import { resolveHoldingBenchmark, getDeviationWarning } from "../lib/benchmarks";
 
 const router: IRouter = Router();
@@ -111,8 +111,11 @@ router.get("/client/advised-plans", requireAuth, async (req, res): Promise<void>
   res.json(enriched);
 });
 
-// Advisor route: create/update advised plan
-router.post("/advisor/clients/:id/advised-plans", requireAuth, requireRole("advisor", "super_admin"), requireAdvisorOwnsClient("id"), async (req, res): Promise<void> => {
+// Advisor route: create/update advised plan. Uses requireAdvisorOwnsClientOrLead
+// so the same route serves a lead (not yet promoted) and an already-promoted
+// client identically — see that middleware's comment for why this tree isn't
+// duplicated the way the read-only Goals/NetWorth/Holdings routes are.
+router.post("/advisor/clients/:id/advised-plans", requireAuth, requireRole("advisor", "super_admin"), requireAdvisorOwnsClientOrLead("id"), async (req, res): Promise<void> => {
   const advisorId = (req as any).userId;
   const userId = req.params.id as string;
   const {
@@ -134,7 +137,10 @@ router.post("/advisor/clients/:id/advised-plans", requireAuth, requireRole("advi
     planType: planType ?? "rsp", currency: currency ?? "USD",
     termYears: termYears ?? null, annualPremium: annualPremium ?? "0", initialPremium: initialPremium ?? "0",
     effectiveDate: effectiveDate ?? null, maturityDate: maturityDate ?? null,
-    status: status ?? "inforce",
+    // A plan starts as a scenario an advisor runs for a lead — it only becomes
+    // "inforce" once policyNumber is filled and the advisor explicitly flips it
+    // (see the lead-detail plan-status endpoint added for the lead pipeline).
+    status: status ?? "scenario",
     latestAccountValue: latestAccountValue ?? "0", latestNetContribution: latestNetContribution ?? "0",
     latestStatementDate: latestStatementDate ?? null,
     nickname: nickname ?? null, advisorNotes: advisorNotes ?? null,
@@ -150,7 +156,7 @@ router.post("/advisor/clients/:id/advised-plans", requireAuth, requireRole("advi
 });
 
 // ── Advisor: list plans for a client ─────────────────────────────────────
-router.get("/advisor/clients/:id/advised-plans", requireAuth, requireRole("advisor", "super_admin"), requireAdvisorOwnsClient("id"), async (req, res): Promise<void> => {
+router.get("/advisor/clients/:id/advised-plans", requireAuth, requireRole("advisor", "super_admin"), requireAdvisorOwnsClientOrLead("id"), async (req, res): Promise<void> => {
   const userId = req.params.id as string;
   const plans = await db.select().from(advisedPlansTable)
     .where(eq(advisedPlansTable.userId, userId))
@@ -159,7 +165,7 @@ router.get("/advisor/clients/:id/advised-plans", requireAuth, requireRole("advis
 });
 
 // ── Advisor: get statements for a plan ───────────────────────────────────
-router.get("/advisor/clients/:clientId/advised-plans/:planId/statements", requireAuth, requireRole("advisor", "super_admin"), requireAdvisorOwnsClient("clientId"), async (req, res): Promise<void> => {
+router.get("/advisor/clients/:clientId/advised-plans/:planId/statements", requireAuth, requireRole("advisor", "super_admin"), requireAdvisorOwnsClientOrLead("clientId"), async (req, res): Promise<void> => {
   const planId = req.params.planId as string;
   const stmts = await db.select().from(advisedPlanStatementsTable)
     .where(eq(advisedPlanStatementsTable.advisedPlanId, planId))
@@ -190,7 +196,7 @@ router.get("/client/advised-plans/:planId/statements/:stmtId/holdings", requireA
 });
 
 // ── Advisor: add statement + holdings + transactions ──────────────────────
-router.post("/advisor/clients/:clientId/advised-plans/:planId/statements", requireAuth, requireRole("advisor", "super_admin"), requireAdvisorOwnsClient("clientId"), async (req, res): Promise<void> => {
+router.post("/advisor/clients/:clientId/advised-plans/:planId/statements", requireAuth, requireRole("advisor", "super_admin"), requireAdvisorOwnsClientOrLead("clientId"), async (req, res): Promise<void> => {
   const advisorId = (req as any).userId;
   const planId = req.params.planId as string;
   const clientId = req.params.clientId as string;
@@ -267,13 +273,56 @@ router.post("/advisor/clients/:clientId/advised-plans/:planId/statements", requi
   res.status(201).json(stmt);
 });
 
+// Flips a plan's status — the "scenario → inforce" transition specifically
+// requires a policyNumber in the same request (Phase 0's validation rule);
+// blocked otherwise rather than allowing an in-force plan with no policy
+// number. Keyed by the plan itself (requireAdvisorOwnsPlan), not by a
+// client/lead id, so it works the same whether the owning user has been
+// promoted yet or not.
+router.put("/advised-plans/:id/status", requireAuth, requireRole("advisor", "super_admin"), requireAdvisorOwnsPlan("id"), async (req, res): Promise<void> => {
+  const id = req.params.id as string;
+  const { status, policyNumber } = req.body;
+  if (!status) { res.status(400).json({ error: "status required" }); return; }
+
+  const [plan] = await db.select().from(advisedPlansTable).where(eq(advisedPlansTable.id, id));
+  if (!plan) { res.status(404).json({ error: "Not found" }); return; }
+
+  const resolvedPolicyNumber = policyNumber !== undefined ? policyNumber : plan.policyNumber;
+  if (status === "inforce" && !resolvedPolicyNumber) {
+    res.status(400).json({ error: "policyNumber is required to mark a plan in-force" });
+    return;
+  }
+
+  const [updated] = await db.update(advisedPlansTable).set({
+    status,
+    ...(policyNumber !== undefined ? { policyNumber } : {}),
+    updatedAt: new Date(),
+  }).where(eq(advisedPlansTable.id, id)).returning();
+
+  res.json(updated);
+});
+
 // ── Client self-entered holdings ──────────────────────────────────────────
-router.get("/client/holdings", requireAuth, async (req, res): Promise<void> => {
-  const userId = (req as any).userId;
-  const holdings = await db.select().from(clientHoldingsTable)
+
+// Shared by the client's own route and the advisor-owns-lead route below —
+// self-held holdings exist on a userId regardless of the account's current role.
+function getActiveHoldingsForUser(userId: string) {
+  return db.select().from(clientHoldingsTable)
     .where(and(eq(clientHoldingsTable.userId, userId), eq(clientHoldingsTable.isActive, true)))
     .orderBy(desc(clientHoldingsTable.createdAt));
-  res.json(holdings);
+}
+
+router.get("/client/holdings", requireAuth, async (req, res): Promise<void> => {
+  const userId = (req as any).userId;
+  res.json(await getActiveHoldingsForUser(userId));
+});
+
+// Advisor read-only view of a lead's self-held holdings. No advisor route for
+// an already-promoted client exists yet; this is scoped to leads specifically,
+// per the lead pipeline redesign.
+router.get("/advisor/leads/:id/holdings", requireAuth, requireRole("advisor", "super_admin"), requireAdvisorOwnsLead("id"), async (req, res): Promise<void> => {
+  const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  res.json(await getActiveHoldingsForUser(rawId));
 });
 
 router.post("/client/holdings", requireAuth, async (req, res): Promise<void> => {
