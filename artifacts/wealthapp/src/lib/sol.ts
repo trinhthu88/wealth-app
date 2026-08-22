@@ -18,7 +18,8 @@ export type SolObservation =
   | { type: "newly_added_holding"; holdingLabel: string; amountUsd: number; daysAgo: number; goalNames: string[] }
   | { type: "over_allocation_blocked"; holdingLabel: string; remainingPct: number; otherGoalNames: string[] }
   | { type: "progress_movement"; goalTitle: string; deltaTotal: number; marketDelta: number; contributionDelta: number; reallocationDelta: number; fromDate: string; toDate: string }
-  | { type: "off_track"; goalTitle: string };
+  | { type: "off_track"; goalTitle: string }
+  | { type: "coast_point_acceleration"; goalTitle: string; extraMonthly: number; currentCoastDate: string | null; newCoastDate: string | null };
 
 // Below this, a move isn't worth Sol narrating — "Sol shouldn't narrate every $10
 // fluctuation" (SOL_PERSONA.md / phase 3 note).
@@ -30,6 +31,13 @@ export function isProgressMovementNoteworthy(movement: { deltaTotal: number }): 
 
 function formatUsd(amount: number): string {
   return `$${Math.round(Math.abs(amount)).toLocaleString()}`;
+}
+
+// "yyyy-mm" -> "March 2034". Coast-point dates never carry a day component —
+// solveCoastPoint() only resolves to month granularity.
+function formatCoastMonth(yyyyMm: string): string {
+  const [year, month] = yyyyMm.split("-").map(Number);
+  return new Date(year, month - 1, 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
 }
 
 function joinNames(names: string[]): string {
@@ -101,5 +109,14 @@ export function generateSolCopy(observation: SolObservation): SolMessage {
         body: `Your ${observation.goalTitle} has fallen behind pace. Want to see what closing the gap would take?`,
         actionLabel: "Run a scenario",
       };
+
+    case "coast_point_acceleration": {
+      const currentLabel = observation.currentCoastDate ? formatCoastMonth(observation.currentCoastDate) : "isn't reached within this goal's timeline at your current rate";
+      const newLabel = observation.newCoastDate ? formatCoastMonth(observation.newCoastDate) : "isn't reached within this goal's timeline even with the extra amount";
+      return {
+        body: `Adding ${formatUsd(observation.extraMonthly)}/month to your ${observation.goalTitle} plan would move your coast point — the point where your current balance alone, left to grow, would still reach the goal with no further contributions — from ${currentLabel} to ${newLabel}. Want me to model it?`,
+        actionLabel: "Model it",
+      };
+    }
   }
 }

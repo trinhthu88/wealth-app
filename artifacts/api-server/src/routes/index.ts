@@ -19,6 +19,7 @@ import notificationsRouter from "./notifications";
 import adminRouter from "./admin";
 import investmentsRouter from "./investments";
 import clientPortalRouter from "./clientPortal";
+import coastPointRouter from "./coastPoint";
 
 const router: IRouter = Router();
 
@@ -42,5 +43,6 @@ router.use(blogRouter);
 router.use(notificationsRouter);
 router.use(adminRouter);
 router.use(investmentsRouter);
+router.use(coastPointRouter);
 
 export default router;

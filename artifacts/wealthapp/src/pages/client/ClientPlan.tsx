@@ -1,14 +1,26 @@
 import { useState } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Map, CalendarDays, AlertTriangle } from "lucide-react";
 import ClientAppShell from "@/components/client/AppShell";
 import Sol from "@/components/Sol";
+import SolCard from "@/components/client/goals/SolCard";
 import RequestReviewSheet from "@/components/client/plan/RequestReviewSheet";
 import { usePlan } from "@/hooks/usePlan";
+import { useCoastPoint } from "@/hooks/useCoastPoint";
+import { useScenarios } from "@/hooks/useScenarios";
+import { usePortfolioTotals } from "@/hooks/usePortfolioTotals";
+import { generateSolCopy, type SolObservation } from "@/lib/sol";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 function formatDate(d: string) {
   return new Date(d).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" });
+}
+
+function monthsUntil(dateStr: string): number {
+  const target = new Date(dateStr);
+  const now = new Date();
+  return Math.max(12, (target.getFullYear() - now.getFullYear()) * 12 + (target.getMonth() - now.getMonth()));
 }
 
 export default function ClientPlan() {
@@ -21,6 +33,50 @@ export default function ClientPlan() {
   } = usePlan();
 
   const [showReviewSheet, setShowReviewSheet] = useState(false);
+  const [dismissedCoastCard, setDismissedCoastCard] = useState(false);
+  const [modeling, setModeling] = useState(false);
+  const [, navigate] = useLocation();
+
+  const coastPoint = useCoastPoint();
+  const totals = usePortfolioTotals();
+  const { runScenario, saveScenario } = useScenarios();
+
+  const cp = coastPoint.data;
+  // Only surface this when the extra amount actually changes the coast date —
+  // never render a Sol message with a no-op number.
+  const showCoastCard = !!cp?.available && !!cp.base && !!cp.accelerated
+    && cp.base.coastDate !== cp.accelerated.coastDate && !dismissedCoastCard;
+
+  const coastObservation: SolObservation | null = showCoastCard && cp && coastPoint.retirementGoal
+    ? {
+        type: "coast_point_acceleration",
+        goalTitle: coastPoint.retirementGoal.title,
+        extraMonthly: coastPoint.extraMonthly,
+        currentCoastDate: cp.base?.coastDate ?? null,
+        newCoastDate: cp.accelerated?.coastDate ?? null,
+      }
+    : null;
+
+  async function handleModelCoastPoint() {
+    if (!cp?.available || !coastPoint.retirementGoal) return;
+    setModeling(true);
+    try {
+      const result = runScenario({
+        type: "increase_monthly",
+        currentValue: totals.totalPortfolioValue,
+        currentMonthly: coastPoint.currentMonthly,
+        newMonthly: coastPoint.currentMonthly + coastPoint.extraMonthly,
+        annualReturnPct: cp.blendedAnnualReturnPct ?? 7,
+        months: monthsUntil(coastPoint.retirementGoal.targetDate ?? new Date().toISOString()),
+      });
+      await saveScenario(result, `Coast point: +$${coastPoint.extraMonthly}/mo`);
+      navigate("/client/scenarios");
+    } catch {
+      toast.error("Couldn't model that scenario. Try again from Scenarios.");
+    } finally {
+      setModeling(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -158,8 +214,7 @@ export default function ClientPlan() {
               }
               
               if (status === "in_progress") {
-                // If linked goal, show progress. Otherwise show it as active but no bar.
-                // We don't have access to goal progress here, so we will style it as the active step.
+                const gp = m.goalProgress;
                 return (
                   <div key={m.id} className={cn("mb-[28px] relative", isNext && "animate-rise-up")}>
                     <div className="absolute -left-[34px] top-[2px] w-[24px] h-[24px] rounded-full bg-forest border-[3px] border-sun z-10 shadow-[0_0_12px_rgba(255,182,39,0.3)]" />
@@ -169,11 +224,26 @@ export default function ClientPlan() {
                     <div className="font-display text-[20px] font-semibold text-paper mt-0.5 mb-1">
                       {m.title}
                     </div>
-                    {m.notes && <div className="text-[13.5px] text-mint mb-2 max-w-[500px] leading-relaxed">{m.notes}</div>}
-                    
-                    <div className="mt-3 inline-flex rounded-full border border-sun/40 px-3 py-1 text-[12px] font-semibold text-sun">
-                      Active milestone
-                    </div>
+                    {gp ? (
+                      <>
+                        <div className="text-[13.5px] text-mint mb-2">
+                          ${Math.round(gp.currentAmount).toLocaleString()} of ${Math.round(gp.targetAmount).toLocaleString()}
+                        </div>
+                        <div className="rounded-full bg-track-dark h-[6px] max-w-[420px]" aria-label={`${Math.round(gp.progressPct)}% of ${m.title} funded`}>
+                          <div
+                            className="h-full rounded-full bg-sun transition-[width] duration-500"
+                            style={{ width: `${Math.min(100, Math.max(0, gp.progressPct))}%` }}
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        {m.notes && <div className="text-[13.5px] text-mint mb-2 max-w-[500px] leading-relaxed">{m.notes}</div>}
+                        <div className="mt-3 inline-flex rounded-full border border-sun/40 px-3 py-1 text-[12px] font-semibold text-sun">
+                          Active milestone
+                        </div>
+                      </>
+                    )}
                   </div>
                 );
               }
@@ -197,6 +267,15 @@ export default function ClientPlan() {
           <div className="bg-forest-700/30 border border-forest-600/50 rounded-[22px] py-12 text-center relative z-10">
             <p className="text-[14.5px] text-mint">No milestones have been added to your plan yet.</p>
           </div>
+        )}
+
+        {coastObservation && (
+          <SolCard
+            className="mt-6 relative z-10"
+            message={generateSolCopy(coastObservation)}
+            onAccept={modeling ? undefined : handleModelCoastPoint}
+            onDismiss={() => setDismissedCoastCard(true)}
+          />
         )}
 
         <RequestReviewSheet

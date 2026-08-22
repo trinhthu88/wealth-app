@@ -33,3 +33,5 @@ export { calculateProjection, applyMonthlyGrowth } from "./compoundProjection";
 export type { ProjectionInput, ProjectionResult } from "./compoundProjection";
 export { computeGoalProgress } from "./pacingProgress";
 export type { GoalStatus, GoalProgressResult } from "./pacingProgress";
+export { solveCoastPoint } from "./coastPoint";
+export type { CoastPointInput, CoastPointResult } from "./coastPoint";

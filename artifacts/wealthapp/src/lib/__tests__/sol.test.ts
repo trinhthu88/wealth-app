@@ -127,6 +127,29 @@ describe("generateSolCopy — off_track", () => {
   });
 });
 
+describe("generateSolCopy — coast_point_acceleration", () => {
+  it("names the real dollar amount and both real dates, never a directive", () => {
+    const msg = generateSolCopy({
+      type: "coast_point_acceleration", goalTitle: "Retirement",
+      extraMonthly: 300, currentCoastDate: "2038-04", newCoastDate: "2034-11",
+    });
+    expect(msg.body).toContain("$300");
+    expect(msg.body).toContain("April 2038");
+    expect(msg.body).toContain("November 2034");
+    expect(msg.body).not.toMatch(/you should|move \$/i);
+    expect(msg.actionLabel).toBe("Model it");
+  });
+
+  it("names the timeline gap in words when a coast date isn't reached, never a null/undefined date", () => {
+    const msg = generateSolCopy({
+      type: "coast_point_acceleration", goalTitle: "Retirement",
+      extraMonthly: 200, currentCoastDate: null, newCoastDate: "2040-01",
+    });
+    expect(msg.body).not.toMatch(/null|undefined|NaN/);
+    expect(msg.body).toContain("January 2040");
+  });
+});
+
 describe("isProgressMovementNoteworthy", () => {
   it("is false for negligible moves", () => {
     expect(isProgressMovementNoteworthy({ deltaTotal: 5 })).toBe(false);

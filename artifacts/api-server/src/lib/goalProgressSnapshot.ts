@@ -11,7 +11,7 @@ import {
 // price exists yet, same as the frontend does.
 const TICKER_BASED_TYPES = new Set(["stock_etf", "etf", "mutual_fund", "commodity", "bond"]);
 
-function resolveHoldingValueUsd(holding: {
+export function resolveHoldingValueUsd(holding: {
   holdingType: string;
   unitsHeld: string | null;
   averageCostPrice: string | null;
