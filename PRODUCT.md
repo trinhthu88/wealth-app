@@ -24,7 +24,7 @@ product
 - **Primary green**: #1D9E75
 - **Navy**: #042C53
 - **Brand tone**: Trusted, professional, calm. Not flashy; builds confidence.
-- **Logo**: Sol — a radiant sun/circle mark
+- **Logo**: Sol — a radiant sun/circle mark, also tala's in-app money buddy (voice and behavior rules: `SOL_PERSONA.md`)
 
 ## Anti-references
 

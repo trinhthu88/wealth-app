@@ -222,6 +222,9 @@ export function useGoals() {
     }),
     onSuccess: () => { invalidate(); toast.success("Investment linked"); },
     onError: (e: Error) => {
+      // Over-allocation (409, carries remainingPct) is explained inline by Sol
+      // instead — see GoalHoldingLinks.tsx's handleLink catch block.
+      if ((e as any).remainingPct !== undefined) return;
       if (e.message?.includes("already linked")) {
         toast.error("This investment is already linked to this goal.");
       } else {
@@ -245,6 +248,7 @@ export function useGoals() {
     loading: goalsQuery.isLoading,
     plans,
     holdings,
+    allLinks,
     addGoal: addGoalMut.mutateAsync,
     updateGoal: (id: string, data: Parameters<typeof updateGoalMut.mutateAsync>[0]["data"]) =>
       updateGoalMut.mutateAsync({ id, data }),

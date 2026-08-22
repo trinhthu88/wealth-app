@@ -23,6 +23,7 @@ function asUser(userId: string) {
 }
 
 let goalId: string;
+let goalBId: string;
 
 beforeAll(async () => {
   await db.insert(profilesTable).values({
@@ -37,6 +38,13 @@ beforeAll(async () => {
     goalType: "retirement",
   }).returning();
   goalId = goal.id;
+
+  const [goalB] = await db.insert(financialGoalsTable).values({
+    userId: clientId,
+    title: "Test Goal B",
+    goalType: "home_purchase",
+  }).returning();
+  goalBId = goalB.id;
 });
 
 afterAll(async () => {
@@ -65,5 +73,45 @@ describe("goal holding links (userId text/uuid schema fix)", () => {
       .set(asUser(clientId))
       .expect(200);
     expect(res.body.length).toBeGreaterThan(0);
+  });
+});
+
+describe("goal holding links (allocation cap, 100% across goals)", () => {
+  const sharedHoldingId = "22222222-2222-2222-2222-222222222222";
+
+  it("links 60% of a holding to goal A", async () => {
+    const res = await request(app)
+      .post(`/api/client/goals/${goalId}/links`)
+      .set(asUser(clientId))
+      .send({ sourceType: "self_holding", sourceId: sharedHoldingId, allocationPct: 60 })
+      .expect(201);
+    expect(res.body.allocationPct).toBe("60");
+  });
+
+  it("rejects linking 60% of the same holding to goal B (only 40% remains)", async () => {
+    const res = await request(app)
+      .post(`/api/client/goals/${goalBId}/links`)
+      .set(asUser(clientId))
+      .send({ sourceType: "self_holding", sourceId: sharedHoldingId, allocationPct: 60 })
+      .expect(409);
+    expect(res.body.remainingPct).toBe(40);
+  });
+
+  it("accepts linking the remaining 40% to goal B", async () => {
+    const res = await request(app)
+      .post(`/api/client/goals/${goalBId}/links`)
+      .set(asUser(clientId))
+      .send({ sourceType: "self_holding", sourceId: sharedHoldingId, allocationPct: 40 })
+      .expect(201);
+    expect(res.body.allocationPct).toBe("40");
+  });
+
+  it("leaves goal A's link untouched at 60%", async () => {
+    const res = await request(app)
+      .get(`/api/client/goals/${goalId}/links`)
+      .set(asUser(clientId))
+      .expect(200);
+    const link = res.body.find((l: any) => l.sourceId === sharedHoldingId);
+    expect(link?.allocationPct).toBe("60");
   });
 });

@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Link } from "wouter";
+import { useState, useEffect, useRef } from "react";
+import { Link, useLocation } from "wouter";
 import { Plus, Target, ChevronDown, ChevronRight, Map, MoreHorizontal, Link as LinkIcon, TrendingUp, CheckCircle2, Pencil, Pause, Trash2, Palmtree, Home, GraduationCap, Rocket, Briefcase, Globe, Coins, Shield } from "lucide-react";
 import ClientAppShell from "@/components/client/AppShell";
 import GoalsSummaryBar from "@/components/client/goals/GoalsSummaryBar";
@@ -7,6 +7,12 @@ import AddGoalSheet from "@/components/client/goals/AddGoalSheet";
 import EditGoalSheet from "@/components/client/goals/EditGoalSheet";
 import GoalHoldingLinks from "@/components/client/goals/GoalHoldingLinks";
 import GoalScenarioCTA from "@/components/client/goals/GoalScenarioCTA";
+import SolCard from "@/components/client/goals/SolCard";
+import { generateSolCopy, isProgressMovementNoteworthy, type SolMessage, type SolObservation } from "@/lib/sol";
+import { detectUnallocatedSources, pickNextSuggestion, type UnallocatedSource } from "@/lib/solObservations";
+import { useSolProgressMovement } from "@/hooks/useSolProgressMovement";
+import { useEnsureOffTrackTask } from "@/hooks/useEnsureOffTrackTask";
+import { useClientTrack } from "@/hooks/useClientTrack";
 import PlanHeader from "@/components/client/plan/PlanHeader";
 import ReviewCountdown from "@/components/client/plan/ReviewCountdown";
 import PlanProgressRing from "@/components/client/plan/PlanProgressRing";
@@ -140,11 +146,46 @@ function PlanTab() {
   );
 }
 
-function GoalCardInline({ goal, plans, holdings, setEditTarget, markComplete, deleteGoal, addHoldingLink, removeHoldingLink }: any) {
+function GoalCardInline({ goal, plans, holdings, allLinks, allGoals, solSuggestion, onDismissSuggestion, setEditTarget, markComplete, deleteGoal, addHoldingLink, removeHoldingLink }: any) {
   const [showLinks, setShowLinks] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmComplete, setConfirmComplete] = useState(false);
+  const [autoLinkTarget, setAutoLinkTarget] = useState<{ sourceType: string; sourceId: string } | null>(null);
+
+  const isActive = goal.status !== "completed" && goal.status !== "cancelled";
+  const { data: progressMovement } = useSolProgressMovement(goal.id, isActive);
+  const progressNote: SolMessage | null = progressMovement?.hasPrior && isProgressMovementNoteworthy(progressMovement)
+    ? generateSolCopy({
+        type: "progress_movement", goalTitle: goal.title, deltaTotal: progressMovement.deltaTotal,
+        marketDelta: progressMovement.marketDelta, contributionDelta: progressMovement.contributionDelta,
+        reallocationDelta: progressMovement.reallocationDelta,
+        // Non-null by the API's own contract whenever hasPrior is true (see
+        // ProgressMovement / getProgressMovement in goalProgressSnapshot.ts).
+        fromDate: progressMovement.fromDate as string, toDate: progressMovement.toDate as string,
+      })
+    : null;
+
+  const [, setLocation] = useLocation();
+  const { isTrackA } = useClientTrack();
+  const isOffTrack = isActive && goal.trackStatus === "off_track";
+  const [offTrackDismissed, setOffTrackDismissed] = useState(() => localStorage.getItem(`sol_offtrack_dismissed_${goal.id}`) === "1");
+  const showOffTrackCard = isOffTrack && !offTrackDismissed;
+
+  // Passive-on-view, fires once per mount for any active goal (not just
+  // off-track ones) — the server re-derives status itself and needs the
+  // on-track case too, so it can close out a stale open task from a prior
+  // episode instead of leaving it to block a future one (see
+  // api-server/src/lib/offTrackTasks.ts). This call never decides anything
+  // client-side, it just tells the advisor side to re-check.
+  const ensureOffTrackTask = useEnsureOffTrackTask();
+  const offTrackTaskFired = useRef(false);
+  useEffect(() => {
+    if (isActive && !offTrackTaskFired.current) {
+      offTrackTaskFired.current = true;
+      ensureOffTrackTask.mutate(goal.id);
+    }
+  }, [isActive, goal.id]);
 
   const isBehind = goal.trackStatus === "at_risk" || goal.trackStatus === "off_track";
   const isNearTerm = goal.monthsRemaining && goal.monthsRemaining < 36;
@@ -201,8 +242,11 @@ function GoalCardInline({ goal, plans, holdings, setEditTarget, markComplete, de
               </span>
             ) : null}
           </div>
+          {progressNote && (
+            <p className="text-[12px] text-ink-30 mt-1 leading-snug">{progressNote.body}</p>
+          )}
         </div>
-        
+
         {/* Menu Toggle */}
         <div className="relative shrink-0 self-start">
           <button
@@ -259,6 +303,22 @@ function GoalCardInline({ goal, plans, holdings, setEditTarget, markComplete, de
         </div>
       )}
 
+      {/* Sol: unallocated / newly-added holding suggestion. The parent already
+          filters out anything dismissed before ranking, so a non-null prop here
+          means it's current — dismissing just reports it upward, which re-ranks
+          and lets the next-best candidate take this slot. */}
+      {solSuggestion && (
+        <SolCard
+          className="mt-[12px]"
+          message={solSuggestion.message}
+          onAccept={() => {
+            setAutoLinkTarget({ sourceType: solSuggestion.sourceType, sourceId: solSuggestion.sourceId });
+            setShowLinks(true);
+          }}
+          onDismiss={() => onDismissSuggestion(solSuggestion.sourceType, solSuggestion.sourceId)}
+        />
+      )}
+
       {/* Linked holdings text */}
       {goal.links.length > 0 && (
         <p className="text-[13px] text-ink-40 mt-3 px-1">
@@ -301,20 +361,43 @@ function GoalCardInline({ goal, plans, holdings, setEditTarget, markComplete, de
         )}
       </div>
 
-      <div className="mt-4">
-        <GoalScenarioCTA goalId={goal.id} goalTitle={goal.title} status={goal.trackStatus} />
-      </div>
+      {/* Sol: off-track nudge into the scenario flow. Replaces (not stacks with)
+          GoalScenarioCTA for off_track specifically — that component still owns
+          at_risk. Track A gets the scenario tool; Track B keeps the same
+          "message your advisor" path GoalScenarioCTA used to offer here, just
+          folded into one card instead of two competing banners. */}
+      {showOffTrackCard && (
+        <SolCard
+          className="mt-4"
+          message={{
+            ...generateSolCopy({ type: "off_track", goalTitle: goal.title }),
+            actionLabel: isTrackA ? "Run a scenario" : "See how an advisor can help",
+          }}
+          onAccept={() => setLocation(isTrackA ? `/client/scenarios?goalId=${goal.id}&type=retire_earlier` : "/client/messages")}
+          onDismiss={() => { localStorage.setItem(`sol_offtrack_dismissed_${goal.id}`, "1"); setOffTrackDismissed(true); }}
+        />
+      )}
+
+      {goal.trackStatus !== "off_track" && (
+        <div className="mt-4">
+          <GoalScenarioCTA goalId={goal.id} goalTitle={goal.title} status={goal.trackStatus} />
+        </div>
+      )}
 
       {showLinks && (
         <div className="mt-4">
           <GoalHoldingLinks
+            key={autoLinkTarget ? `${autoLinkTarget.sourceType}:${autoLinkTarget.sourceId}` : "default"}
             goalId={goal.id}
             links={goal.links}
+            allLinks={allLinks}
+            goals={allGoals}
             plans={plans}
             holdings={holdings}
+            initialLinkTarget={autoLinkTarget}
             onAddLink={(p) => addHoldingLink(p).then(() => {})}
             onRemoveLink={(id) => removeHoldingLink(id).then(() => {})}
-            onClose={() => setShowLinks(false)}
+            onClose={() => { setShowLinks(false); setAutoLinkTarget(null); }}
           />
         </div>
       )}
@@ -324,8 +407,8 @@ function GoalCardInline({ goal, plans, holdings, setEditTarget, markComplete, de
 
 export default function ClientGoals() {
   const {
-    activeGoals, completedGoals, goalsOnTrack, goalsAtRisk, goalsOffTrack,
-    loading, plans, holdings,
+    activeGoals, completedGoals, allGoals, goalsOnTrack, goalsAtRisk, goalsOffTrack,
+    loading, plans, holdings, allLinks,
     addGoal, updateGoal, deleteGoal, markComplete, reopenGoal,
     addHoldingLink, removeHoldingLink,
   } = useGoals();
@@ -343,6 +426,38 @@ export default function ClientGoals() {
 
   const totalActive = activeGoals.length;
   const totalValue = activeGoals.reduce((sum, g) => sum + g.computedCurrentAmount, 0);
+
+  // Sol: surface at most one unallocated/newly-added holding suggestion at a
+  // time, on the top-priority active goal (activeGoals is already sorted
+  // off-track-first). `dismissedSuggestionKeys` is session-only state layered
+  // on top of the localStorage record so dismissing one immediately re-ranks
+  // and surfaces the next candidate, instead of the same one blocking the
+  // rest forever (see pickNextSuggestion in solObservations.ts).
+  const [dismissedSuggestionKeys, setDismissedSuggestionKeys] = useState<Set<string>>(() => new Set());
+  function isSuggestionDismissed(sourceType: string, sourceId: string): boolean {
+    const key = `${sourceType}:${sourceId}`;
+    return dismissedSuggestionKeys.has(key) || localStorage.getItem(`sol_suggestion_dismissed_${key}`) === "1";
+  }
+  function dismissSuggestion(sourceType: string, sourceId: string): void {
+    const key = `${sourceType}:${sourceId}`;
+    localStorage.setItem(`sol_suggestion_dismissed_${key}`, "1");
+    setDismissedSuggestionKeys(prev => new Set(prev).add(key));
+  }
+
+  const targetGoal = activeGoals[0];
+  const topUnallocatedSource: UnallocatedSource | null = targetGoal
+    ? pickNextSuggestion(
+        detectUnallocatedSources({ goals: activeGoals, holdings, plans, allLinks }),
+        isSuggestionDismissed,
+      )
+    : null;
+  const solSuggestion = topUnallocatedSource && targetGoal
+    ? {
+        sourceType: topUnallocatedSource.sourceType,
+        sourceId: topUnallocatedSource.sourceId,
+        message: generateSolCopy({ ...topUnallocatedSource.observation, goalNames: [targetGoal.title] } as SolObservation),
+      }
+    : null;
 
   if (loading) {
     return (
@@ -419,6 +534,10 @@ export default function ClientGoals() {
                 goal={goal}
                 plans={plans}
                 holdings={holdings}
+                allLinks={allLinks}
+                allGoals={allGoals}
+                solSuggestion={goal.id === targetGoal?.id ? solSuggestion : null}
+                onDismissSuggestion={dismissSuggestion}
                 setEditTarget={setEditTarget}
                 deleteGoal={(id: string) => void deleteGoal(id)}
                 markComplete={(id: string) => void markComplete(id)}

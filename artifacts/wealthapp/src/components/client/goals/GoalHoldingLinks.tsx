@@ -2,36 +2,91 @@ import { useState } from "react";
 import { X, Link as LinkIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import CurrencyDisplay from "@/components/client/CurrencyDisplay";
-import type { GoalHoldingLink } from "@/hooks/useGoals";
+import SolCard from "./SolCard";
+import { generateSolCopy, type SolMessage } from "@/lib/sol";
+import { buildOverAllocationObservation } from "@/lib/solObservations";
+import type { EnrichedGoal, GoalHoldingLink } from "@/hooks/useGoals";
 import type { AdvisedPlan } from "@/hooks/useAdvisedPlans";
 import type { ClientHolding } from "@/hooks/useClientHoldings";
 
 interface Props {
   goalId: string;
   links: GoalHoldingLink[];
+  // All of the client's goal-holding links, across every goal — used to compute
+  // how much of each holding is already allocated elsewhere before letting the
+  // client link more of it here. Defaults to `links` (this goal only) if omitted,
+  // which just means cross-goal allocation can't be checked for that caller.
+  allLinks?: GoalHoldingLink[];
+  // All of the client's goals (any status) — only used to name the "other
+  // goals" a holding is already linked to when Sol explains a blocked
+  // over-allocation attempt. Falls back to no names (still explains the %) if omitted.
+  goals?: EnrichedGoal[];
   plans: AdvisedPlan[];
   holdings: ClientHolding[];
+  // Pre-fills and opens the allocation input for this specific source on
+  // mount — used when the client taps a Sol suggestion card that already
+  // named one candidate holding/plan, so they land straight in the confirm step.
+  initialLinkTarget?: { sourceType: string; sourceId: string } | null;
   onAddLink: (params: { goalId: string; sourceType: string; sourceId: string; allocationPct: number }) => Promise<void>;
   onRemoveLink: (linkId: string) => Promise<void>;
   onClose: () => void;
 }
 
-export default function GoalHoldingLinks({ goalId, links, plans, holdings, onAddLink, onRemoveLink, onClose }: Props) {
-  const [linkingId, setLinkingId] = useState<string | null>(null);
-  const [allocationPct, setAllocationPct] = useState(100);
+export default function GoalHoldingLinks({ goalId, links, allLinks, goals, plans, holdings, initialLinkTarget, onAddLink, onRemoveLink, onClose }: Props) {
+  const [linkingId, setLinkingId] = useState<string | null>(() =>
+    initialLinkTarget ? `${initialLinkTarget.sourceType}:${initialLinkTarget.sourceId}` : null
+  );
+  // getRemainingPct is a hoisted function declaration (defined below) — safe to
+  // call here since this initializer only runs during render.
+  const [allocationPct, setAllocationPct] = useState(() =>
+    initialLinkTarget
+      ? Math.max(1, Math.min(100, getRemainingPct(initialLinkTarget.sourceType, initialLinkTarget.sourceId)))
+      : 100
+  );
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
+  const [solError, setSolError] = useState<{ key: string; remainingPct: number; message: SolMessage } | null>(null);
 
   const linkedIds = new Set(links.map(l => `${l.sourceType}:${l.sourceId}`));
+  const crossGoalLinks = allLinks ?? links;
 
   const activePlans = plans.filter(p => p.status === "inforce" && p.isVisibleToClient);
   const investableHoldings = holdings.filter(h =>
     h.isActive && ["stock_etf", "crypto", "property", "pension", "cash"].includes(h.holdingType)
   );
 
-  async function handleLink(sourceType: string, sourceId: string) {
-    await onAddLink({ goalId, sourceType, sourceId, allocationPct });
-    setLinkingId(null);
-    setAllocationPct(100);
+  // How much of this holding is linked to OTHER goals (not the one we're viewing),
+  // and how much is still available to allocate here. Mirrors the server-side check
+  // in POST /client/goals/:id/links so the cap shown here always matches what the
+  // server will actually accept.
+  function getRemainingPct(sourceType: string, sourceId: string) {
+    const allocatedElsewhere = crossGoalLinks
+      .filter(l => l.sourceType === sourceType && l.sourceId === sourceId && l.goalId !== goalId)
+      .reduce((sum, l) => sum + (parseFloat(l.allocationPct) || 0), 0);
+    return Math.max(0, 100 - allocatedElsewhere);
+  }
+
+  function startLinking(key: string, remainingPct: number) {
+    setLinkingId(key);
+    setAllocationPct(Math.max(1, Math.min(100, remainingPct)));
+    setSolError(null);
+  }
+
+  async function handleLink(sourceType: string, sourceId: string, holdingLabel: string) {
+    const key = `${sourceType}:${sourceId}`;
+    setSolError(null);
+    try {
+      await onAddLink({ goalId, sourceType, sourceId, allocationPct });
+      setLinkingId(null);
+      setAllocationPct(100);
+    } catch (err: any) {
+      const remaining = err?.remainingPct;
+      if (typeof remaining !== "number") return; // other errors already surfaced via toast
+      const observation = buildOverAllocationObservation(
+        { goals: goals ?? [], allLinks: crossGoalLinks },
+        { sourceType, sourceId, holdingLabel, remainingPct: remaining, excludeGoalId: goalId },
+      );
+      setSolError({ key, remainingPct: remaining, message: generateSolCopy(observation) });
+    }
   }
 
   function getLinkForId(sourceType: string, sourceId: string) {
@@ -65,6 +120,8 @@ export default function GoalHoldingLinks({ goalId, links, plans, holdings, onAdd
               const link = getLinkForId("advised_plan", plan.id);
               const value = parseFloat(plan.latestAccountValue) || 0;
               const isLinking = linkingId === key;
+              const remainingPct = getRemainingPct("advised_plan", plan.id);
+              const isFullyAllocated = !isLinked && remainingPct <= 0;
 
               return (
                 <div key={plan.id} className="flex items-center justify-between py-2 px-3 bg-white border border-slate-100 rounded-xl">
@@ -73,6 +130,8 @@ export default function GoalHoldingLinks({ goalId, links, plans, holdings, onAdd
                     <p className="text-xs text-slate-400">
                       <CurrencyDisplay amountUsd={value} compact />
                       {link && ` · ${link.allocationPct}% allocated`}
+                      {!isLinked && !isFullyAllocated && remainingPct < 100 && ` · ${remainingPct}% unallocated`}
+                      {isFullyAllocated && " · fully allocated to other goals"}
                     </p>
                     {isLinking && (
                       <div className="mt-2 flex items-center gap-2">
@@ -80,18 +139,26 @@ export default function GoalHoldingLinks({ goalId, links, plans, holdings, onAdd
                         <input
                           type="number"
                           value={allocationPct}
-                          onChange={e => setAllocationPct(Math.min(100, Math.max(1, parseInt(e.target.value) || 100)))}
-                          min={1} max={100}
+                          onChange={e => setAllocationPct(Math.min(remainingPct, Math.max(1, parseInt(e.target.value) || 1)))}
+                          min={1} max={remainingPct}
                           className="w-16 px-2 py-1 rounded-lg border border-[#1D9E75] text-sm text-center"
                         />
+                        <span className="text-xs text-slate-400">of {remainingPct}% available</span>
                         <button
-                          onClick={() => handleLink("advised_plan", plan.id)}
+                          onClick={() => handleLink("advised_plan", plan.id, plan.nickname ?? plan.productName)}
                           className="px-3 py-1 bg-[#1D9E75] text-white text-xs rounded-lg font-medium"
                         >
                           Confirm
                         </button>
-                        <button onClick={() => setLinkingId(null)} className="text-xs text-slate-400">Cancel</button>
+                        <button onClick={() => { setLinkingId(null); setSolError(null); }} className="text-xs text-slate-400">Cancel</button>
                       </div>
+                    )}
+                    {isLinking && solError?.key === key && (
+                      <SolCard
+                        className="mt-2"
+                        message={solError.message}
+                        onAccept={() => { setAllocationPct(solError.remainingPct); setSolError(null); }}
+                      />
                     )}
                   </div>
                   {!isLinking && (
@@ -106,9 +173,11 @@ export default function GoalHoldingLinks({ goalId, links, plans, holdings, onAdd
                           <X className="h-3.5 w-3.5" />
                         </button>
                       )
+                    ) : isFullyAllocated ? (
+                      <span className="ml-2 px-2.5 py-1 bg-slate-100 text-slate-400 text-xs rounded-lg font-medium shrink-0">Unavailable</span>
                     ) : (
                       <button
-                        onClick={() => { setLinkingId(key); setAllocationPct(100); }}
+                        onClick={() => startLinking(key, remainingPct)}
                         className="ml-2 flex items-center gap-1 px-2.5 py-1 bg-[#1D9E75]/10 text-[#1D9E75] text-xs rounded-lg font-medium hover:bg-[#1D9E75]/20 transition-colors shrink-0"
                       >
                         <LinkIcon className="h-3 w-3" />
@@ -131,6 +200,8 @@ export default function GoalHoldingLinks({ goalId, links, plans, holdings, onAdd
               const isLinked = linkedIds.has(key);
               const link = getLinkForId("self_holding", holding.id);
               const isLinking = linkingId === key;
+              const remainingPct = getRemainingPct("self_holding", holding.id);
+              const isFullyAllocated = !isLinked && remainingPct <= 0;
 
               return (
                 <div key={holding.id} className="flex items-center justify-between py-2 px-3 bg-white border border-slate-100 rounded-xl">
@@ -142,6 +213,8 @@ export default function GoalHoldingLinks({ goalId, links, plans, holdings, onAdd
                       <CurrencyDisplay amountUsd={holding.currentValue} compact />
                       {" · "}{holding.holdingType.replace(/_/g, " ")}
                       {link && ` · ${link.allocationPct}% allocated`}
+                      {!isLinked && !isFullyAllocated && remainingPct < 100 && ` · ${remainingPct}% unallocated`}
+                      {isFullyAllocated && " · fully allocated to other goals"}
                     </p>
                     {isLinking && (
                       <div className="mt-2 flex items-center gap-2">
@@ -149,18 +222,26 @@ export default function GoalHoldingLinks({ goalId, links, plans, holdings, onAdd
                         <input
                           type="number"
                           value={allocationPct}
-                          onChange={e => setAllocationPct(Math.min(100, Math.max(1, parseInt(e.target.value) || 100)))}
-                          min={1} max={100}
+                          onChange={e => setAllocationPct(Math.min(remainingPct, Math.max(1, parseInt(e.target.value) || 1)))}
+                          min={1} max={remainingPct}
                           className="w-16 px-2 py-1 rounded-lg border border-[#1D9E75] text-sm text-center"
                         />
+                        <span className="text-xs text-slate-400">of {remainingPct}% available</span>
                         <button
-                          onClick={() => handleLink("self_holding", holding.id)}
+                          onClick={() => handleLink("self_holding", holding.id, holding.ticker ? `${holding.label} · ${holding.ticker}` : holding.label)}
                           className="px-3 py-1 bg-[#1D9E75] text-white text-xs rounded-lg font-medium"
                         >
                           Confirm
                         </button>
-                        <button onClick={() => setLinkingId(null)} className="text-xs text-slate-400">Cancel</button>
+                        <button onClick={() => { setLinkingId(null); setSolError(null); }} className="text-xs text-slate-400">Cancel</button>
                       </div>
+                    )}
+                    {isLinking && solError?.key === key && (
+                      <SolCard
+                        className="mt-2"
+                        message={solError.message}
+                        onAccept={() => { setAllocationPct(solError.remainingPct); setSolError(null); }}
+                      />
                     )}
                   </div>
                   {!isLinking && (
@@ -175,9 +256,11 @@ export default function GoalHoldingLinks({ goalId, links, plans, holdings, onAdd
                           <X className="h-3.5 w-3.5" />
                         </button>
                       )
+                    ) : isFullyAllocated ? (
+                      <span className="ml-2 px-2.5 py-1 bg-slate-100 text-slate-400 text-xs rounded-lg font-medium shrink-0">Unavailable</span>
                     ) : (
                       <button
-                        onClick={() => { setLinkingId(key); setAllocationPct(100); }}
+                        onClick={() => startLinking(key, remainingPct)}
                         className="ml-2 flex items-center gap-1 px-2.5 py-1 bg-[#1D9E75]/10 text-[#1D9E75] text-xs rounded-lg font-medium hover:bg-[#1D9E75]/20 transition-colors shrink-0"
                       >
                         <LinkIcon className="h-3 w-3" />

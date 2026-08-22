@@ -9,6 +9,7 @@
     "seed-demo-data": "tsx ./src/seed-demo-data.ts",
     "reset-demo-passwords": "tsx ./src/reset-demo-passwords.ts",
     "relink-demo-emails": "tsx ./src/relink-demo-emails.ts",
+    "fix-goal-allocation-overflow": "tsx ./src/fix-goal-allocation-overflow.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {

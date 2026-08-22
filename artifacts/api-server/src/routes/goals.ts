@@ -2,6 +2,9 @@ import { Router, type IRouter } from "express";
 import { eq, and } from "drizzle-orm";
 import { db, financialGoalsTable, profilesTable, goalHoldingLinksTable } from "@workspace/db";
 import { requireAuth, requireRole, requireAdvisorOwnsClient } from "../middlewares/requireAuth";
+import { getRemainingPct } from "../lib/goalAllocation";
+import { getProgressMovement } from "../lib/goalProgressSnapshot";
+import { ensureOffTrackTask } from "../lib/offTrackTasks";
 
 const router: IRouter = Router();
 
@@ -139,9 +142,21 @@ router.post("/client/goals/:id/links", requireAuth, async (req, res): Promise<vo
   const goalId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const { sourceType, sourceId, allocationPct } = req.body;
   if (!sourceType || !sourceId) { res.status(400).json({ error: "sourceType and sourceId required" }); return; }
+  const requestedPct = Number(allocationPct ?? 100);
   try {
+    const remainingPct = await getRemainingPct(userId, sourceType, sourceId, goalId);
+    if (requestedPct > remainingPct) {
+      res.status(409).json({
+        error: remainingPct > 0
+          ? `Only ${remainingPct}% of this investment is unallocated — the rest is already linked to your other goals.`
+          : "This investment is already fully allocated to your other goals.",
+        remainingPct,
+      });
+      return;
+    }
+
     const [link] = await db.insert(goalHoldingLinksTable).values({
-      goalId, userId, sourceType, sourceId, allocationPct: String(allocationPct ?? 100),
+      goalId, userId, sourceType, sourceId, allocationPct: String(requestedPct),
     }).returning();
     res.status(201).json(link);
   } catch (err: any) {
@@ -153,6 +168,27 @@ router.post("/client/goals/:id/links", requireAuth, async (req, res): Promise<vo
       res.status(500).json({ error: "Failed to link holding" });
     }
   }
+});
+
+// Sol observation data — a deterministic breakdown of why a goal's funded amount
+// moved since the last time it was observed (market movement / new or removed link /
+// reallocation). Records today's snapshot as a side effect if one doesn't exist yet.
+// Pure data: no phrasing happens here, see src/lib/sol (frontend) for that.
+router.get("/client/goals/:id/progress-movement", requireAuth, async (req, res): Promise<void> => {
+  const userId = (req as any).userId;
+  const goalId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const movement = await getProgressMovement(userId, goalId);
+  res.json(movement);
+});
+
+// Passive-on-view trigger (same pattern as progress-movement above): the client
+// calls this whenever a goal card renders off_track. Re-derives status
+// server-side and dedupes against any already-open advisor task for this goal.
+router.post("/client/goals/:id/ensure-off-track-task", requireAuth, async (req, res): Promise<void> => {
+  const userId = (req as any).userId;
+  const goalId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const result = await ensureOffTrackTask(userId, goalId);
+  res.json(result);
 });
 
 router.delete("/client/goals/links/:linkId", requireAuth, async (req, res): Promise<void> => {

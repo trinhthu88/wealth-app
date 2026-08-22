@@ -30,7 +30,12 @@ export async function apiFetch<T = unknown>(
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error(body?.error ?? `HTTP ${res.status}`);
+    const err = new Error(body?.error ?? `HTTP ${res.status}`);
+    // Preserve any extra fields the server sent alongside the error (e.g. the
+    // 409 "over-allocated" response's `remainingPct`) so callers can react to
+    // them without re-parsing the message string.
+    Object.assign(err, body);
+    throw err;
   }
   if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
