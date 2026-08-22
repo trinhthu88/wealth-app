@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { Link, useLocation, useRoute } from "wouter";
-import { UserButton } from "@clerk/react";
+import { UserButton, useClerk } from "@clerk/react";
 import { useProfile } from "@/hooks/useProfile";
 import { cn } from "@/lib/utils";
 import Sol from "../Sol";
 import { Drawer } from "vaul";
 import {
   LayoutDashboard, PieChart, Calculator, Target,
-  Wallet, MessageSquare, FolderOpen, ChevronLeft, ChevronRight, Activity, Map, MoreHorizontal
+  Wallet, MessageSquare, FolderOpen, ChevronLeft, ChevronRight, Activity, Map, MoreHorizontal, LogOut
 } from "lucide-react";
 
 interface NavItem {
@@ -51,6 +51,7 @@ function BottomTab({ href, label }: { href: string; label: string }) {
 
 export default function ClientAppShell({ children }: { children: React.ReactNode }) {
   const { profile } = useProfile();
+  const { signOut } = useClerk();
   const [location] = useLocation();
   const [solOpen, setSolOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -220,6 +221,16 @@ export default function ClientAppShell({ children }: { children: React.ReactNode
                     );
                   })}
                 </nav>
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    signOut();
+                  }}
+                  className="mt-2 flex w-full min-h-14 items-center gap-3 rounded-[18px] border border-hairline bg-surface px-3.5 py-3 text-[14px] font-semibold text-clay hover:bg-clay-tint"
+                >
+                  <LogOut className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
+                  <span>Sign out</span>
+                </button>
               </div>
             </Drawer.Content>
           </Drawer.Portal>

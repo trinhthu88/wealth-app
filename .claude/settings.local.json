@@ -47,7 +47,30 @@
       "Bash(git commit *)",
       "Bash(npx vitest *)",
       "Bash(node *)",
-      "Bash(pnpm install *)"
+      "Bash(pnpm install *)",
+      "Bash(pnpm relink-demo-emails *)",
+      "Bash(pnpm --filter @workspace/scripts exec tsx src/_investigate.ts)",
+      "Bash(pnpm *)",
+      "Bash(netstat -tlnp)",
+      "Bash(pip show *)",
+      "Bash(python3 -c \"import playwright; print\\(playwright.__file__\\)\")",
+      "Bash(npm ls *)",
+      "Bash(find / -maxdepth 5 -iname \"*chromium-cli*\")",
+      "Bash(kill %1)",
+      "Bash(npx --no-install playwright --version)",
+      "Bash(mkdir -p /tmp/claude-1000/-home-runner-workspace/c88b0d4a-31bb-4401-adf6-62b412d2365e/scratchpad/pw)",
+      "Bash(npm install *)",
+      "Bash(timeout 15 bash -c 'ls /nix/store | grep -i \"^[a-z0-9]*-glib-2\" ')",
+      "Bash(echo \"exit:$?\")",
+      "Bash(timeout 60 nix-shell -p chromium --run \"which chromium\")",
+      "Bash(printenv REPLIT_DEV_DOMAIN)",
+      "Bash(printenv REPLIT_DOMAINS)",
+      "Bash(printenv REPLIT_ARTIFACT_ROUTER)",
+      "Bash(mkdir *)",
+      "Bash(npx tsx *)",
+      "Bash(printenv REPLIT_DEV_DOMAIN *)",
+      "Bash(grep *)",
+      "Bash(python3 -c ' *)"
     ]
   }
 }
