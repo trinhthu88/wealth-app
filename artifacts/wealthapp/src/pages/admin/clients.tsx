@@ -36,14 +36,6 @@ const STATUS_COLORS: Record<string, string> = {
   churned: "bg-clay-tint text-clay-ink",
 };
 
-const KYC_COLORS: Record<string, string> = {
-  not_started: "bg-surface border border-hairline text-ink-60",
-  not_submitted: "bg-surface border border-hairline text-ink-60",
-  submitted: "bg-sun-tint text-amber-ink",
-  approved: "bg-green-tint text-green",
-  rejected: "bg-clay-tint text-clay-ink",
-};
-
 const STATUS_FILTERS = ["all", "active", "paused", "churned"];
 
 const fmtUSD = (v: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(v);
@@ -137,7 +129,6 @@ export default function AdminClients() {
                 <th className="px-5 py-4 font-sans text-[13px] font-medium text-ink-40 border-b border-hairline">Client</th>
                 <th className="px-5 py-4 font-sans text-[13px] font-medium text-ink-40 border-b border-hairline">Advisor</th>
                 <th className="px-5 py-4 font-sans text-[13px] font-medium text-ink-40 border-b border-hairline">Status</th>
-                <th className="px-5 py-4 font-sans text-[13px] font-medium text-ink-40 border-b border-hairline hidden md:table-cell">KYC</th>
                 <th className="px-5 py-4 font-sans text-[13px] font-medium text-ink-40 border-b border-hairline hidden md:table-cell">Risk</th>
                 <th className="px-5 py-4 font-sans text-[13px] font-medium text-ink-40 border-b border-hairline text-right">Portfolio</th>
                 <th className="px-5 py-4 border-b border-hairline" />
@@ -183,11 +174,6 @@ export default function AdminClients() {
                   <td className="px-5 py-3">
                     <span className={cn("text-[13px] px-3 py-1 rounded-full font-medium capitalize", STATUS_COLORS[c.status ?? "active"] ?? "bg-surface border border-hairline text-ink-60")}>
                       {(c.status ?? "—").replace(/_/g, " ")}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3 hidden md:table-cell">
-                    <span className={cn("text-[13px] px-3 py-1 rounded-full font-medium", KYC_COLORS[c.kycStatus ?? "not_started"] ?? "bg-surface border border-hairline text-ink-60")}>
-                      {(c.kycStatus ?? "not started").replace(/_/g, " ")}
                     </span>
                   </td>
                   <td className="px-5 py-3 text-[14px] text-ink-60 capitalize hidden md:table-cell">{c.riskProfile ?? "—"}</td>

@@ -27,15 +27,6 @@ interface Client {
 
 interface Advisor { id: string; email: string; fullName: string | null; }
 
-const KYC_COLORS: Record<string, string> = {
-  not_submitted: "bg-surface border border-hairline text-ink-60",
-  not_started: "bg-surface border border-hairline text-ink-60",
-  pending: "bg-sun-tint text-amber-ink",
-  submitted: "bg-sun-tint text-amber-ink",
-  approved: "bg-green-tint text-green",
-  rejected: "bg-clay-tint text-clay-ink",
-};
-
 // Only active | paused | churned are ever set now — client_profiles.status
 // represents an already-promoted client's account health (see lib/db/src/schema/clients.ts).
 // "prospect"/"pending" belonged to the pre-promotion pipeline, which now lives
@@ -182,7 +173,6 @@ export default function AdvisorClients() {
               <tr>
                 <th className="px-5 py-4 font-sans text-[13px] font-medium text-ink-40 border-b border-hairline">Client</th>
                 <th className="px-5 py-4 font-sans text-[13px] font-medium text-ink-40 border-b border-hairline">Status</th>
-                <th className="px-5 py-4 font-sans text-[13px] font-medium text-ink-40 border-b border-hairline">KYC</th>
                 <th className="px-5 py-4 font-sans text-[13px] font-medium text-ink-40 border-b border-hairline hidden md:table-cell">Risk</th>
                 <th className="px-5 py-4 font-sans text-[13px] font-medium text-ink-40 border-b border-hairline hidden md:table-cell text-right">Portfolio</th>
                 <th className="px-5 py-4 font-sans text-[13px] font-medium text-ink-40 border-b border-hairline hidden lg:table-cell text-right">Packages</th>
@@ -206,11 +196,6 @@ export default function AdvisorClients() {
                   <td className="px-5 py-3">
                     <span className={cn("text-[13px] px-3 py-1 rounded-full font-medium capitalize inline-block", STATUS_COLORS[c.status ?? "active"] ?? "bg-surface border border-hairline text-ink-60")}>
                       {(c.status ?? "—").replace(/_/g, " ")}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3">
-                    <span className={cn("text-[13px] px-3 py-1 rounded-full font-medium inline-block", KYC_COLORS[c.kycStatus ?? "not_submitted"] ?? "bg-surface border border-hairline text-ink-60")}>
-                      {(c.kycStatus ?? "not started").replace(/_/g, " ")}
                     </span>
                   </td>
                   <td className="px-5 py-3 text-[14px] text-ink-60 capitalize hidden md:table-cell">{c.riskProfile ?? "—"}</td>
