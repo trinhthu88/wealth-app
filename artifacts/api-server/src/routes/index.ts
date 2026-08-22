@@ -20,6 +20,7 @@ import adminRouter from "./admin";
 import investmentsRouter from "./investments";
 import clientPortalRouter from "./clientPortal";
 import coastPointRouter from "./coastPoint";
+import clientHealthScoreRouter from "./clientHealthScore";
 
 const router: IRouter = Router();
 
@@ -44,5 +45,6 @@ router.use(notificationsRouter);
 router.use(adminRouter);
 router.use(investmentsRouter);
 router.use(coastPointRouter);
+router.use(clientHealthScoreRouter);
 
 export default router;

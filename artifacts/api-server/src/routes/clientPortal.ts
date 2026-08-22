@@ -507,13 +507,25 @@ router.post("/client/budget", requireAuth, async (req, res): Promise<void> => {
     housing, utilities, transport, insurance,
     foodDining, entertainment, shopping, health, education, otherExpenses,
     investmentContributions,
-    totalIncome, totalExpenses, totalInvestments, netSurplus, savingsRatePct,
     notes,
   } = req.body;
 
   if (!month) { res.status(400).json({ error: "month required (YYYY-MM-DD)" }); return; }
 
+  const n = (v: unknown) => parseFloat(String(v ?? "0")) || 0;
   const toStr = (v: unknown) => v != null ? String(v) : "0";
+  const contributions = Array.isArray(investmentContributions) ? investmentContributions : [];
+
+  // totalIncome/totalExpenses/totalInvestments/netSurplus/savingsRatePct are
+  // computed here from the category fields, not trusted from the request body —
+  // a client (or a frontend bug) submitting a category breakdown that doesn't
+  // match its own totals would otherwise go uncaught.
+  const totalIncome = n(primaryIncome) + n(secondaryIncome) + n(rentalIncome) + n(otherIncome);
+  const totalExpenses = n(housing) + n(utilities) + n(transport) + n(insurance)
+    + n(foodDining) + n(entertainment) + n(shopping) + n(health) + n(education) + n(otherExpenses);
+  const totalInvestments = contributions.reduce((sum: number, c: any) => sum + n(c?.amount), 0);
+  const netSurplus = totalIncome - totalExpenses - totalInvestments;
+  const savingsRatePct = totalIncome > 0 ? (netSurplus / totalIncome) * 100 : 0;
 
   const values = {
     userId, month, currency: currency ?? "USD",
@@ -524,10 +536,10 @@ router.post("/client/budget", requireAuth, async (req, res): Promise<void> => {
     foodDining: toStr(foodDining), entertainment: toStr(entertainment),
     shopping: toStr(shopping), health: toStr(health),
     education: toStr(education), otherExpenses: toStr(otherExpenses),
-    investmentContributions: investmentContributions ?? [],
-    totalIncome: toStr(totalIncome), totalExpenses: toStr(totalExpenses),
-    totalInvestments: toStr(totalInvestments), netSurplus: toStr(netSurplus),
-    savingsRatePct: toStr(savingsRatePct),
+    investmentContributions: contributions,
+    totalIncome: String(totalIncome), totalExpenses: String(totalExpenses),
+    totalInvestments: String(totalInvestments), netSurplus: String(netSurplus),
+    savingsRatePct: String(savingsRatePct),
     notes: notes ?? null,
   };
 
