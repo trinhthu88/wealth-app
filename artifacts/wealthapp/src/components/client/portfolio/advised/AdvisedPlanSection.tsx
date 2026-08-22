@@ -4,7 +4,6 @@ import { apiFetch } from "@/lib/api";
 import CurrencyDisplay from "@/components/client/CurrencyDisplay";
 import AdvisedPlanCardFull from "./AdvisedPlanCard";
 import StatementHistoryDrawer from "./StatementHistoryDrawer";
-import PackageSection from "./PackageSection";
 import type { AdvisedPlan, AdvisedPlanStatement, AdvisedPlanHolding } from "@/hooks/useAdvisedPlans";
 
 interface Props {
@@ -65,7 +64,6 @@ export default function AdvisedPlanSection({ plans, advisorName }: Props) {
         )}
       </div>
       {plans.map(plan => <PlanWithDrawer key={plan.id} plan={plan} />)}
-      <PackageSection />
     </div>
   );
 }

@@ -1,11 +1,15 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import ClientAppShell from "@/components/client/AppShell";
 import AddHoldingSheet from "@/components/client/portfolio/self/AddHoldingSheet";
 import EditHoldingSheet from "@/components/client/portfolio/self/EditHoldingSheet";
+import AdvisedPlanSection from "@/components/client/portfolio/advised/AdvisedPlanSection";
 import CurrencyDisplay from "@/components/client/CurrencyDisplay";
 import { usePortfolioTotals } from "@/hooks/usePortfolioTotals";
 import { useClientHoldings } from "@/hooks/useClientHoldings";
+import { useAdvisedPlans } from "@/hooks/useAdvisedPlans";
 import { useProfile } from "@/hooks/useProfile";
+import { apiFetch } from "@/lib/api";
 import { toast } from "sonner";
 import type { ClientHolding } from "@/hooks/useClientHoldings";
 import { Pencil, Plus } from "lucide-react";
@@ -22,6 +26,11 @@ export default function ClientPortfolio() {
   const { holdings, addHolding, updateHolding, deleteHolding } = useClientHoldings();
   const { profile, update } = useProfile();
   const totals = usePortfolioTotals();
+  const { plans } = useAdvisedPlans();
+  const { data: advisor } = useQuery<{ fullName: string | null } | null>({
+    queryKey: ["client-dashboard-advisor"],
+    queryFn: () => apiFetch<{ fullName: string | null }>("/client/dashboard/advisor").catch(() => null),
+  });
 
   const [activeTab, setActiveTab] = useState<"managed" | "other">("managed");
   const [addOpen, setAddOpen] = useState(false);
@@ -139,10 +148,19 @@ export default function ClientPortfolio() {
         </div>
 
         {/* Holdings list */}
-        <div className="bg-surface rounded-[26px] p-[6px_20px] shadow-[0_2px_14px_rgba(20,52,42,.06)]">
+        {activeTab === "managed" ? (
+          plans.length === 0 ? (
+            <div className="bg-surface rounded-[26px] p-8 text-center text-[15px] text-ink-40 shadow-[0_2px_14px_rgba(20,52,42,.06)]">
+              No advisor-managed investments yet.
+            </div>
+          ) : (
+            <AdvisedPlanSection plans={plans} advisorName={advisor?.fullName ?? undefined} />
+          )
+        ) : (
+          <div className="bg-surface rounded-[26px] p-[6px_20px] shadow-[0_2px_14px_rgba(20,52,42,.06)]">
             {visibleHoldings.length === 0 ? (
               <div className="p-8 text-center text-[15px] text-ink-40">
-                {activeTab === "managed" ? "No advisor-managed investments yet." : "No self-tracked holdings yet."}
+                No self-tracked holdings yet.
               </div>
             ) : (
               visibleHoldings.map((h, i) => {
@@ -150,7 +168,7 @@ export default function ClientPortfolio() {
                   <>
                   <div>
                     <div className="text-[15px] font-semibold text-forest">{h.label}</div>
-                    <div className="text-[13px] text-ink-30">{h.isAdvisedPlan ? "Advised Plan" : "Self-tracked"}</div>
+                    <div className="text-[13px] text-ink-30">Self-tracked</div>
                   </div>
                   <div className="text-right">
                     <div className="text-[15px] font-semibold text-forest tabular-nums">
@@ -166,9 +184,7 @@ export default function ClientPortfolio() {
                   i < visibleHoldings.length - 1 ? "border-b border-hairline" : ""
                 }`;
 
-                return h.isAdvisedPlan ? (
-                  <div key={h.id} className={rowClass}>{rowContent}</div>
-                ) : (
+                return (
                   <button
                     key={h.id}
                     type="button"
@@ -182,19 +198,18 @@ export default function ClientPortfolio() {
                 );
               })
             )}
-            {activeTab === "other" && (
-              <div className="flex justify-center border-t border-hairline py-4">
-                <button
-                  type="button"
-                  onClick={() => setAddOpen(true)}
-                  className="inline-flex min-h-11 items-center gap-2 rounded-full bg-forest px-4 text-[13px] font-semibold text-paper transition-colors hover:bg-forest-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green focus-visible:ring-offset-2"
-                >
-                  <Plus className="h-4 w-4" aria-hidden="true" />
-                  Add self-tracked holding
-                </button>
-              </div>
-            )}
-        </div>
+            <div className="flex justify-center border-t border-hairline py-4">
+              <button
+                type="button"
+                onClick={() => setAddOpen(true)}
+                className="inline-flex min-h-11 items-center gap-2 rounded-full bg-forest px-4 text-[13px] font-semibold text-paper transition-colors hover:bg-forest-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green focus-visible:ring-offset-2"
+              >
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                Add self-tracked holding
+              </button>
+            </div>
+          </div>
+        )}
 
       </div>
 
