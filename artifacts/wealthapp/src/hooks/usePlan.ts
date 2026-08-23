@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useUser } from "@clerk/react";
 import { apiFetch } from "@/lib/api";
 import { useGoals } from "./useGoals";
+import { useCoastPoint } from "./useCoastPoint";
 
 interface RawPlanMilestone {
   id: string;
@@ -25,6 +26,10 @@ export interface PlanMilestone extends RawPlanMilestone {
   // True for a pathway entry synthesized from a goal rather than an
   // advisor-authored plan_milestones row — see the note in usePlan() below.
   isGoalDerived: boolean;
+  // True only for the single synthetic "Coast point" entry — never a goal or
+  // an advisor-authored row. Distinct from isGoalDerived so rendering code
+  // and comment/link UI (which assume a real linked goal) don't misfire on it.
+  isCoastPoint: boolean;
 }
 
 export interface PlanData {
@@ -59,6 +64,7 @@ function statusGroup(status: string): "completed" | "in_progress" | "upcoming" {
 export function usePlan() {
   const { user, isLoaded } = useUser();
   const { allGoals, loading: goalsLoading } = useGoals();
+  const coastPoint = useCoastPoint();
 
   const query = useQuery<RawPlanPayload | null>({
     queryKey: ["client-plan"],
@@ -84,7 +90,7 @@ export function usePlan() {
           progressPct: goal.progressPct ?? 0,
         }
       : null;
-    return { ...m, goalProgress, isGoalDerived: false };
+    return { ...m, goalProgress, isGoalDerived: false, isCoastPoint: false };
   });
 
   const explicitlyLinkedGoalIds = new Set(
@@ -119,10 +125,39 @@ export function usePlan() {
         createdAt: g.createdAt,
         goalProgress,
         isGoalDerived: true,
+        isCoastPoint: false,
       };
     });
 
-  const merged = [...explicitMilestones, ...goalDerivedMilestones].sort((a, b) => {
+  // Sol's contribution to the pathway: never typed, always derived from the
+  // client's real coast-point math (see api-server/src/routes/coastPoint.ts).
+  // Not goal-derived — isGoalDerived stays false so the "mark nearest as in
+  // progress" pass below skips it; a coast point is something that happens to
+  // the plan, not a goal actively worked toward with its own funding. Only
+  // shown once there's a real future date — if the client can already coast
+  // (canCoastNow), there's nothing left on this axis to show as upcoming.
+  const cp = coastPoint.data;
+  const coastPointMilestones: PlanMilestone[] =
+    cp?.available && cp.base?.coastDate && !cp.base.canCoastNow
+      ? [{
+          id: "coast-point",
+          planId: payload?.plan?.id ?? "",
+          title: "Coast point",
+          targetDate: `${cp.base.coastDate}-01`,
+          completedDate: null,
+          linkedGoalId: null,
+          linkedGoal: null,
+          status: "upcoming",
+          notes: "Contributions become optional",
+          orderIndex: 0,
+          createdAt: new Date().toISOString(),
+          goalProgress: null,
+          isGoalDerived: false,
+          isCoastPoint: true,
+        }]
+      : [];
+
+  const merged = [...explicitMilestones, ...goalDerivedMilestones, ...coastPointMilestones].sort((a, b) => {
     if (!a.targetDate && !b.targetDate) return 0;
     if (!a.targetDate) return 1;
     if (!b.targetDate) return -1;
@@ -171,7 +206,7 @@ export function usePlan() {
     advisorName: payload?.advisorName ?? null,
     advisorId: payload?.advisorId ?? null,
     nextReviewDate,
-    loading: query.isLoading || goalsLoading,
+    loading: query.isLoading || goalsLoading || coastPoint.loading,
     statusGroup,
   };
 }

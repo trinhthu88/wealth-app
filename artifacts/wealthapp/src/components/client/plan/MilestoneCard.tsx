@@ -36,7 +36,7 @@ export default function MilestoneCard({ step, isNext, statusGroup }: Props) {
   const [showAddComment, setShowAddComment] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
-  const canComment = !step.isGoalDerived;
+  const canComment = !step.isGoalDerived && !step.isCoastPoint;
   const { comments, adding, addComment, error } = useMilestoneComments(step.id, canComment);
   const badge = STATUS_BADGES[step.status] ?? STATUS_BADGES["upcoming"];
   const overdue = isPastDue(step.targetDate, step.status);
@@ -65,10 +65,16 @@ export default function MilestoneCard({ step, isNext, statusGroup }: Props) {
       )}
 
       {/* Description */}
-      {step.notes && (
+      {(step.notes || step.goalProgress) && (
         <div>
           <p className={cn("text-sm text-slate-500", !expanded && hasLongText && "line-clamp-3")}>
             {step.notes}
+            {step.notes && step.goalProgress ? " · " : ""}
+            {step.goalProgress
+              ? statusGroup(step.status) === "in_progress"
+                ? `$${Math.round(step.goalProgress.currentAmount).toLocaleString()} of $${Math.round(step.goalProgress.targetAmount).toLocaleString()}`
+                : `$${Math.round(step.goalProgress.targetAmount).toLocaleString()}${statusGroup(step.status) === "upcoming" ? " target" : ""}`
+              : ""}
           </p>
           {hasLongText && (
             <button

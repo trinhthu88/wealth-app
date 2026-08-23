@@ -47,10 +47,10 @@ export default function ClientPlan() {
   const showCoastCard = !!cp?.available && !!cp.base && !!cp.accelerated
     && cp.base.coastDate !== cp.accelerated.coastDate && !dismissedCoastCard;
 
-  const coastObservation: SolObservation | null = showCoastCard && cp && coastPoint.retirementGoal
+  const coastObservation: SolObservation | null = showCoastCard && cp && cp.goalTitle
     ? {
         type: "coast_point_acceleration",
-        goalTitle: coastPoint.retirementGoal.title,
+        goalTitle: cp.goalTitle,
         extraMonthly: coastPoint.extraMonthly,
         currentCoastDate: cp.base?.coastDate ?? null,
         newCoastDate: cp.accelerated?.coastDate ?? null,
@@ -58,16 +58,17 @@ export default function ClientPlan() {
     : null;
 
   async function handleModelCoastPoint() {
-    if (!cp?.available || !coastPoint.retirementGoal) return;
+    if (!cp?.available || !cp.goalTargetDate) return;
     setModeling(true);
     try {
+      const currentMonthly = cp.monthlyContribution ?? 0;
       const result = runScenario({
         type: "increase_monthly",
         currentValue: totals.totalPortfolioValue,
-        currentMonthly: coastPoint.currentMonthly,
-        newMonthly: coastPoint.currentMonthly + coastPoint.extraMonthly,
+        currentMonthly,
+        newMonthly: currentMonthly + coastPoint.extraMonthly,
         annualReturnPct: cp.blendedAnnualReturnPct ?? 7,
-        months: monthsUntil(coastPoint.retirementGoal.targetDate ?? new Date().toISOString()),
+        months: monthsUntil(cp.goalTargetDate),
       });
       await saveScenario(result, `Coast point: +$${coastPoint.extraMonthly}/mo`);
       navigate("/client/scenarios");
@@ -207,7 +208,11 @@ export default function ClientPlan() {
                     <h2 className="font-display text-[20px] font-semibold text-paper mt-0.5 mb-1">
                       {m.title}
                     </h2>
-                    {m.notes && <div className="text-[13.5px] text-mint max-w-[500px] leading-relaxed">{m.notes}</div>}
+                    {(m.notes || m.goalProgress) && (
+                      <div className="text-[13.5px] text-mint max-w-[500px] leading-relaxed">
+                        {m.notes}{m.notes && m.goalProgress ? " · " : ""}{m.goalProgress ? `$${Math.round(m.goalProgress.targetAmount).toLocaleString()}` : ""}
+                      </div>
+                    )}
                   </div>
                 );
               }
@@ -257,7 +262,11 @@ export default function ClientPlan() {
                   <h2 className="font-display text-[20px] font-semibold text-[#DCEAE3] mt-0.5 mb-1">
                     {m.title}
                   </h2>
-                  {m.notes && <div className="text-[13.5px] text-mint-dim max-w-[500px] leading-relaxed">{m.notes}</div>}
+                  {(m.notes || m.goalProgress) && (
+                    <div className="text-[13.5px] text-mint-dim max-w-[500px] leading-relaxed">
+                      {m.notes}{m.notes && m.goalProgress ? " · " : ""}{m.goalProgress ? `$${Math.round(m.goalProgress.targetAmount).toLocaleString()} target` : ""}
+                    </div>
+                  )}
                 </div>
               );
           })}

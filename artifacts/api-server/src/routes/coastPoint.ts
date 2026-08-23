@@ -16,6 +16,20 @@ const router: IRouter = Router();
 // fixed at the source.
 const RETIREMENT_GOAL_TYPES = ["retire", "retirement"];
 
+// When a client has more than one matching goal (the duplicate-type situation
+// above, or a client who genuinely created two retirement-labeled goals), pick
+// deterministically rather than taking whatever order Postgres happens to
+// return — an unordered pick silently disappears the coast-point card or
+// (worse) shows one goal's title next to another goal's numbers. Prefer a goal
+// with both a target amount and date set (an incomplete goal can't drive the
+// math at all); among complete candidates, prefer the furthest-out target
+// date, since retirement is normally the last milestone on the pathway.
+function pickRetirementGoal<T extends { targetAmount: string | null; targetDate: string | null }>(goals: T[]): T | null {
+  const usable = goals.filter(g => g.targetAmount && g.targetDate);
+  if (usable.length === 0) return null;
+  return usable.reduce((latest, g) => (new Date(g.targetDate!) > new Date(latest.targetDate!) ? g : latest));
+}
+
 // GET /client/plan/coast-point?extraMonthly=0
 // Real numbers only: blended rate from resolveBlendedRate(), retirement goal from
 // the client's own financial_goals row, current value from the same holdings/plans
@@ -26,8 +40,9 @@ router.get("/client/plan/coast-point", requireAuth, async (req, res): Promise<vo
   const userId = (req as any).userId;
   const extraMonthly = Math.max(0, parseFloat(String(req.query.extraMonthly ?? "0")) || 0);
 
-  const [goal] = await db.select().from(financialGoalsTable)
+  const candidates = await db.select().from(financialGoalsTable)
     .where(and(eq(financialGoalsTable.userId, userId), inArray(financialGoalsTable.goalType, RETIREMENT_GOAL_TYPES)));
+  const goal = pickRetirementGoal(candidates);
 
   if (!goal || !goal.targetAmount || !goal.targetDate) {
     res.json({ available: false, reason: "no_retirement_goal" });
@@ -59,6 +74,8 @@ router.get("/client/plan/coast-point", requireAuth, async (req, res): Promise<vo
     available: true,
     goalId: goal.id,
     goalTitle: goal.title,
+    goalTargetDate: goal.targetDate,
+    monthlyContribution,
     blendedAnnualReturnPct: Math.round(ratePct * 10) / 10,
     portfolioValue: Math.round(totalValue),
     base,
