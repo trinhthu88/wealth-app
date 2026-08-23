@@ -4,6 +4,7 @@ import { UserButton, useClerk } from "@clerk/react";
 import { useProfile } from "@/hooks/useProfile";
 import { cn } from "@/lib/utils";
 import Sol from "../Sol";
+import SolChat from "../SolChat";
 import { Drawer } from "vaul";
 import {
   LayoutDashboard, PieChart, Calculator, Target,
@@ -244,17 +245,12 @@ export default function ClientAppShell({ children }: { children: React.ReactNode
               <Drawer.Description className="sr-only">
                 Ask TALA's financial coach about scenarios, goals, or your budget.
               </Drawer.Description>
-              <div className="p-4 bg-paper rounded-t-[32px] flex-1 overflow-y-auto">
+              <div className="pt-4 bg-paper rounded-t-[32px] flex-1 flex flex-col min-h-0">
                 <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-hairline mb-8" />
-                
-                <div className="flex items-start gap-3">
-                  <Sol size="sm" animate="breathe" />
-                  <div className="bg-surface rounded-2xl rounded-tl-none p-4 shadow-sm max-w-[80%] border border-hairline">
-                    <p className="text-sm text-forest leading-relaxed text-pretty">
-                      Morning! I'm Sol. I can model scenarios, check your goals, or review your budget with you.
-                    </p>
-                  </div>
-                </div>
+                <SolChat
+                  open={solOpen}
+                  greeting="Morning! I'm Sol. I can model scenarios, check your goals, or review your budget with you."
+                />
               </div>
             </Drawer.Content>
           </Drawer.Portal>

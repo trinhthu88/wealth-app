@@ -17,3 +17,4 @@ export * from "./advisedPlans";
 export * from "./clientHoldings";
 export * from "./clientBudget";
 export * from "./scenarioRuns";
+export * from "./solConversations";

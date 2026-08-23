@@ -1,7 +1,7 @@
 import { Link, useRoute } from "wouter";
 import { UserButton } from "@clerk/react";
 import { cn } from "@/lib/utils";
-import Sol from "./Sol";
+import SolChat from "./SolChat";
 import { useState } from "react";
 import { Drawer } from "vaul";
 
@@ -99,17 +99,12 @@ export default function BottomNav() {
             <Drawer.Description className="sr-only">
               Ask TALA's financial coach about your pathway, goals, or financial health.
             </Drawer.Description>
-            <div className="p-4 bg-paper rounded-t-[32px] flex-1 overflow-y-auto">
+            <div className="pt-4 bg-paper rounded-t-[32px] flex-1 flex flex-col min-h-0">
               <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-hairline mb-8" />
-              
-              <div className="flex items-start gap-3">
-                <Sol size="sm" animate="breathe" />
-                <div className="bg-surface rounded-2xl rounded-tl-none p-4 shadow-sm max-w-[80%] border border-hairline">
-                  <p className="text-sm text-forest leading-relaxed">
-                    Hello! I'm Sol. I'm here to help you model your pathway, update your goals, or just chat about your financial health. What's on your mind?
-                  </p>
-                </div>
-              </div>
+              <SolChat
+                open={solOpen}
+                greeting="Hello! I'm Sol. I'm here to help you model your pathway, update your goals, or just chat about your financial health. What's on your mind?"
+              />
             </div>
           </Drawer.Content>
         </Drawer.Portal>
