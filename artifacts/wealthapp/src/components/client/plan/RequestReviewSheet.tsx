@@ -73,24 +73,26 @@ export default function RequestReviewSheet({
     <BottomSheet isOpen={isOpen} onClose={onClose} title="Request a review">
       <div className="space-y-5 pb-4">
         {advisorName && (
-          <p className="text-sm text-slate-500">
-            Your message will be sent to <span className="font-semibold text-[#042C53]">{advisorName}</span>.
+          <p className="text-sm text-ink-60">
+            Your message will be sent to <span className="font-semibold text-forest">{advisorName}</span>.
           </p>
         )}
 
         {/* Urgency selector */}
         <div className="space-y-2">
-          <label className="text-sm font-medium text-[#042C53]">Type of review</label>
-          <div className="flex flex-col gap-2">
+          <span id="review-urgency-label" className="text-sm font-medium text-forest">Type of review</span>
+          <div className="flex flex-col gap-2" role="group" aria-labelledby="review-urgency-label">
             {URGENCY_OPTIONS.map(opt => (
               <button
                 key={opt.value}
+                type="button"
                 onClick={() => setUrgency(opt.value)}
+                aria-pressed={urgency === opt.value}
                 className={cn(
                   "px-4 py-2.5 rounded-xl border text-sm font-medium text-left transition-all",
                   urgency === opt.value
-                    ? "border-[#1D9E75] bg-[#1D9E75]/5 text-[#042C53]"
-                    : "border-slate-200 text-slate-600 hover:border-[#1D9E75]/30"
+                    ? "border-green bg-green-tint text-forest"
+                    : "border-hairline text-ink-60 hover:border-green/30"
                 )}
               >
                 {opt.label}
@@ -101,25 +103,26 @@ export default function RequestReviewSheet({
 
         {/* Message */}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-[#042C53]">Message</label>
+          <label htmlFor="review-message" className="text-sm font-medium text-forest">Message</label>
           <textarea
+            id="review-message"
             value={message}
             onChange={e => setMessage(e.target.value)}
             rows={8}
-            className="w-full px-4 py-3 rounded-xl border border-[#E2E8F0] text-sm text-[#042C53] resize-none focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/30 focus:border-[#1D9E75] font-mono text-xs"
+            className="w-full px-4 py-3 rounded-xl border border-hairline text-sm text-forest resize-none focus:outline-none focus:ring-2 focus:ring-green/30 focus:border-green"
           />
         </div>
 
         <button
           onClick={handleSend}
           disabled={!message.trim() || sending || !advisorId}
-          className="w-full py-3 rounded-xl bg-[#1D9E75] text-white font-semibold text-sm hover:bg-[#0F6E56] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="w-full py-3 rounded-xl bg-green text-white font-semibold text-sm hover:bg-forest-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {sending ? "Sending…" : "Send message"}
         </button>
 
         {!advisorId && (
-          <p className="text-xs text-slate-400 text-center">
+          <p className="text-xs text-ink-40 text-center">
             No advisor assigned yet. Contact support to connect with an advisor.
           </p>
         )}

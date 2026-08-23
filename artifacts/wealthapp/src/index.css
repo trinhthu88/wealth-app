@@ -60,6 +60,7 @@
   --color-green-300: var(--green-300);
   --color-green-tint: var(--green-tint);
   --color-mint: var(--mint);
+  --color-mint-dim: var(--mint-dim);
   --color-sun: var(--sun);
   --color-sun-deep: var(--sun-deep);
   --color-sun-tint: var(--sun-tint);
@@ -103,6 +104,7 @@
   --green-300: #7FC9A6;
   --green-tint: #E7F5EE;
   --mint: #8FBFA9;
+  --mint-dim: #8FAFA0;
   --sun: #FFB627;
   --sun-deep: #F5A623;
   --sun-tint: #FFF0DA;

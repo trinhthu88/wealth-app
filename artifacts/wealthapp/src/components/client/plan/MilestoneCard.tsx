@@ -36,7 +36,8 @@ export default function MilestoneCard({ step, isNext, statusGroup }: Props) {
   const [showAddComment, setShowAddComment] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
-  const { comments, adding, addComment, error } = useMilestoneComments(step.id);
+  const canComment = !step.isGoalDerived;
+  const { comments, adding, addComment, error } = useMilestoneComments(step.id, canComment);
   const badge = STATUS_BADGES[step.status] ?? STATUS_BADGES["upcoming"];
   const overdue = isPastDue(step.targetDate, step.status);
   const hasLongText = (step.notes?.length ?? 0) > 120;
@@ -91,31 +92,33 @@ export default function MilestoneCard({ step, isNext, statusGroup }: Props) {
       )}
 
       {/* Action row */}
-      <div className="flex items-center gap-3 pt-1 border-t border-slate-50 flex-wrap">
-        <button
-          onClick={() => { setShowAddComment(v => !v); setShowComments(true); }}
-          className="flex items-center gap-1 text-xs text-slate-500 hover:text-[#1D9E75] transition-colors"
-        >
-          <MessageSquare className="h-3.5 w-3.5" />
-          Add a comment
-        </button>
-        {comments.length > 0 && (
-          <>
-            <span className="text-slate-200">·</span>
-            <button
-              onClick={() => setShowComments(v => !v)}
-              className="flex items-center gap-1 text-xs text-slate-500 hover:text-[#042C53] transition-colors"
-            >
-              {comments.length} comment{comments.length !== 1 ? "s" : ""}
-              {showComments ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-            </button>
-          </>
-        )}
-      </div>
+      {canComment && (
+        <div className="flex items-center gap-3 pt-1 border-t border-slate-50 flex-wrap">
+          <button
+            onClick={() => { setShowAddComment(v => !v); setShowComments(true); }}
+            className="flex items-center gap-1 text-xs text-slate-500 hover:text-[#1D9E75] transition-colors"
+          >
+            <MessageSquare className="h-3.5 w-3.5" />
+            Add a comment
+          </button>
+          {comments.length > 0 && (
+            <>
+              <span className="text-slate-200">·</span>
+              <button
+                onClick={() => setShowComments(v => !v)}
+                className="flex items-center gap-1 text-xs text-slate-500 hover:text-[#042C53] transition-colors"
+              >
+                {comments.length} comment{comments.length !== 1 ? "s" : ""}
+                {showComments ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+              </button>
+            </>
+          )}
+        </div>
+      )}
 
       {/* Comments thread */}
-      {showComments && <MilestoneComments comments={comments} />}
-      {showAddComment && (
+      {canComment && showComments && <MilestoneComments comments={comments} />}
+      {canComment && showAddComment && (
         <AddCommentForm
           milestoneId={step.id}
           onAdd={(c) => addComment(c).then(() => {})}

@@ -935,13 +935,42 @@ router.get("/client/dashboard/goals", requireAuth, async (req, res): Promise<voi
 });
 
 // ── Client plan ───────────────────────────────────────────────────────────
+// There is currently no advisor-facing UI anywhere that creates a
+// financial_plans row or plan_milestones for a client — the write routes
+// exist (plans.ts) but nothing calls them. So `plan` is null for every real
+// client today; the frontend (usePlan.ts) derives the actual pathway content
+// from the client's own financial_goals instead. This route's job is just to
+// hand back whatever advisor-authored milestones DO exist (for when that UI
+// eventually ships) plus the advisor/review info the pathway header needs —
+// both of which must be present regardless of whether a plan row exists, so
+// this never collapses to a bare `null` response.
 router.get("/client/plan", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
 
   const [plan] = await db.select().from(financialPlansTable)
     .where(eq(financialPlansTable.clientId, userId));
 
-  if (!plan) { res.json(null); return; }
+  const [cp] = await db.select({
+    advisorId: clientProfilesTable.advisorId,
+    annualReviewDate: clientProfilesTable.annualReviewDate,
+  }).from(clientProfilesTable).where(eq(clientProfilesTable.userId, userId));
+
+  let advisorProfile = null;
+  if (cp?.advisorId) {
+    const [ap] = await db.select({ id: profilesTable.id, fullName: profilesTable.fullName, email: profilesTable.email })
+      .from(profilesTable).where(eq(profilesTable.id, cp.advisorId));
+    advisorProfile = ap ?? null;
+  }
+
+  if (!plan) {
+    res.json({
+      plan: null, milestones: [],
+      advisorId: cp?.advisorId ?? null,
+      advisorName: advisorProfile?.fullName ?? null,
+      nextReviewDate: cp?.annualReviewDate ?? null,
+    });
+    return;
+  }
 
   const milestones = await db.select().from(planMilestonesTable)
     .where(eq(planMilestonesTable.planId, plan.id))
@@ -955,18 +984,6 @@ router.get("/client/plan", requireAuth, async (req, res): Promise<void> => {
   if (linkedGoalIds.length > 0) {
     linkedGoals = await db.select().from(financialGoalsTable)
       .where(eq(financialGoalsTable.userId, userId));
-  }
-
-  const [cp] = await db.select({
-    advisorId: clientProfilesTable.advisorId,
-    annualReviewDate: clientProfilesTable.annualReviewDate,
-  }).from(clientProfilesTable).where(eq(clientProfilesTable.userId, userId));
-
-  let advisorProfile = null;
-  if (cp?.advisorId) {
-    const [ap] = await db.select({ id: profilesTable.id, fullName: profilesTable.fullName, email: profilesTable.email })
-      .from(profilesTable).where(eq(profilesTable.id, cp.advisorId));
-    advisorProfile = ap ?? null;
   }
 
   res.json({

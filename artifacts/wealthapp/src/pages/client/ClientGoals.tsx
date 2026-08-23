@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "wouter";
-import { Plus, Target, ChevronDown, ChevronRight, Map, MoreHorizontal, Link as LinkIcon, TrendingUp, CheckCircle2, Pencil, Pause, Trash2, Palmtree, Home, GraduationCap, Rocket, Briefcase, Globe, Coins, Shield } from "lucide-react";
+import { Plus, Target, ChevronDown, ChevronRight, MoreHorizontal, Link as LinkIcon, TrendingUp, CheckCircle2, Pencil, Pause, Trash2, Palmtree, Home, GraduationCap, Rocket, Briefcase, Globe, Coins, Shield } from "lucide-react";
 import ClientAppShell from "@/components/client/AppShell";
 import GoalsSummaryBar from "@/components/client/goals/GoalsSummaryBar";
 import AddGoalSheet from "@/components/client/goals/AddGoalSheet";
@@ -55,7 +55,7 @@ function GoalsTabs({ activeTab, onTabChange }: { activeTab: string; onTabChange:
 
 function PlanTab() {
   const {
-    plan, milestones,
+    milestones,
     completedCount, inProgressCount, upcomingCount, totalCount, completionPct,
     nextMilestone, daysUntilReview, isReviewOverdue,
     advisorName, advisorId, nextReviewDate,
@@ -69,26 +69,6 @@ function PlanTab() {
       <div className="space-y-[14px]">
         <div className="h-24 bg-surface animate-pulse rounded-[28px]" />
         <div className="h-40 bg-surface animate-pulse rounded-[28px]" />
-      </div>
-    );
-  }
-
-  if (!plan) {
-    return (
-      <div className="bg-surface shadow-[0_2px_14px_rgba(20,52,42,.06)] rounded-[28px] py-16 px-6 text-center">
-        <Map className="h-10 w-10 text-green mx-auto mb-3" />
-        <h2 className="text-[16px] font-semibold text-forest mb-1">
-          Your financial plan hasn't been created yet.
-        </h2>
-        <p className="text-[14px] text-ink-40 mb-5">
-          Your advisor will create a personalised plan for you.
-        </p>
-        <Link
-          href="/client/messages"
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-green text-paper text-[14px] font-semibold hover:bg-forest transition-colors cursor-pointer"
-        >
-          Message your advisor →
-        </Link>
       </div>
     );
   }

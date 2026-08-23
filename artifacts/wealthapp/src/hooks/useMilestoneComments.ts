@@ -12,7 +12,7 @@ export interface MilestoneComment {
   createdAt: string;
 }
 
-export function useMilestoneComments(milestoneId: string) {
+export function useMilestoneComments(milestoneId: string, enabled: boolean = true) {
   const { user, isLoaded } = useUser();
   const qc = useQueryClient();
 
@@ -20,7 +20,7 @@ export function useMilestoneComments(milestoneId: string) {
     queryKey: ["milestone-comments", milestoneId],
     queryFn: () =>
       apiFetch<MilestoneComment[]>(`/client/plan/milestones/${milestoneId}/comments`).catch(() => []),
-    enabled: isLoaded && !!user && !!milestoneId,
+    enabled: isLoaded && !!user && !!milestoneId && enabled,
     refetchInterval: 30_000, // poll every 30s (simple realtime substitute)
   });
 

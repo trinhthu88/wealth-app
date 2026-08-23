@@ -22,7 +22,7 @@ export default function SolCard({ message, onAccept, onDismiss, className }: Pro
         {onAccept && message.actionLabel && (
           <button
             onClick={onAccept}
-            className="mt-1.5 font-semibold text-[13px] text-[#1D9E75] hover:underline cursor-pointer"
+            className="mt-1.5 font-semibold text-[13px] text-green hover:underline cursor-pointer"
           >
             {message.actionLabel} →
           </button>
@@ -31,10 +31,10 @@ export default function SolCard({ message, onAccept, onDismiss, className }: Pro
       {onDismiss && (
         <button
           onClick={onDismiss}
-          className="shrink-0 h-5 w-5 flex items-center justify-center text-sun-ink/40 hover:text-sun-ink transition-colors cursor-pointer"
+          className="shrink-0 h-6 w-6 flex items-center justify-center text-sun-ink/40 hover:text-sun-ink transition-colors cursor-pointer"
           aria-label="Dismiss"
         >
-          <X className="h-3 w-3" />
+          <X className="h-3.5 w-3.5" />
         </button>
       )}
     </div>

@@ -88,7 +88,7 @@ export default function ClientPlan() {
     );
   }
 
-  if (!plan) {
+  if (milestones.length === 0) {
     return (
       <ClientAppShell>
         <div className="relative h-[60vh] flex flex-col items-center justify-center text-center px-4 max-w-[860px] mx-auto">
@@ -98,13 +98,13 @@ export default function ClientPlan() {
             Your pathway hasn't been mapped yet
           </h2>
           <p className="text-[14px] text-mint mb-6 max-w-[280px]">
-            Your advisor will create a personalised plan and milestones for you.
+            Your pathway is built from your goals — add one to see it here.
           </p>
           <Link
-            href="/client/messages"
+            href="/client/goals"
             className="inline-flex items-center justify-center h-11 px-6 rounded-full bg-sun text-sun-ink text-[14px] font-semibold hover:bg-sun/90 transition-colors"
           >
-            Message your advisor
+            Add a goal
           </Link>
         </div>
       </ClientAppShell>
@@ -118,11 +118,11 @@ export default function ClientPlan() {
         
         {/* Header Section */}
         <div className="mb-6 relative z-10">
-          <div className="font-display text-[30px] font-semibold text-paper tracking-[-0.02em] mb-1">
+          <h1 className="font-display text-[30px] font-semibold text-paper tracking-[-0.02em] mb-1">
             Your pathway
-          </div>
+          </h1>
           <div className="text-[14px] text-mint flex items-center gap-2">
-            <span>{milestones.length > 0 ? `${milestones.length} milestones ahead` : "Let's build your pathway"}</span>
+            <span>{milestones.length} milestone{milestones.length !== 1 ? "s" : ""} ahead</span>
             {advisorName && (
               <>
                 <span className="opacity-50">·</span>
@@ -133,10 +133,10 @@ export default function ClientPlan() {
         </div>
 
         {/* Review Countdown */}
-        <div className="mb-8 bg-forest-700/50 border border-forest-600 rounded-[22px] p-[18px_20px] flex flex-col sm:flex-row sm:items-center justify-between gap-4 backdrop-blur-sm relative z-10">
+        <div className="mb-8 bg-forest-700/50 border border-forest-700 rounded-[22px] p-[18px_20px] flex flex-col sm:flex-row sm:items-center justify-between gap-4 backdrop-blur-sm relative z-10">
           <div className="flex items-start gap-3">
             {isReviewOverdue ? (
-              <div className="w-[34px] h-[34px] rounded-full bg-[#D34B4B]/20 text-[#FF8A8A] flex items-center justify-center shrink-0">
+              <div className="w-[34px] h-[34px] rounded-full bg-clay/20 text-clay-tint flex items-center justify-center shrink-0">
                 <AlertTriangle className="h-4 w-4" />
               </div>
             ) : (
@@ -147,7 +147,7 @@ export default function ClientPlan() {
             <div>
               <div className="text-[14px] font-semibold text-paper">Next review</div>
               {nextReviewDate ? (
-                <div className={`text-[13px] ${isReviewOverdue ? "text-[#FF8A8A]" : "text-mint"}`}>
+                <div className={`text-[13px] ${isReviewOverdue ? "text-clay-tint" : "text-mint"}`}>
                   {formatDate(nextReviewDate)} · {isReviewOverdue ? `Overdue by ${Math.abs(daysUntilReview!)} days` : `${daysUntilReview} days away`}
                 </div>
               ) : (
@@ -157,7 +157,7 @@ export default function ClientPlan() {
           </div>
           <button 
             onClick={() => setShowReviewSheet(true)}
-            className="flex-shrink-0 px-5 py-2.5 rounded-full border border-[#6E9C85] text-paper text-[13.5px] font-semibold hover:border-sun hover:text-sun transition-colors"
+            className="flex-shrink-0 px-5 py-2.5 rounded-full border border-mint-dim text-paper text-[13.5px] font-semibold hover:border-sun hover:text-sun transition-colors"
           >
             Request a review
           </button>
@@ -167,17 +167,17 @@ export default function ClientPlan() {
         {totalCount > 0 && (
           <div className="mb-10 space-y-3 relative z-10">
             <div className="grid grid-cols-3 gap-3">
-              <div className="bg-forest-700/30 rounded-[18px] p-4 text-center border border-forest-600/50">
+              <div className="bg-forest-700/30 rounded-[18px] p-4 text-center border border-forest-700/70">
                 <div className="font-display text-[24px] font-semibold text-sun mb-0.5">{completedCount}</div>
                 <div className="text-[12px] font-medium tracking-[0.04em] uppercase text-mint">Done</div>
               </div>
-              <div className="bg-forest-700/30 rounded-[18px] p-4 text-center border border-forest-600/50">
+              <div className="bg-forest-700/30 rounded-[18px] p-4 text-center border border-forest-700/70">
                 <div className="font-display text-[24px] font-semibold text-paper mb-0.5">{inProgressCount}</div>
                 <div className="text-[12px] font-medium tracking-[0.04em] uppercase text-mint">Active</div>
               </div>
-              <div className="bg-forest-700/30 rounded-[18px] p-4 text-center border border-forest-600/50">
-                <div className="font-display text-[24px] font-semibold text-[#6E9C85] mb-0.5">{upcomingCount}</div>
-                <div className="text-[12px] font-medium tracking-[0.04em] uppercase text-[#6E9C85]">Upcoming</div>
+              <div className="bg-forest-700/30 rounded-[18px] p-4 text-center border border-forest-700/70">
+                <div className="font-display text-[24px] font-semibold text-mint-dim mb-0.5">{upcomingCount}</div>
+                <div className="text-[12px] font-medium tracking-[0.04em] uppercase text-mint-dim">Upcoming</div>
               </div>
             </div>
             <div className="rounded-full bg-track-dark p-1" aria-label={`${completionPct}% of plan milestones complete`}>
@@ -187,11 +187,10 @@ export default function ClientPlan() {
         )}
 
         {/* Timeline */}
-        {milestones.length > 0 ? (
-          <div className="relative pl-[34px] pb-6">
-            <div className="absolute left-[11px] top-[10px] bottom-[14px] w-[2px] bg-gradient-to-b from-sun from-22% via-track-dark via-40% to-track-dark to-100%" />
-            
-            {milestones.map((m, index) => {
+        <div className="relative pl-[34px] pb-6">
+          <div className="absolute left-[11px] top-[10px] bottom-[14px] w-[2px] bg-gradient-to-b from-sun from-22% via-track-dark via-40% to-track-dark to-100%" />
+
+          {milestones.map((m, index) => {
               const status = statusGroup(m.status);
               const year = m.targetDate ? new Date(m.targetDate).getFullYear() : "";
               const isNext = m.id === nextMilestone?.id;
@@ -205,14 +204,14 @@ export default function ClientPlan() {
                     <div className="text-[12.5px] font-semibold tracking-[0.06em] text-sun uppercase">
                       {year} · DONE
                     </div>
-                    <div className="font-display text-[20px] font-semibold text-paper mt-0.5 mb-1">
+                    <h2 className="font-display text-[20px] font-semibold text-paper mt-0.5 mb-1">
                       {m.title}
-                    </div>
+                    </h2>
                     {m.notes && <div className="text-[13.5px] text-mint max-w-[500px] leading-relaxed">{m.notes}</div>}
                   </div>
                 );
               }
-              
+
               if (status === "in_progress") {
                 const gp = m.goalProgress;
                 return (
@@ -221,9 +220,9 @@ export default function ClientPlan() {
                     <div className="text-[12.5px] font-semibold tracking-[0.06em] text-sun uppercase">
                       {year} · IN PROGRESS {isNext && "· NEXT UP"}
                     </div>
-                    <div className="font-display text-[20px] font-semibold text-paper mt-0.5 mb-1">
+                    <h2 className="font-display text-[20px] font-semibold text-paper mt-0.5 mb-1">
                       {m.title}
-                    </div>
+                    </h2>
                     {gp ? (
                       <>
                         <div className="text-[13.5px] text-mint mb-2">
@@ -250,24 +249,19 @@ export default function ClientPlan() {
               
               // Future (upcoming)
               return (
-                <div key={m.id} className="mb-[26px] relative opacity-[0.82]">
-                  <div className="absolute -left-[34px] top-[2px] w-[24px] h-[24px] rounded-full border-[2px] border-[#4E7A66] z-10 bg-forest" />
-                  <div className="text-[12.5px] font-semibold tracking-[0.06em] text-[#6E9C85] uppercase">
+                <div key={m.id} className="mb-[26px] relative">
+                  <div className="absolute -left-[34px] top-[2px] w-[24px] h-[24px] rounded-full border-[2px] border-mint-dim z-10 bg-forest" />
+                  <div className="text-[12.5px] font-semibold tracking-[0.06em] text-mint-dim uppercase">
                     {year}
                   </div>
-                  <div className="font-display text-[20px] font-semibold text-[#DCEAE3] mt-0.5 mb-1">
+                  <h2 className="font-display text-[20px] font-semibold text-[#DCEAE3] mt-0.5 mb-1">
                     {m.title}
-                  </div>
-                  {m.notes && <div className="text-[13.5px] text-[#6E9C85] max-w-[500px] leading-relaxed">{m.notes}</div>}
+                  </h2>
+                  {m.notes && <div className="text-[13.5px] text-mint-dim max-w-[500px] leading-relaxed">{m.notes}</div>}
                 </div>
               );
-            })}
-          </div>
-        ) : (
-          <div className="bg-forest-700/30 border border-forest-600/50 rounded-[22px] py-12 text-center relative z-10">
-            <p className="text-[14.5px] text-mint">No milestones have been added to your plan yet.</p>
-          </div>
-        )}
+          })}
+        </div>
 
         {coastObservation && (
           <SolCard
