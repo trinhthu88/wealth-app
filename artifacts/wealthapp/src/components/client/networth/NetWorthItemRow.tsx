@@ -3,7 +3,7 @@ import { Pencil, Trash2, ExternalLink } from "lucide-react";
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
 import SyncedItemBadge from "./SyncedItemBadge";
-import CurrencyDisplay from "@/components/client/CurrencyDisplay";
+import CurrencyField from "@/components/shared/CurrencyField";
 import type { SyncedAsset, ManualAsset, ManualLiability } from "@/hooks/useNetWorthItems";
 
 interface SyncedAssetRowProps {
@@ -68,7 +68,7 @@ export function SyncedAssetRow({ item }: SyncedAssetRowProps) {
       </div>
       <div className="flex items-center gap-2 shrink-0 ml-2">
         <span className="text-sm font-semibold text-[#042C53]">
-          <CurrencyDisplay amountUsd={item.valueUsd} compact />
+          <CurrencyField amountUsd={item.valueUsd} compact />
         </span>
         <Link
           href="/client/portfolio"
@@ -98,7 +98,7 @@ export function ManualAssetRow({ item, onEdit, onDelete }: ManualAssetRowProps) 
       </div>
       <div className="flex items-center gap-1.5 shrink-0 ml-2">
         <span className="text-sm font-semibold text-[#042C53]">
-          <CurrencyDisplay amountUsd={item.valueUsd} compact />
+          <CurrencyField amountUsd={item.valueUsd} compact />
         </span>
         {confirmDelete ? (
           <div className="flex items-center gap-1">
@@ -157,7 +157,7 @@ export function ManualLiabilityRow({ item, onEdit, onDelete }: ManualLiabilityRo
       </div>
       <div className="flex items-center gap-1.5 shrink-0 ml-2">
         <span className="text-sm font-semibold text-red-500">
-          <CurrencyDisplay amountUsd={item.balanceUsd} compact />
+          <CurrencyField amountUsd={item.balanceUsd} compact />
         </span>
         {confirmDelete ? (
           <div className="flex items-center gap-1">

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
-import CurrencyDisplay from "@/components/client/CurrencyDisplay";
+import CurrencyField from "@/components/shared/CurrencyField";
 import AdvisedPlanCardFull from "./AdvisedPlanCard";
 import StatementHistoryDrawer from "./StatementHistoryDrawer";
 import type { AdvisedPlan, AdvisedPlanStatement, AdvisedPlanHolding } from "@/hooks/useAdvisedPlans";
@@ -59,7 +59,7 @@ export default function AdvisedPlanSection({ plans, advisorName }: Props) {
         </div>
         {totalValue > 0 && (
           <p className="text-sm font-semibold text-[#042C53]">
-            <CurrencyDisplay amountUsd={totalValue} compact />
+            <CurrencyField amountUsd={totalValue} compact />
           </p>
         )}
       </div>

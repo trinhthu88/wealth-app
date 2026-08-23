@@ -1,7 +1,7 @@
 import { Plus } from "lucide-react";
 import { SyncedAssetRow, ManualAssetRow } from "./NetWorthItemRow";
 import type { SyncedAsset, ManualAsset } from "@/hooks/useNetWorthItems";
-import CurrencyDisplay from "@/components/client/CurrencyDisplay";
+import CurrencyField from "@/components/shared/CurrencyField";
 
 interface Props {
   syncedAssets: SyncedAsset[];
@@ -25,7 +25,7 @@ export default function AssetSection({
           <h2 className="text-base font-semibold text-[#042C53]">Assets</h2>
           {!allEmpty && (
             <span className="text-sm font-semibold text-[#1D9E75]">
-              <CurrencyDisplay amountUsd={totalAssets} compact />
+              <CurrencyField amountUsd={totalAssets} compact />
             </span>
           )}
         </div>

@@ -5,7 +5,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import AppShell from "@/components/AppShell";
 import Sol from "@/components/Sol";
 import SmartUpgradeCard from "@/components/SmartUpgradeCard";
-import GoalCard from "@/components/GoalCard";
+import GoalCard, { toGoalCardData } from "@/components/shared/GoalCard";
+import HealthScoreRing from "@/components/shared/HealthScoreRing";
+import StatCard from "@/components/shared/StatCard";
 import MilestoneChips from "@/components/MilestoneChips";
 import BottomNav from "@/components/BottomNav";
 import { apiFetch } from "@/lib/api";
@@ -241,9 +243,6 @@ export default function FreeDashboard() {
 
   const scoreVal = score?.overallScore || 0;
   const ringR = 68;
-  const ringCirc = 2 * Math.PI * ringR;
-  const ringOffset = ringCirc * (1 - scoreVal / 100);
-  const ringStroke = scoreVal >= 70 ? "#1D9E75" : scoreVal >= 50 ? "#F5B947" : scoreVal > 0 ? "#D86B5A" : "#E6F5EE";
   const scoreStatusText = !scoreVal ? "Complete setup" : scoreVal >= 85 ? "Excellent" : scoreVal >= 70 ? "Good shape" : scoreVal >= 50 ? "Fair" : "Needs attention";
   const scoreStatusColor = !scoreVal ? "#A8A095" : scoreVal >= 70 ? "#1D9E75" : scoreVal >= 50 ? "#E8A53C" : "#D86B5A";
 
@@ -312,32 +311,15 @@ export default function FreeDashboard() {
                     <rect x={72} y={97} width={26} height={8} rx={4} fill="#F2EFE9" className="animate-pulse" />
                   </svg>
                 ) : (
-                  <svg width={170} height={170} viewBox="0 0 170 170">
-                    <circle cx={85} cy={85} r={ringR} fill="none" stroke="#E6F5EE" strokeWidth={12} />
-                    <circle cx={85} cy={85} r={44} fill="#FAF8F5" />
-                    <circle
-                      cx={85} cy={85} r={ringR} fill="none"
-                      stroke={ringStroke} strokeWidth={12} strokeLinecap="round"
-                      strokeDasharray={ringCirc} strokeDashoffset={ringOffset}
-                      transform="rotate(-90 85 85)"
-                      style={{ transition: "stroke-dashoffset 0.8s ease-out" }}
-                    />
-                    <text x={85} y={72} textAnchor="middle" dominantBaseline="middle"
-                      fontFamily="'Sora', sans-serif" fontSize={38} fontWeight={800}
-                      fill="#042C53" letterSpacing={-1.5}>
-                      {scoreVal > 0 ? scoreVal : "—"}
-                    </text>
-                    <text x={85} y={88} textAnchor="middle"
-                      fontFamily="'JetBrains Mono', monospace" fontSize={9}
-                      fill="#A8A095" letterSpacing={2}>
+                  <div className="flex flex-col items-center">
+                    <HealthScoreRing score={scoreVal} size="lg" />
+                    <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, letterSpacing: 2, color: "#A8A095", marginTop: 10 }}>
                       TALA SCORE
-                    </text>
-                    <text x={85} y={104} textAnchor="middle"
-                      fontFamily="'Plus Jakarta Sans', sans-serif" fontSize={12}
-                      fontWeight={600} fill={scoreStatusColor}>
+                    </p>
+                    <p style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 12, fontWeight: 600, color: scoreStatusColor, marginTop: 2 }}>
                       {scoreStatusText}
-                    </text>
-                  </svg>
+                    </p>
+                  </div>
                 )}
               </div>
               {/* Stats: savings rate as primary, saved + net worth as secondary */}
@@ -404,9 +386,9 @@ export default function FreeDashboard() {
                         {eyebrowText}
                       </p>
                       <GoalCard
-                        goal={g}
+                        goal={toGoalCardData(g, gStatus, i === 0 ? savingsBalance + investmentValue : 0)}
                         projection={i === 0 ? projection : undefined}
-                        accountsBalance={i === 0 ? savingsBalance + investmentValue : undefined}
+                        onEdit={() => window.location.href = "/free/goals"}
                         onContribute={() => window.location.href = "/free/goals"}
                       />
                     </div>
@@ -417,30 +399,19 @@ export default function FreeDashboard() {
           </div>
 
           {/* Budget summary */}
-          <div className="bg-white rounded-[20px] p-4" style={{ boxShadow: "0 4px 14px rgba(15,23,42,0.06)" }}>
-            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.11em", textTransform: "uppercase", color: "#A8A095", marginBottom: 12 }}>
+          <div className="space-y-3">
+            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.11em", textTransform: "uppercase", color: "#A8A095" }}>
               This month's budget
             </p>
-            <div className="grid grid-cols-2 gap-4 mb-3">
-              <div>
-                <p style={{ fontSize: 10, color: "#A8A095" }}>Income</p>
-                <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 18, fontWeight: 700, color: "#042C53", marginTop: 2 }}>
-                  {income > 0 ? fmt(income) : "$0"}
-                </p>
-              </div>
-              <div>
-                <p style={{ fontSize: 10, color: "#A8A095" }}>Expenses</p>
-                <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 18, fontWeight: 700, color: "#042C53", marginTop: 2 }}>
-                  {expenses > 0 ? fmt(expenses) : "$0"}
-                </p>
-              </div>
+            <div className="grid grid-cols-2 gap-3">
+              <StatCard label="Income" value={income > 0 ? fmt(income) : "$0"} />
+              <StatCard label="Expenses" value={expenses > 0 ? fmt(expenses) : "$0"} />
             </div>
-            <div style={{ borderTop: "1px solid #F2EFE9", paddingTop: 10 }}>
-              <p style={{ fontSize: 10, color: "#A8A095" }}>Saved this month</p>
-              <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 16, fontWeight: 700, marginTop: 2, color: (income - expenses) > 0 ? "#1D9E75" : (income - expenses) < 0 ? "#D86B5A" : "#A8A095" }}>
-                {fmt(income > 0 || expenses > 0 ? income - expenses : 0)}
-              </p>
-            </div>
+            <StatCard
+              label="Saved this month"
+              value={fmt(income > 0 || expenses > 0 ? income - expenses : 0)}
+              trend={(income - expenses) > 0 ? "up" : (income - expenses) < 0 ? "down" : "neutral"}
+            />
           </div>
 
           {/* Weekly tip */}

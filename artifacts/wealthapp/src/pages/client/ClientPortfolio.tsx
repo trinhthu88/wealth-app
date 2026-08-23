@@ -4,7 +4,7 @@ import ClientAppShell from "@/components/client/AppShell";
 import AddHoldingSheet from "@/components/client/portfolio/self/AddHoldingSheet";
 import EditHoldingSheet from "@/components/client/portfolio/self/EditHoldingSheet";
 import AdvisedPlanSection from "@/components/client/portfolio/advised/AdvisedPlanSection";
-import CurrencyDisplay from "@/components/client/CurrencyDisplay";
+import CurrencyField from "@/components/shared/CurrencyField";
 import { usePortfolioTotals } from "@/hooks/usePortfolioTotals";
 import { useClientHoldings } from "@/hooks/useClientHoldings";
 import { useAdvisedPlans } from "@/hooks/useAdvisedPlans";
@@ -111,7 +111,7 @@ export default function ClientPortfolio() {
           </svg>
           <div className="flex flex-col gap-[9px]">
             <div className="font-display text-[26px] font-semibold text-forest tracking-[-0.02em] tabular-nums">
-              <CurrencyDisplay amountUsd={totalValue} />
+              <CurrencyField amountUsd={totalValue} />
             </div>
             {allocation.slice(0, 5).map((holding) => (
               <div key={holding.id} className="flex items-center gap-2 text-[13.5px] text-ink-60">
@@ -172,7 +172,7 @@ export default function ClientPortfolio() {
                   </div>
                   <div className="text-right">
                     <div className="text-[15px] font-semibold text-forest tabular-nums">
-                      <CurrencyDisplay amountUsd={h.currentValue} />
+                      <CurrencyField amountUsd={h.currentValue} />
                     </div>
                     <div className={`text-[13px] font-semibold ${h.gainLossPct >= 0 ? "text-green" : "text-clay"}`}>
                       {h.gainLossPct >= 0 ? "+" : ""}{h.gainLossPct.toFixed(1)}%

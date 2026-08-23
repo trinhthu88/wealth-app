@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { ChevronRight, TrendingUp, TrendingDown } from "lucide-react";
 import type { AdvisedPlan } from "@/hooks/useAdvisedPlans";
-import CurrencyDisplay from "./CurrencyDisplay";
+import CurrencyField from "@/components/shared/CurrencyField";
 import { formatPct } from "@/lib/currencyUtils";
 import { cn } from "@/lib/utils";
 
@@ -43,7 +43,7 @@ export default function AdvisedPlanCard({ plan, href }: AdvisedPlanCardProps) {
         <div>
           <p className="text-xs text-slate-500 mb-0.5">Account value</p>
           <p className="text-xl font-bold text-[#042C53]">
-            <CurrencyDisplay amountUsd={currentValue} currency={plan.currency} />
+            <CurrencyField amountUsd={currentValue} currency={plan.currency} />
           </p>
         </div>
         <div className="text-right">
@@ -56,7 +56,7 @@ export default function AdvisedPlanCard({ plan, href }: AdvisedPlanCardProps) {
           </div>
           <p className="text-xs text-slate-400">
             {isPositive ? "+" : ""}
-            <CurrencyDisplay amountUsd={plan.gainLoss} currency={plan.currency} showSign />
+            <CurrencyField amountUsd={plan.gainLoss} currency={plan.currency} showSign />
           </p>
         </div>
       </div>

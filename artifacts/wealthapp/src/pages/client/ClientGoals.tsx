@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "wouter";
-import { Plus, Target, ChevronDown, ChevronRight, MoreHorizontal, Link as LinkIcon, TrendingUp, CheckCircle2, Pencil, Pause, Trash2, Palmtree, Home, GraduationCap, Rocket, Briefcase, Globe, Coins, Shield } from "lucide-react";
+import { Plus, Target, ChevronDown, ChevronRight, Link as LinkIcon, TrendingUp, CheckCircle2, Palmtree, Home, GraduationCap, Rocket, Briefcase, Globe, Coins, Shield } from "lucide-react";
 import ClientAppShell from "@/components/client/AppShell";
 import GoalsSummaryBar from "@/components/client/goals/GoalsSummaryBar";
 import AddGoalSheet from "@/components/client/goals/AddGoalSheet";
@@ -19,7 +19,8 @@ import ReviewCountdown from "@/components/client/plan/ReviewCountdown";
 import PlanProgressRing from "@/components/client/plan/PlanProgressRing";
 import PlanTimeline from "@/components/client/plan/PlanTimeline";
 import RequestReviewSheet from "@/components/client/plan/RequestReviewSheet";
-import CurrencyDisplay from "@/components/client/CurrencyDisplay";
+import CurrencyField from "@/components/shared/CurrencyField";
+import GoalCard from "@/components/shared/GoalCard";
 import { useGoals, type EnrichedGoal } from "@/hooks/useGoals";
 import { usePlan } from "@/hooks/usePlan";
 import { cn } from "@/lib/utils";
@@ -128,8 +129,6 @@ function PlanTab() {
 
 function GoalCardInline({ goal, plans, holdings, allLinks, allGoals, solSuggestion, onDismissSuggestion, setEditTarget, markComplete, deleteGoal, addHoldingLink, removeHoldingLink }: any) {
   const [showLinks, setShowLinks] = useState(false);
-  const [showMenu, setShowMenu] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmComplete, setConfirmComplete] = useState(false);
   const [autoLinkTarget, setAutoLinkTarget] = useState<{ sourceType: string; sourceId: string } | null>(null);
 
@@ -169,103 +168,17 @@ function GoalCardInline({ goal, plans, holdings, allLinks, allGoals, solSuggesti
   }, [isActive, goal.id]);
 
   const isBehind = goal.trackStatus === "at_risk" || goal.trackStatus === "off_track";
-  const isNearTerm = goal.monthsRemaining && goal.monthsRemaining < 36;
-  
-  let ringColor = "var(--green)";
-  if (isBehind) ringColor = "var(--clay)";
-  else if (isNearTerm) ringColor = "var(--sun)";
-
-  const progressPct = goal.progressPct ?? 0;
-  const circumference = 2 * Math.PI * 33;
-  const offset = circumference - (Math.min(progressPct, 100) / 100) * circumference;
 
   return (
-    <div className="bg-surface rounded-[28px] p-[20px_22px] shadow-[0_2px_14px_rgba(20,52,42,.06)] mb-[14px] transition-colors relative">
-      <div
-        className="flex gap-[18px] items-center cursor-pointer rounded-[18px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green focus-visible:ring-offset-2"
-        onClick={() => setEditTarget(goal)}
-        onKeyDown={(event) => {
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            setEditTarget(goal);
-          }
-        }}
-        role="button"
-        tabIndex={0}
-        aria-label={`Edit ${goal.title}`}
-      >
-        <div className="relative w-[76px] h-[76px] flex-none">
-          <svg viewBox="0 0 80 80" className="w-[76px] h-[76px] -rotate-90">
-            <circle cx="40" cy="40" r="33" fill="none" stroke="var(--track)" strokeWidth="9" />
-            <circle 
-              cx="40" cy="40" r="33" 
-              fill="none" 
-              stroke={ringColor} 
-              strokeWidth="9" 
-              strokeLinecap="round" 
-              strokeDasharray={circumference} 
-              strokeDashoffset={offset} 
-            />
-          </svg>
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="font-display text-[20px] font-semibold text-forest leading-tight mb-1 truncate">
-            {goal.title}
-          </div>
-          <div className="text-[13.5px] text-ink-40 mb-[6px]">
-            {goal.targetDate ? new Date(goal.targetDate).getFullYear() : "Target not set"}
-          </div>
-          <div className="text-[15px] font-semibold text-forest tabular-nums">
-            <CurrencyDisplay amountUsd={goal.computedCurrentAmount} />
-            {goal.targetAmountNum ? (
-              <span className="font-normal text-ink-30 ml-1">
-                {" "}of <CurrencyDisplay amountUsd={goal.targetAmountNum} />
-              </span>
-            ) : null}
-          </div>
-          {progressNote && (
-            <p className="text-[12px] text-ink-30 mt-1 leading-snug">{progressNote.body}</p>
-          )}
-        </div>
-
-        {/* Menu Toggle */}
-        <div className="relative shrink-0 self-start">
-          <button
-            onClick={(e) => { e.stopPropagation(); setShowMenu(v => !v); }}
-            className="h-8 w-8 flex items-center justify-center rounded-full text-ink-40 hover:text-forest hover:bg-black/5 transition-colors cursor-pointer"
-            aria-label="More options"
-          >
-            <MoreHorizontal className="h-5 w-5" />
-          </button>
-          {showMenu && (
-            <>
-              <div className="fixed inset-0 z-10" onClick={(e) => { e.stopPropagation(); setShowMenu(false); }} />
-              <div className="absolute right-0 top-10 z-20 w-48 bg-surface border border-hairline rounded-[16px] shadow-[0_4px_20px_rgba(0,0,0,.08)] py-2 text-[14px]">
-                <button onClick={(e) => { e.stopPropagation(); setEditTarget(goal); setShowMenu(false); }} className="w-full flex items-center gap-2 px-4 py-2.5 text-left hover:bg-black/5 text-forest cursor-pointer">
-                  <Pencil className="h-4 w-4 text-ink-40" /> Edit goal
-                </button>
-                <button onClick={(e) => { e.stopPropagation(); setShowMenu(false); }} className="w-full flex items-center gap-2 px-4 py-2.5 text-left hover:bg-black/5 text-ink-60 cursor-pointer">
-                  <Pause className="h-4 w-4 text-ink-40" /> Pause goal
-                </button>
-                <div className="border-t border-hairline my-1.5" />
-                {confirmDelete ? (
-                  <div className="px-4 py-2 space-y-2">
-                    <p className="text-[13px] text-clay font-medium">Remove "{goal.title}"?</p>
-                    <div className="flex gap-2">
-                      <button onClick={(e) => { e.stopPropagation(); deleteGoal(goal.id); setShowMenu(false); }} className="flex-1 py-1.5 bg-clay text-white text-[13px] rounded-lg font-semibold cursor-pointer hover:bg-red-600 transition-colors">Yes</button>
-                      <button onClick={(e) => { e.stopPropagation(); setConfirmDelete(false); }} className="flex-1 py-1.5 border border-hairline text-ink-60 text-[13px] rounded-lg font-medium cursor-pointer hover:bg-black/5 transition-colors">No</button>
-                    </div>
-                  </div>
-                ) : (
-                  <button onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }} className="w-full flex items-center gap-2 px-4 py-2.5 text-left hover:bg-clay-tint text-clay cursor-pointer">
-                    <Trash2 className="h-4 w-4" /> Delete goal
-                  </button>
-                )}
-              </div>
-            </>
-          )}
-        </div>
-      </div>
+    <GoalCard
+      goal={goal}
+      onEdit={() => setEditTarget(goal)}
+      onDelete={deleteGoal}
+      className="mb-[14px]"
+    >
+      {progressNote && (
+        <p className="text-[12px] text-ink-30 -mt-2 mb-3 leading-snug">{progressNote.body}</p>
+      )}
 
       {/* Note blocks */}
       {goal.notes ? (
@@ -385,7 +298,7 @@ function GoalCardInline({ goal, plans, holdings, allLinks, allGoals, solSuggesti
           />
         </div>
       )}
-    </div>
+    </GoalCard>
   );
 }
 
@@ -479,7 +392,7 @@ export default function ClientGoals() {
         ) : (
           <>
             <div className="text-[14px] text-ink-40 mb-[8px]">
-              {totalActive} live · <CurrencyDisplay amountUsd={totalValue} compact showSign={false} /> in play
+              {totalActive} live · <CurrencyField amountUsd={totalValue} compact showSign={false} /> in play
             </div>
 
             {/* Summary bar */}

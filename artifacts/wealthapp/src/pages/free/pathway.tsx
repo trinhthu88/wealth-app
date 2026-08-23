@@ -7,7 +7,7 @@ import { apiFetch } from "@/lib/api";
 import { useProfile } from "@/hooks/useProfile";
 import { queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
-import CurrencyInput from "@/components/CurrencyInput";
+import CurrencyField from "@/components/shared/CurrencyField";
 import RewardReveal from "@/components/RewardReveal";
 import BottomNav from "@/components/BottomNav";
 import Sol from "@/components/Sol";
@@ -336,7 +336,7 @@ export default function PathwayPage() {
     /* Step 2 */
     <div className="space-y-6">
       <StepHeading step={2} title="How much do you earn?" sub="Your after-tax take-home pay" />
-      <CurrencyInput value={form.income} onChange={v => setField("income", v)} currency={form.currency} />
+      <CurrencyField editable value={form.income} onChange={v => setField("income", v)} currency={form.currency} />
       <div>
         <p className="text-sm font-medium mb-2">Income sources</p>
         <div className="flex flex-wrap gap-2">
@@ -375,7 +375,7 @@ export default function PathwayPage() {
               {expandedCat === cat.key && (
                 <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                   <div className="px-4 pb-4">
-                    <CurrencyInput value={form[cat.key]} onChange={v => setField(cat.key, v)} currency={form.currency} />
+                    <CurrencyField editable value={form[cat.key]} onChange={v => setField(cat.key, v)} currency={form.currency} />
                   </div>
                 </motion.div>
               )}
@@ -426,7 +426,7 @@ export default function PathwayPage() {
               <label className="text-sm font-medium block mb-1.5">Goal name</label>
               <input value={form.goalTitle} onChange={e => setField("goalTitle", e.target.value)} className="w-full border border-border rounded-xl px-4 py-3 text-sm bg-card outline-none focus:ring-2 focus:ring-primary" />
             </div>
-            <CurrencyInput value={form.goalTarget} onChange={v => setField("goalTarget", v)} currency={form.currency} label="Target amount" />
+            <CurrencyField editable value={form.goalTarget} onChange={v => setField("goalTarget", v)} currency={form.currency} label="Target amount" />
             <div>
               <label className="text-sm font-medium block mb-1.5">Target date</label>
               <div className="flex gap-2">
@@ -449,7 +449,7 @@ export default function PathwayPage() {
     /* Step 5 */
     <div className="space-y-5">
       <StepHeading step={5} title="Let's complete your picture" sub="Approximate numbers are totally fine" />
-      <CurrencyInput value={form.savings} onChange={v => setField("savings", v)} currency={form.currency} label=" Total current savings" />
+      <CurrencyField editable value={form.savings} onChange={v => setField("savings", v)} currency={form.currency} label=" Total current savings" />
       <div>
         <div className="flex items-center justify-between mb-2">
           <label className="text-sm font-medium"> Investments</label>
@@ -458,7 +458,7 @@ export default function PathwayPage() {
             I don't have investments yet
           </label>
         </div>
-        {!form.noInvestments && <CurrencyInput value={form.investments} onChange={v => setField("investments", v)} currency={form.currency} />}
+        {!form.noInvestments && <CurrencyField editable value={form.investments} onChange={v => setField("investments", v)} currency={form.currency} />}
       </div>
       <div>
         <div className="flex items-center justify-between mb-2">
@@ -468,7 +468,7 @@ export default function PathwayPage() {
             I'm debt-free
           </label>
         </div>
-        {!form.debtFree && <CurrencyInput value={form.debts} onChange={v => setField("debts", v)} currency={form.currency} />}
+        {!form.debtFree && <CurrencyField editable value={form.debts} onChange={v => setField("debts", v)} currency={form.currency} />}
       </div>
 
       {/* Interest rate inputs */}

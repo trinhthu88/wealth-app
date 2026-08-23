@@ -1,5 +1,5 @@
 import { CheckCircle2, AlertTriangle } from "lucide-react";
-import CurrencyDisplay from "@/components/client/CurrencyDisplay";
+import CurrencyField from "@/components/shared/CurrencyField";
 import SavingsRateGauge from "./SavingsRateGauge";
 import { cn } from "@/lib/utils";
 
@@ -24,19 +24,19 @@ export default function BudgetSummaryPanel({ selectedMonthLabel, income, expense
         <div className="flex items-center justify-between text-sm">
           <span className="text-slate-500">Income</span>
           <span className="font-semibold text-[#1D9E75]">
-            <CurrencyDisplay amountUsd={income} compact />
+            <CurrencyField amountUsd={income} compact />
           </span>
         </div>
         <div className="flex items-center justify-between text-sm">
           <span className="text-slate-500">Expenses</span>
           <span className="font-semibold text-red-500">
-            − <CurrencyDisplay amountUsd={expenses} compact />
+            − <CurrencyField amountUsd={expenses} compact />
           </span>
         </div>
         <div className="flex items-center justify-between text-sm">
           <span className="text-slate-500">Investments</span>
           <span className="font-semibold text-[#1D9E75]">
-            − <CurrencyDisplay amountUsd={investments} compact />
+            − <CurrencyField amountUsd={investments} compact />
           </span>
         </div>
 
@@ -53,14 +53,14 @@ export default function BudgetSummaryPanel({ selectedMonthLabel, income, expense
             <span className={cn(
               isDeficit ? "text-red-500" : isZero ? "text-amber-500" : "text-emerald-600"
             )}>
-              <CurrencyDisplay amountUsd={surplus} compact />
+              <CurrencyField amountUsd={surplus} compact />
             </span>
           </div>
         </div>
 
         {isDeficit && (
           <p className="text-xs text-red-500">
-            You're spending <CurrencyDisplay amountUsd={Math.abs(surplus)} compact /> more than you earn this month.
+            You're spending <CurrencyField amountUsd={Math.abs(surplus)} compact /> more than you earn this month.
           </p>
         )}
       </div>

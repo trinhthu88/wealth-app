@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import HoldingRow from "@/components/client/portfolio/shared/HoldingRow";
-import CurrencyDisplay from "@/components/client/CurrencyDisplay";
+import CurrencyField from "@/components/shared/CurrencyField";
 import type { AllHolding } from "@/hooks/usePortfolioTotals";
 
 const TYPE_LABELS: Record<string, string> = {
@@ -100,10 +100,10 @@ export default function HoldingsTab({ allHoldings, displayCurrency, onEdit, onVi
               <tfoot>
                 <tr className="border-t-2 border-slate-200 bg-slate-50 font-semibold">
                   <td className="py-3 px-4 text-sm text-[#042C53]">Total</td>
-                  <td className="py-3 px-4 text-sm text-slate-500"><CurrencyDisplay amountUsd={totalCost} compact /></td>
-                  <td className="py-3 px-4 text-sm text-[#042C53]"><CurrencyDisplay amountUsd={totalValue} compact /></td>
+                  <td className="py-3 px-4 text-sm text-slate-500"><CurrencyField amountUsd={totalCost} compact /></td>
+                  <td className="py-3 px-4 text-sm text-[#042C53]"><CurrencyField amountUsd={totalValue} compact /></td>
                   <td className={cn("py-3 px-4 text-sm", totalGain >= 0 ? "text-emerald-600" : "text-red-500")}>
-                    <CurrencyDisplay amountUsd={totalGain} compact showSign />
+                    <CurrencyField amountUsd={totalGain} compact showSign />
                   </td>
                   <td className={cn("py-3 px-4 text-sm", totalGain >= 0 ? "text-emerald-600" : "text-red-500")}>
                     {totalGain >= 0 ? "+" : ""}{totalGainPct.toFixed(1)}%

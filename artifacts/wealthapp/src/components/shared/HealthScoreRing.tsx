@@ -31,12 +31,14 @@ export default function HealthScoreRing({ score, size = "md", animate = true, da
     return () => clearTimeout(timeout);
   }, [score, animate, circ, offset]);
 
+  // Token colors (index.css): green #1D9E75, sun #FFB627, clay #E8663D —
+  // matches the same 3-tier scale used elsewhere for score/status coloring.
   const color = darkMode ? "white"
-    : score >= 70 ? "#1D9E75"
-    : score >= 40 ? "#f59e0b"
-    : "#ef4444";
+    : score >= 70 ? "var(--green)"
+    : score >= 40 ? "var(--sun)"
+    : "var(--clay)";
 
-  const trackColor = darkMode ? "rgba(255,255,255,0.2)" : "hsl(var(--muted))";
+  const trackColor = darkMode ? "rgba(255,255,255,0.2)" : "var(--track)";
 
   const fontSize = { sm: "text-xs", md: "text-base", lg: "text-2xl" }[size];
 
@@ -65,7 +67,7 @@ export default function HealthScoreRing({ score, size = "md", animate = true, da
       </svg>
       <div className="absolute inset-0 flex items-center justify-center" aria-hidden="true">
         <span className={`font-bold ${fontSize}`} style={{ color: darkMode ? "white" : color }}>
-          {score}
+          {Math.round(score)}
         </span>
       </div>
     </div>

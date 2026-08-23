@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ChevronDown, ChevronUp, ExternalLink, AlertCircle, MessageSquare } from "lucide-react";
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
-import CurrencyDisplay from "@/components/client/CurrencyDisplay";
+import CurrencyField from "@/components/shared/CurrencyField";
 import { formatPct } from "@/lib/currencyUtils";
 import PlanFundBar from "./PlanFundBar";
 import SourceBadge from "@/components/client/portfolio/shared/SourceBadge";
@@ -73,16 +73,16 @@ export default function AdvisedPlanCardFull({ plan, onViewStatements }: Props) {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
               <div>
                 <p className="text-xs text-slate-400 mb-0.5">Net contribution</p>
-                <p className="text-sm font-semibold text-[#042C53]"><CurrencyDisplay amountUsd={nc} currency={plan.currency} compact /></p>
+                <p className="text-sm font-semibold text-[#042C53]"><CurrencyField amountUsd={nc} currency={plan.currency} compact /></p>
               </div>
               <div>
                 <p className="text-xs text-slate-400 mb-0.5">Account value</p>
-                <p className="text-sm font-semibold text-[#042C53]"><CurrencyDisplay amountUsd={cv} currency={plan.currency} compact /></p>
+                <p className="text-sm font-semibold text-[#042C53]"><CurrencyField amountUsd={cv} currency={plan.currency} compact /></p>
               </div>
               <div>
                 <p className="text-xs text-slate-400 mb-0.5">Gain / loss</p>
                 <p className={cn("text-sm font-semibold", isGain ? "text-emerald-600" : "text-red-500")}>
-                  <CurrencyDisplay amountUsd={plan.gainLoss} currency={plan.currency} compact showSign />
+                  <CurrencyField amountUsd={plan.gainLoss} currency={plan.currency} compact showSign />
                 </p>
                 <p className={cn("text-xs", isGain ? "text-emerald-500" : "text-red-400")}>
                   {formatPct(plan.gainLossPct)}

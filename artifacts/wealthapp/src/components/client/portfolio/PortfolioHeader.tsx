@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import CurrencyDisplay from "@/components/client/CurrencyDisplay";
+import CurrencyField from "@/components/shared/CurrencyField";
 import CurrencyToggle from "@/components/client/CurrencyToggle";
 import type { usePortfolioTotals } from "@/hooks/usePortfolioTotals";
 
@@ -42,19 +42,19 @@ export default function PortfolioHeader({ totals, loading }: Props) {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <MetricCard label="Total portfolio">
           <p className="text-2xl font-semibold text-[#042C53]">
-            <CurrencyDisplay amountUsd={totalPortfolioValue} compact />
+            <CurrencyField amountUsd={totalPortfolioValue} compact />
           </p>
         </MetricCard>
 
         <MetricCard label="Total invested">
           <p className="text-2xl font-semibold text-[#042C53]">
-            <CurrencyDisplay amountUsd={totalNetContribution} compact />
+            <CurrencyField amountUsd={totalNetContribution} compact />
           </p>
         </MetricCard>
 
         <MetricCard label="Total gain / loss">
           <p className={cn("text-2xl font-semibold", isGain ? "text-emerald-600" : "text-red-500")}>
-            <CurrencyDisplay amountUsd={totalGainLoss} compact showSign />
+            <CurrencyField amountUsd={totalGainLoss} compact showSign />
           </p>
           <p className={cn("text-[13px] mt-0.5 font-medium", isGain ? "text-emerald-600" : "text-red-500")}>
             {isGain ? "+" : ""}{totalGainLossPct.toFixed(1)}%

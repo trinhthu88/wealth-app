@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import CurrencyDisplay from "@/components/client/CurrencyDisplay";
+import CurrencyField from "@/components/shared/CurrencyField";
 import type { NetWorthSummary } from "@/hooks/useDashboardData";
 
 interface Props {
@@ -72,13 +72,13 @@ export default function NetWorthRingSection({ netWorth }: Props) {
             <div className="flex items-center justify-between text-sm">
               <span className="text-[#64748B]">Assets</span>
               <span className="font-medium text-[#042C53]">
-                <CurrencyDisplay amountUsd={netWorth!.totalAssets} compact />
+                <CurrencyField amountUsd={netWorth!.totalAssets} compact />
               </span>
             </div>
             <div className="flex items-center justify-between text-sm">
               <span className="text-[#64748B]">Liabilities</span>
               <span className="font-medium text-red-500">
-                -<CurrencyDisplay amountUsd={netWorth!.totalLiabilities} compact />
+                -<CurrencyField amountUsd={netWorth!.totalLiabilities} compact />
               </span>
             </div>
           </div>

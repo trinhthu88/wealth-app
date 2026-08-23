@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import CurrencyDisplay from "@/components/client/CurrencyDisplay";
+import CurrencyField from "@/components/shared/CurrencyField";
 
 interface Props {
   totalValue: number;
@@ -20,7 +20,7 @@ export default function PortfolioSnapshotSection({ totalValue, gainLossPct, isTr
           Everything tracked in tala
         </div>
         <div className="font-display text-[32px] font-bold text-[#042C53] tracking-[-0.03em] leading-none">
-          <CurrencyDisplay amountUsd={totalValue} compact />
+          <CurrencyField amountUsd={totalValue} compact />
         </div>
         <div className="text-xs text-[#6B6459] mt-2">
           {isTrackA ? "Advised and self-managed" : "Self-managed accounts"} · {gainLossPct >= 0 ? "+" : ""}{gainLossPct.toFixed(1)}% return

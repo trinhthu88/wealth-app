@@ -1,5 +1,5 @@
 import { Plus } from "lucide-react";
-import CurrencyDisplay from "@/components/client/CurrencyDisplay";
+import CurrencyField from "@/components/shared/CurrencyField";
 import HoldingTypeBadge from "@/components/client/HoldingTypeBadge";
 import HoldingCard from "./HoldingCard";
 import type { ClientHolding } from "@/hooks/useClientHoldings";
@@ -28,7 +28,7 @@ export default function SelfHoldingsSection({ holdings, totalValue, advisorName,
         </div>
         <div className="flex items-center gap-3">
           {totalValue > 0 && (
-            <p className="text-sm font-semibold text-[#042C53]"><CurrencyDisplay amountUsd={totalValue} compact /></p>
+            <p className="text-sm font-semibold text-[#042C53]"><CurrencyField amountUsd={totalValue} compact /></p>
           )}
           <button
             onClick={onAdd}
@@ -54,7 +54,7 @@ export default function SelfHoldingsSection({ holdings, totalValue, advisorName,
             <div className="flex items-center justify-between mb-2">
               <HoldingTypeBadge type={type} size="sm" />
               <span className="text-xs text-slate-500">
-                <CurrencyDisplay amountUsd={group.reduce((s, h) => s + h.currentValue, 0)} compact />
+                <CurrencyField amountUsd={group.reduce((s, h) => s + h.currentValue, 0)} compact />
               </span>
             </div>
             <div className="space-y-2">

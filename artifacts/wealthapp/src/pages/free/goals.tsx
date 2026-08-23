@@ -3,9 +3,9 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import AppShell from "@/components/AppShell";
 import FreeTierBanner from "@/components/FreeTierBanner";
-import GoalCard, { type Goal } from "@/components/GoalCard";
+import GoalCard, { toGoalCardData } from "@/components/shared/GoalCard";
 import LockedGoalSlotCard from "@/components/LockedGoalSlotCard";
-import CurrencyInput from "@/components/CurrencyInput";
+import CurrencyField from "@/components/shared/CurrencyField";
 import BottomNav from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
@@ -17,6 +17,18 @@ import { calculateProjection, applyMonthlyGrowth } from "@/lib/goalProjection";
 import type { ProjectionResult } from "@/lib/goalProjection";
 import { getRatesFromStorage } from "@/lib/milestones";
 import { cn } from "@/lib/utils";
+
+export interface Goal {
+  id: string;
+  title: string;
+  goalType: string;
+  targetAmount: string | null;
+  currentAmount: string | null;
+  monthlyContribution: string | null;
+  currency: string;
+  status: string;
+  targetDate?: string | null;
+}
 
 interface BudgetEntry { income: string | null; housing: string | null; food: string | null; transport: string | null; utilities: string | null; entertainment: string | null; other: string | null; }
 interface BudgetTransaction { id: string; periodMonth: string; amount: string; type: string; category: string; }
@@ -424,9 +436,8 @@ export default function GoalsPage() {
               )}
 
               <GoalCard
-                goal={goal}
+                goal={toGoalCardData(goal, st, goal.id === topGoal?.id ? savingsBalance + investmentValue : 0)}
                 projection={proj}
-                accountsBalance={goal.id === topGoal?.id ? savingsBalance + investmentValue : undefined}
                 onEdit={() => openEditForm(goal)}
               />
 
@@ -609,15 +620,15 @@ function GoalFormSheet({ form, setForm, errors, editingGoal, onClose, onSubmit, 
 
           {/* Target amount */}
           <div>
-            <CurrencyInput value={form.targetAmount} onChange={v => setForm(f => ({ ...f, targetAmount: v }))} currency={formCurrency} label="Target amount" />
+            <CurrencyField editable value={form.targetAmount} onChange={v => setForm(f => ({ ...f, targetAmount: v }))} currency={formCurrency} label="Target amount" />
             {errors.targetAmount && <p className="text-xs text-red-500 mt-1 ml-1">{errors.targetAmount}</p>}
           </div>
 
           {/* Current amount */}
-          <CurrencyInput value={form.currentAmount} onChange={v => setForm(f => ({ ...f, currentAmount: v }))} currency={formCurrency} label="Amount already saved" />
+          <CurrencyField editable value={form.currentAmount} onChange={v => setForm(f => ({ ...f, currentAmount: v }))} currency={formCurrency} label="Amount already saved" />
 
           {/* Monthly contribution */}
-          <CurrencyInput value={form.monthlyContribution} onChange={v => setForm(f => ({ ...f, monthlyContribution: v }))} currency={formCurrency} label="Monthly contribution" />
+          <CurrencyField editable value={form.monthlyContribution} onChange={v => setForm(f => ({ ...f, monthlyContribution: v }))} currency={formCurrency} label="Monthly contribution" />
 
           {/* Target date */}
           <div>

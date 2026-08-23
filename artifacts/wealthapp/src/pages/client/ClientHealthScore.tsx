@@ -4,6 +4,7 @@ import { apiFetch } from "@/lib/api";
 import ClientAppShell from "@/components/client/AppShell";
 import { useUser } from "@clerk/react";
 import { cn } from "@/lib/utils";
+import HealthScoreRing from "@/components/shared/HealthScoreRing";
 
 interface HealthScore {
   id: string;
@@ -62,12 +63,8 @@ export default function ClientHealthScore() {
         ) : (
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
             <div className="bg-surface rounded-[32px] p-[24px_22px] shadow-[0_2px_14px_rgba(20,52,42,.06)] mb-[16px] text-center relative">
-              <svg viewBox="0 0 200 130" className="w-full h-[150px]">
-                <path d="M20 118 A80 80 0 0 1 180 118" fill="none" stroke="var(--track)" strokeWidth="16" strokeLinecap="round"></path>
-                <path d="M20 118 A80 80 0 0 1 180 118" fill="none" stroke="var(--green)" strokeWidth="16" strokeLinecap="round" strokeDasharray="251" strokeDashoffset={251 - (score / 100) * 251} className="transition-all duration-1000 ease-out"></path>
-              </svg>
-              <div className="font-display text-[52px] font-semibold text-forest tracking-[-0.03em] -mt-[38px]">
-                {Math.round(score)}
+              <div className="flex justify-center mb-2">
+                <HealthScoreRing score={score} size="lg" />
               </div>
               <div className="text-[15px] font-semibold text-green mb-1">
                 {score >= 70 ? "Strong" : score >= 50 ? "Solid" : "Needs attention"}

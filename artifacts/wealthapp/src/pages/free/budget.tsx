@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import AppShell from "@/components/AppShell";
 import FreeTierBanner from "@/components/FreeTierBanner";
-import CurrencyInput from "@/components/CurrencyInput";
+import CurrencyField from "@/components/shared/CurrencyField";
 import BottomNav from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
@@ -698,7 +698,7 @@ export default function BudgetPage() {
                       <AnimatePresence>
                         {editingIncome && (
                           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                            <div className="px-4 pb-4"><CurrencyInput value={form.income} onChange={v => setForm(f => ({ ...f, income: v }))} currency={currency} /></div>
+                            <div className="px-4 pb-4"><CurrencyField editable value={form.income} onChange={v => setForm(f => ({ ...f, income: v }))} currency={currency} /></div>
                           </motion.div>
                         )}
                       </AnimatePresence>
@@ -718,7 +718,7 @@ export default function BudgetPage() {
                         <AnimatePresence>
                           {editingCat === cat.key && (
                             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                              <div className="px-4 pb-4"><CurrencyInput value={form[cat.key]} onChange={v => setForm(f => ({ ...f, [cat.key]: v }))} currency={currency} /></div>
+                              <div className="px-4 pb-4"><CurrencyField editable value={form[cat.key]} onChange={v => setForm(f => ({ ...f, [cat.key]: v }))} currency={currency} /></div>
                             </motion.div>
                           )}
                         </AnimatePresence>

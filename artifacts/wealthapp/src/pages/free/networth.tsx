@@ -5,7 +5,7 @@ import AppShell from "@/components/AppShell";
 import FreeTierBanner from "@/components/FreeTierBanner";
 import BottomNav from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
-import CurrencyInput from "@/components/CurrencyInput";
+import CurrencyField from "@/components/shared/CurrencyField";
 import { apiFetch } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
 import { Plus, Trash2, X, ChevronDown, Landmark, PiggyBank, TrendingUp, Briefcase, Home, FileText, CreditCard, Wallet, AlertCircle, Car, GraduationCap } from "lucide-react";
@@ -411,7 +411,7 @@ export default function NetWorthPage() {
                     <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                   </div>
                 </div>
-                <CurrencyInput value={aValue} onChange={setAValue} currency={currency} label="Value (USD)" />
+                <CurrencyField editable value={aValue} onChange={setAValue} currency={currency} label="Value (USD)" />
               </div>
               <Button
                 className="w-full mt-6" onClick={() => addAsset.mutate()}
@@ -462,7 +462,7 @@ export default function NetWorthPage() {
                     <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                   </div>
                 </div>
-                <CurrencyInput value={lValue} onChange={setLValue} currency={currency} label="Balance (USD)" />
+                <CurrencyField editable value={lValue} onChange={setLValue} currency={currency} label="Balance (USD)" />
                 <div>
                   <label className="text-sm font-medium block mb-1.5">Interest rate % <span className="text-muted-foreground font-normal">(optional)</span></label>
                   <input

@@ -4,7 +4,7 @@ import { Hourglass, TrendingUp, Target, MessageSquare, Sparkles, X } from "lucid
 import { Area, AreaChart, ResponsiveContainer, YAxis } from "recharts";
 import ClientAppShell from "@/components/client/AppShell";
 import Sol from "@/components/Sol";
-import CurrencyDisplay from "@/components/client/CurrencyDisplay";
+import CurrencyField from "@/components/shared/CurrencyField";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useProfile } from "@/hooks/useProfile";
 import { usePlan } from "@/hooks/usePlan";
@@ -162,10 +162,10 @@ export default function ClientDashboard() {
           </div>
           
           <div className="font-display text-[44px] font-semibold tracking-[-0.03em] text-forest my-1.5 tabular-nums leading-none">
-            <CurrencyDisplay amountUsd={data.netWorth?.netWorth ?? 0} />
+            <CurrencyField amountUsd={data.netWorth?.netWorth ?? 0} />
           </div>
           <div className="text-[14px] text-ink-40 mb-[14px]">
-            <CurrencyDisplay amountUsd={data.portfolio.totalValue} compact /> {data.isTrackA ? "advised & self-managed" : "self-managed"}
+            <CurrencyField amountUsd={data.portfolio.totalValue} compact /> {data.isTrackA ? "advised & self-managed" : "self-managed"}
           </div>
           
           <div className="h-[70px] w-full" role="img" aria-label={hasHistory ? "Net worth trend over time" : "Net worth trend will appear after more updates"}>
@@ -227,7 +227,7 @@ export default function ClientDashboard() {
                   {data.topGoals[0].targetAmount && (
                     <div>
                       <div className="text-[13px] text-mint mb-2">
-                        <CurrencyDisplay amountUsd={Number(data.topGoals[0].currentAmount)} compact /> / <CurrencyDisplay amountUsd={Number(data.topGoals[0].targetAmount)} compact />
+                        <CurrencyField amountUsd={Number(data.topGoals[0].currentAmount)} compact /> / <CurrencyField amountUsd={Number(data.topGoals[0].targetAmount)} compact />
                       </div>
                       <div className="h-[4px] w-full bg-mint/20 rounded-full overflow-hidden">
                         <div className="h-full bg-sun rounded-full" style={{ width: `${Math.min(100, (Number(data.topGoals[0].currentAmount) / Number(data.topGoals[0].targetAmount)) * 100)}%` }} />

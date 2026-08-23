@@ -2,7 +2,7 @@ import { useState } from "react";
 import { MoreHorizontal } from "lucide-react";
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import CurrencyDisplay from "@/components/client/CurrencyDisplay";
+import CurrencyField from "@/components/shared/CurrencyField";
 import HoldingTypeBadge from "@/components/client/HoldingTypeBadge";
 import SourceBadge from "../shared/SourceBadge";
 import PriceTag from "../shared/PriceTag";
@@ -60,7 +60,7 @@ export default function HoldingCard({ holding: h, onEdit }: Props) {
           </div>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
-          <p className="text-sm font-bold text-[#042C53]"><CurrencyDisplay amountUsd={h.currentValue} compact /></p>
+          <p className="text-sm font-bold text-[#042C53]"><CurrencyField amountUsd={h.currentValue} compact /></p>
           <div className="relative">
             <button onClick={() => setMenuOpen(v => !v)} aria-label="More options" className="h-7 w-7 flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100">
               <MoreHorizontal className="h-4 w-4" />
@@ -78,7 +78,7 @@ export default function HoldingCard({ holding: h, onEdit }: Props) {
 
       {showGain && (
         <div className="flex items-center gap-3 text-xs text-slate-500">
-          <span>Cost: <CurrencyDisplay amountUsd={h.costBasis} compact /></span>
+          <span>Cost: <CurrencyField amountUsd={h.costBasis} compact /></span>
           {h.holdingType !== "cash" && (
             <span className={cn("font-medium", isGain ? "text-emerald-600" : "text-red-500")}>
               {isGain ? "+" : ""}{h.gainLossPct.toFixed(1)}%

@@ -2,7 +2,7 @@ import { Plus } from "lucide-react";
 import { Link } from "wouter";
 import { ManualLiabilityRow } from "./NetWorthItemRow";
 import type { ManualLiability } from "@/hooks/useNetWorthItems";
-import CurrencyDisplay from "@/components/client/CurrencyDisplay";
+import CurrencyField from "@/components/shared/CurrencyField";
 
 interface Props {
   manualLiabilities: ManualLiability[];
@@ -28,7 +28,7 @@ export default function LiabilitySection({
           <h2 className="text-base font-semibold text-[#042C53]">Liabilities</h2>
           {!isEmpty && (
             <span className="text-sm font-semibold text-red-500">
-              <CurrencyDisplay amountUsd={totalLiabilities} compact />
+              <CurrencyField amountUsd={totalLiabilities} compact />
             </span>
           )}
         </div>
@@ -69,7 +69,7 @@ export default function LiabilitySection({
           <div>
             <p className="text-xs text-slate-500">Total monthly debt payments</p>
             <p className="text-sm font-semibold text-[#042C53]">
-              <CurrencyDisplay amountUsd={totalMonthlyPayment} compact />
+              <CurrencyField amountUsd={totalMonthlyPayment} compact />
               <span className="text-slate-400 font-normal text-xs">/mo</span>
             </p>
           </div>

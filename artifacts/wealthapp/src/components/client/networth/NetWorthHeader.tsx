@@ -1,5 +1,5 @@
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
-import CurrencyDisplay from "@/components/client/CurrencyDisplay";
+import CurrencyField from "@/components/shared/CurrencyField";
 import CurrencyToggle from "@/components/client/CurrencyToggle";
 import { cn } from "@/lib/utils";
 
@@ -33,7 +33,7 @@ function StatCard({
         <p className="text-xl font-bold text-slate-300">--</p>
       ) : (
         <p className={cn("text-xl font-bold text-[#042C53]", valueColor)}>
-          <CurrencyDisplay amountUsd={valueUsd} compact />
+          <CurrencyField amountUsd={valueUsd} compact />
         </p>
       )}
       {sub && <div className="mt-1">{sub}</div>}
@@ -54,7 +54,7 @@ export default function NetWorthHeader({
     trendNode = (
       <span className={cn("flex items-center gap-0.5 text-xs font-medium", isUp ? "text-emerald-600" : "text-red-500")}>
         <Icon className="h-3.5 w-3.5" />
-        <CurrencyDisplay amountUsd={Math.abs(trendDelta)} compact showSign={false} />
+        <CurrencyField amountUsd={Math.abs(trendDelta)} compact showSign={false} />
         {" "}from last snapshot
       </span>
     );

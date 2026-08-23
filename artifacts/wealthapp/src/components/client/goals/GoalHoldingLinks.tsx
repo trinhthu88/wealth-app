@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { X, Link as LinkIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import CurrencyDisplay from "@/components/client/CurrencyDisplay";
+import CurrencyField from "@/components/shared/CurrencyField";
 import SolCard from "./SolCard";
 import { generateSolCopy, type SolMessage } from "@/lib/sol";
 import { buildOverAllocationObservation } from "@/lib/solObservations";
@@ -128,7 +128,7 @@ export default function GoalHoldingLinks({ goalId, links, allLinks, goals, plans
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-[#042C53] truncate">{plan.nickname ?? plan.productName}</p>
                     <p className="text-xs text-slate-400">
-                      <CurrencyDisplay amountUsd={value} compact />
+                      <CurrencyField amountUsd={value} compact />
                       {link && ` · ${link.allocationPct}% allocated`}
                       {!isLinked && !isFullyAllocated && remainingPct < 100 && ` · ${remainingPct}% unallocated`}
                       {isFullyAllocated && " · fully allocated to other goals"}
@@ -210,7 +210,7 @@ export default function GoalHoldingLinks({ goalId, links, allLinks, goals, plans
                       {holding.label}{holding.ticker ? ` · ${holding.ticker}` : ""}
                     </p>
                     <p className="text-xs text-slate-400">
-                      <CurrencyDisplay amountUsd={holding.currentValue} compact />
+                      <CurrencyField amountUsd={holding.currentValue} compact />
                       {" · "}{holding.holdingType.replace(/_/g, " ")}
                       {link && ` · ${link.allocationPct}% allocated`}
                       {!isLinked && !isFullyAllocated && remainingPct < 100 && ` · ${remainingPct}% unallocated`}

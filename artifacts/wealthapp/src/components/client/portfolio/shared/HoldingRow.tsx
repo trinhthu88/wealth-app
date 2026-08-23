@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import CurrencyDisplay from "@/components/client/CurrencyDisplay";
+import CurrencyField from "@/components/shared/CurrencyField";
 import HoldingTypeBadge from "@/components/client/HoldingTypeBadge";
 import type { AllHolding } from "@/hooks/usePortfolioTotals";
 
@@ -24,11 +24,11 @@ export default function HoldingRow({ holding, onEdit, onView, compact = false }:
             <span className="text-sm font-semibold text-[#042C53] truncate">{holding.label}</span>
           </div>
           <span className="text-sm font-bold text-[#042C53] shrink-0">
-            <CurrencyDisplay amountUsd={holding.currentValue} compact />
+            <CurrencyField amountUsd={holding.currentValue} compact />
           </span>
         </div>
         <div className="flex items-center gap-3 text-xs text-slate-500">
-          <span>Cost: <CurrencyDisplay amountUsd={holding.costBasis} compact /></span>
+          <span>Cost: <CurrencyField amountUsd={holding.costBasis} compact /></span>
           <span className={cn("font-medium", gainColor)}>
             {isGain ? "+" : ""}{holding.gainLossPct.toFixed(1)}%
           </span>
@@ -62,13 +62,13 @@ export default function HoldingRow({ holding, onEdit, onView, compact = false }:
         </div>
       </td>
       <td className="py-3 px-4 text-sm text-slate-500">
-        <CurrencyDisplay amountUsd={holding.costBasis} compact />
+        <CurrencyField amountUsd={holding.costBasis} compact />
       </td>
       <td className="py-3 px-4 text-sm font-semibold text-[#042C53]">
-        <CurrencyDisplay amountUsd={holding.currentValue} compact />
+        <CurrencyField amountUsd={holding.currentValue} compact />
       </td>
       <td className={cn("py-3 px-4 text-sm font-medium", gainColor)}>
-        <CurrencyDisplay amountUsd={holding.gainLoss} compact showSign />
+        <CurrencyField amountUsd={holding.gainLoss} compact showSign />
       </td>
       <td className={cn("py-3 px-4 text-sm font-medium", gainColor)}>
         {isGain ? "+" : ""}{holding.gainLossPct.toFixed(1)}%

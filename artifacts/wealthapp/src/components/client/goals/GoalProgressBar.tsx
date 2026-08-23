@@ -1,4 +1,4 @@
-import CurrencyDisplay from "@/components/client/CurrencyDisplay";
+import CurrencyField from "@/components/shared/CurrencyField";
 
 interface Props {
   progressPct: number | null;
@@ -34,7 +34,7 @@ export default function GoalProgressBar({ progressPct, currentAmount, targetAmou
       {/* Labels */}
       <div className="flex items-center justify-between text-xs">
         <span className="text-slate-500">
-          <CurrencyDisplay amountUsd={currentAmount} compact /> / <CurrencyDisplay amountUsd={targetAmount} compact />
+          <CurrencyField amountUsd={currentAmount} compact /> / <CurrencyField amountUsd={targetAmount} compact />
         </span>
         <span className="font-semibold text-[#042C53]">{Math.round(pct)}%</span>
       </div>

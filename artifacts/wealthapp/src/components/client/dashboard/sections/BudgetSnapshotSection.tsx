@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
-import CurrencyDisplay from "@/components/client/CurrencyDisplay";
+import CurrencyField from "@/components/shared/CurrencyField";
 import type { ClientBudgetMonth } from "@/hooks/useClientBudget";
 
 function n(v: string | null | undefined) { return parseFloat(v ?? "0") || 0; }
@@ -55,13 +55,13 @@ export default function BudgetSnapshotSection({ budget, isTrackA, planNickname }
               <div key={row.label} className="flex items-center justify-between text-sm">
                 <span className="text-[#64748B]">{row.label}</span>
                 <span className={cn("font-medium text-[#042C53]", row.color)}>
-                  <CurrencyDisplay amountUsd={row.value} compact />
+                  <CurrencyField amountUsd={row.value} compact />
                 </span>
               </div>
             ))}
             {isTrackA && rspAmount > 0 && (
               <p className="text-[11px] text-[#64748B] pl-1">
-                Includes <CurrencyDisplay amountUsd={rspAmount} compact /> RSP{planNickname ? ` (${planNickname})` : ""}
+                Includes <CurrencyField amountUsd={rspAmount} compact /> RSP{planNickname ? ` (${planNickname})` : ""}
               </p>
             )}
 
@@ -69,7 +69,7 @@ export default function BudgetSnapshotSection({ budget, isTrackA, planNickname }
               <span className="text-[#042C53]">Surplus</span>
               <div className="flex items-center gap-2">
                 <span className={surplus >= 0 ? "text-emerald-600" : "text-red-500"}>
-                  <CurrencyDisplay amountUsd={surplus} compact />
+                  <CurrencyField amountUsd={surplus} compact />
                 </span>
                 <SavingsBadge rate={savingsRate} />
               </div>

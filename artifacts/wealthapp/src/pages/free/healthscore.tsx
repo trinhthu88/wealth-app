@@ -2,7 +2,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import AppShell from "@/components/AppShell";
-import HealthScoreRing from "@/components/HealthScoreRing";
+import HealthScoreRing from "@/components/shared/HealthScoreRing";
 import BenchmarkCard from "@/components/BenchmarkCard";
 import BottomNav from "@/components/BottomNav";
 import WeeklyTipCard from "@/components/WeeklyTipCard";
@@ -103,8 +103,6 @@ export default function HealthScorePage() {
   const sym = (profile?.preferredCurrency ?? "USD") === "VND" ? "₫" : "$";
   const currentMk = monthKey(new Date());
 
-  // Animated ring score: starts at 0, animates to actual after mount
-  const [ringScore, setRingScore] = useState(0);
   const [streakWeeks, setStreakWeeks] = useState(0);
   useEffect(() => { setStreakWeeks(getStreak().weeks); }, []);
 
@@ -181,15 +179,6 @@ export default function HealthScorePage() {
 
   // ── Derived values ────────────────────────────────────────────────────────
   const overall = score?.overallScore ?? 0;
-
-  // Animate ring from 0 → actual score on load / recalculate
-  useEffect(() => {
-    if (overall > 0) {
-      const t = setTimeout(() => setRingScore(overall), 100);
-      return () => clearTimeout(t);
-    }
-    return undefined;
-  }, [overall]);
 
   // Income / expenses — always from live budget/transaction data (never from pathway)
   const txIncome  = transactions.filter(t => t.type === "income").reduce((s, t) => s + parseFloat(t.amount), 0);
@@ -357,10 +346,6 @@ export default function HealthScorePage() {
     : null;
 
   // ── Ring drawing values ───────────────────────────────────────────────────
-  const r = 84;
-  const circ = 2 * Math.PI * r;
-  const arcColor = ringColor(ringScore);
-  const arcOffset = circ * (1 - ringScore / 100);
   const statusText = overall >= 85 ? "Excellent" : overall >= 70 ? "Good shape" : overall >= 50 ? "Getting there" : overall >= 30 ? "Needs work" : overall > 0 ? "Action needed" : "Calculating...";
   const statusColor = ringColor(overall);
 
@@ -386,37 +371,18 @@ export default function HealthScorePage() {
           style={{ boxShadow: "0 4px 14px rgba(15,23,42,0.06)" }}
           initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
         >
-          <div
-            className="flex justify-center mb-2"
-            role="img"
-            aria-label={`Health score: ${overall > 0 ? overall : "not yet calculated"} out of 100${overall > 0 ? `, ${statusText}` : ""}`}
-          >
-            <svg width={200} height={200} viewBox="0 0 200 200" aria-hidden="true">
-              <circle cx={100} cy={100} r={r} fill="none" stroke="#E6F5EE" strokeWidth={14} />
-              <circle cx={100} cy={100} r={54} fill="#FAF8F5" />
-              <circle
-                cx={100} cy={100} r={r} fill="none"
-                stroke={arcColor} strokeWidth={14} strokeLinecap="round"
-                strokeDasharray={circ} strokeDashoffset={arcOffset}
-                transform="rotate(-90 100 100)"
-                style={{ transition: "stroke-dashoffset 0.9s ease-out, stroke 0.3s ease" }}
-              />
-              <text x={100} y={94} textAnchor="middle" dominantBaseline="middle"
-                fontFamily="'Sora', sans-serif" fontSize={46} fontWeight={800}
-                fill="#042C53" letterSpacing={-2}>
-                {overall > 0 ? overall : "—"}
-              </text>
-              <text x={100} y={118} textAnchor="middle"
-                fontFamily="'JetBrains Mono', monospace" fontSize={10}
-                fill="#A8A095" letterSpacing={2.5}>
-                /100
-              </text>
-              <text x={100} y={135} textAnchor="middle"
-                fontFamily="'Plus Jakarta Sans', sans-serif" fontSize={13}
-                fontWeight={600} fill={statusColor}>
-                {statusText}
-              </text>
-            </svg>
+          <div className="flex flex-col items-center gap-2 mb-2">
+            <HealthScoreRing score={overall} size="lg" />
+            <div
+              style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, letterSpacing: 2.5, color: "#A8A095" }}
+            >
+              /100
+            </div>
+            <div
+              style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 13, fontWeight: 600, color: statusColor }}
+            >
+              {statusText}
+            </div>
           </div>
           <button
             className="inline-flex items-center gap-1.5 rounded-full transition-colors"
