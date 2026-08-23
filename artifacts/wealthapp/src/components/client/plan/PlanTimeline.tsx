@@ -6,7 +6,6 @@ import { Check } from "lucide-react";
 interface Props {
   milestones: PlanMilestone[];
   nextMilestoneId: string | null;
-  statusGroup: (s: string) => string;
 }
 
 function DotIndicator({ status, isNext }: { status: string; isNext: boolean }) {
@@ -38,7 +37,7 @@ function DotIndicator({ status, isNext }: { status: string; isNext: boolean }) {
   );
 }
 
-export default function PlanTimeline({ milestones, nextMilestoneId, statusGroup }: Props) {
+export default function PlanTimeline({ milestones, nextMilestoneId }: Props) {
   return (
     <div className="space-y-0">
       {milestones.map((step, idx) => {
@@ -60,7 +59,7 @@ export default function PlanTimeline({ milestones, nextMilestoneId, statusGroup 
                   Next up
                 </p>
               )}
-              <MilestoneCard step={step} isNext={isNext} statusGroup={statusGroup} />
+              <MilestoneCard step={step} isNext={isNext} />
             </div>
           </div>
         );

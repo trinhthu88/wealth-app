@@ -28,10 +28,9 @@ function isPastDue(d: string | null, status: string) {
 interface Props {
   step: PlanMilestone;
   isNext: boolean;
-  statusGroup: (s: string) => string;
 }
 
-export default function MilestoneCard({ step, isNext, statusGroup }: Props) {
+export default function MilestoneCard({ step, isNext }: Props) {
   const [showComments, setShowComments] = useState(false);
   const [showAddComment, setShowAddComment] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -67,15 +66,11 @@ export default function MilestoneCard({ step, isNext, statusGroup }: Props) {
       {/* Description */}
       {(step.notes || step.goalProgress) && (
         <div>
-          <p className={cn("text-sm text-slate-500", !expanded && hasLongText && "line-clamp-3")}>
-            {step.notes}
-            {step.notes && step.goalProgress ? " · " : ""}
-            {step.goalProgress
-              ? statusGroup(step.status) === "in_progress"
-                ? `$${Math.round(step.goalProgress.currentAmount).toLocaleString()} of $${Math.round(step.goalProgress.targetAmount).toLocaleString()}`
-                : `$${Math.round(step.goalProgress.targetAmount).toLocaleString()}${statusGroup(step.status) === "upcoming" ? " target" : ""}`
-              : ""}
-          </p>
+          {step.notes && (
+            <p className={cn("text-sm text-slate-500", !expanded && hasLongText && "line-clamp-3")}>
+              {step.notes}
+            </p>
+          )}
           {hasLongText && (
             <button
               onClick={() => setExpanded(v => !v)}
@@ -83,6 +78,19 @@ export default function MilestoneCard({ step, isNext, statusGroup }: Props) {
             >
               {expanded ? "Show less" : "Read more"}
             </button>
+          )}
+          {step.goalProgress && (
+            <div className={cn(step.notes && "mt-2")}>
+              <p className="text-sm text-slate-500 mb-1.5">
+                ${Math.round(step.goalProgress.currentAmount).toLocaleString()} of ${Math.round(step.goalProgress.targetAmount).toLocaleString()}
+              </p>
+              <div className="rounded-full bg-slate-100 h-1.5 max-w-[280px]" aria-label={`${Math.round(step.goalProgress.progressPct)}% of ${step.title} funded`}>
+                <div
+                  className="h-full rounded-full bg-[#1D9E75] transition-[width] duration-500"
+                  style={{ width: `${Math.min(100, Math.max(0, step.goalProgress.progressPct))}%` }}
+                />
+              </div>
+            </div>
           )}
         </div>
       )}

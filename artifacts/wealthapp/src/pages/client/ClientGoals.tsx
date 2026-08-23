@@ -59,7 +59,7 @@ function PlanTab() {
     completedCount, inProgressCount, upcomingCount, totalCount, completionPct,
     nextMilestone, daysUntilReview, isReviewOverdue,
     advisorName, advisorId, nextReviewDate,
-    loading, statusGroup,
+    loading,
   } = usePlan();
 
   const [showReviewSheet, setShowReviewSheet] = useState(false);
@@ -106,7 +106,6 @@ function PlanTab() {
           <PlanTimeline
             milestones={milestones}
             nextMilestoneId={nextMilestone?.id ?? null}
-            statusGroup={statusGroup}
           />
         </div>
       ) : (

@@ -197,6 +197,7 @@ export default function ClientPlan() {
               const isNext = m.id === nextMilestone?.id;
               
               if (status === "completed") {
+                const gp = m.goalProgress;
                 return (
                   <div key={m.id} className="mb-[28px] relative">
                     <div className="absolute -left-[34px] top-[2px] w-[24px] h-[24px] rounded-full bg-sun flex items-center justify-center text-[12px] text-sun-ink font-bold z-10 shadow-[0_0_12px_rgba(255,182,39,0.3)]">
@@ -208,10 +209,19 @@ export default function ClientPlan() {
                     <h2 className="font-display text-[20px] font-semibold text-paper mt-0.5 mb-1">
                       {m.title}
                     </h2>
-                    {(m.notes || m.goalProgress) && (
-                      <div className="text-[13.5px] text-mint max-w-[500px] leading-relaxed">
-                        {m.notes}{m.notes && m.goalProgress ? " · " : ""}{m.goalProgress ? `$${Math.round(m.goalProgress.targetAmount).toLocaleString()}` : ""}
-                      </div>
+                    {m.notes && <div className="text-[13.5px] text-mint mb-2 max-w-[500px] leading-relaxed">{m.notes}</div>}
+                    {gp && (
+                      <>
+                        <div className="text-[13.5px] text-mint mb-2">
+                          ${Math.round(gp.currentAmount).toLocaleString()} of ${Math.round(gp.targetAmount).toLocaleString()}
+                        </div>
+                        <div className="rounded-full bg-track-dark h-[6px] max-w-[420px]" aria-label={`${Math.round(gp.progressPct)}% of ${m.title} funded`}>
+                          <div
+                            className="h-full rounded-full bg-sun transition-[width] duration-500"
+                            style={{ width: `${Math.min(100, Math.max(0, gp.progressPct))}%` }}
+                          />
+                        </div>
+                      </>
                     )}
                   </div>
                 );
@@ -253,22 +263,34 @@ export default function ClientPlan() {
               }
               
               // Future (upcoming)
-              return (
-                <div key={m.id} className="mb-[26px] relative">
-                  <div className="absolute -left-[34px] top-[2px] w-[24px] h-[24px] rounded-full border-[2px] border-mint-dim z-10 bg-forest" />
-                  <div className="text-[12.5px] font-semibold tracking-[0.06em] text-mint-dim uppercase">
-                    {year}
-                  </div>
-                  <h2 className="font-display text-[20px] font-semibold text-[#DCEAE3] mt-0.5 mb-1">
-                    {m.title}
-                  </h2>
-                  {(m.notes || m.goalProgress) && (
-                    <div className="text-[13.5px] text-mint-dim max-w-[500px] leading-relaxed">
-                      {m.notes}{m.notes && m.goalProgress ? " · " : ""}{m.goalProgress ? `$${Math.round(m.goalProgress.targetAmount).toLocaleString()} target` : ""}
+              {
+                const gp = m.goalProgress;
+                return (
+                  <div key={m.id} className="mb-[26px] relative">
+                    <div className="absolute -left-[34px] top-[2px] w-[24px] h-[24px] rounded-full border-[2px] border-mint-dim z-10 bg-forest" />
+                    <div className="text-[12.5px] font-semibold tracking-[0.06em] text-mint-dim uppercase">
+                      {year}
                     </div>
-                  )}
-                </div>
-              );
+                    <h2 className="font-display text-[20px] font-semibold text-[#DCEAE3] mt-0.5 mb-1">
+                      {m.title}
+                    </h2>
+                    {m.notes && <div className="text-[13.5px] text-mint-dim mb-2 max-w-[500px] leading-relaxed">{m.notes}</div>}
+                    {gp && (
+                      <>
+                        <div className="text-[13.5px] text-mint-dim mb-2">
+                          ${Math.round(gp.currentAmount).toLocaleString()} of ${Math.round(gp.targetAmount).toLocaleString()}
+                        </div>
+                        <div className="rounded-full bg-track-dark h-[6px] max-w-[420px]" aria-label={`${Math.round(gp.progressPct)}% of ${m.title} funded`}>
+                          <div
+                            className="h-full rounded-full bg-sun transition-[width] duration-500"
+                            style={{ width: `${Math.min(100, Math.max(0, gp.progressPct))}%` }}
+                          />
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              }
           })}
         </div>
 
