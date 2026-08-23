@@ -1,3 +1,12 @@
+// ANIMATION RULES FOR THIS PAGE:
+// ✓ ALLOWED: Chart draw animation (Recharts default)
+// ✓ ALLOWED: BottomSheet spring animation
+// ✗ BANNED:  Page-load stagger on sections
+// ✗ BANNED:  JetBrains Mono font
+// ✗ BANNED:  Cream/warm palette (#FAF8F5, #F2EFE9, #A8A095)
+// ✗ BANNED:  Inline style={{ color: '#hexcode' }} — use Tailwind tokens only
+// ✗ BANNED:  Double bottom nav — AppShell is the ONLY nav
+
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
@@ -16,16 +25,19 @@ import { useProfile } from "@/hooks/useProfile";
 interface Asset { id: string; name: string; category: string; valueUsd: string; currencyOriginal: string; }
 interface Liability { id: string; name: string; category: string; balanceUsd: string; interestRatePercent: string | null; }
 
-// Free-tier: exactly 5 asset categories
+// Free-tier: exactly 5 asset categories.
+// The design system's palette is brand-semantic (green/sun/clay + neutrals), not a
+// general-purpose categorical palette, so these 5 distinct hues are the closest
+// available tokens rather than a precise one-to-one mapping — flagged for review.
 const ASSET_CAT_INFO: Record<string, { label: string; icon: React.ElementType; color: string; bg: string }> = {
-  cash:        { label: "Cash",        icon: Landmark, color: "#4ADE80", bg: "rgba(74,222,128,0.15)" },
-  savings:     { label: "Savings",     icon: PiggyBank, color: "#60A5FA", bg: "rgba(96,165,250,0.15)" },
-  investment:  { label: "Investment",  icon: TrendingUp, color: "#A78BFA", bg: "rgba(167,139,250,0.15)" },
-  business:    { label: "Business",    icon: Briefcase, color: "#FB923C", bg: "rgba(251,146,60,0.15)" },
-  real_estate: { label: "Real Estate", icon: Home, color: "#F472B6", bg: "rgba(244,114,182,0.15)" },
+  cash:        { label: "Cash",        icon: Landmark, color: "var(--green)", bg: "rgba(29,158,117,0.15)" },
+  savings:     { label: "Savings",     icon: PiggyBank, color: "var(--sun)", bg: "rgba(255,182,39,0.15)" },
+  investment:  { label: "Investment",  icon: TrendingUp, color: "var(--forest-700)", bg: "rgba(29,74,58,0.15)" },
+  business:    { label: "Business",    icon: Briefcase, color: "var(--clay-ink)", bg: "rgba(163,69,42,0.15)" },
+  real_estate: { label: "Real Estate", icon: Home, color: "var(--ink-60)", bg: "rgba(74,92,84,0.15)" },
 };
 // Fallback for any legacy categories still in DB
-const ASSET_CAT_FALLBACK = { label: "Other", icon: FileText, color: "#A8A095", bg: "rgba(168,160,149,0.12)" };
+const ASSET_CAT_FALLBACK = { label: "Other", icon: FileText, color: "var(--ink-40)", bg: "rgba(122,139,130,0.12)" };
 
 const LIABILITY_CAT_INFO: Record<string, { label: string; icon: React.ElementType }> = {
   mortgage:     { label: "Mortgage",        icon: Home },
@@ -111,12 +123,12 @@ export default function NetWorthPage() {
   });
 
   const chartData = [
-    { name: "Assets",       value: totalAssets,      fill: "#1D9E75" },
-    { name: "Liabilities",  value: totalLiabilities, fill: "#D86B5A" },
-    { name: "Net Worth",    value: Math.abs(netWorth), fill: netWorth >= 0 ? "#042C53" : "#F5B947" },
+    { name: "Assets",       value: totalAssets,      fill: "var(--green)" },
+    { name: "Liabilities",  value: totalLiabilities, fill: "var(--clay)" },
+    { name: "Net Worth",    value: Math.abs(netWorth), fill: netWorth >= 0 ? "var(--forest)" : "var(--sun)" },
   ];
 
-  const netWorthColor = netWorth > 0 ? "#1D9E75" : netWorth < 0 ? "#D86B5A" : "#A8A095";
+  const netWorthColor = netWorth > 0 ? "var(--green)" : netWorth < 0 ? "var(--clay)" : "var(--ink-40)";
 
   return (
     <AppShell>
@@ -129,53 +141,53 @@ export default function NetWorthPage() {
         />
 
         {/* Dark navy header */}
-        <div className="-mx-4 -mt-4 md:-mx-6 md:-mt-6" style={{ background: "#042C53", padding: "20px 22px 48px" }}>
-          <h1 style={{ fontFamily: "'Sora', sans-serif", fontSize: 22, fontWeight: 700, color: "white", letterSpacing: "-0.02em", marginBottom: 20 }}>
+        <div className="-mx-4 -mt-4 md:-mx-6 md:-mt-6 bg-forest p-[20px_22px_48px]">
+          <h1 className="text-[22px] font-bold text-white tracking-[-0.02em] mb-5">
             Net Worth
           </h1>
           <div className="grid grid-cols-2 gap-5 mb-3">
             <div>
-              <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 11 }}>Total assets</p>
-              <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 22, fontWeight: 700, color: "white", marginTop: 2 }}>
+              <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.5)" }}>Total assets</p>
+              <p className="text-[22px] font-bold text-white mt-0.5">
                 {totalAssets > 0 ? fmt(totalAssets) : "—"}
               </p>
             </div>
             <div>
-              <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 11 }}>Total liabilities</p>
-              <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 22, fontWeight: 700, color: "white", marginTop: 2 }}>
+              <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.5)" }}>Total liabilities</p>
+              <p className="text-[22px] font-bold text-white mt-0.5">
                 {totalLiabilities > 0 ? fmt(totalLiabilities) : "—"}
               </p>
             </div>
           </div>
           {(totalAssets > 0 || totalLiabilities > 0) && (
-            <p style={{ color: netWorth >= 0 ? "#F5B947" : "#D86B5A", fontSize: 13, fontWeight: 500 }}>
+            <p className={`text-[13px] font-medium ${netWorth >= 0 ? "text-sun" : "text-clay"}`}>
               Net worth {fmt(netWorth)}{netWorth < 0 ? " — liabilities exceed assets" : ""}
             </p>
           )}
         </div>
 
         {/* Cream content area */}
-        <div className="-mx-4 md:-mx-6" style={{ background: "#FAF8F5", borderRadius: "24px 24px 0 0", marginTop: -24, padding: "22px 16px 0", minHeight: "100%" }}>
+        <div className="-mx-4 md:-mx-6 bg-paper rounded-t-[24px] -mt-6 p-[22px_16px_0] min-h-full">
           <div className="space-y-4">
 
             {/* Chart */}
             {(assets.length > 0 || liabilities.length > 0) && (
-              <div className="bg-white rounded-[20px]" style={{ boxShadow: "0 4px 14px rgba(15,23,42,0.06)", padding: 18 }}>
-                <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.11em", textTransform: "uppercase", color: "#A8A095", marginBottom: 12 }}>
+              <div className="bg-surface rounded-[20px] p-[18px] shadow-[0_4px_14px_rgba(20,52,42,.06)]">
+                <p className="text-[11px] tracking-[0.11em] uppercase text-ink-40 mb-3">
                   Overview
                 </p>
                 {netWorth < 0 && (
-                  <div className="rounded-[12px] px-3 py-2 mb-3 flex items-center gap-2" style={{ background: "#FEEAE8", border: "1px solid rgba(216,107,90,0.2)" }}>
-                    <AlertCircle className="h-4 w-4 shrink-0 text-[#B85544]" aria-hidden="true" />
-                    <p style={{ fontSize: 12, color: "#B85544" }}>Your liabilities currently exceed your assets.</p>
+                  <div className="rounded-[12px] px-3 py-2 mb-3 flex items-center gap-2 bg-clay-tint border border-clay/20">
+                    <AlertCircle className="h-4 w-4 shrink-0 text-clay-ink" aria-hidden="true" />
+                    <p className="text-xs text-clay-ink">Your liabilities currently exceed your assets.</p>
                   </div>
                 )}
                 <div role="img" aria-label={`Net worth breakdown: assets ${fmt(totalAssets)}, liabilities ${fmt(totalLiabilities)}, net worth ${fmt(netWorth)}`}>
                   <ResponsiveContainer width="100%" height={160}>
                     <BarChart data={chartData} barSize={40}>
-                      <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#A8A095" }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fontSize: 10, fill: "#A8A095" }} tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} axisLine={false} tickLine={false} />
-                      <Tooltip formatter={(v: number) => [fmt(v), ""]} cursor={{ fill: "rgba(4,44,83,0.04)" }} />
+                      <XAxis dataKey="name" tick={{ fontSize: 11, fill: "var(--ink-40)" }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fontSize: 10, fill: "var(--ink-40)" }} tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} axisLine={false} tickLine={false} />
+                      <Tooltip formatter={(v: number) => [fmt(v), ""]} cursor={{ fill: "rgba(20,52,42,0.04)" }} />
                       <Bar dataKey="value" radius={[6, 6, 0, 0]}>
                         {chartData.map((d, i) => <Cell key={i} fill={d.fill} />)}
                       </Bar>
@@ -186,15 +198,12 @@ export default function NetWorthPage() {
             )}
 
             {/* Tab toggle */}
-            <div className="flex gap-1 rounded-xl p-1" style={{ background: "#F2EFE9" }}>
+            <div className="flex gap-1 rounded-xl p-1 bg-hairline">
               {(["assets", "liabilities"] as const).map(t => (
                 <button key={t} onClick={() => setTab(t)}
-                  className="flex-1 py-1.5 text-xs font-medium rounded-lg transition-all capitalize"
-                  style={{
-                    background: tab === t ? "white" : "transparent",
-                    color: tab === t ? "#042C53" : "#A8A095",
-                    boxShadow: tab === t ? "0 1px 4px rgba(15,23,42,0.08)" : "none",
-                  }}>
+                  className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all capitalize ${
+                    tab === t ? "bg-surface text-forest shadow-[0_1px_4px_rgba(20,52,42,.08)]" : "bg-transparent text-ink-40"
+                  }`}>
                   {t === "assets" ? `Assets (${assets.length})` : `Liabilities (${liabilities.length})`}
                 </button>
               ))}
@@ -205,57 +214,56 @@ export default function NetWorthPage() {
               <div className="space-y-3">
                 <button
                   onClick={() => setShowAssetForm(true)}
-                  className="w-full rounded-[20px] p-4 text-left active:scale-95 transition-transform"
-                  style={{ background: "#E6F5EE", border: "1px solid rgba(29,158,117,0.25)" }}
+                  className="w-full rounded-[20px] p-4 text-left active:scale-95 transition-transform bg-green-tint border border-green/25"
                 >
                   <div className="flex items-center gap-2">
                     <span className="text-lg"></span>
-                    <Plus className="h-3.5 w-3.5" style={{ color: "#1D9E75" }} />
-                    <p style={{ fontSize: 13, fontWeight: 600, color: "#0F6E56" }}>Add an asset</p>
+                    <Plus className="h-3.5 w-3.5 text-green" />
+                    <p className="text-[13px] font-semibold text-green">Add an asset</p>
                   </div>
-                  <p style={{ fontSize: 11, color: "#1D9E75", marginTop: 4 }}>Cash, savings, investments, business, property</p>
+                  <p className="text-[11px] text-green mt-1">Cash, savings, investments, business, property</p>
                 </button>
 
                 {assets.length === 0 ? (
-                  <div className="rounded-[20px] text-center py-8" style={{ border: "1.5px dashed #E6E1D8" }}>
-                    <p style={{ fontSize: 13, color: "#A8A095" }}>No assets added yet.</p>
-                    <p style={{ fontSize: 12, color: "#A8A095", marginTop: 4 }}>Track what you own to see your net worth.</p>
+                  <div className="rounded-[20px] text-center py-8 border-[1.5px] border-dashed border-hairline">
+                    <p className="text-[13px] text-ink-40">No assets added yet.</p>
+                    <p className="text-xs text-ink-40 mt-1">Track what you own to see your net worth.</p>
                   </div>
                 ) : (
-                  <div className="bg-white rounded-[20px] overflow-hidden" style={{ boxShadow: "0 4px 14px rgba(15,23,42,0.06)" }}>
+                  <div className="bg-surface rounded-[20px] overflow-hidden shadow-[0_4px_14px_rgba(20,52,42,.06)]">
                     {assets.map((a, idx) => {
                       const info = ASSET_CAT_INFO[a.category] ?? ASSET_CAT_FALLBACK;
                       return (
-                        <div key={a.id} style={{ padding: "14px 18px", borderBottom: idx < assets.length - 1 ? "1px solid #F2EFE9" : "none" }}>
+                        <div key={a.id} className={`p-[14px_18px] ${idx < assets.length - 1 ? "border-b border-hairline" : ""}`}>
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3 flex-1 min-w-0">
-                              <div className="flex-shrink-0 flex items-center justify-center rounded-xl" style={{ width: 38, height: 38, background: info.bg }}>
+                              <div className="flex-shrink-0 flex items-center justify-center rounded-xl w-[38px] h-[38px]" style={{ background: info.bg }}>
                                 <info.icon className="w-5 h-5" style={{ color: info.color }} />
                               </div>
                               <div className="min-w-0">
-                                <p style={{ fontSize: 13, fontWeight: 600, color: "#042C53" }} className="truncate">{a.name}</p>
-                                <p style={{ fontSize: 11, color: "#A8A095", marginTop: 1 }}>{info.label}</p>
+                                <p className="text-[13px] font-semibold text-forest truncate">{a.name}</p>
+                                <p className="text-[11px] text-ink-40 mt-px">{info.label}</p>
                               </div>
                             </div>
                             <div className="flex items-center gap-2 flex-shrink-0">
-                              <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 14, fontWeight: 700, color: info.color }}>
+                              <p className="text-sm font-bold" style={{ color: info.color }}>
                                 {fmt(parseFloat(a.valueUsd))}
                               </p>
                               {confirmDeleteAsset === a.id ? (
                                 <div className="flex items-center gap-1">
                                   <button onClick={() => delAsset.mutate(a.id)} disabled={delAsset.isPending}
-                                    className="text-xs text-white font-medium px-2 py-1 rounded-lg" style={{ background: "#D86B5A", minHeight: 32 }}>
+                                    className="text-xs text-white font-medium px-2 py-1 rounded-lg bg-clay min-h-8">
                                     {delAsset.isPending ? "…" : "Delete"}
                                   </button>
                                   <button onClick={() => setConfirmDeleteAsset(null)}
-                                    className="text-xs text-muted-foreground px-2 py-1 rounded-lg hover:bg-muted" style={{ minHeight: 32 }}>
+                                    className="text-xs text-muted-foreground px-2 py-1 rounded-lg hover:bg-muted min-h-8">
                                     Cancel
                                   </button>
                                 </div>
                               ) : (
                                 <button onClick={() => setConfirmDeleteAsset(a.id)}
-                                  className="flex items-center justify-center text-muted-foreground hover:text-red-500 transition-colors"
-                                  aria-label={`Delete ${a.name}`} style={{ minWidth: 36, minHeight: 36 }}>
+                                  className="flex items-center justify-center text-muted-foreground hover:text-red-500 transition-colors min-w-9 min-h-9"
+                                  aria-label={`Delete ${a.name}`}>
                                   <Trash2 className="h-4 w-4" />
                                 </button>
                               )}
@@ -276,19 +284,19 @@ export default function NetWorthPage() {
                 .filter(c => c.total > 0);
               if (totals.length === 0) return null;
               return (
-                <div className="bg-white rounded-[20px] overflow-hidden" style={{ boxShadow: "0 4px 14px rgba(15,23,42,0.06)" }}>
-                  <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.11em", textTransform: "uppercase", color: "#A8A095", padding: "14px 18px 8px" }}>
+                <div className="bg-surface rounded-[20px] overflow-hidden shadow-[0_4px_14px_rgba(20,52,42,.06)]">
+                  <p className="text-[11px] tracking-[0.11em] uppercase text-ink-40 p-[14px_18px_8px]">
                     By category
                   </p>
                   {totals.map((c, idx) => (
-                    <div key={c.key} style={{ padding: "10px 18px", borderTop: "1px solid #F2EFE9" }}>
+                    <div key={c.key} className="p-[10px_18px] border-t border-hairline">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <div style={{ width: 8, height: 8, borderRadius: "50%", background: c.color, flexShrink: 0 }} />
+                          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: c.color }} />
                           <c.icon className="w-4 h-4 text-muted-foreground" />
-                          <span style={{ fontSize: 13, color: "#2D2A24" }}>{c.label}</span>
+                          <span className="text-[13px] text-forest">{c.label}</span>
                         </div>
-                        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, fontWeight: 600, color: c.color }}>
+                        <span className="text-[13px] font-semibold" style={{ color: c.color }}>
                           {fmt(c.total)}
                         </span>
                       </div>
@@ -303,59 +311,58 @@ export default function NetWorthPage() {
               <div className="space-y-3">
                 <button
                   onClick={() => setShowLiabForm(true)}
-                  className="w-full rounded-[20px] p-4 text-left active:scale-95 transition-transform"
-                  style={{ background: "#FEEAE8", border: "1px solid rgba(216,107,90,0.25)" }}
+                  className="w-full rounded-[20px] p-4 text-left active:scale-95 transition-transform bg-clay-tint border border-clay/25"
                 >
                   <div className="flex items-center gap-2">
                     <span className="text-lg"></span>
-                    <Plus className="h-3.5 w-3.5" style={{ color: "#D86B5A" }} />
-                    <p style={{ fontSize: 13, fontWeight: 600, color: "#B85544" }}>Add a liability</p>
+                    <Plus className="h-3.5 w-3.5 text-clay" />
+                    <p className="text-[13px] font-semibold text-clay-ink">Add a liability</p>
                   </div>
-                  <p style={{ fontSize: 11, color: "#D86B5A", marginTop: 4 }}>Mortgage, loans, credit card debt…</p>
+                  <p className="text-[11px] text-clay mt-1">Mortgage, loans, credit card debt…</p>
                 </button>
 
                 {liabilities.length === 0 ? (
-                  <div className="rounded-[20px] text-center py-8" style={{ border: "1.5px dashed #E6E1D8" }}>
-                    <p style={{ fontSize: 13, color: "#A8A095" }}>No liabilities added yet.</p>
-                    <p style={{ fontSize: 12, color: "#A8A095", marginTop: 4 }}>Track what you owe for a complete picture.</p>
+                  <div className="rounded-[20px] text-center py-8 border-[1.5px] border-dashed border-hairline">
+                    <p className="text-[13px] text-ink-40">No liabilities added yet.</p>
+                    <p className="text-xs text-ink-40 mt-1">Track what you owe for a complete picture.</p>
                   </div>
                 ) : (
-                  <div className="bg-white rounded-[20px] overflow-hidden" style={{ boxShadow: "0 4px 14px rgba(15,23,42,0.06)" }}>
+                  <div className="bg-surface rounded-[20px] overflow-hidden shadow-[0_4px_14px_rgba(20,52,42,.06)]">
                     {liabilities.map((l, idx) => {
                       const info = LIABILITY_CAT_INFO[l.category] ?? { label: l.category, icon: AlertCircle };
                       return (
-                        <div key={l.id} style={{ padding: "14px 18px", borderBottom: idx < liabilities.length - 1 ? "1px solid #F2EFE9" : "none" }}>
+                        <div key={l.id} className={`p-[14px_18px] ${idx < liabilities.length - 1 ? "border-b border-hairline" : ""}`}>
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3 flex-1 min-w-0">
-                              <div className="flex-shrink-0 flex items-center justify-center rounded-xl" style={{ width: 38, height: 38, background: "#FEEAE8" }}>
-                                <info.icon className="w-5 h-5 text-[#D86B5A]" />
+                              <div className="flex-shrink-0 flex items-center justify-center rounded-xl w-[38px] h-[38px] bg-clay-tint">
+                                <info.icon className="w-5 h-5 text-clay" />
                               </div>
                               <div className="min-w-0">
-                                <p style={{ fontSize: 13, fontWeight: 600, color: "#042C53" }} className="truncate">{l.name}</p>
-                                <p style={{ fontSize: 11, color: "#A8A095", marginTop: 1 }}>
+                                <p className="text-[13px] font-semibold text-forest truncate">{l.name}</p>
+                                <p className="text-[11px] text-ink-40 mt-px">
                                   {info.label}{l.interestRatePercent ? ` · ${l.interestRatePercent}% interest` : ""}
                                 </p>
                               </div>
                             </div>
                             <div className="flex items-center gap-2 flex-shrink-0">
-                              <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 14, fontWeight: 700, color: "#D86B5A" }}>
+                              <p className="text-sm font-bold text-clay">
                                 {fmt(parseFloat(l.balanceUsd))}
                               </p>
                               {confirmDeleteLiab === l.id ? (
                                 <div className="flex items-center gap-1">
                                   <button onClick={() => delLiab.mutate(l.id)} disabled={delLiab.isPending}
-                                    className="text-xs text-white font-medium px-2 py-1 rounded-lg" style={{ background: "#D86B5A", minHeight: 32 }}>
+                                    className="text-xs text-white font-medium px-2 py-1 rounded-lg bg-clay min-h-8">
                                     {delLiab.isPending ? "…" : "Delete"}
                                   </button>
                                   <button onClick={() => setConfirmDeleteLiab(null)}
-                                    className="text-xs text-muted-foreground px-2 py-1 rounded-lg hover:bg-muted" style={{ minHeight: 32 }}>
+                                    className="text-xs text-muted-foreground px-2 py-1 rounded-lg hover:bg-muted min-h-8">
                                     Cancel
                                   </button>
                                 </div>
                               ) : (
                                 <button onClick={() => setConfirmDeleteLiab(l.id)}
-                                  className="flex items-center justify-center text-muted-foreground hover:text-red-500 transition-colors"
-                                  aria-label={`Delete ${l.name}`} style={{ minWidth: 36, minHeight: 36 }}>
+                                  className="flex items-center justify-center text-muted-foreground hover:text-red-500 transition-colors min-w-9 min-h-9"
+                                  aria-label={`Delete ${l.name}`}>
                                   <Trash2 className="h-4 w-4" />
                                 </button>
                               )}
@@ -379,12 +386,11 @@ export default function NetWorthPage() {
           <>
             <motion.div className="fixed inset-0 bg-black/30 z-40" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowAssetForm(false)} />
             <motion.div
-              className="fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl shadow-2xl"
-              style={{ background: "white", padding: "24px 24px 40px" }}
+              className="fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl shadow-2xl bg-surface p-[24px_24px_40px]"
               initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", damping: 25, stiffness: 300 }}
             >
               <div className="flex items-center justify-between mb-5">
-                <h3 style={{ fontFamily: "'Sora', sans-serif", fontSize: 18, fontWeight: 700, color: "#042C53" }}>Add an asset</h3>
+                <h3 className="text-lg font-bold text-forest">Add an asset</h3>
                 <button onClick={() => setShowAssetForm(false)} className="flex items-center justify-center text-muted-foreground hover:text-foreground" aria-label="Close" style={{ minWidth: 36, minHeight: 36 }}>
                   <X className="h-5 w-5" />
                 </button>
@@ -430,12 +436,11 @@ export default function NetWorthPage() {
           <>
             <motion.div className="fixed inset-0 bg-black/30 z-40" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowLiabForm(false)} />
             <motion.div
-              className="fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl shadow-2xl"
-              style={{ background: "white", padding: "24px 24px 40px" }}
+              className="fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl shadow-2xl bg-surface p-[24px_24px_40px]"
               initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", damping: 25, stiffness: 300 }}
             >
               <div className="flex items-center justify-between mb-5">
-                <h3 style={{ fontFamily: "'Sora', sans-serif", fontSize: 18, fontWeight: 700, color: "#042C53" }}>Add a liability</h3>
+                <h3 className="text-lg font-bold text-forest">Add a liability</h3>
                 <button onClick={() => setShowLiabForm(false)} className="flex items-center justify-center text-muted-foreground hover:text-foreground" aria-label="Close" style={{ minWidth: 36, minHeight: 36 }}>
                   <X className="h-5 w-5" />
                 </button>

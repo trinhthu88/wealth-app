@@ -1,3 +1,12 @@
+// ANIMATION RULES FOR THIS PAGE:
+// ✓ ALLOWED: Chart draw animation (Recharts default)
+// ✓ ALLOWED: BottomSheet spring animation
+// ✗ BANNED:  Page-load stagger on sections
+// ✗ BANNED:  JetBrains Mono font
+// ✗ BANNED:  Cream/warm palette (#FAF8F5, #F2EFE9, #A8A095)
+// ✗ BANNED:  Inline style={{ color: '#hexcode' }} — use Tailwind tokens only
+// ✗ BANNED:  Double bottom nav — AppShell is the ONLY nav
+
 import confetti from "canvas-confetti";
 import { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -80,14 +89,14 @@ const slideVariants = {
 
 function StepHeading({ step: sn, title, sub }: { step: number; title: string; sub: string }) {
   return (
-    <div style={{ marginBottom: 24 }}>
-      <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, letterSpacing: "0.14em", textTransform: "uppercase", color: "#1D9E75", marginBottom: 8 }}>
+    <div className="mb-6">
+      <p className="text-[9px] tracking-[0.14em] uppercase text-green mb-2">
         STEP {sn} OF 6
       </p>
-      <h2 style={{ fontFamily: "'Sora', sans-serif", fontSize: 24, fontWeight: 700, color: "#042C53", letterSpacing: "-0.02em", lineHeight: 1.2 }}>
+      <h2 className="font-display text-[24px] font-bold text-forest tracking-[-0.02em] leading-tight">
         {title}
       </h2>
-      <p style={{ fontSize: 14, color: "#6B6459", marginTop: 6 }}>{sub}</p>
+      <p className="text-sm text-ink-60 mt-1.5">{sub}</p>
     </div>
   );
 }
@@ -410,11 +419,11 @@ export default function PathwayPage() {
           <motion.div key="grid" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} className="grid grid-cols-2 gap-3">
             {GOAL_OPTIONS.map(g => (
               <button key={g.type} onClick={() => { setField("goalType", g.type); setField("goalTitle", g.name); setGoalPanel(true); }}
-                className="rounded-[16px] p-4 text-center transition-colors active:scale-95 flex flex-col items-center"
-                style={{ border: form.goalType === g.type ? "2px solid #1D9E75" : "2px solid #E6E1D8", background: form.goalType === g.type ? "#E6F5EE" : "white" }}>
+                className={cn("rounded-[16px] p-4 text-center transition-colors active:scale-95 flex flex-col items-center border-2",
+                  form.goalType === g.type ? "border-green bg-green-tint" : "border-hairline bg-surface")}>
                 <div className="mb-2"><g.icon className={cn("w-7 h-7", form.goalType === g.type ? "text-primary" : "text-muted-foreground")} /></div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "#042C53" }}>{g.name}</div>
-                <div style={{ fontSize: 11, color: "#A8A095", marginTop: 2 }}>{g.desc}</div>
+                <div className="text-[13px] font-semibold text-forest">{g.name}</div>
+                <div className="text-[11px] text-ink-40 mt-0.5">{g.desc}</div>
               </button>
             ))}
           </motion.div>
@@ -547,8 +556,8 @@ export default function PathwayPage() {
                   setTimeout(() => setRiskAnswered(true), 200);
                 }
               }}
-                className="w-full rounded-[14px] p-3.5 text-left transition-colors active:scale-[0.98]"
-                style={{ border: form.riskAnswers[riskSubStep] === i + 1 ? "2px solid #1D9E75" : "2px solid #E6E1D8", background: form.riskAnswers[riskSubStep] === i + 1 ? "#E6F5EE" : "white", fontSize: 14, color: "#042C53" }}>
+                className={cn("w-full rounded-[14px] p-3.5 text-left transition-colors active:scale-[0.98] border-2 text-sm text-forest",
+                  form.riskAnswers[riskSubStep] === i + 1 ? "border-green bg-green-tint" : "border-hairline bg-surface")}>
                 {opt}
               </button>
             ))}
@@ -589,7 +598,7 @@ export default function PathwayPage() {
   // Completion screen — shown after step 6 is saved
   if (showCompletion) {
     return (
-      <div className="h-screen flex flex-col items-center justify-center px-6" style={{ background: "#042C53" }}>
+      <div className="h-screen flex flex-col items-center justify-center px-6 bg-forest">
         <motion.div
           initial={{ opacity: 0, scale: 0.9, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -604,32 +613,31 @@ export default function PathwayPage() {
           </motion.div>
 
           <div className="space-y-2">
-            <h1 style={{ fontFamily: "'Sora', sans-serif", fontSize: 26, fontWeight: 700, color: "white", lineHeight: 1.2 }}>
+            <h1 className="font-display text-[26px] font-bold text-white leading-tight">
               Your plan is ready.
             </h1>
-            <p style={{ fontSize: 14, color: "rgba(255,255,255,0.5)", marginTop: 10, lineHeight: 1.6 }}>
+            <p className="text-sm text-white/50 mt-2.5 leading-relaxed">
               Sol is proud of you. Your financial pathway is complete — your personalised plan awaits.
             </p>
           </div>
 
-          <div className="bg-white rounded-[20px] p-5 space-y-3 text-left">
+          <div className="bg-surface rounded-[20px] p-5 space-y-3 text-left">
             {[
               "Profile & goals saved",
               "Risk profile set",
               "Financial snapshot complete",
             ].map((item) => (
               <div key={item} className="flex items-center gap-3">
-                <div className="h-5 w-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "#1D9E75" }}>
+                <div className="h-5 w-5 rounded-full flex items-center justify-center flex-shrink-0 bg-green">
                   <Check className="h-3 w-3 text-white" />
                 </div>
-                <span style={{ fontSize: 13, fontWeight: 500, color: "#042C53" }}>{item}</span>
+                <span className="text-[13px] font-medium text-forest">{item}</span>
               </div>
             ))}
           </div>
 
           <button
-            className="w-full rounded-full transition-opacity active:opacity-80"
-            style={{ background: "#1D9E75", color: "white", padding: "17px 24px", fontSize: 16, fontWeight: 700, fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+            className="w-full rounded-full transition-opacity active:opacity-80 bg-green text-white px-6 py-[17px] text-base font-bold"
             onClick={() => navigate("/free/dashboard")}
           >
             Take me to my dashboard →
@@ -668,14 +676,14 @@ export default function PathwayPage() {
 
     return (
       <div className="h-screen bg-background flex flex-col overflow-hidden">
-        <div className="sticky top-0 z-10" style={{ background: "#FAF8F5", borderBottom: "1px solid #E6E1D8" }}>
+        <div className="sticky top-0 z-10 bg-paper border-b border-hairline">
           <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
             <div className="flex gap-1.5 flex-1 mr-3">
               {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} style={{ height: 4, flex: 1, borderRadius: 999, background: "#1D9E75" }} />
+                <div key={i} className="h-1 flex-1 rounded-full bg-green" />
               ))}
             </div>
-            <span style={{ fontSize: 11, color: "#1D9E75", fontWeight: 600, whiteSpace: "nowrap" }}>
+            <span className="text-[11px] text-green font-semibold whitespace-nowrap">
               <Check className="inline h-3 w-3 mr-1" />All complete
             </span>
           </div>
@@ -685,7 +693,7 @@ export default function PathwayPage() {
           <div className="max-w-lg mx-auto px-4 py-6 pb-28 space-y-4">
             <div className="text-center mb-4">
               <div className="text-4xl mb-3"></div>
-              <h1 style={{ fontFamily: "'Sora', sans-serif", fontSize: 22, fontWeight: 700, color: "#042C53" }}>
+              <h1 className="font-display text-[22px] font-bold text-forest">
                 Your pathway is complete
               </h1>
               <p className="text-sm text-muted-foreground mt-1">
@@ -734,8 +742,7 @@ export default function PathwayPage() {
 
             <button
               onClick={() => navigate("/free/dashboard")}
-              className="w-full rounded-full mt-2"
-              style={{ background: "#1D9E75", color: "white", padding: "15px 24px", fontSize: 15, fontWeight: 700, fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+              className="w-full rounded-full mt-2 bg-green text-white px-6 py-[15px] text-[15px] font-bold"
             >
               Back to dashboard
             </button>
@@ -758,33 +765,29 @@ export default function PathwayPage() {
   return (
     <div className="h-screen bg-background flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="sticky top-0 z-10" style={{ background: "#FAF8F5", borderBottom: "1px solid #E6E1D8" }}>
+      <div className="sticky top-0 z-10 bg-paper border-b border-hairline">
         <div className="max-w-lg mx-auto px-4 py-3 flex items-center gap-3">
           {step > 0 && (
-            <button onClick={back} style={{ color: "#A8A095", marginRight: 4 }} className="transition-colors hover:opacity-70">
+            <button onClick={back} className="transition-colors hover:opacity-70 text-ink-40 mr-1">
               <ArrowLeft className="h-5 w-5" />
             </button>
           )}
           <div className="flex-1">
-            <div className="flex gap-1.5" style={{ marginBottom: 6 }}>
+            <div className="flex gap-1.5 mb-1.5">
               {Array.from({ length: 6 }).map((_, i) => (
                 <div
                   key={i}
-                  style={{
-                    height: 4, flex: 1, borderRadius: 999,
-                    background: i <= step - 1 ? "#1D9E75" : i === step ? "#1D9E75" : "#E6E1D8",
-                    transition: "background 0.3s",
-                  }}
+                  className={cn("h-1 flex-1 rounded-full transition-colors", i <= step ? "bg-green" : "bg-hairline")}
                 />
               ))}
             </div>
-            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: "#A8A095" }}>
+            <p className="text-[10px] text-ink-40">
               {completedCount}/6 steps complete
             </p>
           </div>
           {saveStatus !== "idle" && (
-            <span style={{ fontSize: 11, color: "#A8A095", display: "flex", alignItems: "center", gap: 4 }}>
-              {saveStatus === "saving" ? "Saving…" : <><Check className="h-3.5 w-3.5" style={{ color: "#1D9E75" }} />Saved</>}
+            <span className="text-[11px] text-ink-40 flex items-center gap-1">
+              {saveStatus === "saving" ? "Saving…" : <><Check className="h-3.5 w-3.5 text-green" />Saved</>}
             </span>
           )}
         </div>

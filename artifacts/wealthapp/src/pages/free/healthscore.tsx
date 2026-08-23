@@ -1,3 +1,12 @@
+// ANIMATION RULES FOR THIS PAGE:
+// ✓ ALLOWED: Chart draw animation (Recharts default)
+// ✓ ALLOWED: BottomSheet spring animation
+// ✗ BANNED:  Page-load stagger on sections
+// ✗ BANNED:  JetBrains Mono font
+// ✗ BANNED:  Cream/warm palette (#FAF8F5, #F2EFE9, #A8A095)
+// ✗ BANNED:  Inline style={{ color: '#hexcode' }} — use Tailwind tokens only
+// ✗ BANNED:  Double bottom nav — AppShell is the ONLY nav
+
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
@@ -75,27 +84,26 @@ function investmentScore(investmentBalance: number): number {
 }
 
 function statusBadge(score: number) {
-  if (score >= 70) return { label: "Good",       color: "#1D9E75", bg: "#E6F5EE" };
-  if (score >= 40) return { label: "Fair",       color: "#E8A53C", bg: "#FEF3C7" };
-  return             { label: "Needs work", color: "#D86B5A", bg: "#FEEAE8" };
+  if (score >= 70) return { label: "Good",       color: "var(--green)", bg: "var(--green-tint)" };
+  if (score >= 40) return { label: "Fair",       color: "var(--amber-ink)", bg: "var(--sun-tint)" };
+  return             { label: "Needs work", color: "var(--clay-ink)", bg: "var(--clay-tint)" };
 }
 
 function ringColor(score: number): string {
-  if (score >= 85) return "#10B981";
-  if (score >= 70) return "#1D9E75";
-  if (score >= 50) return "#F59E0B";
-  if (score >   0) return "#EF4444";
-  return "#E6F5EE";
+  if (score >= 70) return "var(--green)";
+  if (score >= 50) return "var(--sun-deep)";
+  if (score >   0) return "var(--clay)";
+  return "var(--ink-40)";
 }
 
 function monthKey(d: Date) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; }
 
 function insightCardStyle(text: string): { background: string; border: string } {
   if (/on track|ahead|positive|grew|great|excellent/i.test(text))
-    return { background: "#E6F5EE", border: "1px solid rgba(29,158,117,0.25)" };
+    return { background: "var(--green-tint)", border: "1px solid rgba(29,158,117,0.25)" };
   if (/setting|unlock|attention|focus|shortfall/i.test(text))
-    return { background: "#FEF9ED", border: "1px solid rgba(245,185,71,0.35)" };
-  return { background: "#EFF6FF", border: "1px solid rgba(59,130,246,0.2)" };
+    return { background: "var(--sun-tint)", border: "1px solid rgba(245,185,71,0.35)" };
+  return { background: "var(--surface)", border: "1px solid var(--hairline)" };
 }
 
 export default function HealthScorePage() {
@@ -210,19 +218,19 @@ export default function HealthScorePage() {
   const invScore = investmentScore(investmentBalance);
 
   // ── Per-dimension status badges (using underlying data thresholds, not score %) ──
-  const srBadge  = effectiveSavingsRate >= 15 ? { label: "Good",       color: "#1D9E75", bg: "#E6F5EE" }
-                 : effectiveSavingsRate >= 8  ? { label: "Fair",       color: "#E8A53C", bg: "#FEF3C7" }
-                 :                              { label: "Needs work", color: "#D86B5A", bg: "#FEEAE8" };
-  const efBadge  = emergencyMonths >= 6 ? { label: "Good",       color: "#1D9E75", bg: "#E6F5EE" }
-                 : emergencyMonths >= 3 ? { label: "Fair",       color: "#E8A53C", bg: "#FEF3C7" }
-                 :                        { label: "Needs work", color: "#D86B5A", bg: "#FEEAE8" };
-  const dlBadge  = debtToIncome <= 0   ? { label: "Good",       color: "#1D9E75", bg: "#E6F5EE" }
-                 : debtToIncome < 0.5  ? { label: "Good",       color: "#1D9E75", bg: "#E6F5EE" }
-                 : debtToIncome < 1.5  ? { label: "Fair",       color: "#E8A53C", bg: "#FEF3C7" }
-                 :                       { label: "Needs work", color: "#D86B5A", bg: "#FEEAE8" };
-  const invBadge = investmentBalance > 10_000 ? { label: "Good",       color: "#1D9E75", bg: "#E6F5EE" }
-                 : investmentBalance > 1_000  ? { label: "Fair",       color: "#E8A53C", bg: "#FEF3C7" }
-                 :                              { label: "Needs work", color: "#D86B5A", bg: "#FEEAE8" };
+  const srBadge  = effectiveSavingsRate >= 15 ? { label: "Good",       color: "var(--green)", bg: "var(--green-tint)" }
+                 : effectiveSavingsRate >= 8  ? { label: "Fair",       color: "var(--amber-ink)", bg: "var(--sun-tint)" }
+                 :                              { label: "Needs work", color: "var(--clay-ink)", bg: "var(--clay-tint)" };
+  const efBadge  = emergencyMonths >= 6 ? { label: "Good",       color: "var(--green)", bg: "var(--green-tint)" }
+                 : emergencyMonths >= 3 ? { label: "Fair",       color: "var(--amber-ink)", bg: "var(--sun-tint)" }
+                 :                        { label: "Needs work", color: "var(--clay-ink)", bg: "var(--clay-tint)" };
+  const dlBadge  = debtToIncome <= 0   ? { label: "Good",       color: "var(--green)", bg: "var(--green-tint)" }
+                 : debtToIncome < 0.5  ? { label: "Good",       color: "var(--green)", bg: "var(--green-tint)" }
+                 : debtToIncome < 1.5  ? { label: "Fair",       color: "var(--amber-ink)", bg: "var(--sun-tint)" }
+                 :                       { label: "Needs work", color: "var(--clay-ink)", bg: "var(--clay-tint)" };
+  const invBadge = investmentBalance > 10_000 ? { label: "Good",       color: "var(--green)", bg: "var(--green-tint)" }
+                 : investmentBalance > 1_000  ? { label: "Fair",       color: "var(--amber-ink)", bg: "var(--sun-tint)" }
+                 :                              { label: "Needs work", color: "var(--clay-ink)", bg: "var(--clay-tint)" };
 
   // Tips (shown only when score < 70)
   const srTip: string | null = srScore < 70
@@ -367,48 +375,42 @@ export default function HealthScorePage() {
 
         {/* ── Hero ring ──────────────────────────────────────────────────── */}
         <motion.div
-          className="bg-white rounded-[20px] p-6 text-center"
-          style={{ boxShadow: "0 4px 14px rgba(15,23,42,0.06)" }}
+          className="bg-surface rounded-[20px] p-6 text-center shadow-[0_4px_14px_rgba(15,23,42,0.06)]"
           initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
         >
           <div className="flex flex-col items-center gap-2 mb-2">
             <HealthScoreRing score={overall} size="lg" />
-            <div
-              style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, letterSpacing: 2.5, color: "#A8A095" }}
-            >
+            <div className="text-[10px] tracking-[2.5px] text-ink-40">
               /100
             </div>
-            <div
-              style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 13, fontWeight: 600, color: statusColor }}
-            >
+            <div className="text-[13px] font-semibold" style={{ color: statusColor }}>
               {statusText}
             </div>
           </div>
           <button
-            className="inline-flex items-center gap-1.5 rounded-full transition-colors"
-            style={{ border: "1.5px solid #E6E1D8", padding: "9px 18px", fontSize: 13, fontWeight: 500, color: "#6B6459", background: "white", minHeight: 44 }}
+            className="inline-flex items-center gap-1.5 rounded-full transition-colors border-[1.5px] border-hairline px-[18px] py-[9px] text-[13px] font-medium text-ink-60 bg-surface min-h-11"
             onClick={() => calculate.mutate()} disabled={calculate.isPending}
             aria-label="Recalculate financial health score"
           >
             <RefreshCw className={cn("h-3.5 w-3.5", calculate.isPending && "animate-spin")} />
             {calculate.isPending ? "Calculating…" : "Recalculate"}
           </button>
-          <p style={{ fontSize: 11, color: "#A8A095", marginTop: 8 }}>Updates when you edit your plan, budget, or asset data</p>
+          <p className="text-[11px] text-ink-40 mt-2">Updates when you edit your plan, budget, or asset data</p>
         </motion.div>
 
         {/* ── Four dimension cards ────────────────────────────────────────── */}
         {score && (
           <div className="space-y-3">
-            <h2 style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "#A8A095", margin: 0 }}>
+            <h2 className="text-[11px] tracking-[0.12em] uppercase text-ink-40 m-0">
               YOUR FINANCIAL HEALTH
             </h2>
             {dimensions.map((dim) => {
               const badge = dim.badge;
               const barPct = Math.min(100, dim.score);
-              const barColor = dim.score >= 70 ? "#1D9E75" : dim.score >= 40 ? "#E8A53C" : "#D86B5A";
+              const barColor = dim.score >= 70 ? "var(--green)" : dim.score >= 40 ? "var(--sun-deep)" : "var(--clay)";
               return (
                 <div key={dim.label}>
-                  <div className="bg-white rounded-2xl p-4" style={{ boxShadow: "0 2px 8px rgba(15,23,42,0.05)" }}>
+                  <div className="bg-surface rounded-2xl p-4 shadow-[0_2px_8px_rgba(15,23,42,0.05)]">
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2.5">
                         <div className="h-9 w-9 rounded-xl flex items-center justify-center"
@@ -416,39 +418,39 @@ export default function HealthScorePage() {
                           <dim.icon className="w-5 h-5" />
                         </div>
                         <div>
-                          <p style={{ fontSize: 13, fontWeight: 600, color: "#2D2A24" }}>{dim.label}</p>
-                          <p style={{ fontSize: 11, color: "#A8A095", marginTop: 1 }}>{dim.detail}</p>
+                          <p className="text-[13px] font-semibold text-forest">{dim.label}</p>
+                          <p className="text-[11px] text-ink-40 mt-px">{dim.detail}</p>
                         </div>
                       </div>
                       <div className="flex flex-col items-end gap-1">
-                        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 16, fontWeight: 700, color: badge.color }}>
+                        <span className="text-[16px] font-bold" style={{ color: badge.color }}>
                           {dim.score}
                         </span>
                         <span
-                          style={{ fontSize: 10, fontWeight: 600, color: badge.color, background: badge.bg, borderRadius: 999, padding: "2px 8px" }}
+                          className="text-[10px] font-semibold rounded-full px-2 py-0.5"
+                          style={{ color: badge.color, background: badge.bg }}
                         >
                           {badge.label}
                         </span>
                       </div>
                     </div>
                     <div
-                      style={{ height: 6, borderRadius: 999, background: "#F2EFE9", overflow: "hidden" }}
+                      className="h-1.5 rounded-full bg-hairline overflow-hidden"
                       role="progressbar"
                       aria-valuenow={barPct}
                       aria-valuemin={0}
                       aria-valuemax={100}
                       aria-label={`${dim.label}: ${dim.score} out of 100, ${badge.label}`}
                     >
-                      <div style={{ height: "100%", borderRadius: 999, background: barColor, width: `${barPct}%`, transition: "width 0.6s ease" }} />
+                      <div className="h-full rounded-full transition-[width] duration-500 ease-out" style={{ background: barColor, width: `${barPct}%` }} />
                     </div>
                   </div>
 
                   {/* Inline tip for scores below 70 */}
                   {dim.tip && (
-                    <div className="mt-1.5 mx-1 rounded-xl px-3 py-2.5 flex items-start gap-2"
-                      style={{ background: "#FEF9ED", border: "1px solid #F5D88A" }}>
-                      <span style={{ fontSize: 13, flexShrink: 0, marginTop: 1 }} aria-hidden="true"></span>
-                      <p style={{ fontSize: 12, color: "#7A5A00", lineHeight: 1.5 }}>{dim.tip}</p>
+                    <div className="mt-1.5 mx-1 rounded-xl px-3 py-2.5 flex items-start gap-2 bg-sun-tint border border-sun/40">
+                      <span className="text-[13px] flex-shrink-0 mt-px" aria-hidden="true"></span>
+                      <p className="text-[12px] text-amber-ink leading-normal">{dim.tip}</p>
                     </div>
                   )}
                 </div>
@@ -473,7 +475,7 @@ export default function HealthScorePage() {
               {insights.map((text, i) => {
                 const cardStyle = insightCardStyle(text);
                 return (
-                  <div key={i} className="rounded-xl p-4" style={{ background: cardStyle.background, border: cardStyle.border, fontSize: 13, lineHeight: 1.55, color: "#2D2A24" }}>
+                  <div key={i} className="rounded-xl p-4 text-[13px] leading-[1.55] text-forest" style={{ background: cardStyle.background, border: cardStyle.border }}>
                     {text}
                   </div>
                 );
@@ -500,7 +502,7 @@ export default function HealthScorePage() {
                 <ResponsiveContainer width="100%" height={100}>
                   <LineChart data={chartData}>
                     <Tooltip formatter={(v) => [`${v}`, "Score"]} labelFormatter={(l) => new Date(l).toLocaleDateString("en-US", { month: "short" })} />
-                    <Line type="monotone" dataKey="score" stroke="#1D9E75" strokeWidth={2} dot={{ fill: "#1D9E75", r: 4 }} />
+                    <Line type="monotone" dataKey="score" stroke="var(--green)" strokeWidth={2} dot={{ fill: "var(--green)", r: 4 }} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>

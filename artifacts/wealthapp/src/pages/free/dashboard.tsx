@@ -1,3 +1,12 @@
+// ANIMATION RULES FOR THIS PAGE:
+// ✓ ALLOWED: Chart draw animation (Recharts default)
+// ✓ ALLOWED: BottomSheet spring animation
+// ✗ BANNED:  Page-load stagger on sections
+// ✗ BANNED:  JetBrains Mono font
+// ✗ BANNED:  Cream/warm palette (#FAF8F5, #F2EFE9, #A8A095)
+// ✗ BANNED:  Inline style={{ color: '#hexcode' }} — use Tailwind tokens only
+// ✗ BANNED:  Double bottom nav — AppShell is the ONLY nav
+
 import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
@@ -244,7 +253,7 @@ export default function FreeDashboard() {
   const scoreVal = score?.overallScore || 0;
   const ringR = 68;
   const scoreStatusText = !scoreVal ? "Complete setup" : scoreVal >= 85 ? "Excellent" : scoreVal >= 70 ? "Good shape" : scoreVal >= 50 ? "Fair" : "Needs attention";
-  const scoreStatusColor = !scoreVal ? "#A8A095" : scoreVal >= 70 ? "#1D9E75" : scoreVal >= 50 ? "#E8A53C" : "#D86B5A";
+  const scoreStatusColor = !scoreVal ? "var(--ink-40)" : scoreVal >= 70 ? "var(--green)" : scoreVal >= 50 ? "var(--sun-deep)" : "var(--clay)";
 
   return (
     <AppShell>
@@ -256,10 +265,10 @@ export default function FreeDashboard() {
           className="flex items-start justify-between mb-5"
         >
           <div>
-            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: "#A8A095", marginBottom: 3 }}>
+            <p className="text-[10px] tracking-[0.12em] uppercase text-ink-40 mb-[3px]">
               {formatDashboardDate()}
             </p>
-            <h1 style={{ fontFamily: "'Sora', sans-serif", fontSize: 22, fontWeight: 700, color: "#042C53", letterSpacing: "-0.02em", lineHeight: 1.2 }}>
+            <h1 className="text-forest text-[22px] font-bold tracking-[-0.02em] leading-[1.2]">
               {getGreeting()}, {firstName}.
             </h1>
           </div>
@@ -273,20 +282,19 @@ export default function FreeDashboard() {
             {!pathwayDismissed && completedSteps < 6 && !profile?.onboardingComplete && (
               <motion.div
                 initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, height: 0, marginTop: 0 }}
-                className="relative overflow-hidden rounded-[16px] p-4"
-                style={{ background: "#E6F5EE", border: "1px solid rgba(29,158,117,0.2)" }}
+                className="relative overflow-hidden rounded-[16px] p-4 bg-green-tint border border-green/20"
               >
-                <button onClick={() => setPathwayDismissed(true)} className="absolute top-2 right-2 flex items-center justify-center" style={{ color: "#A8A095", minWidth: 36, minHeight: 36 }} aria-label="Dismiss pathway banner"><X className="h-4 w-4" /></button>
+                <button onClick={() => setPathwayDismissed(true)} className="absolute top-2 right-2 flex items-center justify-center text-ink-40 min-w-9 min-h-9" aria-label="Dismiss pathway banner"><X className="h-4 w-4" /></button>
                 <div className="flex items-center gap-2 mb-2 pr-6">
-                  <span style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 13, fontWeight: 600, color: "#0F6E56" }}>
+                  <span className="text-[13px] font-semibold text-green">
                     {completedSteps} of 6 steps complete
                   </span>
                 </div>
-                <div style={{ height: 4, borderRadius: 999, background: "#C8EDE0", overflow: "hidden", marginBottom: 10 }}>
-                  <div style={{ height: "100%", borderRadius: 999, background: "#1D9E75", width: `${pathwayPct}%`, transition: "width 0.4s ease" }} />
+                <div className="h-1 rounded-full bg-green-tint overflow-hidden mb-2.5">
+                  <div className="h-full rounded-full bg-green transition-[width] duration-300 ease-in-out" style={{ width: `${pathwayPct}%` }} />
                 </div>
                 <Link href="/free/pathway">
-                  <span style={{ fontSize: 12, fontWeight: 700, color: "#1D9E75" }}>
+                  <span className="text-[12px] font-bold text-green">
                     {completedSteps === 0 ? "Start your financial pathway →" : "Continue setup →"}
                   </span>
                 </Link>
@@ -297,41 +305,40 @@ export default function FreeDashboard() {
           {/* Score card */}
           <Link href="/free/health-score">
             <div
-              className="bg-white rounded-[20px] cursor-pointer hover:opacity-[0.97] transition-opacity"
-              style={{ boxShadow: "0 4px 14px rgba(15,23,42,0.06)", padding: 22 }}
+              className="bg-surface rounded-[20px] cursor-pointer hover:opacity-[0.97] transition-opacity p-[22px] shadow-[0_4px_14px_rgba(15,23,42,0.06)]"
             >
               <div className="flex justify-center">
                 {score === undefined ? (
                   /* Skeleton ring while loading */
                   <svg width={170} height={170} viewBox="0 0 170 170">
-                    <circle cx={85} cy={85} r={ringR} fill="none" stroke="#E6F5EE" strokeWidth={12} />
-                    <circle cx={85} cy={85} r={44} fill="#FAF8F5" />
-                    <rect x={60} y={67} width={50} height={12} rx={6} fill="#E6E1D8" className="animate-pulse" />
-                    <rect x={68} y={84} width={34} height={8} rx={4} fill="#F2EFE9" className="animate-pulse" />
-                    <rect x={72} y={97} width={26} height={8} rx={4} fill="#F2EFE9" className="animate-pulse" />
+                    <circle cx={85} cy={85} r={ringR} fill="none" stroke="var(--green-tint)" strokeWidth={12} />
+                    <circle cx={85} cy={85} r={44} fill="var(--paper)" />
+                    <rect x={60} y={67} width={50} height={12} rx={6} fill="var(--hairline)" className="animate-pulse" />
+                    <rect x={68} y={84} width={34} height={8} rx={4} fill="var(--hairline)" className="animate-pulse" />
+                    <rect x={72} y={97} width={26} height={8} rx={4} fill="var(--hairline)" className="animate-pulse" />
                   </svg>
                 ) : (
                   <div className="flex flex-col items-center">
                     <HealthScoreRing score={scoreVal} size="lg" />
-                    <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, letterSpacing: 2, color: "#A8A095", marginTop: 10 }}>
+                    <p className="text-[9px] tracking-[2px] text-ink-40 mt-2.5">
                       TALA SCORE
                     </p>
-                    <p style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 12, fontWeight: 600, color: scoreStatusColor, marginTop: 2 }}>
+                    <p className="text-[12px] font-semibold mt-0.5" style={{ color: scoreStatusColor }}>
                       {scoreStatusText}
                     </p>
                   </div>
                 )}
               </div>
               {/* Stats: savings rate as primary, saved + net worth as secondary */}
-              <div style={{ borderTop: "1px solid #F2EFE9", paddingTop: 14 }}>
+              <div className="border-t border-hairline pt-3.5">
                 <div className="flex items-baseline justify-between mb-1">
-                  <p style={{ fontSize: 12, color: "#6B6459" }}>Savings rate this month</p>
-                  <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 18, fontWeight: 700, color: savingsRate > 0 ? "#1D9E75" : "#A8A095" }}>
+                  <p className="text-[12px] text-ink-60">Savings rate this month</p>
+                  <p className={`text-[18px] font-bold ${savingsRate > 0 ? "text-green" : "text-ink-40"}`}>
                     {savingsRate > 0 ? `${savingsRate.toFixed(0)}%` : "—"}
                   </p>
                 </div>
                 <div className="flex items-center justify-between">
-                  <p style={{ fontSize: 11, color: "#A8A095" }}>
+                  <p className="text-[11px] text-ink-40">
                     {income > 0 || expenses > 0 ? `Saved ${fmt(Math.max(0, income - expenses))}` : "No budget data yet"}
                     {netWorth !== null ? ` · Net worth ${fmt(netWorth)}` : ""}
                   </p>
@@ -343,14 +350,14 @@ export default function FreeDashboard() {
           {/* Streak banner */}
           {streakWeeks > 0 && (
             <div
-              className="flex items-center justify-between rounded-[16px]"
-              style={{ background: "linear-gradient(135deg, #FEF3D6, #F5B947 180%)", padding: "13px 18px" }}
+              className="flex items-center justify-between rounded-[16px] px-[18px] py-[13px]"
+              style={{ background: "linear-gradient(135deg, var(--sun-tint), var(--sun) 180%)" }}
             >
               <div>
-                <p style={{ fontFamily: "'Sora', sans-serif", fontSize: 15, fontWeight: 700, color: "#042C53" }}>
+                <p className="text-forest text-[15px] font-bold">
                   {streakWeeks}-week streak
                 </p>
-                <p style={{ fontSize: 12, color: "#6B6459", marginTop: 2 }}>
+                <p className="text-[12px] text-ink-60 mt-0.5">
                   Consistency is your superpower.
                 </p>
               </div>
@@ -361,28 +368,27 @@ export default function FreeDashboard() {
           {/* Goals section */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h2 style={{ fontFamily: "'Sora', sans-serif", fontSize: 16, fontWeight: 700, color: "#042C53" }}>Your goals</h2>
+              <h2 className="text-forest text-[16px]">Your goals</h2>
               <Link href="/free/goals">
-                <span style={{ fontSize: 13, fontWeight: 600, color: "#1D9E75" }}>See all</span>
+                <span className="text-[13px] font-semibold text-green">See all</span>
               </Link>
             </div>
             {goals.length === 0 ? (
               <Link href="/free/goals">
-                <div className="bg-white rounded-[20px] p-5 text-center cursor-pointer"
-                  style={{ border: "1.5px dashed #E6E1D8", boxShadow: "0 4px 14px rgba(15,23,42,0.04)" }}>
-                  <p style={{ fontSize: 13, color: "#A8A095" }}>No goals yet.</p>
-                  <p style={{ fontSize: 13, fontWeight: 600, color: "#1D9E75", marginTop: 4 }}>Add your first goal →</p>
+                <div className="bg-surface rounded-[20px] p-5 text-center cursor-pointer border-[1.5px] border-dashed border-hairline shadow-[0_4px_14px_rgba(15,23,42,0.04)]">
+                  <p className="text-[13px] text-ink-40">No goals yet.</p>
+                  <p className="text-[13px] font-semibold text-green mt-1">Add your first goal →</p>
                 </div>
               </Link>
             ) : (
               <div className="space-y-3">
                 {goals.slice(0, 3).map((g, i) => {
                   const gStatus = i === 0 ? (projection?.status ?? g.status) : g.status;
-                  const eyebrowColor = gStatus === "on_track" ? "#1D9E75" : gStatus === "almost" ? "#E8A53C" : "#D86B5A";
+                  const eyebrowColor = gStatus === "on_track" ? "var(--green)" : gStatus === "almost" ? "var(--sun-deep)" : "var(--clay)";
                   const eyebrowText = gStatus === "on_track" ? "ON TRACK" : gStatus === "almost" ? "AT RISK" : "OFF TRACK";
                   return (
                     <div key={g.id}>
-                      <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.11em", textTransform: "uppercase", color: eyebrowColor, marginBottom: 6 }}>
+                      <p className="text-[11px] tracking-[0.11em] uppercase mb-1.5" style={{ color: eyebrowColor }}>
                         {eyebrowText}
                       </p>
                       <GoalCard
@@ -400,7 +406,7 @@ export default function FreeDashboard() {
 
           {/* Budget summary */}
           <div className="space-y-3">
-            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.11em", textTransform: "uppercase", color: "#A8A095" }}>
+            <p className="text-[11px] tracking-[0.11em] uppercase text-ink-40">
               This month's budget
             </p>
             <div className="grid grid-cols-2 gap-3">
@@ -416,15 +422,14 @@ export default function FreeDashboard() {
 
           {/* Weekly tip */}
           <div>
-            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.11em", textTransform: "uppercase", color: "#A8A095", marginBottom: 8 }}>
+            <p className="text-[11px] tracking-[0.11em] uppercase text-ink-40 mb-2">
               This week's insight
             </p>
             <div
-              className="flex items-start gap-3 rounded-[16px]"
-              style={{ background: "#E6F5EE", padding: "14px 16px" }}
+              className="flex items-start gap-3 rounded-[16px] bg-green-tint px-4 py-3.5"
             >
               <Sol size="xs" animate="idle" showFace />
-              <p style={{ fontSize: 13, color: "#0F6E56", lineHeight: 1.55, fontWeight: 500, flex: 1 }}>
+              <p className="text-[13px] text-green leading-[1.55] font-medium flex-1">
                 {weeklyTip.body}
               </p>
             </div>
@@ -433,7 +438,7 @@ export default function FreeDashboard() {
           {/* Milestones — compact strip, always visible (folded in from the old standalone Badges nav item) */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.11em", textTransform: "uppercase", color: "#A8A095" }}>
+              <p className="text-[11px] tracking-[0.11em] uppercase text-ink-40">
                 Your achievements
               </p>
               <Link href="/free/milestones" className="text-xs font-medium text-primary hover:underline">
@@ -475,14 +480,12 @@ export default function FreeDashboard() {
               { icon: "", label: "Add to goal", href: "/free/goals" },
             ].map((a, i) => (
               <Link key={i} href={a.href}>
-                <div className="flex items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2 cursor-pointer transition-colors"
-                  style={{ background: "#F2EFE9", border: "1px solid #E6E1D8", fontSize: 13, fontWeight: 500, color: "#042C53" }}>
+                <div className="flex items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2 cursor-pointer transition-colors bg-hairline border border-hairline text-[13px] font-medium text-forest">
                   <span>{a.icon}</span><span>{a.label}</span>
                 </div>
               </Link>
             ))}
-            <a href="/book" className="flex items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2 transition-colors"
-              style={{ background: "#F2EFE9", border: "1px solid #E6E1D8", fontSize: 13, fontWeight: 500, color: "#042C53" }}>
+            <a href="/book" className="flex items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2 transition-colors bg-hairline border border-hairline text-[13px] font-medium text-forest">
               <Phone className="h-3.5 w-3.5" /><span>Book a call</span>
             </a>
           </div>

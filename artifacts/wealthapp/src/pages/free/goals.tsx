@@ -1,3 +1,12 @@
+// ANIMATION RULES FOR THIS PAGE:
+// ✓ ALLOWED: Chart draw animation (Recharts default)
+// ✓ ALLOWED: BottomSheet spring animation
+// ✗ BANNED:  Page-load stagger on sections
+// ✗ BANNED:  JetBrains Mono font
+// ✗ BANNED:  Cream/warm palette (#FAF8F5, #F2EFE9, #A8A095)
+// ✗ BANNED:  Inline style={{ color: '#hexcode' }} — use Tailwind tokens only
+// ✗ BANNED:  Double bottom nav — AppShell is the ONLY nav
+
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
@@ -388,10 +397,10 @@ export default function GoalsPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 style={{ fontFamily: "'Sora', sans-serif", fontSize: 22, fontWeight: 700, color: "#042C53", letterSpacing: "-0.02em" }}>
+            <h1 className="text-forest text-[22px] font-bold tracking-[-0.02em]">
               Financial Goals
             </h1>
-            <p style={{ fontSize: 12, color: "#A8A095", marginTop: 2 }}>
+            <p className="text-[12px] text-ink-40 mt-0.5">
               {goals.length} {goals.length === 1 ? "goal" : "goals"} active
             </p>
           </div>
@@ -421,7 +430,7 @@ export default function GoalsPage() {
         {sortedGoals.map((goal) => {
           const proj = goal.id === topGoal?.id ? topGoalProjection : projections.get(goal.id);
           const st = proj?.status ?? goal.status;
-          const eyebrowColor = st === "on_track" ? "#1D9E75" : st === "almost" ? "#E8A53C" : "#D86B5A";
+          const eyebrowColor = st === "on_track" ? "var(--green)" : st === "almost" ? "var(--sun-deep)" : "var(--clay)";
           const eyebrowText = st === "on_track" ? "ON TRACK" : st === "almost" ? "AT RISK" : "OFF TRACK";
           const projText = goalProjectionText(goal);
           const isAchieved = parseFloat(goal.currentAmount ?? "0") >= parseFloat(goal.targetAmount ?? "1");
@@ -430,7 +439,7 @@ export default function GoalsPage() {
             <div key={goal.id} className="space-y-2">
               {/* Status eyebrow */}
               {!isAchieved && (
-                <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: "0.11em", textTransform: "uppercase", color: eyebrowColor }}>
+                <p className="text-[11px] tracking-[0.11em] uppercase" style={{ color: eyebrowColor }}>
                   {eyebrowText}
                 </p>
               )}
@@ -456,8 +465,7 @@ export default function GoalsPage() {
                   <button
                     onClick={() => deleteGoalMutation.mutate(goal.id)}
                     disabled={deleteGoalMutation.isPending}
-                    className="text-xs text-white font-medium px-3 py-1.5 rounded-lg"
-                    style={{ background: "#D86B5A" }}
+                    className="text-xs text-white font-medium px-3 py-1.5 rounded-lg bg-clay"
                   >
                     {deleteGoalMutation.isPending ? "Deleting…" : "Delete"}
                   </button>
@@ -502,13 +510,13 @@ export default function GoalsPage() {
             ? `An advisor can create a personalised investment roadmap for ${topGoal.title}.`
             : "An advisor can help you build a personalised financial plan.";
           return (
-            <div className="rounded-[20px] p-5" style={{ background: "#F2EFE9", border: "1.5px dashed #D8D2C8" }}>
+            <div className="rounded-[20px] p-5 bg-hairline border-[1.5px] border-dashed border-hairline">
               <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 flex items-center justify-center rounded-xl" style={{ width: 40, height: 40, background: "#E6F5EE" }}>
-                  <Lock className="h-4 w-4" style={{ color: "#1D9E75" }} />
+                <div className="flex-shrink-0 flex items-center justify-center rounded-xl w-10 h-10 bg-green-tint">
+                  <Lock className="h-4 w-4 text-green" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p style={{ fontSize: 13, fontWeight: 600, color: "#042C53", lineHeight: 1.4 }}>{insight}</p>
+                  <p className="text-[13px] font-semibold text-forest leading-[1.4]">{insight}</p>
                   <Button variant="outline" size="sm" className="mt-3 text-xs border-primary text-primary hover:bg-primary/5">
                     Book a free discovery call →
                   </Button>

@@ -1,3 +1,12 @@
+// ANIMATION RULES FOR THIS PAGE:
+// ✓ ALLOWED: Chart draw animation (Recharts default)
+// ✓ ALLOWED: BottomSheet spring animation
+// ✗ BANNED:  Page-load stagger on sections
+// ✗ BANNED:  JetBrains Mono font
+// ✗ BANNED:  Cream/warm palette (#FAF8F5, #F2EFE9, #A8A095)
+// ✗ BANNED:  Inline style={{ color: '#hexcode' }} — use Tailwind tokens only
+// ✗ BANNED:  Double bottom nav — AppShell is the ONLY nav
+
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
@@ -305,9 +314,9 @@ export default function BudgetPage() {
   const grouped = groupByDate(transactions);
 
   const CAT_COLORS: Record<string, string> = {
-    housing: "#4A7CB8", food: "#1D9E75", transport: "#F5B947",
-    utilities: "#A8A095", entertainment: "#D86B5A", other: "#A8A095",
-    income: "#1D9E75",
+    housing: "var(--forest-700)", food: "var(--green)", transport: "var(--sun)",
+    utilities: "var(--ink-40)", entertainment: "var(--clay)", other: "var(--ink-40)",
+    income: "var(--green)",
   };
 
   const isBusy = addTx.isPending || editTx.isPending;
@@ -323,14 +332,14 @@ export default function BudgetPage() {
         />
 
         {/* Dark navy header */}
-        <div className="-mx-4 -mt-4 md:-mx-6 md:-mt-6" style={{ background: "#042C53", padding: "20px 22px 48px" }}>
+        <div className="-mx-4 -mt-4 md:-mx-6 md:-mt-6 bg-forest p-[20px_22px_48px]">
           <div className="flex items-center justify-between mb-5">
-            <h1 style={{ fontFamily: "'Sora', sans-serif", fontSize: 22, fontWeight: 700, color: "white", letterSpacing: "-0.02em" }}>
+            <h1 className="text-[22px] font-bold text-white tracking-[-0.02em]">
               Budget
             </h1>
-            <div className="flex items-center gap-2" style={{ background: "rgba(255,255,255,0.1)", borderRadius: 10, padding: "7px 14px" }}>
+            <div className="flex items-center gap-2 rounded-[10px] p-[7px_14px]" style={{ background: "rgba(255,255,255,0.1)" }}>
               <button onClick={prevMonth}><ChevronLeft className="h-4 w-4 text-white" /></button>
-              <span style={{ color: "white", fontSize: 13, fontWeight: 500 }}>{monthLabel(viewDate)}</span>
+              <span className="text-white text-[13px] font-medium">{monthLabel(viewDate)}</span>
               <button onClick={nextMonth} disabled={mk >= monthKey(now)}>
                 <ChevronRight className={`h-4 w-4 text-white ${mk >= monthKey(now) ? "opacity-30" : ""}`} />
               </button>
@@ -338,27 +347,27 @@ export default function BudgetPage() {
           </div>
           <div className="grid grid-cols-2 gap-5 mb-3">
             <div>
-              <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 11 }}>Income</p>
-              <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 24, fontWeight: 700, color: "white", marginTop: 2 }}>
+              <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.5)" }}>Income</p>
+              <p className="text-[24px] font-bold text-white mt-0.5">
                 {totalIncome > 0 ? fmt(totalIncome) : "—"}
               </p>
             </div>
             <div>
-              <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 11 }}>Expenses</p>
-              <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 24, fontWeight: 700, color: "white", marginTop: 2 }}>
+              <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.5)" }}>Expenses</p>
+              <p className="text-[24px] font-bold text-white mt-0.5">
                 {totalExpenses > 0 ? fmt(totalExpenses) : "—"}
               </p>
             </div>
           </div>
           {totalIncome > 0 && (
-            <p style={{ color: "#F5B947", fontSize: 13, fontWeight: 500 }}>
+            <p className="text-sun text-[13px] font-medium">
               Saved {fmt(Math.max(0, saved))} · {savingsRate.toFixed(0)}% rate
             </p>
           )}
         </div>
 
         {/* Cream content area */}
-        <div className="-mx-4 md:-mx-6" style={{ background: "#FAF8F5", borderRadius: "24px 24px 0 0", marginTop: -24, padding: "22px 16px 0", minHeight: "100%" }}>
+        <div className="-mx-4 md:-mx-6 bg-paper rounded-t-[24px] -mt-6 p-[22px_16px_0] min-h-full">
         <div className="space-y-4">
 
         {/* Carry-forward banner */}
@@ -366,24 +375,22 @@ export default function BudgetPage() {
           {carryPending?.pending && !carryForwardDismissed && (
             <motion.div
               initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, height: 0, marginTop: 0 }}
-              className="flex items-center justify-between gap-3 rounded-[16px] p-4"
-              style={{ background: "#E6F5EE", border: "1px solid rgba(29,158,117,0.25)" }}
+              className="flex items-center justify-between gap-3 rounded-[16px] p-4 bg-green-tint border border-green/25"
             >
               <div className="flex items-start gap-2.5 flex-1 min-w-0">
-                <RefreshCw className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color: "#1D9E75" }} />
-                <p style={{ fontSize: 13, fontWeight: 500, color: "#0F6E56" }}>
+                <RefreshCw className="h-4 w-4 mt-0.5 flex-shrink-0 text-green" />
+                <p className="text-[13px] font-medium text-green">
                   {carryPending.count} recurring items from {prevMonthName(mk)} — copy them over?
                 </p>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
                 <button
                   onClick={() => carryForward.mutate()} disabled={carryForward.isPending}
-                  className="rounded-full transition-colors"
-                  style={{ background: "#1D9E75", color: "white", fontSize: 12, fontWeight: 600, padding: "6px 14px", minHeight: 32 }}
+                  className="rounded-full transition-colors bg-green text-white text-xs font-semibold px-3.5 py-1.5 min-h-8"
                 >
                   {carryForward.isPending ? "…" : "Yes, copy"}
                 </button>
-                <button onClick={() => setCarryForwardDismissed(true)} className="flex items-center justify-center" style={{ color: "#A8A095", minWidth: 36, minHeight: 36 }} aria-label="Dismiss"><X className="h-4 w-4" /></button>
+                <button onClick={() => setCarryForwardDismissed(true)} className="flex items-center justify-center text-ink-40 min-w-9 min-h-9" aria-label="Dismiss"><X className="h-4 w-4" /></button>
               </div>
             </motion.div>
           )}
@@ -393,27 +400,25 @@ export default function BudgetPage() {
         <div className="grid grid-cols-2 gap-3">
           <button
             onClick={() => openTxForm("income")}
-            className="rounded-[20px] p-4 text-left active:scale-95 transition-transform"
-            style={{ background: "#E6F5EE", border: "1px solid rgba(29,158,117,0.25)" }}
+            className="rounded-[20px] p-4 text-left active:scale-95 transition-transform bg-green-tint border border-green/25"
           >
             <div className="flex items-center gap-2 mb-1.5">
               <span className="text-lg"></span>
-              <Plus className="h-3.5 w-3.5" style={{ color: "#1D9E75" }} />
+              <Plus className="h-3.5 w-3.5 text-green" />
             </div>
-            <p style={{ fontSize: 13, fontWeight: 600, color: "#0F6E56" }}>Log Income</p>
-            <p style={{ fontSize: 11, color: "#1D9E75", marginTop: 2 }}>Salary, freelance, etc.</p>
+            <p className="text-[13px] font-semibold text-green">Log Income</p>
+            <p className="text-[11px] text-green mt-0.5">Salary, freelance, etc.</p>
           </button>
           <button
             onClick={() => openTxForm("expense")}
-            className="rounded-[20px] p-4 text-left active:scale-95 transition-transform"
-            style={{ background: "#FEEAE8", border: "1px solid rgba(216,107,90,0.25)" }}
+            className="rounded-[20px] p-4 text-left active:scale-95 transition-transform bg-clay-tint border border-clay/25"
           >
             <div className="flex items-center gap-2 mb-1.5">
               <span className="text-lg"></span>
-              <Plus className="h-3.5 w-3.5" style={{ color: "#D86B5A" }} />
+              <Plus className="h-3.5 w-3.5 text-clay" />
             </div>
-            <p style={{ fontSize: 13, fontWeight: 600, color: "#B85544" }}>Log Expense</p>
-            <p style={{ fontSize: 11, color: "#D86B5A", marginTop: 2 }}>Food, rent, bills, etc.</p>
+            <p className="text-[13px] font-semibold text-clay">Log Expense</p>
+            <p className="text-[11px] text-clay mt-0.5">Food, rent, bills, etc.</p>
           </button>
         </div>
 
@@ -560,7 +565,7 @@ export default function BudgetPage() {
                             </div>
                             <p className="text-xs text-muted-foreground">{catLabel(tx.category)}</p>
                           </div>
-                          <span className="flex-shrink-0" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 14, fontWeight: 700, color: tx.type === "income" ? "#1D9E75" : "#D86B5A" }}>
+                          <span className={`flex-shrink-0 text-sm font-bold ${tx.type === "income" ? "text-green" : "text-clay"}`}>
                             {tx.type === "income" ? "+" : "-"}{sym}{parseFloat(tx.amount).toLocaleString()}
                           </span>
 
@@ -570,8 +575,7 @@ export default function BudgetPage() {
                               <button
                                 onClick={() => deleteTx.mutate(tx.id)}
                                 disabled={deleteTx.isPending}
-                                className="text-xs text-white font-medium px-2 py-1 rounded-lg"
-                                style={{ background: "#D86B5A" }}
+                                className="text-xs text-white font-medium px-2 py-1 rounded-lg bg-clay"
                               >
                                 {deleteTx.isPending ? "…" : "Delete"}
                               </button>
@@ -627,36 +631,36 @@ export default function BudgetPage() {
                 {catTotals.map(c => {
                   const isIncome = c.value === "income";
                   const pct = totalExpenses > 0 && !isIncome ? (c.total / totalExpenses) * 100 : 0;
-                  const dotColor = CAT_COLORS[c.value] ?? "#A8A095";
+                  const dotColor = CAT_COLORS[c.value] ?? "var(--ink-40)";
                   const budgetAmt = !isIncome ? (form as any)[c.value] as number ?? 0 : 0;
                   const variance = !isIncome && budgetAmt > 0 ? c.total - budgetAmt : null;
                   return (
-                    <div key={c.value} style={{ padding: "12px 18px", borderBottom: "1px solid #F2EFE9" }}>
+                    <div key={c.value} className="p-[12px_18px] border-b border-hairline">
                       <div className="flex items-center justify-between mb-1.5">
                         <div className="flex items-center gap-2">
-                          <div style={{ width: 8, height: 8, borderRadius: "50%", background: dotColor, flexShrink: 0 }} />
-                          <span style={{ fontSize: 13, fontWeight: 500, color: "#2D2A24" }}>{c.label}</span>
+                          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: dotColor }} />
+                          <span className="text-[13px] font-medium text-forest">{c.label}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           {variance !== null && (
-                            <span style={{ fontSize: 11, fontWeight: 500, color: variance > 0 ? "#D86B5A" : "#1D9E75" }}>
+                            <span className={`text-[11px] font-medium ${variance > 0 ? "text-clay" : "text-green"}`}>
                               {variance > 0 ? `+${sym}${Math.round(variance).toLocaleString()} over` : `-${sym}${Math.abs(Math.round(variance)).toLocaleString()} under`}
                             </span>
                           )}
                           {!isIncome && variance === null && totalExpenses > 0 && (
-                            <span style={{ fontSize: 11, color: "#A8A095" }}>{pct.toFixed(0)}%</span>
+                            <span className="text-[11px] text-ink-40">{pct.toFixed(0)}%</span>
                           )}
-                          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, fontWeight: 600, color: isIncome ? "#1D9E75" : "#042C53" }}>
+                          <span className={`text-[13px] font-semibold ${isIncome ? "text-green" : "text-forest"}`}>
                             {isIncome ? "+" : ""}{sym}{c.total.toLocaleString()}
                           </span>
                         </div>
                       </div>
                       {!isIncome && (
-                        <div style={{ position: "relative", height: 6, borderRadius: 999, background: "#F2EFE9", overflow: "hidden" }}>
+                        <div className="relative h-1.5 rounded-full bg-hairline overflow-hidden">
                           {budgetAmt > 0 && (
-                            <div style={{ position: "absolute", height: "100%", borderRadius: 999, background: "#E6E1D8", width: `${Math.min(100, (budgetAmt / Math.max(budgetAmt, c.total)) * 100)}%` }} />
+                            <div className="absolute h-full rounded-full bg-track" style={{ width: `${Math.min(100, (budgetAmt / Math.max(budgetAmt, c.total)) * 100)}%` }} />
                           )}
-                          <div style={{ position: "absolute", height: "100%", borderRadius: 999, background: variance !== null && variance > 0 ? "#D86B5A" : dotColor, width: `${Math.min(100, budgetAmt > 0 ? (c.total / Math.max(budgetAmt, c.total)) * 100 : pct)}%`, transition: "width 0.4s ease" }} />
+                          <div className="absolute h-full rounded-full" style={{ background: variance !== null && variance > 0 ? "var(--clay)" : dotColor, width: `${Math.min(100, budgetAmt > 0 ? (c.total / Math.max(budgetAmt, c.total)) * 100 : pct)}%`, transition: "width 0.4s ease" }} />
                         </div>
                       )}
                     </div>
