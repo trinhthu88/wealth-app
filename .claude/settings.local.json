@@ -73,7 +73,13 @@
       "Bash(python3 -c ' *)",
       "Bash(kill 286)",
       "Bash(PORT=8080 nohup node --enable-source-maps ./dist/index.mjs)",
-      "Bash(disown)"
+      "Bash(disown)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(xargs -I{} wc -l {})",
+      "Bash(echo \"---exit $?---\")",
+      "Bash(git status *)",
+      "Bash(npm run *)",
+      "Bash(PORT=5173 npm run build)"
     ]
   }
 }
