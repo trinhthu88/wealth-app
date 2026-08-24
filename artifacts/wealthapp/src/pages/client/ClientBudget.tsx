@@ -7,6 +7,7 @@ import { useState, useEffect, useRef } from "react";
 import ClientAppShell from "@/components/client/AppShell";
 import BudgetMonthSelector from "@/components/client/budget/BudgetMonthSelector";
 import BudgetInputForm, { type BudgetFormState } from "@/components/client/budget/BudgetInputForm";
+import type { HoldingContributionEntry } from "@/components/client/budget/HoldingContributionPicker";
 import BudgetSummaryPanel from "@/components/client/budget/BudgetSummaryPanel";
 import SurplusCTA from "@/components/client/budget/SurplusCTA";
 import GoalFundingGaps from "@/components/client/budget/GoalFundingGaps";
@@ -77,11 +78,16 @@ export default function ClientBudget() {
   const [form, setForm] = useState<BudgetFormState>({ ...EMPTY_FORM });
   const [isReadOnly, setIsReadOnly] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
+  const [holdingContributions, setHoldingContributions] = useState<HoldingContributionEntry[]>([]);
 
   // Sync form from loaded month data
   useEffect(() => {
     if (!loading) {
       setForm(rowToForm(monthData as any));
+      const selfHolding = ((monthData?.investmentContributions ?? []) as InvestmentContribution[])
+        .filter(c => c.source_type === "self_holding")
+        .map(c => ({ holdingId: c.source_id, amount: String(c.amount) }));
+      setHoldingContributions(selfHolding);
       setIsDirty(false);
     }
   }, [monthData?.id, loading]);
@@ -115,6 +121,11 @@ export default function ClientBudget() {
     setIsDirty(true);
   }
 
+  function handleHoldingContributionsChange(entries: HoldingContributionEntry[]) {
+    setHoldingContributions(entries);
+    setIsDirty(true);
+  }
+
   // Auto-populate rental income from property holdings
   useEffect(() => {
     if (!monthData) {
@@ -127,19 +138,30 @@ export default function ClientBudget() {
     }
   }, [holdings.length, monthData?.id]);
 
-  const syncedContributions = (monthData?.investmentContributions ?? []) as InvestmentContribution[];
+  const advisedPlanContributions = ((monthData?.investmentContributions ?? []) as InvestmentContribution[])
+    .filter(c => c.source_type === "advised_plan");
+  const holdingsById = Object.fromEntries(holdings.map(h => [h.id, h]));
 
   // Live totals for summary panel
   const income = n(form.primaryIncome) + n(form.secondaryIncome) + n(form.rentalIncome) + n(form.otherIncome);
   const expenses = n(form.housing) + n(form.utilities) + n(form.transport) + n(form.insurance)
     + n(form.foodDining) + n(form.entertainment) + n(form.shopping) + n(form.health) + n(form.education) + n(form.otherExpenses);
-  const syncedInvest = syncedContributions.reduce((s, c) => s + c.amount, 0);
-  const totalInvestments = syncedInvest + n(form.otherInvestments);
+  const advisedInvest = advisedPlanContributions.reduce((s, c) => s + c.amount, 0);
+  const holdingInvest = holdingContributions.reduce((s, e) => s + n(e.amount), 0);
+  const totalInvestments = advisedInvest + holdingInvest + n(form.otherInvestments);
   const surplus = income - expenses - totalInvestments;
 
   async function handleSave() {
     const all: InvestmentContribution[] = [
-      ...syncedContributions,
+      ...advisedPlanContributions,
+      ...holdingContributions
+        .filter(e => e.holdingId && n(e.amount) > 0)
+        .map(e => ({
+          label: holdingsById[e.holdingId]?.label ?? "Holding",
+          amount: n(e.amount),
+          source_id: e.holdingId,
+          source_type: "self_holding",
+        })),
       ...(n(form.otherInvestments) > 0 ? [{
         label: "Other investments",
         amount: n(form.otherInvestments),
@@ -229,7 +251,10 @@ export default function ClientBudget() {
               <BudgetInputForm
                 form={form}
                 onChange={handleChange}
-                syncedContributions={syncedContributions}
+                syncedContributions={advisedPlanContributions}
+                holdings={holdings}
+                holdingContributions={holdingContributions}
+                onHoldingContributionsChange={handleHoldingContributionsChange}
                 isReadOnly={isReadOnly}
                 saving={saving}
                 onSave={handleSave}

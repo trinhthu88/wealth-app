@@ -9,8 +9,9 @@ vi.mock("@clerk/express", () => ({
 const { default: app } = await import("../../app");
 const {
   db, profilesTable, leadsTable, clientProfilesTable, advisedPlansTable,
+  clientBudgetMonthsTable, clientHoldingsTable, clientHoldingTransactionsTable,
 } = await import("@workspace/db");
-const { eq } = await import("drizzle-orm");
+const { eq, and } = await import("drizzle-orm");
 
 const RUN_ID = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const advisorA = `advisor-a-test-${RUN_ID}`;
@@ -156,5 +157,149 @@ describe("PUT /advised-plans/:id/contribution", () => {
     const contribution = res.body.contributions.find((c: any) => c.source_id === planId);
     expect(contribution).toBeTruthy();
     expect(contribution.amount).toBe(200); // 2400 / 12
+  });
+
+  it("preserves a manual contribution already saved for the current month when sync-contributions runs again", async () => {
+    const currentMonth = new Date().toISOString().slice(0, 7) + "-01";
+    const [before] = await db.select().from(clientBudgetMonthsTable)
+      .where(and(eq(clientBudgetMonthsTable.userId, clientUserId), eq(clientBudgetMonthsTable.month, currentMonth)));
+    expect(before).toBeTruthy(); // created by the sync-contributions call in the previous test
+
+    await db.update(clientBudgetMonthsTable)
+      .set({
+        investmentContributions: [
+          ...(before!.investmentContributions as any[]),
+          { label: "Brokerage top-up", amount: 50, source_id: "manual", source_type: "manual" },
+        ],
+      })
+      .where(eq(clientBudgetMonthsTable.id, before!.id));
+
+    await request(app)
+      .post("/api/client/budget/sync-contributions")
+      .set(asUser(clientUserId))
+      .expect(200);
+
+    const [after] = await db.select().from(clientBudgetMonthsTable)
+      .where(and(eq(clientBudgetMonthsTable.userId, clientUserId), eq(clientBudgetMonthsTable.month, currentMonth)));
+    const contribs = after!.investmentContributions as any[];
+
+    const manualEntry = contribs.find(c => c.source_type === "manual");
+    expect(manualEntry).toBeTruthy();
+    expect(manualEntry.amount).toBe(50);
+
+    const advisedEntry = contribs.find(c => c.source_id === planId);
+    expect(advisedEntry).toBeTruthy();
+    expect(advisedEntry.amount).toBe(200);
+  });
+});
+
+describe("advised-plan activation backfills RSP contributions into budget history", () => {
+  const budgetUserId = `budget-user-test-${RUN_ID}`;
+  const now = new Date();
+
+  function monthsAgoDate(n: number) {
+    return new Date(now.getFullYear(), now.getMonth() - n, 1).toISOString().slice(0, 10);
+  }
+  function monthsAgoMonth(n: number) {
+    return monthsAgoDate(n).slice(0, 7) + "-01";
+  }
+
+  beforeAll(async () => {
+    await db.insert(profilesTable).values({
+      id: budgetUserId, email: `budget-user-${RUN_ID}@test.local`, fullName: "Budget User", role: "investment_client",
+    });
+    await db.insert(clientProfilesTable).values({ userId: budgetUserId, advisorId: advisorA });
+  });
+
+  afterAll(async () => {
+    await db.delete(clientHoldingTransactionsTable).where(eq(clientHoldingTransactionsTable.userId, budgetUserId));
+    await db.delete(clientHoldingsTable).where(eq(clientHoldingsTable.userId, budgetUserId));
+    await db.delete(clientBudgetMonthsTable).where(eq(clientBudgetMonthsTable.userId, budgetUserId));
+    await db.delete(advisedPlansTable).where(eq(advisedPlansTable.userId, budgetUserId));
+    await db.delete(clientProfilesTable).where(eq(clientProfilesTable.userId, budgetUserId));
+    await db.delete(profilesTable).where(eq(profilesTable.id, budgetUserId));
+  });
+
+  it("backfills every month from effectiveDate to now, preserving existing income and non-advised_plan entries", async () => {
+    const midMonth = monthsAgoMonth(2);
+    await db.insert(clientBudgetMonthsTable).values({
+      userId: budgetUserId, month: midMonth,
+      primaryIncome: "5000", totalIncome: "5000", totalExpenses: "0",
+      investmentContributions: [{ label: "Old manual", amount: 100, source_id: "manual", source_type: "manual" }],
+      totalInvestments: "100", netSurplus: "4900", savingsRatePct: "98",
+    });
+
+    const [plan] = await db.insert(advisedPlansTable).values({
+      userId: budgetUserId, advisorId: advisorA, providerName: "Acme", productName: "RSP Growth",
+      planType: "rsp", status: "scenario", annualPremium: "1200", effectiveDate: monthsAgoDate(3),
+    }).returning();
+
+    await request(app)
+      .put(`/api/advised-plans/${plan.id}/status`)
+      .set(asUser(advisorA))
+      .send({ status: "inforce", policyNumber: "POL-BF-1" })
+      .expect(200);
+
+    const rows = await db.select().from(clientBudgetMonthsTable)
+      .where(eq(clientBudgetMonthsTable.userId, budgetUserId));
+    const byMonth = Object.fromEntries(rows.map(r => [r.month, r]));
+
+    for (const n of [3, 2, 1, 0]) {
+      const row = byMonth[monthsAgoMonth(n)];
+      expect(row, `expected a budget row for ${monthsAgoMonth(n)}`).toBeTruthy();
+      const advised = (row!.investmentContributions as any[]).find(c => c.source_id === plan.id);
+      expect(advised).toBeTruthy();
+      expect(advised.amount).toBe(100); // 1200 / 12
+    }
+
+    const midRow = byMonth[midMonth]!;
+    expect(parseFloat(midRow.totalIncome)).toBe(5000); // untouched by the backfill
+    const manualEntry = (midRow.investmentContributions as any[]).find(c => c.source_type === "manual");
+    expect(manualEntry).toBeTruthy();
+    expect(manualEntry.amount).toBe(100); // survives the merge
+  });
+
+  it("propagates an annualPremium change while inforce into a previously backfilled month", async () => {
+    const [plan] = await db.insert(advisedPlansTable).values({
+      userId: budgetUserId, advisorId: advisorA, providerName: "Acme", productName: "RSP Top-up",
+      planType: "rsp", status: "scenario", annualPremium: "600", effectiveDate: monthsAgoDate(1),
+    }).returning();
+
+    await request(app)
+      .put(`/api/advised-plans/${plan.id}/status`)
+      .set(asUser(advisorA))
+      .send({ status: "inforce", policyNumber: "POL-BF-2" })
+      .expect(200);
+
+    await request(app)
+      .put(`/api/advised-plans/${plan.id}/contribution`)
+      .set(asUser(advisorA))
+      .send({ annualPremium: 1200 })
+      .expect(200);
+
+    const pastMonth = monthsAgoMonth(1);
+    const [row] = await db.select().from(clientBudgetMonthsTable)
+      .where(and(eq(clientBudgetMonthsTable.userId, budgetUserId), eq(clientBudgetMonthsTable.month, pastMonth)));
+    const entry = (row!.investmentContributions as any[]).find(c => c.source_id === plan.id);
+    expect(entry).toBeTruthy();
+    expect(entry.amount).toBe(100); // 1200 / 12 — the new rate, in a PAST month
+  });
+
+  it("never touches budget history for a plan edited while still in scenario status", async () => {
+    const [plan] = await db.insert(advisedPlansTable).values({
+      userId: budgetUserId, advisorId: advisorA, providerName: "Acme", productName: "RSP Draft",
+      planType: "rsp", status: "scenario", annualPremium: "600", effectiveDate: monthsAgoDate(2),
+    }).returning();
+
+    await request(app)
+      .put(`/api/advised-plans/${plan.id}/contribution`)
+      .set(asUser(advisorA))
+      .send({ annualPremium: 900 })
+      .expect(200);
+
+    const rows = await db.select().from(clientBudgetMonthsTable)
+      .where(eq(clientBudgetMonthsTable.userId, budgetUserId));
+    const touched = rows.some(r => (r.investmentContributions as any[]).some(c => c.source_id === plan.id));
+    expect(touched).toBe(false);
   });
 });

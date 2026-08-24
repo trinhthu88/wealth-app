@@ -11,7 +11,9 @@ import {
   MoreHorizontal
 } from "lucide-react";
 import InvestmentContributionRow from "./InvestmentContributionRow";
+import HoldingContributionPicker, { type HoldingContributionEntry } from "./HoldingContributionPicker";
 import type { InvestmentContribution } from "@/hooks/useClientBudget";
+import type { ClientHolding } from "@/hooks/useClientHoldings";
 import { cn } from "@/lib/utils";
 
 export interface BudgetFormState {
@@ -60,6 +62,9 @@ interface Props {
   form: BudgetFormState;
   onChange: (field: keyof BudgetFormState, value: string) => void;
   syncedContributions: InvestmentContribution[];
+  holdings: ClientHolding[];
+  holdingContributions: HoldingContributionEntry[];
+  onHoldingContributionsChange: (entries: HoldingContributionEntry[]) => void;
   isReadOnly: boolean;
   saving: boolean;
   onSave: () => void;
@@ -107,13 +112,15 @@ function SectionHeader({ title, total, totalColor = "text-ink-60" }: { title: st
 }
 
 export default function BudgetInputForm({
-  form, onChange, syncedContributions, isReadOnly, saving, onSave, isCurrentMonth, onEditThisMonth,
+  form, onChange, syncedContributions, holdings, holdingContributions, onHoldingContributionsChange,
+  isReadOnly, saving, onSave, isCurrentMonth, onEditThisMonth,
 }: Props) {
   const incomeTotal = totalIncome(form);
   const expenseTotal = totalExpenses(form);
   const otherInvest = n(form.otherInvestments);
   const syncedTotal = syncedContributions.reduce((s, c) => s + c.amount, 0);
-  const investTotal = syncedTotal + otherInvest;
+  const holdingTotal = holdingContributions.reduce((s, e) => s + (n(e.amount)), 0);
+  const investTotal = syncedTotal + holdingTotal + otherInvest;
 
   return (
     <div className="space-y-6">
@@ -161,12 +168,18 @@ export default function BudgetInputForm({
       <div>
         <SectionHeader title="Investment contributions" total={investTotal} totalColor="text-green" />
         <p className="text-xs text-ink-30 mb-3">Fixed monthly amounts going into your investments.</p>
-        <div className="space-y-2">
+        <div className="space-y-3">
           {syncedContributions.map(c => (
             <InvestmentContributionRow key={c.source_id} contribution={c} />
           ))}
+          <HoldingContributionPicker
+            holdings={holdings}
+            entries={holdingContributions}
+            onChange={onHoldingContributionsChange}
+            isReadOnly={isReadOnly}
+          />
           <NumberInput
-            label="Other investment contributions"
+            label="Unattributed / other contributions"
             value={form.otherInvestments}
             onChange={v => onChange("otherInvestments", v)}
             placeholder="e.g. brokerage top-ups, crypto buys"

@@ -9,6 +9,7 @@ import PriceTag from "../shared/PriceTag";
 import { apiFetch } from "@/lib/api";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ClientHolding } from "@/hooks/useClientHoldings";
+import HoldingTransactionsDrawer from "./HoldingTransactionsDrawer";
 
 interface Props {
   holding: ClientHolding;
@@ -19,6 +20,7 @@ export default function HoldingCard({ holding: h, onEdit }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const qc = useQueryClient();
   const [, navigate] = useLocation();
   const isGain = h.gainLoss >= 0;
@@ -68,6 +70,7 @@ export default function HoldingCard({ holding: h, onEdit }: Props) {
             {menuOpen && (
               <div className="absolute right-0 top-8 bg-white border border-slate-200 rounded-xl shadow-lg py-1 z-10 min-w-[160px]">
                 <button onClick={() => { onEdit(); setMenuOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-[#042C53] hover:bg-slate-50">Edit</button>
+                <button onClick={() => { setHistoryOpen(true); setMenuOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-[#042C53] hover:bg-slate-50">Transaction history</button>
                 <button onClick={() => { navigate(`/client/messages?about=${encodeURIComponent(h.label)}`); setMenuOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-[#042C53] hover:bg-slate-50">Ask advisor about this</button>
                 <button onClick={() => { setConfirmDelete(true); setMenuOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-red-500 hover:bg-red-50">Delete</button>
               </div>
@@ -112,6 +115,14 @@ export default function HoldingCard({ holding: h, onEdit }: Props) {
           </div>
         </div>
       )}
+
+      <HoldingTransactionsDrawer
+        isOpen={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        holdingId={h.id}
+        holdingLabel={h.label}
+        isCash={h.holdingType === "cash"}
+      />
     </div>
   );
 }

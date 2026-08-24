@@ -62,6 +62,28 @@ export const clientHoldingsTable = pgTable("client_holdings", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
+// Money-in/money-out ledger for a self-tracked holding. `source` distinguishes
+// client-entered rows ("manual") from rows written by the budget save flow
+// ("budget_contribution" — a client-attributed monthly contribution,
+// "surplus_sweep" — unattributed monthly surplus auto-routed to a cash
+// holding). The (holdingId, sourceMonth, source) uniqueness is what lets the
+// budget save flow upsert idempotently instead of appending a new row every
+// time a month is re-saved.
+export const clientHoldingTransactionsTable = pgTable("client_holding_transactions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  holdingId: uuid("holding_id").notNull().references(() => clientHoldingsTable.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull().references(() => profilesTable.id, { onDelete: "cascade" }),
+
+  type: text("type").notNull(), // "in" | "out"
+  amount: numeric("amount").notNull(), // always positive; direction carried by `type`
+  source: text("source").notNull(), // "manual" | "budget_contribution" | "surplus_sweep"
+  sourceMonth: date("source_month"),
+  description: text("description"),
+  transactionDate: date("transaction_date").notNull(),
+
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [unique().on(t.holdingId, t.sourceMonth, t.source)]);
+
 export const priceCacheTable = pgTable("price_cache", {
   id: uuid("id").primaryKey().defaultRandom(),
   symbol: text("symbol").notNull(),
@@ -95,12 +117,15 @@ export const advisedStrategyReturnsTable = pgTable("advised_strategy_returns", {
 });
 
 export const insertClientHoldingSchema = createInsertSchema(clientHoldingsTable).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertClientHoldingTransactionSchema = createInsertSchema(clientHoldingTransactionsTable).omit({ id: true, createdAt: true });
 export const insertPriceCacheSchema = createInsertSchema(priceCacheTable).omit({ id: true });
 export const insertAssetClassBenchmarkSchema = createInsertSchema(assetClassBenchmarksTable).omit({ id: true, updatedAt: true });
 export const insertAdvisedStrategyReturnSchema = createInsertSchema(advisedStrategyReturnsTable).omit({ id: true, updatedAt: true });
 
 export type ClientHolding = typeof clientHoldingsTable.$inferSelect;
 export type InsertClientHolding = z.infer<typeof insertClientHoldingSchema>;
+export type ClientHoldingTransaction = typeof clientHoldingTransactionsTable.$inferSelect;
+export type InsertClientHoldingTransaction = z.infer<typeof insertClientHoldingTransactionSchema>;
 export type PriceCache = typeof priceCacheTable.$inferSelect;
 export type InsertPriceCache = z.infer<typeof insertPriceCacheSchema>;
 export type AssetClassBenchmark = typeof assetClassBenchmarksTable.$inferSelect;

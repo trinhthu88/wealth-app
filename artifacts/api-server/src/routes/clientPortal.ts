@@ -1,15 +1,17 @@
 import { Router, type IRouter } from "express";
-import { eq, desc, and, ne } from "drizzle-orm";
+import { eq, desc, and, ne, sql } from "drizzle-orm";
 import {
   db, profilesTable, clientProfilesTable,
   advisedPlansTable, advisedPlanStatementsTable, advisedPlanHoldingsTable,
-  clientHoldingsTable, clientBudgetMonthsTable, advisedPlanTransactionsTable,
+  clientHoldingsTable, clientHoldingTransactionsTable, clientBudgetMonthsTable, advisedPlanTransactionsTable,
   scenarioRunsTable, financialGoalsTable, netWorthSnapshotsTable, assetsTable, liabilitiesTable,
   financialPlansTable, planMilestonesTable, milestoneCommentsTable,
   conversationsTable, messagesTable, advisedStrategyReturnsTable,
 } from "@workspace/db";
 import { requireAuth, requireRole, requireAdvisorOwnsClient, requireAdvisorOwnsLead, requireAdvisorOwnsClientOrLead, requireAdvisorOwnsPlan } from "../middlewares/requireAuth";
 import { resolveHoldingBenchmark, getDeviationWarning } from "../lib/benchmarks";
+import { recordHoldingTransaction, upsertMonthlyHoldingLedgerEntry, getOrCreateDefaultCashHolding } from "../lib/holdingTransactions";
+import { syncAdvisedPlanContributionsToBudget } from "../lib/advisedPlanBudgetSync";
 
 const router: IRouter = Router();
 
@@ -299,6 +301,17 @@ router.put("/advised-plans/:id/status", requireAuth, requireRole("advisor", "sup
     updatedAt: new Date(),
   }).where(eq(advisedPlansTable.id, id)).returning();
 
+  // Going in-force should immediately (and retroactively, from when the plan
+  // actually took effect) show up as a budget contribution — not wait for the
+  // client to happen to open the Budget page. Best-effort: a sync failure
+  // shouldn't block the status change itself from succeeding.
+  if (updated.status === "inforce") {
+    const fromMonth = (updated.effectiveDate ?? new Date().toISOString().slice(0, 10)).slice(0, 7) + "-01";
+    try {
+      await syncAdvisedPlanContributionsToBudget(db, { userId: updated.userId, fromMonth });
+    } catch { /* status change still succeeds even if the budget sync fails */ }
+  }
+
   res.json(updated);
 });
 
@@ -326,6 +339,15 @@ router.put("/advised-plans/:id/contribution", requireAuth, requireRole("advisor"
     ...(initialPremium != null ? { initialPremium: String(initialPremium) } : {}),
     updatedAt: new Date(),
   }).where(eq(advisedPlansTable.id, id)).returning();
+
+  // Only backfill if the plan is actually in-force — a scenario-stage premium
+  // edit is just modeling and shouldn't touch the client's real budget history.
+  if (updated.status === "inforce" && annualPremium != null) {
+    const fromMonth = (updated.effectiveDate ?? new Date().toISOString().slice(0, 10)).slice(0, 7) + "-01";
+    try {
+      await syncAdvisedPlanContributionsToBudget(db, { userId: updated.userId, fromMonth });
+    } catch { /* premium change still succeeds even if the budget sync fails */ }
+  }
 
   res.json(updated);
 });
@@ -432,6 +454,80 @@ router.delete("/client/holdings/:id", requireAuth, async (req, res): Promise<voi
     .set({ isActive: false, updatedAt: new Date() })
     .where(and(eq(clientHoldingsTable.id, id), eq(clientHoldingsTable.userId, userId)));
   res.sendStatus(204);
+});
+
+// ── Self-held holding transactions (money in / money out history) ────────
+
+router.get("/client/holdings/:id/transactions", requireAuth, async (req, res): Promise<void> => {
+  const userId = (req as any).userId;
+  const id = req.params.id as string;
+  const [holding] = await db.select({ id: clientHoldingsTable.id }).from(clientHoldingsTable)
+    .where(and(eq(clientHoldingsTable.id, id), eq(clientHoldingsTable.userId, userId)));
+  if (!holding) { res.status(404).json({ error: "Not found" }); return; }
+
+  const rows = await db.select().from(clientHoldingTransactionsTable)
+    .where(eq(clientHoldingTransactionsTable.holdingId, id))
+    .orderBy(desc(clientHoldingTransactionsTable.transactionDate), desc(clientHoldingTransactionsTable.createdAt));
+  res.json(rows);
+});
+
+router.post("/client/holdings/:id/transactions", requireAuth, async (req, res): Promise<void> => {
+  const userId = (req as any).userId;
+  const id = req.params.id as string;
+  const { type, amount, description, transactionDate } = req.body;
+  if ((type !== "in" && type !== "out") || !(Number(amount) > 0)) {
+    res.status(400).json({ error: "type ('in' or 'out') and a positive amount are required" });
+    return;
+  }
+  try {
+    const row = await recordHoldingTransaction(db, {
+      holdingId: id, userId, type, amount: Number(amount),
+      source: "manual", description: description ?? null, transactionDate,
+    });
+    res.status(201).json(row);
+  } catch {
+    res.status(404).json({ error: "Not found" });
+  }
+});
+
+router.delete("/client/holdings/:id/transactions/:txId", requireAuth, async (req, res): Promise<void> => {
+  const userId = (req as any).userId;
+  const { id, txId } = req.params as { id: string; txId: string };
+
+  const [row] = await db.select().from(clientHoldingTransactionsTable)
+    .where(and(
+      eq(clientHoldingTransactionsTable.id, txId),
+      eq(clientHoldingTransactionsTable.holdingId, id),
+      eq(clientHoldingTransactionsTable.userId, userId),
+    ));
+  // Only manual entries are user-deletable — synced budget_contribution/surplus_sweep
+  // rows are managed by the budget save flow (POST /client/budget), not directly.
+  if (!row || row.source !== "manual") { res.status(404).json({ error: "Not found" }); return; }
+
+  const [holding] = await db.select().from(clientHoldingsTable).where(eq(clientHoldingsTable.id, id));
+  await db.delete(clientHoldingTransactionsTable).where(eq(clientHoldingTransactionsTable.id, txId));
+  if (holding?.holdingType === "cash") {
+    const delta = row.type === "in" ? -parseFloat(row.amount) : parseFloat(row.amount);
+    await db.update(clientHoldingsTable)
+      .set({ currentBalance: sql`${clientHoldingsTable.currentBalance} + ${delta}`, updatedAt: new Date() })
+      .where(eq(clientHoldingsTable.id, id));
+  }
+  res.sendStatus(204);
+});
+
+// Advisor read-only view of a lead's self-held holding transactions — mirrors
+// GET /advisor/leads/:id/holdings above.
+router.get("/advisor/leads/:id/holdings/:holdingId/transactions", requireAuth, requireRole("advisor", "super_admin"), requireAdvisorOwnsLead("id"), async (req, res): Promise<void> => {
+  const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const holdingId = req.params.holdingId as string;
+  const [holding] = await db.select({ id: clientHoldingsTable.id }).from(clientHoldingsTable)
+    .where(and(eq(clientHoldingsTable.id, holdingId), eq(clientHoldingsTable.userId, rawId)));
+  if (!holding) { res.status(404).json({ error: "Not found" }); return; }
+
+  const rows = await db.select().from(clientHoldingTransactionsTable)
+    .where(eq(clientHoldingTransactionsTable.holdingId, holdingId))
+    .orderBy(desc(clientHoldingTransactionsTable.transactionDate));
+  res.json(rows);
 });
 
 function deviationResponse(value: number | null, benchmarkValue: number | null) {
@@ -556,40 +652,66 @@ router.post("/client/budget", requireAuth, async (req, res): Promise<void> => {
   } else {
     [row] = await db.insert(clientBudgetMonthsTable).values(values).returning();
   }
+
+  // ── Attribute contributions to self-tracked holdings, and sweep whatever's
+  // left of netSurplus into a cash holding — both idempotent per (holding,
+  // month, source) so re-saving this same month never double-counts.
+  const ownedHoldings = await db.select({ id: clientHoldingsTable.id }).from(clientHoldingsTable)
+    .where(and(eq(clientHoldingsTable.userId, userId), eq(clientHoldingsTable.isActive, true)));
+  const ownedHoldingIds = new Set(ownedHoldings.map(h => h.id));
+
+  const selfHoldingEntries = contributions.filter(
+    (c: any) => c?.source_type === "self_holding" && ownedHoldingIds.has(c.source_id),
+  );
+  const nextHoldingIds = new Set(selfHoldingEntries.map((c: any) => c.source_id as string));
+
+  const priorContribRows = await db.select().from(clientHoldingTransactionsTable).where(and(
+    eq(clientHoldingTransactionsTable.userId, userId),
+    eq(clientHoldingTransactionsTable.sourceMonth, month),
+    eq(clientHoldingTransactionsTable.source, "budget_contribution"),
+  ));
+  for (const prior of priorContribRows) {
+    if (!nextHoldingIds.has(prior.holdingId)) {
+      await upsertMonthlyHoldingLedgerEntry(db, {
+        holdingId: prior.holdingId, userId, source: "budget_contribution", sourceMonth: month, amount: 0,
+      });
+    }
+  }
+  for (const c of selfHoldingEntries) {
+    await upsertMonthlyHoldingLedgerEntry(db, {
+      holdingId: c.source_id, userId, source: "budget_contribution", sourceMonth: month,
+      amount: n(c.amount), description: `Budget contribution — ${month}`,
+    });
+  }
+
+  const [existingSweep] = await db.select().from(clientHoldingTransactionsTable).where(and(
+    eq(clientHoldingTransactionsTable.userId, userId),
+    eq(clientHoldingTransactionsTable.sourceMonth, month),
+    eq(clientHoldingTransactionsTable.source, "surplus_sweep"),
+  ));
+  if (netSurplus > 0) {
+    const targetHoldingId = existingSweep?.holdingId ?? (await getOrCreateDefaultCashHolding(db, userId)).id;
+    await upsertMonthlyHoldingLedgerEntry(db, {
+      holdingId: targetHoldingId, userId, source: "surplus_sweep", sourceMonth: month,
+      amount: netSurplus, description: `Unattributed surplus — ${month}`,
+    });
+  } else if (existingSweep) {
+    await upsertMonthlyHoldingLedgerEntry(db, {
+      holdingId: existingSweep.holdingId, userId, source: "surplus_sweep", sourceMonth: month, amount: 0,
+    });
+  }
+
   res.json(row);
 });
 
 router.post("/client/budget/sync-contributions", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
 
-  const plans = await db.select({
-    id: advisedPlansTable.id,
-    nickname: advisedPlansTable.nickname,
-    productName: advisedPlansTable.productName,
-    annualPremium: advisedPlansTable.annualPremium,
-    planType: advisedPlansTable.planType,
-  }).from(advisedPlansTable)
-    .where(and(eq(advisedPlansTable.userId, userId), eq(advisedPlansTable.status, "inforce")));
-
-  const contributions = plans
-    .filter(p => p.planType === "rsp" && parseFloat(p.annualPremium as string) > 0)
-    .map(p => ({
-      label: p.nickname ?? p.productName,
-      amount: Math.round(parseFloat(p.annualPremium as string) / 12),
-      source_id: p.id,
-      source_type: "advised_plan",
-    }));
-
-  // Update current month's budget
-  const currentMonth = new Date().toISOString().slice(0, 7) + "-01";
-  const [existing] = await db.select().from(clientBudgetMonthsTable)
-    .where(and(eq(clientBudgetMonthsTable.userId, userId), eq(clientBudgetMonthsTable.month, currentMonth)));
-
-  if (existing) {
-    await db.update(clientBudgetMonthsTable)
-      .set({ investmentContributions: contributions, updatedAt: new Date() })
-      .where(eq(clientBudgetMonthsTable.id, existing.id));
-  }
+  // Single-month "live top-up" sync (fromMonth defaults to the current month).
+  // Merges into whatever's already there instead of overwriting the whole
+  // array, so manual/self_holding entries the client already saved survive.
+  const result = await syncAdvisedPlanContributionsToBudget(db, { userId });
+  const contributions = result.contributions;
 
   res.json({ synced: contributions.length, contributions });
 });
