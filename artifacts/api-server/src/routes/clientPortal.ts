@@ -188,7 +188,7 @@ router.get("/client/advised-plans/:planId/statements", requireAuth, async (req, 
   res.json(stmts);
 });
 
-// ── Client: last 20 transactions for a plan (across all its statements) ──
+// ── Client: last 50 transactions for a plan (across all its statements) ──
 router.get("/client/advised-plans/:planId/transactions", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
   const planId = req.params.planId as string;
@@ -198,7 +198,7 @@ router.get("/client/advised-plans/:planId/transactions", requireAuth, async (req
   const rows = await db.select().from(advisedPlanTransactionsTable)
     .where(eq(advisedPlanTransactionsTable.advisedPlanId, planId))
     .orderBy(desc(advisedPlanTransactionsTable.transactionDate))
-    .limit(20);
+    .limit(50);
   res.json(rows);
 });
 

@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import ClientAppShell from "@/components/client/AppShell";
 import BottomSheet from "@/components/client/BottomSheet";
 import BudgetMonthStrip from "@/components/client/budget/BudgetMonthStrip";
-import BudgetSurplusBar from "@/components/client/budget/BudgetSurplusBar";
-import BudgetCategoryCard from "@/components/client/budget/BudgetCategoryCard";
+import BudgetSummaryCard from "@/components/client/budget/BudgetSummaryCard";
+import BudgetCategoryRow from "@/components/client/budget/BudgetCategoryRow";
 import InvestmentContributionRow from "@/components/client/budget/InvestmentContributionRow";
 import HoldingContributionPicker, { type HoldingContributionEntry } from "@/components/client/budget/HoldingContributionPicker";
 import SurplusCTA from "@/components/client/budget/SurplusCTA";
@@ -37,9 +37,15 @@ function rowToForm(data: Record<string, string | null | undefined> | null): Budg
   };
 }
 
-function monthLabel(dateStr: string) {
+function monthTitle(dateStr: string) {
   const d = new Date(dateStr + "T00:00:00");
-  return d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  return d.toLocaleDateString("en-US", { month: "long" });
+}
+
+function daysLeftInMonth(): number {
+  const now = new Date();
+  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  return lastDay.getDate() - now.getDate();
 }
 
 type SheetKey = "income" | "expenses" | "investments" | null;
@@ -154,10 +160,15 @@ export default function ClientBudget() {
   return (
     <ClientAppShell>
       <div className="space-y-[14px] pb-12">
-        <div className="mb-1">
+        <div className="mb-2">
           <h1 className="font-display text-[30px] font-semibold text-forest tracking-[-0.02em]">
-            {monthLabel(selectedMonth)}
+            {monthTitle(selectedMonth)}
           </h1>
+          {selectedMonth === currentMonthStr && (
+            <div className="text-[14px] text-ink-40 mt-1">
+              {daysLeftInMonth()} days left in the month
+            </div>
+          )}
         </div>
 
         <BudgetMonthStrip
@@ -167,41 +178,47 @@ export default function ClientBudget() {
           onChange={handleMonthChange}
         />
 
-        <BudgetSurplusBar netSurplus={netSurplus} savingsRatePct={savingsRatePct} />
+        <BudgetSummaryCard
+          incomeTotal={incomeTotal}
+          expenseTotal={expenseTotal}
+          investTotal={investTotal}
+          netSurplus={netSurplus}
+        />
 
-        <div className="space-y-3">
-          <BudgetCategoryCard
+        <SurplusCTA surplus={netSurplus} monthKey={selectedMonth.slice(0, 7)} />
+
+        <div className="bg-surface rounded-[26px] p-[6px_20px] shadow-[0_2px_14px_rgba(20,52,42,.06)]">
+          <BudgetCategoryRow
             label="Income"
-            total={incomeTotal}
-            pctOfIncome={100}
-            borderColor="var(--green)"
+            subtitle="Primary & other"
+            value={incomeTotal}
+            color="var(--forest)"
             onClick={() => setOpenSheet("income")}
           />
-          <BudgetCategoryCard
+          <BudgetCategoryRow
             label="Expenses"
-            total={expenseTotal}
-            pctOfIncome={incomeTotal > 0 ? (expenseTotal / incomeTotal) * 100 : 0}
-            borderColor="#EF4444"
+            subtitle="Housing, utilities, etc."
+            value={expenseTotal}
+            color="var(--clay)"
             onClick={() => setOpenSheet("expenses")}
           />
-          <BudgetCategoryCard
+          <BudgetCategoryRow
             label="Investments"
-            total={investTotal}
-            pctOfIncome={incomeTotal > 0 ? (investTotal / incomeTotal) * 100 : 0}
-            borderColor="var(--violet)"
+            subtitle="Advised & self-managed"
+            value={investTotal}
+            color="var(--green)"
+            noBorder
             onClick={() => setOpenSheet("investments")}
           />
         </div>
 
-        <SurplusCTA surplus={netSurplus} monthKey={selectedMonth.slice(0, 7)} />
-
         {investTotal > 0 && (
-          <div className="bg-surface rounded-[22px] p-[18px_20px] shadow-[0_2px_14px_rgba(20,52,42,.06)]">
+          <div className="bg-surface rounded-[26px] p-[18px_20px] shadow-[0_2px_14px_rgba(20,52,42,.06)]">
             <GoalFundingGaps totalMonthlyInvestments={investTotal} />
           </div>
         )}
 
-        <div className="bg-surface rounded-[22px] p-[18px_20px] shadow-[0_2px_14px_rgba(20,52,42,.06)]">
+        <div className="bg-surface rounded-[26px] p-[18px_20px] shadow-[0_2px_14px_rgba(20,52,42,.06)]">
           <BudgetHistoryChart months={months} />
         </div>
 

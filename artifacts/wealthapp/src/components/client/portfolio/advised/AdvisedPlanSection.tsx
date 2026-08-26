@@ -24,9 +24,10 @@ function PlanWithSheets({ plan }: { plan: AdvisedPlan }) {
     queryKey: ["plan-statement-holdings", plan.id],
     queryFn: async () => {
       const map: Record<string, AdvisedPlanHolding[]> = {};
-      for (const stmt of statements) {
-        const h = await apiFetch<AdvisedPlanHolding[]>(`/client/advised-plans/${plan.id}/statements/${stmt.id}/holdings`);
-        map[stmt.id] = h;
+      for (const statement of statements) {
+        map[statement.id] = await apiFetch<AdvisedPlanHolding[]>(
+          `/client/advised-plans/${plan.id}/statements/${statement.id}/holdings`,
+        );
       }
       return map;
     },
@@ -40,7 +41,10 @@ function PlanWithSheets({ plan }: { plan: AdvisedPlan }) {
         isOpen={detailOpen}
         onClose={() => setDetailOpen(false)}
         plan={plan}
-        onViewAllStatements={() => { setDetailOpen(false); setHistoryOpen(true); }}
+        onViewAllStatements={() => {
+          setDetailOpen(false);
+          setHistoryOpen(true);
+        }}
       />
       <StatementHistoryDrawer
         isOpen={historyOpen}
@@ -56,7 +60,7 @@ function PlanWithSheets({ plan }: { plan: AdvisedPlan }) {
 export default function AdvisedPlanSection({ plans }: Props) {
   return (
     <div className="space-y-3">
-      {plans.map(plan => <PlanWithSheets key={plan.id} plan={plan} />)}
+      {plans.map((plan) => <PlanWithSheets key={plan.id} plan={plan} />)}
     </div>
   );
 }

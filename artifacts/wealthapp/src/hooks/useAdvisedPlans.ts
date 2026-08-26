@@ -94,7 +94,7 @@ export interface AdvisedPlanTransaction {
   createdAt: string;
 }
 
-/** Last 20 transactions across all of a plan's statements, newest first. */
+/** Last 50 transactions across all of a plan's statements, newest first. */
 export function useAdvisedPlanTransactions(planId: string | null) {
   const { user, isLoaded } = useUser();
 

@@ -28,6 +28,8 @@ const MilestonesPage = lazy(() => import("@/pages/free/milestones"));
 
 const ClientDashboard = lazy(() => import("@/pages/client/ClientDashboard"));
 const ClientPortfolio = lazy(() => import("@/pages/client/ClientPortfolio"));
+const AdvisedPlanDetail = lazy(() => import("@/pages/client/AdvisedPlanDetail"));
+const HoldingDetail = lazy(() => import("@/pages/client/HoldingDetail"));
 const ClientPlan = lazy(() => import("@/pages/client/plan"));
 const ClientGoals = lazy(() => import("@/pages/client/goals"));
 const ClientNetWorth = lazy(() => import("@/pages/client/networth"));
@@ -228,6 +230,8 @@ function AppRoutes() {
       <Route path="/client/onboarding" component={() => <ProtectedRoute component={ClientOnboarding} role={["investment_client", "super_admin"]} />} />
       <Route path="/client/dashboard" component={() => <ProtectedRoute component={ClientDashboard} role={["investment_client", "super_admin"]} />} />
       <Route path="/client/portfolio" component={() => <ProtectedRoute component={ClientPortfolio} role={["investment_client", "super_admin"]} />} />
+      <Route path="/client/portfolio/holding/:holdingId" component={() => <ProtectedRoute component={HoldingDetail} role={["investment_client", "super_admin"]} />} />
+      <Route path="/client/portfolio/:planId" component={() => <ProtectedRoute component={AdvisedPlanDetail} role={["investment_client", "super_admin"]} />} />
       <Route path="/client/packages/:id" component={() => <ProtectedRoute component={ClientPackageDetail} role={["investment_client", "super_admin"]} />} />
       {/* Packages and Transactions folded into Investment accounts (Phase 5/6) — old links redirect there. */}
       <Route path="/client/packages" component={() => <Redirect to="/client/portfolio" />} />

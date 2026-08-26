@@ -11,7 +11,9 @@ interface Props {
   onViewAllStatements: () => void;
 }
 
-function n(v: string | number | null | undefined) { return parseFloat(String(v ?? "0")) || 0; }
+function n(v: string | number | null | undefined) {
+  return parseFloat(String(v ?? "0")) || 0;
+}
 
 const PLAN_TYPE_LABEL: Record<string, string> = {
   rsp: "Regular Savings Plan",
@@ -37,10 +39,10 @@ export default function AdvisedPlanDetailSheet({ isOpen, onClose, plan, onViewAl
     <BottomSheet isOpen={isOpen} onClose={onClose} title={plan.nickname ?? plan.productName} height="full">
       <div className="space-y-5">
         <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-[14px]">
-          {details.map(([label, val]) => (
+          {details.map(([label, value]) => (
             <div key={label}>
               <p className="text-[12px] text-ink-40">{label}</p>
-              <p className="font-medium text-forest">{val}</p>
+              <p className="font-medium text-forest">{value}</p>
             </div>
           ))}
         </div>
@@ -54,25 +56,25 @@ export default function AdvisedPlanDetailSheet({ isOpen, onClose, plan, onViewAl
           <p className="text-[12px] font-semibold text-ink-40 uppercase tracking-wide mb-2">Transactions</p>
           {loading ? (
             <div className="space-y-2">
-              {[0, 1, 2].map(i => <div key={i} className="h-10 bg-hairline/60 animate-pulse rounded-lg" />)}
+              {[0, 1, 2].map((index) => <div key={index} className="h-10 bg-hairline/60 animate-pulse rounded-lg" />)}
             </div>
           ) : transactions.length === 0 ? (
             <p className="text-[13.5px] text-ink-40 py-4 text-center">No transactions yet.</p>
           ) : (
             <div className="space-y-1">
-              {transactions.map(t => {
-                const amt = n(t.netAmount);
+              {transactions.map((transaction) => {
+                const amount = n(transaction.netAmount);
                 return (
-                  <div key={t.id} className="flex items-center justify-between py-2 border-b border-hairline last:border-0">
+                  <div key={transaction.id} className="flex items-center justify-between py-2 border-b border-hairline last:border-0">
                     <div className="min-w-0">
-                      <p className="text-[13.5px] text-forest truncate">{t.description}</p>
+                      <p className="text-[13.5px] text-forest truncate">{transaction.description}</p>
                       <p className="text-[12px] text-ink-40">
-                        {new Date(t.transactionDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                        {new Date(transaction.transactionDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                       </p>
                     </div>
-                    <span className={cn("text-[13.5px] font-semibold tabular-nums shrink-0 ml-3", amt >= 0 ? "text-green" : "text-clay")}>
-                      {amt >= 0 ? "+" : ""}
-                      <CurrencyField amountUsd={amt} currency={plan.currency} compact />
+                    <span className={cn("text-[13.5px] font-semibold tabular-nums shrink-0 ml-3", amount >= 0 ? "text-green" : "text-clay")}>
+                      {amount >= 0 ? "+" : ""}
+                      <CurrencyField amountUsd={amount} currency={plan.currency} compact />
                     </span>
                   </div>
                 );

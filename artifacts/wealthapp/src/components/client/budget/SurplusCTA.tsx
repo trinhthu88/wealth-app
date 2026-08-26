@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Sparkles, X } from "lucide-react";
+import { X } from "lucide-react";
 import { Link } from "wouter";
 import { useClientTrack } from "@/hooks/useClientTrack";
 import { projectMonthlyGrowth } from "@/lib/investmentCalculations";
+import Sol from "@/components/Sol";
 
 function fmtCompact(v: number) {
   if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
@@ -28,53 +29,48 @@ export default function SurplusCTA({ surplus, monthKey }: Props) {
   const tenYearValue = projected[projected.length - 1].value;
 
   return (
-    <div className="flex items-start gap-2.5 p-3 rounded-xl bg-[#1D9E75]/5 border-l-[3px] border-[#1D9E75]">
-      <Sparkles className="h-4 w-4 text-[#1D9E75] shrink-0 mt-0.5" />
-      <div className="flex-1 min-w-0 space-y-1.5">
-        <p className="text-[13px] font-semibold text-[#042C53]">
-          You have {fmtCompact(surplus)} surplus this month
-        </p>
-        {isTrackA ? (
-          <p className="text-xs text-slate-600">
-            Run a scenario to see what investing your {fmtCompact(surplus)}/month surplus could do.{" "}
-            <Link
-              href={`/client/scenarios?type=increase_monthly&surplus=${Math.round(surplus)}`}
-              className="text-[#1D9E75] font-medium hover:underline"
-            >
-              Model my surplus →
-            </Link>
-          </p>
-        ) : (
-          <>
-            <p className="text-xs text-slate-600">
-              Investing {fmtCompact(surplus)}/month could grow to{" "}
-              <span className="font-semibold text-[#042C53]">{fmtCompact(tenYearValue)}</span>{" "}
-              over 10 years at 7%.{" "}
+    <div className="bg-sun-tint rounded-[24px] p-[16px_18px] mb-[14px] flex gap-3 items-start relative pr-10">
+      <div className="shrink-0 mt-1">
+        <Sol size="sm" animate="idle" showRays={false} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-[14px] text-amber-ink leading-[1.5] text-pretty">
+          {isTrackA ? (
+            <>
+              You have {fmtCompact(surplus)} surplus this month. Want me to run a scenario to see what investing it could do?{" "}
               <Link
                 href={`/client/scenarios?type=increase_monthly&surplus=${Math.round(surplus)}`}
-                className="text-[#1D9E75] font-medium hover:underline"
+                className="font-semibold underline decoration-amber-ink/30 hover:decoration-amber-ink"
               >
-                Run the numbers →
+                Model my surplus
               </Link>
-            </p>
-            <p className="text-xs text-slate-500">
-              Want a personalized investment plan?{" "}
-              <Link href="/client/messages" className="text-[#1D9E75] font-medium hover:underline">
-                Talk to an advisor →
+            </>
+          ) : (
+            <>
+              Investing your {fmtCompact(surplus)} surplus could grow to <span className="font-semibold">{fmtCompact(tenYearValue)}</span> over 10 years.{" "}
+              <Link
+                href={`/client/scenarios?type=increase_monthly&surplus=${Math.round(surplus)}`}
+                className="font-semibold underline decoration-amber-ink/30 hover:decoration-amber-ink"
+              >
+                Run the numbers
               </Link>
-            </p>
-          </>
-        )}
+              {" "}or{" "}
+              <Link href="/client/messages" className="font-semibold underline decoration-amber-ink/30 hover:decoration-amber-ink">
+                talk to an advisor
+              </Link>.
+            </>
+          )}
+        </p>
       </div>
       <button
         onClick={() => {
           setDismissed(true);
           localStorage.setItem(`surplus_cta_dismissed_${monthKey}`, "1");
         }}
-        className="shrink-0 h-5 w-5 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors"
+        className="absolute top-[16px] right-[16px] h-6 w-6 flex items-center justify-center rounded-full text-amber-ink/50 hover:bg-sun-deep/10 hover:text-amber-ink transition-colors"
         aria-label="Dismiss"
       >
-        <X className="h-3 w-3" />
+        <X className="h-4 w-4" />
       </button>
     </div>
   );

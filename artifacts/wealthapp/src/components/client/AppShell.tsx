@@ -4,7 +4,6 @@ import { UserButton, useClerk } from "@clerk/react";
 import { useProfile } from "@/hooks/useProfile";
 import { cn } from "@/lib/utils";
 import Sol from "../Sol";
-import SolChat from "../SolChat";
 import { Drawer } from "vaul";
 import {
   LayoutDashboard, PieChart, Calculator, Target,
@@ -31,8 +30,7 @@ const SIDEBAR_NAV: NavItem[] = [
 
 // The 5-slot mobile bottom nav is a fixed, product-specified set (Home,
 // Portfolio, Goals, Budget, More) — distinct from the sidebar's full list, and
-// no longer includes Pathway/Plan or a Sol slot (Sol moved to a floating
-// button — see the Sol FAB below — so it stays reachable without taking a tab).
+// no longer includes Pathway/Plan.
 const MOBILE_BOTTOM_TABS: NavItem[] = [
   { label: "Home",      href: "/client/dashboard", icon: LayoutDashboard },
   { label: "Portfolio", href: "/client/portfolio", icon: PieChart },
@@ -58,7 +56,6 @@ export default function ClientAppShell({ children }: { children: React.ReactNode
   const { profile } = useProfile();
   const { signOut } = useClerk();
   const [location] = useLocation();
-  const [solOpen, setSolOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [isPathway] = useRoute("/client/plan");
@@ -142,14 +139,6 @@ export default function ClientAppShell({ children }: { children: React.ReactNode
           {children}
         </main>
 
-        <button
-          onClick={() => setSolOpen(true)}
-          className="lg:hidden fixed right-4 bottom-[104px] z-40 flex h-[52px] w-[52px] items-center justify-center rounded-full bg-sun shadow-[0_4px_14px_rgba(255,182,39,0.45)] outline-none"
-          aria-label="Talk to Sol"
-        >
-          <div className={cn("h-[16px] w-[16px] rounded-full", isPathway ? "bg-forest" : "bg-paper")} />
-        </button>
-
         <div className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-surface border-t border-hairline-2 h-[88px]">
           <div className="flex items-start justify-around pt-3 h-full pb-[env(safe-area-inset-bottom)]">
             {MOBILE_BOTTOM_TABS.map((item) => (
@@ -232,25 +221,6 @@ export default function ClientAppShell({ children }: { children: React.ReactNode
                   <LogOut className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
                   <span>Sign out</span>
                 </button>
-              </div>
-            </Drawer.Content>
-          </Drawer.Portal>
-        </Drawer.Root>
-
-        <Drawer.Root open={solOpen} onOpenChange={setSolOpen}>
-          <Drawer.Portal>
-            <Drawer.Overlay className="fixed inset-0 bg-forest/40 z-50 backdrop-blur-sm" />
-            <Drawer.Content className="bg-paper flex flex-col rounded-t-[32px] h-[80vh] mt-24 fixed bottom-0 left-0 right-0 z-50 focus:outline-none max-w-[440px] mx-auto">
-              <Drawer.Title className="sr-only">Talk to Sol</Drawer.Title>
-              <Drawer.Description className="sr-only">
-                Ask TALA's financial coach about scenarios, goals, or your budget.
-              </Drawer.Description>
-              <div className="pt-4 bg-paper rounded-t-[32px] flex-1 flex flex-col min-h-0">
-                <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-hairline mb-8" />
-                <SolChat
-                  open={solOpen}
-                  greeting="Morning! I'm Sol. I can model scenarios, check your goals, or review your budget with you."
-                />
               </div>
             </Drawer.Content>
           </Drawer.Portal>

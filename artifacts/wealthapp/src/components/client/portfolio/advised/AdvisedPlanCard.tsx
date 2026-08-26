@@ -2,7 +2,6 @@ import { AlertCircle, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import CurrencyField from "@/components/shared/CurrencyField";
 import { formatPct } from "@/lib/currencyUtils";
-import SourceBadge from "@/components/client/portfolio/shared/SourceBadge";
 import type { AdvisedPlan } from "@/hooks/useAdvisedPlans";
 
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
@@ -27,22 +26,21 @@ export default function AdvisedPlanCardFull({ plan, onOpen }: Props) {
     <button
       type="button"
       onClick={onOpen}
-      className="w-full text-left bg-surface border border-hairline rounded-[22px] p-4 transition-colors hover:border-green/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green"
+      className="w-full text-left bg-surface rounded-[26px] p-[20px_22px] shadow-[0_2px_14px_rgba(20,52,42,.06)] transition-all hover:shadow-[0_4px_20px_rgba(20,52,42,.08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green"
     >
-      <div className="flex items-start justify-between gap-3 mb-3">
+      <div className="flex items-start justify-between gap-3 mb-4">
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <p className="text-[15px] font-semibold text-forest">{plan.nickname ?? plan.productName}</p>
-            <SourceBadge kind="advised" />
-            <span className={cn("text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0", status.className)}>
+          <div className="flex items-center gap-2 flex-wrap mb-1">
+            <h3 className="text-[20px] font-semibold text-forest leading-none">{plan.nickname ?? plan.productName}</h3>
+            <span className={cn("text-[10px] font-bold tracking-[0.06em] uppercase px-2 py-0.5 rounded-md shrink-0", status.className)}>
               {status.label}
             </span>
           </div>
-          <p className="text-[13px] text-ink-40 mt-0.5">
+          <p className="text-[13.5px] text-ink-40">
             {plan.providerName}{plan.policyNumber ? ` · ${plan.policyNumber}` : ""}
           </p>
         </div>
-        <ChevronRight className="h-4 w-4 shrink-0 text-ink-30 mt-1" aria-hidden="true" />
+        <ChevronRight className="h-5 w-5 shrink-0 text-ink-30 mt-1" aria-hidden="true" />
       </div>
 
       {isPending ? (
@@ -51,17 +49,21 @@ export default function AdvisedPlanCardFull({ plan, onOpen }: Props) {
           <p className="text-amber-ink">Your advisor is entering your plan details. This will update within 24 hours.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="flex justify-between items-end">
           <div>
-            <p className="text-[12px] text-ink-40 mb-0.5">Account value</p>
-            <p className="text-[15px] font-semibold text-forest tabular-nums"><CurrencyField amountUsd={cv} currency={plan.currency} compact /></p>
+            <p className="text-[13.5px] text-ink-40 mb-1">Account value</p>
+            <p className="font-display text-[22px] font-semibold text-forest tabular-nums leading-none">
+              <CurrencyField amountUsd={cv} currency={plan.currency} compact />
+            </p>
           </div>
-          <div>
-            <p className="text-[12px] text-ink-40 mb-0.5">Gain / loss</p>
-            <p className={cn("text-[15px] font-semibold tabular-nums", isGain ? "text-green" : "text-clay")}>
+          <div className="text-right">
+            <p className="text-[13.5px] text-ink-40 mb-1">Gain / loss</p>
+            <p className={cn("text-[15px] font-semibold tabular-nums leading-none mb-1", isGain ? "text-green" : "text-clay")}>
               <CurrencyField amountUsd={plan.gainLoss} currency={plan.currency} compact showSign />
             </p>
-            <p className={cn("text-[12px]", isGain ? "text-green" : "text-clay")}>{formatPct(plan.gainLossPct)}</p>
+            <p className={cn("text-[12.5px] font-medium leading-none", isGain ? "text-green" : "text-clay")}>
+              {formatPct(plan.gainLossPct)}
+            </p>
           </div>
         </div>
       )}

@@ -25,16 +25,18 @@ const TYPE_OPTIONS: { value: HoldingTransactionType; label: string }[] = [
   { value: "fee", label: "Fee paid" },
 ];
 
-function fmtDate(d: string) {
-  return new Date(d + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+function formatDate(date: string) {
+  return new Date(`${date}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
-function fmtUsd(n: number) {
-  return `$${Math.round(n).toLocaleString("en-US")}`;
+
+function formatUsd(value: number) {
+  return `$${Math.round(value).toLocaleString("en-US")}`;
 }
+
 function signFor(type: HoldingTransactionType) {
   if (type === "in") return 1;
   if (type === "out" || type === "fee") return -1;
-  return 0; // value_update doesn't carry a direction
+  return 0;
 }
 
 export default function HoldingTransactionsDrawer({ isOpen, onClose, holdingId, holdingLabel, isUnitsBased }: Props) {
@@ -55,10 +57,12 @@ export default function HoldingTransactionsDrawer({ isOpen, onClose, holdingId, 
   }
 
   async function handleAdd() {
-    const amt = parseFloat(amount);
-    if (!(amt > 0)) return;
+    const parsedAmount = parseFloat(amount);
+    if (!(parsedAmount > 0)) return;
     await addTransaction({
-      type, amount: amt, transactionDate: date,
+      type,
+      amount: parsedAmount,
+      transactionDate: date,
       description: note || undefined,
       units: units ? parseFloat(units) || undefined : undefined,
     });
@@ -70,37 +74,39 @@ export default function HoldingTransactionsDrawer({ isOpen, onClose, holdingId, 
     <BottomSheet isOpen={isOpen} onClose={onClose} title={`${holdingLabel} — Transactions`}>
       {loading ? (
         <div className="space-y-2">
-          {[0, 1, 2].map(i => <div key={i} className="h-12 bg-hairline/60 animate-pulse rounded-lg" />)}
+          {[0, 1, 2].map((index) => <div key={index} className="h-12 bg-hairline/60 animate-pulse rounded-lg" />)}
         </div>
       ) : transactions.length === 0 ? (
-        <p className="text-[13.5px] text-ink-40 py-6 text-center">No transactions yet.</p>
+        <p className="py-6 text-center text-[13.5px] text-ink-40">No transactions yet.</p>
       ) : (
-        <div className="space-y-2 mb-4">
-          {transactions.map(tx => {
-            const amt = parseFloat(tx.amount) || 0;
-            const sign = signFor(tx.type);
-            const isLocked = tx.source !== "manual";
-            const label = tx.type === "value_update" ? "Value update"
-              : tx.description || SOURCE_LABEL[tx.source] || "Transaction";
+        <div className="mb-4 space-y-2">
+          {transactions.map((transaction) => {
+            const amountValue = parseFloat(transaction.amount) || 0;
+            const sign = signFor(transaction.type);
+            const isLocked = transaction.source !== "manual";
+            const label = transaction.type === "value_update"
+              ? "Value update"
+              : transaction.description || SOURCE_LABEL[transaction.source] || "Transaction";
             return (
-              <div key={tx.id} className="flex items-center justify-between py-2.5 px-3 border border-hairline rounded-[14px]">
-                <div className="min-w-0 flex items-center gap-1.5">
+              <div key={transaction.id} className="flex items-center justify-between rounded-[14px] border border-hairline px-3 py-2.5">
+                <div className="flex min-w-0 items-center gap-1.5">
                   {isLocked && <Lock className="h-3 w-3 shrink-0 text-ink-30" aria-label="Automatic entry, locked" />}
                   <div className="min-w-0">
-                    <p className="text-[13.5px] text-forest truncate">{label}</p>
+                    <p className="truncate text-[13.5px] text-forest">{label}</p>
                     <p className="text-[12px] text-ink-40">
-                      {fmtDate(tx.transactionDate)} · {SOURCE_LABEL[tx.source] ?? tx.source}
-                      {tx.units ? ` · ${parseFloat(tx.units)} units` : ""}
+                      {formatDate(transaction.transactionDate)} · {SOURCE_LABEL[transaction.source] ?? transaction.source}
+                      {transaction.units ? ` · ${parseFloat(transaction.units)} units` : ""}
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0 ml-2">
+                <div className="ml-2 flex shrink-0 items-center gap-2">
                   <span className={cn("text-[13.5px] font-semibold tabular-nums", sign > 0 ? "text-green" : sign < 0 ? "text-clay" : "text-forest")}>
-                    {sign > 0 ? "+" : sign < 0 ? "-" : ""}{fmtUsd(amt)}
+                    {sign > 0 ? "+" : sign < 0 ? "-" : ""}{formatUsd(amountValue)}
                   </span>
                   {!isLocked && (
                     <button
-                      onClick={() => deleteTransaction(tx.id)}
+                      type="button"
+                      onClick={() => deleteTransaction(transaction.id)}
                       className="text-[12px] text-ink-30 hover:text-clay"
                       aria-label="Delete transaction"
                     >
@@ -117,7 +123,7 @@ export default function HoldingTransactionsDrawer({ isOpen, onClose, holdingId, 
       <button
         type="button"
         onClick={() => setAddOpen(true)}
-        className="w-full min-h-11 flex items-center justify-center gap-1.5 rounded-[14px] border border-dashed border-hairline text-[13.5px] font-semibold text-ink-40 hover:border-green hover:text-green transition-colors"
+        className="flex min-h-11 w-full items-center justify-center gap-1.5 rounded-[14px] border border-dashed border-hairline text-[13.5px] font-semibold text-ink-40 transition-colors hover:border-green hover:text-green"
       >
         <Plus className="h-4 w-4" aria-hidden="true" /> Add transaction
       </button>
@@ -125,67 +131,32 @@ export default function HoldingTransactionsDrawer({ isOpen, onClose, holdingId, 
       <BottomSheet isOpen={addOpen} onClose={() => setAddOpen(false)} title="Add transaction">
         <div className="space-y-3">
           <div>
-            <label className="text-[12.5px] font-medium text-ink-40 mb-1 block">Date</label>
-            <input
-              type="date"
-              value={date}
-              onChange={e => setDate(e.target.value)}
-              className="w-full min-h-11 px-3 rounded-xl border border-hairline text-[14px] focus:outline-none focus:ring-2 focus:ring-green"
-            />
+            <label className="mb-1 block text-[12.5px] font-medium text-ink-40">Date</label>
+            <input type="date" value={date} onChange={(event) => setDate(event.target.value)} className="min-h-11 w-full rounded-xl border border-hairline px-3 text-[14px] focus:outline-none focus:ring-2 focus:ring-green" />
           </div>
           <div>
-            <label className="text-[12.5px] font-medium text-ink-40 mb-1 block">Type</label>
-            <select
-              value={type}
-              onChange={e => setType(e.target.value as HoldingTransactionType)}
-              className="w-full min-h-11 px-3 rounded-xl border border-hairline text-[14px] bg-surface focus:outline-none focus:ring-2 focus:ring-green"
-            >
-              {TYPE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            <label className="mb-1 block text-[12.5px] font-medium text-ink-40">Type</label>
+            <select value={type} onChange={(event) => setType(event.target.value as HoldingTransactionType)} className="min-h-11 w-full rounded-xl border border-hairline bg-surface px-3 text-[14px] focus:outline-none focus:ring-2 focus:ring-green">
+              {TYPE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
             </select>
           </div>
           <div>
-            <label className="text-[12.5px] font-medium text-ink-40 mb-1 block">
-              {type === "value_update" ? "New value" : "Amount"}
-            </label>
-            <input
-              type="number"
-              min={0}
-              value={amount}
-              onChange={e => setAmount(e.target.value)}
-              placeholder="0"
-              className="w-full min-h-11 px-3 rounded-xl border border-hairline text-[14px] focus:outline-none focus:ring-2 focus:ring-green"
-            />
+            <label className="mb-1 block text-[12.5px] font-medium text-ink-40">{type === "value_update" ? "New value" : "Amount"}</label>
+            <input type="number" min={0} value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="0" className="min-h-11 w-full rounded-xl border border-hairline px-3 text-[14px] focus:outline-none focus:ring-2 focus:ring-green" />
           </div>
           {isUnitsBased && (
             <div>
-              <label className="text-[12.5px] font-medium text-ink-40 mb-1 block">Units (optional)</label>
-              <input
-                type="number"
-                min={0}
-                value={units}
-                onChange={e => setUnits(e.target.value)}
-                placeholder="0"
-                className="w-full min-h-11 px-3 rounded-xl border border-hairline text-[14px] focus:outline-none focus:ring-2 focus:ring-green"
-              />
+              <label className="mb-1 block text-[12.5px] font-medium text-ink-40">Units (optional)</label>
+              <input type="number" min={0} value={units} onChange={(event) => setUnits(event.target.value)} placeholder="0" className="min-h-11 w-full rounded-xl border border-hairline px-3 text-[14px] focus:outline-none focus:ring-2 focus:ring-green" />
             </div>
           )}
           <div>
-            <label className="text-[12.5px] font-medium text-ink-40 mb-1 block">Note (optional)</label>
-            <input
-              type="text"
-              value={note}
-              onChange={e => setNote(e.target.value)}
-              placeholder="Note"
-              className="w-full min-h-11 px-3 rounded-xl border border-hairline text-[14px] focus:outline-none focus:ring-2 focus:ring-green"
-            />
+            <label className="mb-1 block text-[12.5px] font-medium text-ink-40">Note (optional)</label>
+            <input type="text" value={note} onChange={(event) => setNote(event.target.value)} placeholder="Note" className="min-h-11 w-full rounded-xl border border-hairline px-3 text-[14px] focus:outline-none focus:ring-2 focus:ring-green" />
           </div>
           <div className="flex gap-2 pt-1">
-            <button onClick={() => setAddOpen(false)} className="flex-1 min-h-11 rounded-xl border border-hairline text-[14px] text-ink-40">Cancel</button>
-            <button
-              onClick={handleAdd}
-              disabled={adding || !(parseFloat(amount) > 0)}
-              className="flex-1 min-h-11 rounded-xl bg-green text-white text-[14px] font-semibold disabled:opacity-50"
-            >
+            <button type="button" onClick={() => setAddOpen(false)} className="min-h-11 flex-1 rounded-xl border border-hairline text-[14px] text-ink-40">Cancel</button>
+            <button type="button" onClick={handleAdd} disabled={adding || !(parseFloat(amount) > 0)} className="min-h-11 flex-1 rounded-xl bg-green text-[14px] font-semibold text-white disabled:opacity-50">
               {adding ? "Saving…" : "Save"}
             </button>
           </div>
