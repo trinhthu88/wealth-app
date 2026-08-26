@@ -188,6 +188,20 @@ router.get("/client/advised-plans/:planId/statements", requireAuth, async (req, 
   res.json(stmts);
 });
 
+// ── Client: last 20 transactions for a plan (across all its statements) ──
+router.get("/client/advised-plans/:planId/transactions", requireAuth, async (req, res): Promise<void> => {
+  const userId = (req as any).userId;
+  const planId = req.params.planId as string;
+  const [plan] = await db.select({ id: advisedPlansTable.id })
+    .from(advisedPlansTable).where(and(eq(advisedPlansTable.id, planId), eq(advisedPlansTable.userId, userId)));
+  if (!plan) { res.status(403).json({ error: "Forbidden" }); return; }
+  const rows = await db.select().from(advisedPlanTransactionsTable)
+    .where(eq(advisedPlanTransactionsTable.advisedPlanId, planId))
+    .orderBy(desc(advisedPlanTransactionsTable.transactionDate))
+    .limit(20);
+  res.json(rows);
+});
+
 // ── Client: get holdings for a statement ─────────────────────────────────
 router.get("/client/advised-plans/:planId/statements/:stmtId/holdings", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
@@ -471,18 +485,21 @@ router.get("/client/holdings/:id/transactions", requireAuth, async (req, res): P
   res.json(rows);
 });
 
+const MANUAL_TX_TYPES = new Set(["in", "out", "fee", "value_update"]);
+
 router.post("/client/holdings/:id/transactions", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
   const id = req.params.id as string;
-  const { type, amount, description, transactionDate } = req.body;
-  if ((type !== "in" && type !== "out") || !(Number(amount) > 0)) {
-    res.status(400).json({ error: "type ('in' or 'out') and a positive amount are required" });
+  const { type, amount, description, transactionDate, units } = req.body;
+  if (!MANUAL_TX_TYPES.has(type) || !(Number(amount) > 0)) {
+    res.status(400).json({ error: "type ('in', 'out', 'fee', or 'value_update') and a positive amount are required" });
     return;
   }
   try {
     const row = await recordHoldingTransaction(db, {
       holdingId: id, userId, type, amount: Number(amount),
       source: "manual", description: description ?? null, transactionDate,
+      units: units != null ? Number(units) : null,
     });
     res.status(201).json(row);
   } catch {
@@ -506,7 +523,10 @@ router.delete("/client/holdings/:id/transactions/:txId", requireAuth, async (req
 
   const [holding] = await db.select().from(clientHoldingsTable).where(eq(clientHoldingsTable.id, id));
   await db.delete(clientHoldingTransactionsTable).where(eq(clientHoldingTransactionsTable.id, txId));
-  if (holding?.holdingType === "cash") {
+  // "value_update" set an absolute value rather than a delta — there's no
+  // reliable prior value to restore (other transactions may have followed
+  // it), so deleting one only removes the ledger row, not the holding's value.
+  if (holding?.holdingType === "cash" && (row.type === "in" || row.type === "out" || row.type === "fee")) {
     const delta = row.type === "in" ? -parseFloat(row.amount) : parseFloat(row.amount);
     await db.update(clientHoldingsTable)
       .set({ currentBalance: sql`${clientHoldingsTable.currentBalance} + ${delta}`, updatedAt: new Date() })

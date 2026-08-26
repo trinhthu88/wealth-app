@@ -1,23 +1,23 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
-import CurrencyField from "@/components/shared/CurrencyField";
 import AdvisedPlanCardFull from "./AdvisedPlanCard";
+import AdvisedPlanDetailSheet from "./AdvisedPlanDetailSheet";
 import StatementHistoryDrawer from "./StatementHistoryDrawer";
 import type { AdvisedPlan, AdvisedPlanStatement, AdvisedPlanHolding } from "@/hooks/useAdvisedPlans";
 
 interface Props {
   plans: AdvisedPlan[];
-  advisorName?: string;
 }
 
-function PlanWithDrawer({ plan }: { plan: AdvisedPlan }) {
-  const [drawerOpen, setDrawerOpen] = useState(false);
+function PlanWithSheets({ plan }: { plan: AdvisedPlan }) {
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   const { data: statements = [] } = useQuery<AdvisedPlanStatement[]>({
     queryKey: ["plan-statements", plan.id],
     queryFn: () => apiFetch(`/client/advised-plans/${plan.id}/statements`),
-    enabled: drawerOpen,
+    enabled: historyOpen,
   });
 
   const { data: holdingsMap = {} } = useQuery<Record<string, AdvisedPlanHolding[]>>({
@@ -30,15 +30,21 @@ function PlanWithDrawer({ plan }: { plan: AdvisedPlan }) {
       }
       return map;
     },
-    enabled: drawerOpen && statements.length > 0,
+    enabled: historyOpen && statements.length > 0,
   });
 
   return (
     <>
-      <AdvisedPlanCardFull plan={plan} onViewStatements={() => setDrawerOpen(true)} />
+      <AdvisedPlanCardFull plan={plan} onOpen={() => setDetailOpen(true)} />
+      <AdvisedPlanDetailSheet
+        isOpen={detailOpen}
+        onClose={() => setDetailOpen(false)}
+        plan={plan}
+        onViewAllStatements={() => { setDetailOpen(false); setHistoryOpen(true); }}
+      />
       <StatementHistoryDrawer
-        isOpen={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
+        isOpen={historyOpen}
+        onClose={() => setHistoryOpen(false)}
         plan={plan}
         statements={statements}
         holdingsByStatement={holdingsMap}
@@ -47,23 +53,10 @@ function PlanWithDrawer({ plan }: { plan: AdvisedPlan }) {
   );
 }
 
-export default function AdvisedPlanSection({ plans, advisorName }: Props) {
-  const totalValue = plans.reduce((s, p) => s + (parseFloat(p.latestAccountValue) || 0), 0);
-
+export default function AdvisedPlanSection({ plans }: Props) {
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-base font-semibold text-[#042C53]">Managed by your advisor</p>
-          {advisorName && <p className="text-xs text-slate-500">Managed by {advisorName}</p>}
-        </div>
-        {totalValue > 0 && (
-          <p className="text-sm font-semibold text-[#042C53]">
-            <CurrencyField amountUsd={totalValue} compact />
-          </p>
-        )}
-      </div>
-      {plans.map(plan => <PlanWithDrawer key={plan.id} plan={plan} />)}
+      {plans.map(plan => <PlanWithSheets key={plan.id} plan={plan} />)}
     </div>
   );
 }

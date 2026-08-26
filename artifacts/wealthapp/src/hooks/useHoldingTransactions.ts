@@ -2,17 +2,29 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useUser } from "@clerk/react";
 import { apiFetch } from "@/lib/api";
 
+export type HoldingTransactionType = "in" | "out" | "fee" | "value_update";
+
 export interface HoldingTransaction {
   id: string;
   holdingId: string;
   userId: string;
-  type: "in" | "out";
+  type: HoldingTransactionType;
   amount: string;
   source: "manual" | "budget_contribution" | "surplus_sweep";
   sourceMonth: string | null;
   description: string | null;
   transactionDate: string;
+  units: string | null;
+  balanceAfter: string | null;
   createdAt: string;
+}
+
+export interface AddHoldingTransactionInput {
+  type: HoldingTransactionType;
+  amount: number;
+  description?: string;
+  transactionDate?: string;
+  units?: number;
 }
 
 export function useHoldingTransactions(holdingId: string | null) {
@@ -31,7 +43,7 @@ export function useHoldingTransactions(holdingId: string | null) {
   }
 
   const addTransaction = useMutation({
-    mutationFn: (data: { type: "in" | "out"; amount: number; description?: string; transactionDate?: string }) =>
+    mutationFn: (data: AddHoldingTransactionInput) =>
       apiFetch(`/client/holdings/${holdingId}/transactions`, { method: "POST", body: JSON.stringify(data) }),
     onSuccess: invalidate,
   });
@@ -45,8 +57,7 @@ export function useHoldingTransactions(holdingId: string | null) {
   return {
     transactions: query.data ?? [],
     loading: query.isLoading,
-    addTransaction: (data: { type: "in" | "out"; amount: number; description?: string; transactionDate?: string }) =>
-      addTransaction.mutateAsync(data),
+    addTransaction: (data: AddHoldingTransactionInput) => addTransaction.mutateAsync(data),
     deleteTransaction: (txId: string) => deleteTransaction.mutateAsync(txId),
     adding: addTransaction.isPending,
   };

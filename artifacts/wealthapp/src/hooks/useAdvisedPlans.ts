@@ -80,6 +80,33 @@ function enrichPlan(raw: Omit<AdvisedPlan, "gainLoss" | "gainLossPct" | "cagr">)
   return { ...raw, gainLoss, gainLossPct, cagr };
 }
 
+export interface AdvisedPlanTransaction {
+  id: string;
+  advisedPlanId: string;
+  statementId: string;
+  fundCode: string;
+  fundName: string | null;
+  transactionDate: string;
+  description: string;
+  netAmount: string;
+  unitValue: string | null;
+  unitsThisTransaction: string | null;
+  createdAt: string;
+}
+
+/** Last 20 transactions across all of a plan's statements, newest first. */
+export function useAdvisedPlanTransactions(planId: string | null) {
+  const { user, isLoaded } = useUser();
+
+  const query = useQuery<AdvisedPlanTransaction[]>({
+    queryKey: ["advised-plan-transactions", planId],
+    queryFn: () => apiFetch(`/client/advised-plans/${planId}/transactions`),
+    enabled: isLoaded && !!user && !!planId,
+  });
+
+  return { transactions: query.data ?? [], loading: query.isLoading };
+}
+
 export function useAdvisedPlans() {
   const { user, isLoaded } = useUser();
 

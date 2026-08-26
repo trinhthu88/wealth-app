@@ -1,40 +1,40 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { Pencil, Clock, Plus } from "lucide-react";
+import { toast } from "sonner";
 import ClientAppShell from "@/components/client/AppShell";
+import CurrencyToggle from "@/components/client/CurrencyToggle";
+import CurrencyField from "@/components/shared/CurrencyField";
 import AddHoldingSheet from "@/components/client/portfolio/self/AddHoldingSheet";
 import EditHoldingSheet from "@/components/client/portfolio/self/EditHoldingSheet";
+import HoldingTransactionsDrawer from "@/components/client/portfolio/self/HoldingTransactionsDrawer";
 import AdvisedPlanSection from "@/components/client/portfolio/advised/AdvisedPlanSection";
-import CurrencyField from "@/components/shared/CurrencyField";
-import { usePortfolioTotals } from "@/hooks/usePortfolioTotals";
-import { useClientHoldings } from "@/hooks/useClientHoldings";
 import { useAdvisedPlans } from "@/hooks/useAdvisedPlans";
-import { useProfile } from "@/hooks/useProfile";
-import { apiFetch } from "@/lib/api";
-import { toast } from "sonner";
-import type { ClientHolding } from "@/hooks/useClientHoldings";
-import { Pencil, Plus } from "lucide-react";
+import { useClientHoldings, type ClientHolding } from "@/hooks/useClientHoldings";
+import { cn } from "@/lib/utils";
 
-const ALLOCATION_COLORS = [
-  "var(--green)",
-  "var(--green-300)",
-  "var(--forest)",
-  "var(--sun)",
-  "var(--sand)",
+type Tab = "advised" | "self";
+
+const UNITS_BASED_TYPES = new Set(["stock_etf", "etf", "mutual_fund", "bond", "commodity", "crypto"]);
+
+const SELF_GROUPS: { key: string; label: string; types: string[] }[] = [
+  { key: "stocks", label: "Stocks & ETFs", types: ["stock_etf", "etf", "mutual_fund", "bond", "commodity"] },
+  { key: "crypto", label: "Crypto", types: ["crypto"] },
+  { key: "property", label: "Property", types: ["property"] },
+  { key: "cash", label: "Cash & Savings", types: ["cash"] },
+  { key: "pension", label: "Pension", types: ["pension"] },
+  { key: "other", label: "Other", types: ["other"] },
 ];
 
-export default function ClientPortfolio() {
-  const { holdings, addHolding, updateHolding, deleteHolding } = useClientHoldings();
-  const { profile, update } = useProfile();
-  const totals = usePortfolioTotals();
-  const { plans } = useAdvisedPlans();
-  const { data: advisor } = useQuery<{ fullName: string | null } | null>({
-    queryKey: ["client-dashboard-advisor"],
-    queryFn: () => apiFetch<{ fullName: string | null }>("/client/dashboard/advisor").catch(() => null),
-  });
+function n(v: string | null | undefined) { return parseFloat(v ?? "0") || 0; }
 
-  const [activeTab, setActiveTab] = useState<"managed" | "other">("managed");
+export default function ClientPortfolio() {
+  const { plans, loading: plansLoading } = useAdvisedPlans();
+  const { holdings, addHolding, updateHolding, deleteHolding, loading: holdingsLoading } = useClientHoldings();
+
+  const [tab, setTab] = useState<Tab>("advised");
   const [addOpen, setAddOpen] = useState(false);
   const [editHolding, setEditHolding] = useState<ClientHolding | null>(null);
+  const [txHolding, setTxHolding] = useState<ClientHolding | null>(null);
 
   async function handleAdd(data: Record<string, unknown>) {
     await addHolding(data as any);
@@ -46,171 +46,143 @@ export default function ClientPortfolio() {
   }
   async function handleDelete(id: string) {
     await deleteHolding(id);
-    toast.success("Holding removed.");
+    toast.success("Holding removed");
   }
 
-  const totalValue = totals.totalPortfolioValue;
-  const displayCurrency = profile?.preferredCurrency ?? "USD";
-  const visibleHoldings = totals.allHoldings.filter((holding) =>
-    activeTab === "managed" ? holding.isAdvisedPlan : !holding.isAdvisedPlan
-  );
-  const toggleCurrency = () => {
-    update.mutate({ preferredCurrency: displayCurrency === "USD" ? "VND" : "USD" });
-  };
-  const circumference = 2 * Math.PI * 48;
-  const allocation = totals.allHoldings
-    .filter((holding) => holding.currentValue > 0)
-    .sort((a, b) => b.currentValue - a.currentValue)
-    .map((holding, index) => ({
-      ...holding,
-      color: ALLOCATION_COLORS[index % ALLOCATION_COLORS.length],
-      percentage: totalValue > 0 ? (holding.currentValue / totalValue) * 100 : 0,
-    }));
-  let allocationOffset = 0;
+  const totalAdvisedValue = plans.reduce((s, p) => s + n(p.latestAccountValue), 0);
+  const totalNetContribution = plans.reduce((s, p) => s + n(p.latestNetContribution), 0);
+  const advisedGainLoss = totalAdvisedValue - totalNetContribution;
+  const advisedGainLossPct = totalNetContribution > 0 ? (advisedGainLoss / totalNetContribution) * 100 : 0;
+  const isAdvisedGain = advisedGainLoss >= 0;
 
   return (
     <ClientAppShell>
-      <div className="space-y-[14px]">
-        {/* Header */}
-        <div className="mb-4 flex items-start justify-between gap-4">
-          <div>
-            <h1 className="font-display text-[30px] font-semibold text-forest tracking-[-0.02em] mb-1">Portfolio</h1>
-            <div className="text-[14px] text-ink-40">Advised and self-tracked investments</div>
-          </div>
-          <button
-            type="button"
-            onClick={toggleCurrency}
-            className="min-h-11 rounded-full border border-hairline bg-surface px-4 font-mono text-[11px] font-semibold text-forest transition-colors hover:border-green hover:text-green focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green"
-            aria-label={`Display portfolio in ${displayCurrency === "USD" ? "VND" : "USD"}`}
-          >
-            {displayCurrency}
-          </button>
+      <div className="space-y-[14px] pb-8">
+        <div className="flex items-start justify-between gap-4 mb-1">
+          <h1 className="font-display text-[30px] font-semibold text-forest tracking-[-0.02em]">Portfolio</h1>
+          <CurrencyToggle />
         </div>
 
-        {/* Allocation card */}
-        <div className="bg-surface rounded-[28px] p-[22px] shadow-[0_2px_14px_rgba(20,52,42,.06)] flex items-center gap-5">
-          <svg viewBox="0 0 120 120" className="w-[132px] h-[132px] flex-none -rotate-90" aria-label="Portfolio allocation">
-            <circle cx="60" cy="60" r="48" fill="none" stroke="var(--track)" strokeWidth="18" />
-            {allocation.map((holding) => {
-              const offset = allocationOffset;
-              allocationOffset += holding.percentage;
-              return (
-                <circle
-                  key={holding.id}
-                  cx="60"
-                  cy="60"
-                  r="48"
-                  fill="none"
-                  stroke={holding.color}
-                  strokeWidth="18"
-                  strokeDasharray={`${(holding.percentage / 100) * circumference} ${circumference}`}
-                  strokeDashoffset={-((offset / 100) * circumference)}
-                />
-              );
-            })}
-          </svg>
-          <div className="flex flex-col gap-[9px]">
-            <div className="font-display text-[26px] font-semibold text-forest tracking-[-0.02em] tabular-nums">
-              <CurrencyField amountUsd={totalValue} />
-            </div>
-            {allocation.slice(0, 5).map((holding) => (
-              <div key={holding.id} className="flex items-center gap-2 text-[13.5px] text-ink-60">
-                <span className="w-2.5 h-2.5 rounded-[3px]" style={{ backgroundColor: holding.color }} />
-                <span className="min-w-0 truncate">{holding.label}</span>
-                <span className="ml-auto tabular-nums">{Math.round(holding.percentage)}%</span>
-              </div>
-            ))}
-            {allocation.length === 0 && (
-              <div className="text-[13.5px] text-ink-40">Add an investment to see allocation.</div>
+        <div className="flex gap-1 rounded-full border border-hairline bg-surface p-1" role="tablist" aria-label="Portfolio holdings">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "advised"}
+            onClick={() => setTab("advised")}
+            className={cn(
+              "min-h-11 flex-1 rounded-full px-4 text-[13px] font-semibold transition-colors",
+              tab === "advised" ? "bg-forest text-paper" : "text-ink-40 hover:text-forest",
             )}
-          </div>
-        </div>
-
-        <div className="my-[14px] flex gap-1 rounded-full border border-hairline bg-surface p-1" role="tablist" aria-label="Portfolio holdings">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === "managed"}
-            onClick={() => setActiveTab("managed")}
-            className={`min-h-11 flex-1 rounded-full px-4 text-[13px] font-semibold transition-colors ${activeTab === "managed" ? "bg-forest text-paper" : "text-ink-40 hover:text-forest"}`}
           >
-            Managed by your advisor
+            Advised Plans
           </button>
           <button
             type="button"
             role="tab"
-            aria-selected={activeTab === "other"}
-            onClick={() => setActiveTab("other")}
-            className={`min-h-11 flex-1 rounded-full px-4 text-[13px] font-semibold transition-colors ${activeTab === "other" ? "bg-forest text-paper" : "text-ink-40 hover:text-forest"}`}
+            aria-selected={tab === "self"}
+            onClick={() => setTab("self")}
+            className={cn(
+              "min-h-11 flex-1 rounded-full px-4 text-[13px] font-semibold transition-colors",
+              tab === "self" ? "bg-forest text-paper" : "text-ink-40 hover:text-forest",
+            )}
           >
-            Your other holdings
+            Self-Managed
           </button>
         </div>
 
-        {/* Holdings list */}
-        {activeTab === "managed" ? (
-          plans.length === 0 ? (
+        {tab === "advised" ? (
+          plansLoading ? (
+            <div className="h-40 bg-surface animate-pulse rounded-[26px]" />
+          ) : plans.length === 0 ? (
             <div className="bg-surface rounded-[26px] p-8 text-center text-[15px] text-ink-40 shadow-[0_2px_14px_rgba(20,52,42,.06)]">
               No advisor-managed investments yet.
             </div>
           ) : (
-            <AdvisedPlanSection plans={plans} advisorName={advisor?.fullName ?? undefined} />
+            <>
+              <div className="bg-surface rounded-[26px] p-[22px] shadow-[0_2px_14px_rgba(20,52,42,.06)]">
+                <p className="text-[13px] font-semibold text-ink-40 mb-1">Total portfolio value</p>
+                <div className="font-display text-[32px] font-semibold text-forest tracking-[-0.02em] tabular-nums mb-1">
+                  <CurrencyField amountUsd={totalAdvisedValue} />
+                </div>
+                <p className={cn("text-[13.5px] font-semibold", isAdvisedGain ? "text-green" : "text-clay")}>
+                  {isAdvisedGain ? "+" : ""}<CurrencyField amountUsd={advisedGainLoss} showSign={false} compact /> ({isAdvisedGain ? "+" : ""}{advisedGainLossPct.toFixed(1)}%) vs. net contribution
+                </p>
+              </div>
+              <AdvisedPlanSection plans={plans} />
+            </>
           )
+        ) : holdingsLoading ? (
+          <div className="h-40 bg-surface animate-pulse rounded-[26px]" />
         ) : (
-          <div className="bg-surface rounded-[26px] p-[6px_20px] shadow-[0_2px_14px_rgba(20,52,42,.06)]">
-            {visibleHoldings.length === 0 ? (
-              <div className="p-8 text-center text-[15px] text-ink-40">
+          <div className="space-y-4">
+            {SELF_GROUPS.map(group => {
+              const groupHoldings = holdings.filter(h => group.types.includes(h.holdingType));
+              if (groupHoldings.length === 0) return null;
+              return (
+                <div key={group.key} className="bg-surface rounded-[26px] p-[6px_20px] shadow-[0_2px_14px_rgba(20,52,42,.06)]">
+                  <p className="text-[12px] font-semibold text-ink-40 uppercase tracking-wide pt-3 pb-1">{group.label}</p>
+                  {groupHoldings.map((h, i) => (
+                    <div
+                      key={h.id}
+                      className={cn(
+                        "flex items-center justify-between gap-3 py-[14px]",
+                        i < groupHoldings.length - 1 && "border-b border-hairline",
+                      )}
+                    >
+                      <div className="min-w-0">
+                        <p className="text-[15px] font-semibold text-forest truncate">{h.label}</p>
+                        <p className="text-[13px] text-ink-40 tabular-nums">
+                          Cost basis <CurrencyField amountUsd={h.costBasis} compact />
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-[15px] font-semibold text-forest tabular-nums"><CurrencyField amountUsd={h.currentValue} compact /></p>
+                        <p className={cn("text-[13px] font-semibold", h.gainLossPct >= 0 ? "text-green" : "text-clay")}>
+                          {h.gainLossPct >= 0 ? "+" : ""}{h.gainLossPct.toFixed(1)}%
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setEditHolding(h)}
+                          className="h-9 w-9 flex items-center justify-center rounded-full text-ink-30 hover:bg-hairline/50 hover:text-forest transition-colors"
+                          aria-label={`Edit ${h.label}`}
+                        >
+                          <Pencil className="h-4 w-4" aria-hidden="true" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setTxHolding(h)}
+                          className="h-9 w-9 flex items-center justify-center rounded-full text-ink-30 hover:bg-hairline/50 hover:text-forest transition-colors"
+                          aria-label={`${h.label} transactions`}
+                        >
+                          <Clock className="h-4 w-4" aria-hidden="true" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
+
+            {holdings.length === 0 && (
+              <div className="bg-surface rounded-[26px] p-8 text-center text-[15px] text-ink-40 shadow-[0_2px_14px_rgba(20,52,42,.06)]">
                 No self-tracked holdings yet.
               </div>
-            ) : (
-              visibleHoldings.map((h, i) => {
-                const rowContent = (
-                  <>
-                  <div>
-                    <div className="text-[15px] font-semibold text-forest">{h.label}</div>
-                    <div className="text-[13px] text-ink-30">Self-tracked</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-[15px] font-semibold text-forest tabular-nums">
-                      <CurrencyField amountUsd={h.currentValue} />
-                    </div>
-                    <div className={`text-[13px] font-semibold ${h.gainLossPct >= 0 ? "text-green" : "text-clay"}`}>
-                      {h.gainLossPct >= 0 ? "+" : ""}{h.gainLossPct.toFixed(1)}%
-                    </div>
-                  </div>
-                  </>
-                );
-                const rowClass = `w-full flex justify-between items-center gap-4 py-[15px] text-left ${
-                  i < visibleHoldings.length - 1 ? "border-b border-hairline" : ""
-                }`;
-
-                return (
-                  <button
-                    key={h.id}
-                    type="button"
-                    onClick={() => setEditHolding(h.raw as ClientHolding)}
-                    className={`${rowClass} rounded-xl transition-colors hover:bg-paper/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green focus-visible:ring-offset-2`}
-                    aria-label={`Edit ${h.label}`}
-                  >
-                    {rowContent}
-                    <Pencil className="h-4 w-4 shrink-0 text-ink-30" aria-hidden="true" />
-                  </button>
-                );
-              })
             )}
-            <div className="flex justify-center border-t border-hairline py-4">
+
+            <div className="flex justify-center pt-1">
               <button
                 type="button"
                 onClick={() => setAddOpen(true)}
-                className="inline-flex min-h-11 items-center gap-2 rounded-full bg-forest px-4 text-[13px] font-semibold text-paper transition-colors hover:bg-forest-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green focus-visible:ring-offset-2"
+                className="inline-flex min-h-11 items-center gap-2 rounded-full bg-forest px-5 text-[13.5px] font-semibold text-paper transition-colors hover:bg-forest-700"
               >
                 <Plus className="h-4 w-4" aria-hidden="true" />
-                Add self-tracked holding
+                Add holding
               </button>
             </div>
           </div>
         )}
-
       </div>
 
       <AddHoldingSheet isOpen={addOpen} onClose={() => setAddOpen(false)} onAdd={handleAdd} />
@@ -221,6 +193,15 @@ export default function ClientPortfolio() {
         onUpdate={handleUpdate}
         onDelete={handleDelete}
       />
+      {txHolding && (
+        <HoldingTransactionsDrawer
+          isOpen={!!txHolding}
+          onClose={() => setTxHolding(null)}
+          holdingId={txHolding.id}
+          holdingLabel={txHolding.label}
+          isUnitsBased={UNITS_BASED_TYPES.has(txHolding.holdingType)}
+        />
+      )}
     </ClientAppShell>
   );
 }

@@ -29,22 +29,26 @@ const SIDEBAR_NAV: NavItem[] = [
   { label: "Documents",      href: "/client/documents",    icon: FolderOpen },
 ];
 
+// The 5-slot mobile bottom nav is a fixed, product-specified set (Home,
+// Portfolio, Goals, Budget, More) — distinct from the sidebar's full list, and
+// no longer includes Pathway/Plan or a Sol slot (Sol moved to a floating
+// button — see the Sol FAB below — so it stays reachable without taking a tab).
+const MOBILE_BOTTOM_TABS: NavItem[] = [
+  { label: "Home",      href: "/client/dashboard", icon: LayoutDashboard },
+  { label: "Portfolio", href: "/client/portfolio", icon: PieChart },
+  { label: "Goals",     href: "/client/goals",     icon: Target },
+  { label: "Budget",    href: "/client/budget",    icon: Wallet },
+];
+
 const MOBILE_MORE_NAV = SIDEBAR_NAV.filter(
-  (item) => !["/client/dashboard", "/client/plan", "/client/goals"].includes(item.href),
+  (item) => !MOBILE_BOTTOM_TABS.some((tab) => tab.href === item.href),
 );
 
-function TabIcon({ active, label }: { active: boolean; label: string }) {
-  if (label === "Home") return <div className={cn("w-[22px] h-[22px] rounded-[7px]", active ? "bg-green" : "border-2 border-ink-20")} />;
-  if (label === "Plan") return <div className={cn("w-[22px] h-[22px] rounded-[7px]", active ? "bg-green" : "border-2 border-ink-20")} />;
-  if (label === "Goals") return <div className={cn("w-[22px] h-[22px] rounded-full", active ? "bg-green" : "border-2 border-ink-20")} />;
-  return <div className={cn("w-[22px] h-[22px] rounded-[3px]", active ? "bg-green" : "border-2 border-ink-20")} />;
-}
-
-function BottomTab({ href, label }: { href: string; label: string }) {
+function BottomTab({ href, label, icon: Icon }: { href: string; label: string; icon: React.ElementType }) {
   const [active] = useRoute(href);
   return (
     <Link href={href} className="flex flex-col items-center gap-[5px] flex-1 cursor-pointer outline-none" aria-current={active ? "page" : undefined}>
-      <TabIcon active={active} label={label} />
+      <Icon className={cn("h-[22px] w-[22px]", active ? "text-green" : "text-ink-20")} strokeWidth={active ? 2.25 : 2} aria-hidden="true" />
       <span className={cn("text-[11.5px] font-semibold leading-none", active ? "text-green" : "text-ink-20")}>{label}</span>
     </Link>
   );
@@ -138,23 +142,19 @@ export default function ClientAppShell({ children }: { children: React.ReactNode
           {children}
         </main>
 
+        <button
+          onClick={() => setSolOpen(true)}
+          className="lg:hidden fixed right-4 bottom-[104px] z-40 flex h-[52px] w-[52px] items-center justify-center rounded-full bg-sun shadow-[0_4px_14px_rgba(255,182,39,0.45)] outline-none"
+          aria-label="Talk to Sol"
+        >
+          <div className={cn("h-[16px] w-[16px] rounded-full", isPathway ? "bg-forest" : "bg-paper")} />
+        </button>
+
         <div className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-surface border-t border-hairline-2 h-[88px]">
           <div className="flex items-start justify-around pt-3 h-full pb-[env(safe-area-inset-bottom)]">
-            <BottomTab href="/client/dashboard" label="Home" />
-            <BottomTab href="/client/plan" label="Plan" />
-            
-            <button 
-              onClick={() => setSolOpen(true)}
-              className="flex flex-col items-center gap-[5px] flex-1 cursor-pointer -mt-1.5 outline-none"
-              aria-label="Talk to Sol"
-            >
-              <div className="w-[34px] h-[34px] rounded-full bg-sun flex items-center justify-center shadow-[0_2px_8px_rgba(255,182,39,0.4)]">
-                <div className={cn("w-[12px] h-[12px] rounded-full", isPathway ? "bg-forest" : "bg-paper")} />
-              </div>
-              <span className="text-[11.5px] font-semibold text-sun-deep">Sol</span>
-            </button>
-
-            <BottomTab href="/client/goals" label="Goals" />
+            {MOBILE_BOTTOM_TABS.map((item) => (
+              <BottomTab key={item.href} href={item.href} label={item.label} icon={item.icon} />
+            ))}
 
             <button
               onClick={() => setMenuOpen(true)}

@@ -74,12 +74,19 @@ export const clientHoldingTransactionsTable = pgTable("client_holding_transactio
   holdingId: uuid("holding_id").notNull().references(() => clientHoldingsTable.id, { onDelete: "cascade" }),
   userId: text("user_id").notNull().references(() => profilesTable.id, { onDelete: "cascade" }),
 
-  type: text("type").notNull(), // "in" | "out"
+  type: text("type").notNull(), // "in" | "out" | "value_update" | "fee"
   amount: numeric("amount").notNull(), // always positive; direction carried by `type`
   source: text("source").notNull(), // "manual" | "budget_contribution" | "surplus_sweep"
   sourceMonth: date("source_month"),
   description: text("description"),
   transactionDate: date("transaction_date").notNull(),
+  // Optional unit count for a manual buy/sell entry on a units-based holding
+  // (stock_etf/crypto/etf/mutual_fund/bond/commodity) — purely informational,
+  // not used to recompute unitsHeld/averageCostPrice.
+  units: numeric("units"),
+  // Snapshot of the holding's direct value column right after this transaction
+  // applied — populated for "value_update" rows (and left null for others).
+  balanceAfter: numeric("balance_after"),
 
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [unique().on(t.holdingId, t.sourceMonth, t.source)]);

@@ -11,7 +11,15 @@ export const healthScoresTable = pgTable("health_scores", {
   goalsScore: integer("goals_score"),
   netWorthScore: integer("net_worth_score"),
   savingsScore: integer("savings_score"),
+  // Investment-client tier only (clientHealthScore.ts) — the free tier's 4
+  // legacy columns above don't have a debt/liabilities dimension.
+  debtToAssetScore: integer("debt_to_asset_score"),
   insights: jsonb("insights"),
+  // Investment-client tier only: the full weighted 5-dimension breakdown
+  // (savingsConsistency/investmentGrowth/goalProgress/debtToAsset/budgetSurplus
+  // + weights + tier), kept separate from `insights` (the free tier's own
+  // per-score metadata) so the two tiers' shapes never collide in one column.
+  details: jsonb("details"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

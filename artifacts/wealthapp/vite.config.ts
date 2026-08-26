@@ -63,6 +63,8 @@ export default defineConfig({
     strictPort: true,
     host: "0.0.0.0",
     allowedHosts: true,
+    // TEMPORARY local verification proxy — not part of the deliverable, will be reverted.
+    proxy: { "/api": "http://localhost:8082" },
     fs: {
       strict: true,
     },

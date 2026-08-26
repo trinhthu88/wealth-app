@@ -78,6 +78,8 @@
   --color-track: var(--track);
   --color-track-dark: var(--track-dark);
   --color-sand: var(--sand);
+  --color-violet: var(--violet);
+  --color-violet-tint: var(--violet-tint);
 
   --radius-sm: 8px;
   --radius-md: 16px;
@@ -122,6 +124,9 @@
   --track: #EFE5D6;
   --track-dark: #2F5A48;
   --sand: #E4D7C3;
+  /* Investments category accent (Budget page) — no existing token covers violet. */
+  --violet: #7C3AED;
+  --violet-tint: #F1EAFD;
 
   --app-font-display: 'Bricolage Grotesque', sans-serif;
   --app-font-sans: 'Figtree', sans-serif;

@@ -9,25 +9,44 @@ function todayStr() {
   return new Date().toISOString().slice(0, 10);
 }
 
+// Holding types that store their current value in a single direct column
+// (as opposed to stock_etf/crypto/etf/mutual_fund/bond/commodity, whose value
+// is derived from unitsHeld × live price and has no single column to set).
+const DIRECT_VALUE_COLUMN = {
+  cash: "currentBalance",
+  property: "currentEstimatedValue",
+  pension: "currentBalancePension",
+  other: "currentValueOther",
+} as const;
+
 /**
- * Inserts a ledger row and, for a cash holding, applies its balance effect
- * immediately (currentBalance +amount for "in", -amount for "out"). Used for
- * client-entered manual transactions — always creates a new row, never merges
- * with an existing one (unlike upsertMonthlyHoldingLedgerEntry below).
+ * Inserts a ledger row and applies its balance effect immediately:
+ *   - "in" / "out": ± amount on a cash holding's currentBalance (unchanged
+ *     behavior — "Buy more" / "Partial sell" for other holding types are
+ *     recorded but don't move a column, since their value is units×price).
+ *   - "fee": always decreases a cash holding's currentBalance, like "out".
+ *   - "value_update": SETS (not deltas) the holding type's direct value
+ *     column to `amount`, for the 4 types that have one (see above);
+ *     no-op for units-priced holding types.
+ * Used for client-entered manual transactions — always creates a new row,
+ * never merges with an existing one (unlike upsertMonthlyHoldingLedgerEntry).
  */
 export async function recordHoldingTransaction(dbc: Dbc, params: {
   holdingId: string;
   userId: string;
-  type: "in" | "out";
+  type: "in" | "out" | "fee" | "value_update";
   amount: number;
   source: "manual" | "budget_contribution" | "surplus_sweep";
   sourceMonth?: string | null;
   description?: string | null;
   transactionDate?: string;
+  units?: number | null;
 }) {
   const [holding] = await dbc.select().from(clientHoldingsTable)
     .where(and(eq(clientHoldingsTable.id, params.holdingId), eq(clientHoldingsTable.userId, params.userId)));
   if (!holding) throw new Error("Holding not found");
+
+  const balanceAfter = params.type === "value_update" ? params.amount : null;
 
   const [row] = await dbc.insert(clientHoldingTransactionsTable).values({
     holdingId: params.holdingId,
@@ -38,9 +57,18 @@ export async function recordHoldingTransaction(dbc: Dbc, params: {
     sourceMonth: params.sourceMonth ?? null,
     description: params.description ?? null,
     transactionDate: params.transactionDate ?? todayStr(),
+    units: params.units != null ? String(params.units) : null,
+    balanceAfter: balanceAfter != null ? String(balanceAfter) : null,
   }).returning();
 
-  if (holding.holdingType === "cash") {
+  if (params.type === "value_update") {
+    const column = DIRECT_VALUE_COLUMN[holding.holdingType as keyof typeof DIRECT_VALUE_COLUMN];
+    if (column) {
+      await dbc.update(clientHoldingsTable)
+        .set({ [column]: String(params.amount), updatedAt: new Date() } as any)
+        .where(eq(clientHoldingsTable.id, params.holdingId));
+    }
+  } else if (holding.holdingType === "cash") {
     const delta = params.type === "in" ? params.amount : -params.amount;
     await dbc.update(clientHoldingsTable)
       .set({ currentBalance: sql`${clientHoldingsTable.currentBalance} + ${delta}`, updatedAt: new Date() })

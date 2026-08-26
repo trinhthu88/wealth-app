@@ -9,6 +9,7 @@ import { useDashboardData } from "@/hooks/useDashboardData";
 import { useProfile } from "@/hooks/useProfile";
 import { usePlan } from "@/hooks/usePlan";
 import { useNetWorthTrend } from "@/hooks/useNetWorthTrend";
+import WealthScoreCard from "@/components/client/dashboard/WealthScoreCard";
 
 function getGreeting(): string {
   const h = new Date().getHours();
@@ -198,6 +199,9 @@ export default function ClientDashboard() {
             )}
           </div>
         </Link>
+
+        {/* Wealth Score */}
+        <WealthScoreCard />
 
         {/* Track B Conversion CTA */}
         {data.isTrackB && (
