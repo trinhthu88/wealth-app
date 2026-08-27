@@ -2,8 +2,9 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import ClientAppShell from "@/components/client/AppShell";
 import BottomSheet from "@/components/client/BottomSheet";
+import SolNarration from "@/components/client/SolNarration";
 import { apiFetch } from "@/lib/api";
-import { useProfile } from "@/hooks/useProfile";
+import { usePlan } from "@/hooks/usePlan";
 import { FileText, Download, Calendar, Plus } from "lucide-react";
 import Sol from "@/components/Sol";
 import { toast } from "sonner";
@@ -26,7 +27,6 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-// Fix 4: URL validation for any remaining inputs
 function isValidDocumentUrl(url: string): boolean {
   try {
     const parsed = new URL(url);
@@ -49,9 +49,8 @@ const REQUEST_TYPES = [
 ];
 
 export default function ClientDocuments() {
-  const { profile } = useProfile();
+  const { advisorName } = usePlan();
 
-  // Fix 1: "Request a document" replaces arbitrary "Add Document"
   const [requestOpen, setRequestOpen] = useState(false);
   const [requestType, setRequestType] = useState("Annual report");
   const [requestNotes, setRequestNotes] = useState("");
@@ -92,80 +91,86 @@ export default function ClientDocuments() {
     }
   }
 
+  const latestDoc = docs[0] ?? null;
+
   return (
     <ClientAppShell>
       <div className="max-w-[860px] mx-auto space-y-5">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-[#042C53]">Documents</h1>
-            <p className="text-sm text-slate-400 mt-0.5">Your financial documents and reports.</p>
+            <h1 className="font-display text-[26px] font-semibold text-forest tracking-[-0.02em]">Documents</h1>
+            <p className="text-sm text-ink-40 mt-0.5">Statements and paperwork.</p>
           </div>
-          {/* Fix 1: "Request a document" — no arbitrary URL input */}
           <button
             onClick={() => setRequestOpen(true)}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-[#1D9E75] text-[#1D9E75] text-sm font-medium hover:bg-[#1D9E75]/5 transition-colors"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-full border border-green text-green text-sm font-medium hover:bg-green-tint transition-colors"
           >
             <Plus className="h-4 w-4" />
             Request a document
           </button>
         </div>
 
+        {!isLoading && latestDoc && (
+          <SolNarration
+            line={`${latestDoc.title} is here, dated ${new Date(latestDoc.createdAt).toLocaleDateString("en-US", { day: "numeric", month: "short" })}.`}
+            detail="Statements are the record of what your plan actually did — opening value, contributions, returns and every charge. Worth skimming the charges line at least once a year."
+            advisorFirstName={advisorName?.split(" ")[0] ?? null}
+          />
+        )}
+
         {isLoading ? (
           <div className="space-y-3">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-16 bg-slate-100 rounded-xl animate-pulse" />
+              <div key={i} className="h-16 bg-hairline/60 rounded-[20px] animate-pulse" />
             ))}
           </div>
         ) : docs.length === 0 ? (
-          <div className="bg-white border border-[#E2E8F0] rounded-xl p-12 text-center flex flex-col items-center gap-4">
+          <div className="bg-surface border border-hairline rounded-[24px] p-12 text-center flex flex-col items-center gap-4 shadow-[0_2px_14px_rgba(20,52,42,.06)]">
             <Sol size="lg" animate="float" showFace />
             <div>
-              <h3 className="font-semibold mb-1 text-[#042C53]">No documents yet</h3>
-              <p className="text-slate-500 text-sm">Documents shared by your advisor will appear here.</p>
+              <h3 className="font-display font-semibold text-forest mb-1">No documents yet</h3>
+              <p className="text-ink-40 text-sm">Documents shared by your advisor will appear here.</p>
             </div>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {docs.map(d => {
-              // Fix 3: uploaded_by_role badge (column may not exist)
               const role = d.uploadedByRole ?? null;
               const showBadge = role === "client" || role === "system";
 
               return (
-                <div key={d.id} className="bg-white border border-[#E2E8F0] rounded-xl px-5 py-4 flex items-center gap-4">
-                  <div className="h-10 w-10 rounded-lg bg-[#1D9E75]/10 flex items-center justify-center shrink-0">
-                    <FileText className="h-5 w-5 text-[#1D9E75]" />
+                <div key={d.id} className="bg-surface border border-hairline rounded-[20px] px-[17px] py-[15px] flex items-center gap-3.5 shadow-[0_2px_14px_rgba(20,52,42,.06)]">
+                  <div className="h-10 w-10 rounded-[10px] bg-green-tint flex items-center justify-center shrink-0">
+                    <FileText className="h-5 w-5 text-green" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-medium text-sm text-[#042C53]">{d.title}</p>
-                      {/* Fix 3: role badge */}
+                      <p className="font-medium text-[14.5px] text-forest">{d.title}</p>
                       {showBadge && (
-                        <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
+                        <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-hairline text-ink-40">
                           {role === "client" ? "Added by you" : "Auto-generated"}
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-3 mt-0.5 flex-wrap">
-                      <span className="text-xs text-slate-400 capitalize">{d.category}</span>
-                      <span className="flex items-center gap-1 text-xs text-slate-400">
+                      <span className="text-xs text-ink-40 capitalize">{d.category}</span>
+                      <span className="flex items-center gap-1 text-xs text-ink-40">
                         <Calendar className="h-3 w-3" />
                         {new Date(d.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                       </span>
-                      {d.fileName && <span className="text-xs text-slate-400">{d.fileName}</span>}
+                      {d.fileName && <span className="text-xs text-ink-40">{d.fileName}</span>}
                       {d.fileSizeBytes != null && d.fileSizeBytes > 0 && (
-                        <span className="text-xs text-slate-400">{formatBytes(d.fileSizeBytes)}</span>
+                        <span className="text-xs text-ink-40">{formatBytes(d.fileSizeBytes)}</span>
                       )}
                     </div>
                   </div>
-                  {/* Fix 2: sr-only new-tab hint + Fix 4: URL validation before rendering link */}
                   {d.fileUrl && isValidDocumentUrl(d.fileUrl) && (
                     <a
                       href={d.fileUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label={`${d.title} (opens in new tab)`}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E2E8F0] text-slate-500 hover:text-[#1D9E75] hover:border-[#1D9E75]/30 transition-colors shrink-0"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-hairline text-ink-40 hover:text-green hover:border-green/30 transition-colors shrink-0"
                     >
                       <Download className="h-4 w-4" />
                       <span className="text-xs font-medium">Download</span>
@@ -179,19 +184,18 @@ export default function ClientDocuments() {
         )}
       </div>
 
-      {/* Fix 1: ARIA-correct BottomSheet — no arbitrary URL input */}
       <BottomSheet
         isOpen={requestOpen}
         onClose={() => setRequestOpen(false)}
         title="Request a document"
       >
         <div className="space-y-5 pb-4">
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-ink-40">
             Your request will be sent to your advisor as a message.
           </p>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium text-[#042C53]">Document type</label>
+            <label className="text-sm font-medium text-forest">Document type</label>
             <div className="flex flex-wrap gap-2">
               {REQUEST_TYPES.map(type => (
                 <button
@@ -200,8 +204,8 @@ export default function ClientDocuments() {
                   className={cn(
                     "px-3 py-1.5 rounded-lg border text-sm font-medium transition-all",
                     requestType === type
-                      ? "border-[#1D9E75] bg-[#1D9E75]/10 text-[#1D9E75]"
-                      : "border-slate-200 text-slate-600 hover:border-[#1D9E75]/30"
+                      ? "border-green bg-green-tint text-green"
+                      : "border-hairline text-ink-60 hover:border-green/30"
                   )}
                 >
                   {type}
@@ -211,22 +215,22 @@ export default function ClientDocuments() {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-[#042C53]">
-              Notes <span className="text-slate-400 font-normal">(optional)</span>
+            <label className="text-sm font-medium text-forest">
+              Notes <span className="text-ink-30 font-normal">(optional)</span>
             </label>
             <textarea
               value={requestNotes}
               onChange={e => setRequestNotes(e.target.value)}
               placeholder="Any specific details or date range needed…"
               rows={3}
-              className="w-full px-4 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#042C53] placeholder:text-slate-400 resize-none focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/30 focus:border-[#1D9E75]"
+              className="w-full px-4 py-2.5 rounded-xl border border-hairline text-sm text-forest placeholder:text-ink-30 resize-none focus:outline-none focus:ring-2 focus:ring-green/30 focus:border-green"
             />
           </div>
 
           <button
             onClick={handleSendRequest}
             disabled={!requestType || sendingRequest}
-            className="w-full py-3 rounded-xl bg-[#1D9E75] text-white font-semibold text-sm hover:bg-[#0F6E56] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="w-full py-3 rounded-xl bg-green text-white font-semibold text-sm hover:bg-forest-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {sendingRequest ? "Sending…" : "Send request →"}
           </button>

@@ -4,6 +4,7 @@ import ClientAppShell from "@/components/client/AppShell";
 import { apiFetch } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
 import { useProfile } from "@/hooks/useProfile";
+import { usePlan } from "@/hooks/usePlan";
 import { MessageSquare, Send } from "lucide-react";
 import Sol from "@/components/Sol";
 import { cn } from "@/lib/utils";
@@ -24,6 +25,7 @@ function formatDateSeparator(dateStr: string): string {
 
 export default function ClientMessages() {
   const { profile } = useProfile();
+  const { advisorName } = usePlan();
   const [activeConvId, setActiveConvId] = useState<string | null>(null);
   const [msg, setMsg] = useState("");
   const [isTyping, setIsTyping] = useState(false); // local typing feedback
@@ -44,7 +46,6 @@ export default function ClientMessages() {
     refetchInterval: 10000,
   });
 
-  // Fix 3: send only content, no role in body
   const send = useMutation({
     mutationFn: (content: string) =>
       apiFetch(`/conversations/${activeConv!.id}/messages`, {
@@ -62,7 +63,7 @@ export default function ClientMessages() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Fix 5: "Ask about [holding]" pre-fill from URL param
+  // "Ask about [holding]" pre-fill from URL param
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const about = params.get("about");
@@ -90,39 +91,46 @@ export default function ClientMessages() {
     send.mutate(msg.trim());
   }
 
+  const advisorInitials = advisorName ? advisorName.split(" ").map(p => p[0]).join("").toUpperCase() : "A";
+
   return (
     <ClientAppShell>
-      {/* Fix 2: h-full flex col so inner flex-1 works */}
       <div className="h-full flex flex-col max-w-[860px] mx-auto">
-        <h1 className="text-xl font-bold text-[#042C53] mb-4 shrink-0">Messages</h1>
+        <h1 className="font-display text-[26px] font-semibold text-forest tracking-[-0.02em] mb-4 shrink-0">Messages</h1>
 
         {convs.length === 0 ? (
-          <div className="bg-white border border-[#E2E8F0] rounded-xl p-12 text-center flex flex-col items-center gap-4">
+          <div className="bg-surface border border-hairline rounded-[24px] p-12 text-center flex flex-col items-center gap-4 shadow-[0_2px_14px_rgba(20,52,42,.06)]">
             <Sol size="lg" animate="float" showFace />
             <div>
-              <h3 className="font-semibold mb-1 text-[#042C53]">No messages yet</h3>
-              <p className="text-slate-500 text-sm">Send your advisor a message to get started.</p>
+              <h3 className="font-display font-semibold text-forest mb-1">No messages yet</h3>
+              <p className="text-ink-40 text-sm">Send your advisor a message to get started.</p>
             </div>
           </div>
         ) : (
-          /* Fix 2: flex-1 min-h-0 replaces h-[520px] */
-          <div className="bg-white border border-[#E2E8F0] rounded-xl overflow-hidden flex flex-col flex-1 min-h-0">
-            <div className="border-b border-[#E2E8F0] px-4 py-3 font-medium text-sm flex items-center gap-2 shrink-0">
-              <MessageSquare className="h-4 w-4 text-[#1D9E75]" />
-              <span className="text-[#042C53]">Conversation with your advisor</span>
+          <div className="bg-surface border border-hairline rounded-[24px] shadow-[0_2px_14px_rgba(20,52,42,.06)] overflow-hidden flex flex-col flex-1 min-h-0">
+            <div className="border-b border-hairline px-4 py-3.5 flex items-center gap-3 shrink-0">
+              <div className="w-[38px] h-[38px] rounded-full bg-[#DCEAE3] flex-none flex items-center justify-center text-[13px] font-semibold text-forest">
+                {advisorInitials}
+              </div>
+              <div className="min-w-0">
+                <div className="text-[14.5px] font-semibold text-forest truncate">{advisorName ?? "Your advisor"}</div>
+                <div className="text-[12px] text-ink-40 flex items-center gap-1.5">
+                  <MessageSquare className="h-3 w-3 text-green" aria-hidden="true" />
+                  Your advisor
+                </div>
+              </div>
             </div>
 
-            {/* Fix 1: role="log" aria-live="polite" + Fix 2: flex-1 min-h-0 */}
             <div
               role="log"
               aria-live="polite"
               aria-label="Conversation with your advisor"
               aria-atomic="false"
               aria-relevant="additions"
-              className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3"
+              className="flex-1 min-h-0 overflow-y-auto p-4 space-y-1"
             >
               {messages.length === 0 && (
-                <p className="text-center text-sm text-slate-400 pt-8">
+                <p className="text-center text-sm text-ink-30 pt-8">
                   No messages yet. Start the conversation!
                 </p>
               )}
@@ -137,25 +145,25 @@ export default function ClientMessages() {
                 return Object.entries(byDate).map(([dateKey, dayMessages]) => (
                   <div key={dateKey}>
                     <div className="flex items-center gap-3 my-3">
-                      <div className="flex-1 h-px bg-slate-100" />
-                      <span className="text-xs text-slate-400 shrink-0">
+                      <div className="flex-1 h-px bg-hairline" />
+                      <span className="text-xs text-ink-30 shrink-0">
                         {dateKey !== "Unknown" ? formatDateSeparator(dateKey) : ""}
                       </span>
-                      <div className="flex-1 h-px bg-slate-100" />
+                      <div className="flex-1 h-px bg-hairline" />
                     </div>
                     {dayMessages.map(m => {
                       const isMe = m.senderId === profile?.id;
                       const timestamp = m.sentAt ?? m.createdAt ?? "";
                       return (
-                        <div key={m.id} className={cn("flex mb-2", isMe ? "justify-end" : "justify-start")}>
+                        <div key={m.id} className={cn("flex mb-2.5", isMe ? "justify-end" : "justify-start")}>
                           <div className={cn(
-                            "max-w-xs md:max-w-md px-4 py-2.5 rounded-2xl text-sm",
+                            "max-w-[78%] px-[15px] py-3 rounded-[20px] text-[14px] leading-[1.5] text-pretty",
                             isMe
-                              ? "bg-[#1D9E75] text-white rounded-br-sm"
-                              : "bg-slate-100 text-[#042C53] rounded-bl-sm"
+                              ? "bg-forest text-paper rounded-br-md"
+                              : "bg-paper text-forest rounded-bl-md"
                           )}>
                             <p>{m.content}</p>
-                            <p className={cn("text-xs mt-1", isMe ? "text-white/70" : "text-slate-400")}>
+                            <p className={cn("text-[11px] mt-1", isMe ? "text-mint" : "text-ink-30")}>
                               {timestamp ? new Date(timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : ""}
                             </p>
                           </div>
@@ -166,27 +174,25 @@ export default function ClientMessages() {
                 ));
               })()}
 
-              {/* Fix 4: typing indicator (local feedback when user is composing) */}
               {isTyping && (
                 <div
                   role="status"
                   aria-label="Composing message"
                   className="flex items-center gap-1 px-3 py-1"
                 >
-                  <span className="w-1.5 h-1.5 rounded-full bg-slate-300 animate-bounce [animation-delay:0ms]" />
-                  <span className="w-1.5 h-1.5 rounded-full bg-slate-300 animate-bounce [animation-delay:150ms]" />
-                  <span className="w-1.5 h-1.5 rounded-full bg-slate-300 animate-bounce [animation-delay:300ms]" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-ink-20 animate-bounce [animation-delay:0ms]" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-ink-20 animate-bounce [animation-delay:150ms]" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-ink-20 animate-bounce [animation-delay:300ms]" />
                 </div>
               )}
 
               <div ref={bottomRef} />
             </div>
 
-            {/* Input area */}
-            <div className="border-t border-[#E2E8F0] p-3 flex gap-2 shrink-0">
+            <div className="border-t border-hairline p-3 flex gap-2 shrink-0">
               <textarea
                 ref={textareaRef}
-                placeholder="Type a message…"
+                placeholder={`Write to ${advisorName?.split(" ")[0] ?? "your advisor"}…`}
                 value={msg}
                 onChange={handleInputChange}
                 onKeyDown={e => {
@@ -196,13 +202,13 @@ export default function ClientMessages() {
                   }
                 }}
                 rows={2}
-                className="flex-1 px-3 py-2 rounded-xl border border-[#E2E8F0] text-sm text-[#042C53] placeholder:text-slate-400 resize-none focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/30 focus:border-[#1D9E75]"
+                className="flex-1 px-4 py-3 rounded-[18px] border border-hairline bg-paper text-sm text-forest placeholder:text-ink-30 resize-none focus:outline-none focus:ring-2 focus:ring-green/30 focus:border-green"
               />
               <button
                 onClick={handleSend}
                 disabled={!msg.trim() || send.isPending}
                 aria-label="Send message"
-                className="h-10 w-10 self-end flex items-center justify-center rounded-xl bg-[#1D9E75] text-white hover:bg-[#0F6E56] disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
+                className="h-11 w-11 self-end flex items-center justify-center rounded-full bg-green text-white hover:bg-forest disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
               >
                 <Send className="h-4 w-4" />
               </button>

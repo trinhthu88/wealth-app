@@ -9,6 +9,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import ClientAppShell from "@/components/client/AppShell";
+import SolNarration from "@/components/client/SolNarration";
 import NetWorthHeader from "@/components/client/networth/NetWorthHeader";
 import NetWorthTrendChart from "@/components/client/networth/NetWorthTrendChart";
 import NetWorthSummaryBar from "@/components/client/networth/NetWorthSummaryBar";
@@ -24,12 +25,16 @@ import {
 } from "@/hooks/useNetWorthItems";
 import { useNetWorthSummary } from "@/hooks/useNetWorthSummary";
 import { useNetWorthTrend } from "@/hooks/useNetWorthTrend";
+import { usePlan } from "@/hooks/usePlan";
+
+const CASH_CATEGORIES = new Set(["cash", "savings"]);
 
 export default function ClientNetWorth() {
   const {
     syncedAssets, syncedLiabilities, manualAssets, manualLiabilities,
     totalAssets, totalLiabilities, netWorth, assetCount, liabilityCount, loading,
   } = useNetWorthSummary();
+  const { advisorName } = usePlan();
   const {
     addAsset, updateAsset, deleteAsset,
     addLiability, updateLiability, deleteLiability,
@@ -60,9 +65,23 @@ export default function ClientNetWorth() {
     };
   }, [totalAssets, totalLiabilities, loading]);
 
+  const cashValue = [...syncedAssets, ...manualAssets]
+    .filter(a => CASH_CATEGORIES.has(a.category))
+    .reduce((s, a) => s + a.valueUsd, 0);
+  const cashPct = totalAssets > 0 ? Math.round((cashValue / totalAssets) * 100) : 0;
+  const placeCount = assetCount + liabilityCount;
+
   return (
     <ClientAppShell>
       <div className="max-w-[900px] mx-auto space-y-5">
+        {!loading && totalAssets > 0 && (
+          <SolNarration
+            line={`$${Math.round(totalAssets).toLocaleString()} across ${placeCount} place${placeCount !== 1 ? "s" : ""}. Cash is ${cashPct}% of it.`}
+            detail="A cash buffer is usually sized in months of expenses — three to six is typical. Money beyond that has an opportunity cost, and what to do with it is worth raising at your next review."
+            advisorFirstName={advisorName?.split(" ")[0] ?? null}
+          />
+        )}
+
         <NetWorthHeader
           totalAssets={totalAssets}
           totalLiabilities={totalLiabilities}

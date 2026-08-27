@@ -3,6 +3,8 @@ import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import ClientAppShell from "@/components/client/AppShell";
 import CurrencyToggle from "@/components/client/CurrencyToggle";
+import CurrencyField from "@/components/shared/CurrencyField";
+import SolNarration from "@/components/client/SolNarration";
 import AddHoldingSheet from "@/components/client/portfolio/self/AddHoldingSheet";
 import EditHoldingSheet from "@/components/client/portfolio/self/EditHoldingSheet";
 import HoldingTransactionsDrawer from "@/components/client/portfolio/self/HoldingTransactionsDrawer";
@@ -11,6 +13,7 @@ import PortfolioSummaryCard from "@/components/client/portfolio/PortfolioSummary
 import HoldingRow from "@/components/client/portfolio/self/HoldingRow";
 import { useAdvisedPlans } from "@/hooks/useAdvisedPlans";
 import { useClientHoldings, type ClientHolding } from "@/hooks/useClientHoldings";
+import { usePlan } from "@/hooks/usePlan";
 import { cn } from "@/lib/utils";
 
 type Tab = "advised" | "self";
@@ -36,10 +39,12 @@ const SELF_GROUPS: { key: string; label: string; types: string[] }[] = [
 ];
 
 function n(v: string | null | undefined) { return parseFloat(v ?? "0") || 0; }
+function fmtUsdShort(v: number) { return `$${Math.round(v).toLocaleString()}`; }
 
 export default function ClientPortfolio() {
   const { plans, loading: plansLoading } = useAdvisedPlans();
   const { holdings, addHolding, updateHolding, deleteHolding, loading: holdingsLoading } = useClientHoldings();
+  const { advisorName } = usePlan();
 
   const [tab, setTab] = useState<Tab>("advised");
   const [addOpen, setAddOpen] = useState(false);
@@ -80,16 +85,48 @@ export default function ClientPortfolio() {
     })
     .filter(s => s.value > 0);
 
+  const activePlans = plans.filter(p => p.status === "inforce" && p.isVisibleToClient);
+  const totalGrowth = activePlans.reduce((s, p) => s + p.gainLoss, 0);
+  const planTypeLabel = activePlans[0]?.planType
+    ? activePlans[0].planType.charAt(0).toUpperCase() + activePlans[0].planType.slice(1)
+    : null;
+  const lastReviewed = activePlans
+    .map(p => p.latestStatementDate)
+    .filter((d): d is string => !!d)
+    .sort()
+    .at(-1);
+
+  const advisorFirstName = advisorName?.split(" ")[0] ?? null;
+  const topEquityAdvised = advisedSegments.length > 0 ? advisedSegments[0] : null;
+  const advisedPct = topEquityAdvised && totalAdvisedValue > 0 ? Math.round((topEquityAdvised.value / totalAdvisedValue) * 100) : null;
+
   return (
     <ClientAppShell>
       <div className="space-y-[14px] pb-8">
         <div className="flex items-start justify-between gap-4 mb-1">
           <div>
             <h1 className="font-display text-[30px] font-semibold text-forest tracking-[-0.02em] mb-[4px]">Portfolio</h1>
-            <div className="text-[14px] text-ink-40">Balanced growth</div>
+            <div className="text-[14px] text-ink-40">
+              {planTypeLabel ? `${planTypeLabel} profile` : "Portfolio"}
+              {lastReviewed && ` · reviewed ${new Date(lastReviewed + "T00:00:00").toLocaleDateString("en-US", { month: "short", year: "numeric" })}`}
+            </div>
           </div>
           <CurrencyToggle />
         </div>
+
+        {tab === "advised" && advisedSegments.length > 1 && topEquityAdvised && advisedPct != null ? (
+          <SolNarration
+            line={`${topEquityAdvised.label} is ${advisedPct}% of what you have with tala. That's the split your plans are built on.`}
+            detail="Concentration across plans this size is worth understanding — it can be entirely appropriate for the mandate you're on. Whether the split still suits you is a conversation for your next review."
+            advisorFirstName={advisorFirstName}
+          />
+        ) : tab === "advised" && activePlans.length === 1 ? (
+          <SolNarration
+            line={`Your plan is ${totalGrowth >= 0 ? "up" : "down"} ${fmtUsdShort(Math.abs(totalGrowth))} since it started.`}
+            detail="Early in a plan's term, contributions do most of the work — compounding takes over the longer it runs. That's the normal shape of a regular savings plan."
+            advisorFirstName={advisorFirstName}
+          />
+        ) : null}
 
         <div className="flex gap-1 rounded-full border border-hairline bg-surface p-1 mb-2" role="tablist" aria-label="Portfolio mode">
           <button
@@ -119,7 +156,23 @@ export default function ClientPortfolio() {
         </div>
 
         {tab === "advised" && !plansLoading && totalAdvisedValue > 0 && (
-          <PortfolioSummaryCard totalValue={totalAdvisedValue} segments={advisedSegments} />
+          <>
+            <PortfolioSummaryCard totalValue={totalAdvisedValue} segments={advisedSegments} />
+            <div className="flex gap-3 mb-4">
+              <div className="flex-1 bg-green-tint rounded-[20px] p-[15px_16px]">
+                <div className="text-[12.5px] font-semibold text-green">Total growth</div>
+                <div className={cn("font-display text-[23px] font-semibold tracking-[-0.02em]", totalGrowth >= 0 ? "text-forest" : "text-clay")}>
+                  <CurrencyField amountUsd={totalGrowth} compact showSign />
+                </div>
+              </div>
+              {planTypeLabel && (
+                <div className="flex-1 bg-surface rounded-[20px] p-[15px_16px] shadow-[0_2px_14px_rgba(20,52,42,.06)]">
+                  <div className="text-[12.5px] font-semibold text-ink-40">Plan type</div>
+                  <div className="font-display text-[23px] font-semibold text-forest tracking-[-0.02em]">{planTypeLabel}</div>
+                </div>
+              )}
+            </div>
+          </>
         )}
 
         {tab === "self" && !holdingsLoading && totalSelfValue > 0 && (

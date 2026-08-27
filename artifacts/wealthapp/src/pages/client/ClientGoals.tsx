@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "wouter";
 import { Plus, Target, ChevronDown, ChevronRight, Link as LinkIcon, TrendingUp, CheckCircle2, Palmtree, Home, GraduationCap, Rocket, Briefcase, Globe, Coins, Shield } from "lucide-react";
 import ClientAppShell from "@/components/client/AppShell";
+import SolNarration from "@/components/client/SolNarration";
 import GoalsSummaryBar from "@/components/client/goals/GoalsSummaryBar";
 import AddGoalSheet from "@/components/client/goals/AddGoalSheet";
 import EditGoalSheet from "@/components/client/goals/EditGoalSheet";
@@ -310,6 +311,7 @@ export default function ClientGoals() {
     addHoldingLink, removeHoldingLink,
   } = useGoals();
 
+  const { advisorName } = usePlan();
   const [showAdd, setShowAdd] = useState(false);
   const [editTarget, setEditTarget] = useState<EnrichedGoal | null>(null);
   const [completedOpen, setCompletedOpen] = useState(false);
@@ -391,6 +393,13 @@ export default function ClientGoals() {
           <PlanTab />
         ) : (
           <>
+            {targetGoal && targetGoal.progressPct != null && (
+              <SolNarration
+                line={`${targetGoal.title} sits at ${Math.round(targetGoal.progressPct)}% of $${Math.round(targetGoal.targetAmountNum ?? 0).toLocaleString()}${targetGoal.monthsRemaining ? `, with ${targetGoal.monthsRemaining} months to cover the rest` : ""}.`}
+                detail="Early progress on a long-dated goal is mostly what you pay in — two decades of compounding is what closes most of a gap like this. Consistent contributions matter more here than any single month's return."
+                advisorFirstName={advisorName?.split(" ")[0] ?? null}
+              />
+            )}
             <div className="text-[14px] text-ink-40 mb-[8px]">
               {totalActive} live · <CurrencyField amountUsd={totalValue} compact showSign={false} /> in play
             </div>

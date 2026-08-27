@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Map, CalendarDays, AlertTriangle } from "lucide-react";
 import ClientAppShell from "@/components/client/AppShell";
-import Sol from "@/components/Sol";
+import SolNarration from "@/components/client/SolNarration";
 import SolCard from "@/components/client/goals/SolCard";
 import RequestReviewSheet from "@/components/client/plan/RequestReviewSheet";
 import { usePlan } from "@/hooks/usePlan";
@@ -132,6 +132,20 @@ export default function ClientPlan() {
             )}
           </div>
         </div>
+
+        <SolNarration
+          tone="dark"
+          className="relative z-10"
+          line={`${completionPct}% through your pathway's ${totalCount} milestone${totalCount !== 1 ? "s" : ""}.${nextMilestone ? ` Next up: ${nextMilestone.title}.` : ""}`}
+          detail={
+            isReviewOverdue
+              ? `Your annual review is overdue by ${Math.abs(daysUntilReview ?? 0)} days. Early years of a plan are about consistency, not returns — a review is where ${advisorName ?? "your advisor"} checks the plan still fits.`
+              : nextReviewDate
+              ? `Your next fixed point is the review on ${formatDate(nextReviewDate)}, ${daysUntilReview} days away. Early years of a plan are about consistency, not returns — the plan is doing exactly what it was set up to do.`
+              : undefined
+          }
+          advisorFirstName={advisorName?.split(" ")[0] ?? null}
+        />
 
         {/* Review Countdown */}
         <div className="mb-8 bg-forest-700/50 border border-forest-700 rounded-[22px] p-[18px_20px] flex flex-col sm:flex-row sm:items-center justify-between gap-4 backdrop-blur-sm relative z-10">

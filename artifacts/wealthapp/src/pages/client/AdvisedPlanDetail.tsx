@@ -1,13 +1,15 @@
 import { useState } from "react";
-import { useParams, Link } from "wouter";
+import { useParams, Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import ClientAppShell from "@/components/client/AppShell";
 import CurrencyField from "@/components/shared/CurrencyField";
+import SolNarration from "@/components/client/SolNarration";
 import StatementHistoryDrawer from "@/components/client/portfolio/advised/StatementHistoryDrawer";
 import { formatPct } from "@/lib/currencyUtils";
 import { apiFetch } from "@/lib/api";
 import { useAdvisedPlans, useAdvisedPlanTransactions, type AdvisedPlanStatement, type AdvisedPlanHolding } from "@/hooks/useAdvisedPlans";
+import { usePlan } from "@/hooks/usePlan";
 import { cn } from "@/lib/utils";
 
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
@@ -17,6 +19,8 @@ const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
   scenario:  { label: "Scenario",    className: "bg-hairline text-ink-40" },
 };
 
+const FUND_COLORS = ["var(--green)", "var(--forest)", "var(--green-300)", "var(--sun)", "var(--sand)"];
+
 function n(v: string | number | null | undefined) { return parseFloat(String(v ?? "0")) || 0; }
 
 function monthKey(dateStr: string) {
@@ -24,10 +28,24 @@ function monthKey(dateStr: string) {
   return d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
 }
 
+function yearsLeft(maturityDate: string | null, termYears: number | null, effectiveDate: string | null): number | null {
+  if (maturityDate) {
+    const yrs = (new Date(maturityDate).getTime() - Date.now()) / (365.25 * 86_400_000);
+    return Math.max(0, Math.round(yrs));
+  }
+  if (termYears && effectiveDate) {
+    const elapsed = (Date.now() - new Date(effectiveDate).getTime()) / (365.25 * 86_400_000);
+    return Math.max(0, Math.round(termYears - elapsed));
+  }
+  return null;
+}
+
 export default function AdvisedPlanDetail() {
   const { planId } = useParams<{ planId: string }>();
+  const [, navigate] = useLocation();
   const { plans, loading: plansLoading } = useAdvisedPlans();
   const { transactions, loading: txLoading } = useAdvisedPlanTransactions(planId ?? null);
+  const { advisorName } = usePlan();
   const [historyOpen, setHistoryOpen] = useState(false);
 
   const plan = plans.find(p => p.id === planId);
@@ -74,9 +92,11 @@ export default function AdvisedPlanDetail() {
 
   const status = STATUS_CONFIG[plan.status] ?? { label: plan.status, className: "bg-hairline text-ink-40" };
   const isGain = plan.gainLoss >= 0;
+  const advisorFirstName = advisorName?.split(" ")[0] ?? null;
 
   const holdings = [...(plan.latestHoldings ?? [])].sort((a, b) => n(b.finalValue) - n(a.finalValue));
   const totalHoldingValue = holdings.reduce((s, h) => s + n(h.finalValue), 0);
+  const term = yearsLeft(plan.maturityDate, plan.termYears, plan.effectiveDate);
 
   const groupedTx: { month: string; rows: typeof transactions }[] = [];
   for (const t of transactions) {
@@ -85,6 +105,14 @@ export default function AdvisedPlanDetail() {
     if (group && group.month === key) group.rows.push(t);
     else groupedTx.push({ month: key, rows: [t] });
   }
+
+  const netContributed = n(plan.latestNetContribution);
+  const solLine = holdings.length > 0 && totalHoldingValue > 0
+    ? `${holdings[0].fundName} is ${Math.round((n(holdings[0].finalValue) / totalHoldingValue) * 100)}% of this plan.`
+    : `This plan is ${isGain ? "up" : "down"} ${formatPct(Math.abs(plan.gainLossPct))} since it started.`;
+  const solDetail = holdings.length > 0 && totalHoldingValue > 0
+    ? "Holding most of a plan in one fund means its performance largely is your performance. That can be entirely appropriate for the mandate you're on — whether the split still suits you is a conversation for your next review."
+    : `You've paid in $${Math.round(netContributed).toLocaleString()} and the account sits at $${Math.round(n(plan.latestAccountValue)).toLocaleString()}. Quarters like this are ordinary noise over a long term.`;
 
   return (
     <ClientAppShell>
@@ -110,62 +138,63 @@ export default function AdvisedPlanDetail() {
           </p>
         </div>
 
-        <div className="bg-surface rounded-[26px] p-[22px] shadow-[0_2px_14px_rgba(20,52,42,.06)] space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+        <SolNarration line={solLine} detail={solDetail} advisorFirstName={advisorFirstName} />
+
+        {/* Dark account value hero */}
+        <div className="bg-forest rounded-[28px] p-[22px]">
+          <p className="text-[12.5px] font-semibold text-mint">
+            Account value{plan.latestStatementDate ? ` · ${new Date(plan.latestStatementDate + "T00:00:00").toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" })}` : ""}
+          </p>
+          <p className="font-display text-[40px] font-semibold text-paper tracking-[-0.03em] tabular-nums my-0.5 mb-3">
+            <CurrencyField amountUsd={n(plan.latestAccountValue)} currency={plan.currency} compact />
+          </p>
+          <div className="grid grid-cols-3 gap-2.5">
             <div>
-              <p className="text-[13px] text-ink-40 mb-1">Account value</p>
-              <p className="font-display text-[24px] font-semibold text-forest tabular-nums leading-none">
-                <CurrencyField amountUsd={n(plan.latestAccountValue)} currency={plan.currency} compact />
-              </p>
+              <div className="text-[11.5px] text-mint">Paid in</div>
+              <div className="text-[16px] font-semibold text-paper tabular-nums"><CurrencyField amountUsd={netContributed} currency={plan.currency} compact /></div>
             </div>
             <div>
-              <p className="text-[13px] text-ink-40 mb-1">Net contributed</p>
-              <p className="font-display text-[24px] font-semibold text-forest tabular-nums leading-none">
-                <CurrencyField amountUsd={n(plan.latestNetContribution)} currency={plan.currency} compact />
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center justify-between pt-3 border-t border-hairline">
-            <div>
-              <p className="text-[13px] text-ink-40 mb-1">Gain / loss</p>
-              <p className={cn("text-[16px] font-semibold tabular-nums", isGain ? "text-green" : "text-clay")}>
-                <CurrencyField amountUsd={plan.gainLoss} currency={plan.currency} compact showSign /> ({formatPct(plan.gainLossPct)})
-              </p>
-            </div>
-            {plan.effectiveDate && (
-              <div className="text-right">
-                <p className="text-[13px] text-ink-40 mb-1">CAGR</p>
-                <p className={cn("text-[16px] font-semibold tabular-nums", plan.cagr >= 0 ? "text-green" : "text-clay")}>
-                  {formatPct(plan.cagr)}
-                </p>
+              <div className="text-[11.5px] text-mint">Growth</div>
+              <div className={cn("text-[16px] font-semibold tabular-nums", isGain ? "text-sun" : "text-clay")}>
+                <CurrencyField amountUsd={plan.gainLoss} currency={plan.currency} compact showSign />
               </div>
-            )}
+            </div>
+            <div>
+              <div className="text-[11.5px] text-mint">Term left</div>
+              <div className="text-[16px] font-semibold text-paper tabular-nums">{term != null ? `${term} yrs` : "—"}</div>
+            </div>
           </div>
         </div>
 
         <div className="bg-surface rounded-[26px] p-[22px] shadow-[0_2px_14px_rgba(20,52,42,.06)]">
-          <p className="text-[15px] font-semibold text-forest mb-3">Fund allocation</p>
+          <p className="text-[15px] font-semibold text-forest mb-3">Funds</p>
           {holdings.length === 0 ? (
             <p className="text-[13.5px] text-ink-40 py-2">
               No fund data available — your advisor will update this after the next statement.
             </p>
           ) : (
-            <div className="space-y-3">
-              {holdings.map(h => {
+            <div>
+              {holdings.map((h, i) => {
                 const val = n(h.finalValue);
-                const pct = totalHoldingValue > 0 ? (val / totalHoldingValue) * 100 : 0;
+                const pct = totalHoldingValue > 0 ? Math.round((val / totalHoldingValue) * 100) : 0;
                 return (
-                  <div key={h.id}>
-                    <div className="flex items-center justify-between text-[13.5px] mb-1">
-                      <span className="text-forest font-medium truncate pr-2">{h.fundName}</span>
-                      <span className="text-forest font-semibold tabular-nums shrink-0">
-                        <CurrencyField amountUsd={val} currency={plan.currency} compact />
-                      </span>
+                  <button
+                    key={h.id}
+                    type="button"
+                    onClick={() => navigate(`/client/portfolio/${plan.id}/funds/${h.fundCode}`)}
+                    className="w-full flex items-center gap-3 py-[11px] border-t border-hairline first:border-t-0 text-left hover:bg-hairline/20 transition-colors"
+                  >
+                    <span className="w-[10px] h-[34px] rounded-[4px] shrink-0" style={{ background: FUND_COLORS[i % FUND_COLORS.length] }} />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[14.5px] font-semibold text-forest truncate">{h.fundName}</div>
+                      <div className="text-[12.5px] text-ink-40">{h.fundCode}{h.unitsHeld ? ` · ${Number(h.unitsHeld).toLocaleString()} units` : ""}</div>
                     </div>
-                    <div className="h-[4px] w-full rounded-full bg-hairline overflow-hidden">
-                      <div className="h-full rounded-full bg-green" style={{ width: `${pct}%` }} />
+                    <div className="text-right shrink-0">
+                      <div className="text-[15px] font-semibold text-forest tabular-nums"><CurrencyField amountUsd={val} currency={plan.currency} compact /></div>
+                      <div className="text-[12px] text-ink-30">{pct}% of plan</div>
                     </div>
-                  </div>
+                    <ChevronRight className="h-4 w-4 text-ink-30 shrink-0" aria-hidden="true" />
+                  </button>
                 );
               })}
             </div>
@@ -221,13 +250,23 @@ export default function AdvisedPlanDetail() {
           )}
         </div>
 
-        <button
-          type="button"
-          onClick={() => setHistoryOpen(true)}
-          className="w-full min-h-11 rounded-[14px] border border-hairline text-[13.5px] font-semibold text-green hover:bg-green-tint transition-colors"
-        >
-          View full statement history
-        </button>
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => setHistoryOpen(true)}
+            className="text-left bg-surface rounded-[20px] p-[16px] shadow-[0_2px_14px_rgba(20,52,42,.06)]"
+          >
+            <div className="text-[14px] font-semibold text-forest">Statement history</div>
+            <div className="text-[12.5px] text-ink-40 mt-0.5">All quarters, in detail</div>
+          </button>
+          <Link
+            href={`/client/scenarios?planId=${plan.id}`}
+            className="bg-sun-tint rounded-[20px] p-[16px] block"
+          >
+            <div className="text-[14px] font-semibold text-amber-ink">Run a what-if</div>
+            <div className="text-[12.5px] text-[#B07A22] mt-0.5">On this plan</div>
+          </Link>
+        </div>
       </div>
 
       <StatementHistoryDrawer

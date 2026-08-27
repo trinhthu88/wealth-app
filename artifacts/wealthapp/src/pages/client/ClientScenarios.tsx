@@ -9,6 +9,7 @@ import { useLocation } from "wouter";
 import { BarChart2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ClientAppShell from "@/components/client/AppShell";
+import SolNarration from "@/components/client/SolNarration";
 import ScenarioSidebar, { type ScenarioSource } from "@/components/client/scenarios/ScenarioSidebar";
 import ScenarioInputPanel from "@/components/client/scenarios/ScenarioInputPanel";
 import ScenarioResultPanel from "@/components/client/scenarios/ScenarioResultPanel";
@@ -17,6 +18,7 @@ import BringUnderManagementCompare from "@/components/client/scenarios/BringUnde
 import { useAdvisedPlans } from "@/hooks/useAdvisedPlans";
 import { useClientHoldings } from "@/hooks/useClientHoldings";
 import { useScenarios } from "@/hooks/useScenarios";
+import { usePlan } from "@/hooks/usePlan";
 import { useQuery } from "@tanstack/react-query";
 import { useUser } from "@clerk/react";
 import { apiFetch } from "@/lib/api";
@@ -37,6 +39,7 @@ export default function ClientScenarios() {
   const { plans, totalAdvisedValue } = useAdvisedPlans();
   const { holdings } = useClientHoldings();
   const { savedScenarios, advisorScenarios, saveScenario, deleteScenario, markAdvisorScenarioViewed } = useScenarios();
+  const { advisorName } = usePlan();
 
   const goalsQuery = useQuery<DashboardGoal[]>({
     queryKey: ["dashboard-goals"],
@@ -112,6 +115,14 @@ export default function ClientScenarios() {
             </button>
           )}
         </div>
+
+        {mode === "advised" && (
+          <SolNarration
+            line="Move a lever and I'll show what changes. Which one to pull is your advisor's call, not mine."
+            detail="These projections compound your current value and future contributions at a flat annual rate. Real markets don't deliver flat rates, so read the number as a shape, not a promise."
+            advisorFirstName={advisorName?.split(" ")[0] ?? null}
+          />
+        )}
 
         <div className="flex gap-1 bg-track rounded-xl p-1 w-fit mb-[22px]">
           {MODES.map(m => (

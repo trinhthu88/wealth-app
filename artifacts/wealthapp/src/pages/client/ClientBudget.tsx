@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import ClientAppShell from "@/components/client/AppShell";
+import SolNarration from "@/components/client/SolNarration";
+import CurrencyField from "@/components/shared/CurrencyField";
 import BudgetMonthStrip from "@/components/client/budget/BudgetMonthStrip";
-import BudgetSummaryCard from "@/components/client/budget/BudgetSummaryCard";
 import BudgetLineRow from "@/components/client/budget/BudgetLineRow";
 import NumericKeypadSheet from "@/components/client/budget/NumericKeypadSheet";
 import InvestmentContributionRow from "@/components/client/budget/InvestmentContributionRow";
@@ -16,6 +17,7 @@ import {
 import { useClientBudget, type InvestmentContribution } from "@/hooks/useClientBudget";
 import { useClientHoldings } from "@/hooks/useClientHoldings";
 import { useNetWorthItems } from "@/hooks/useNetWorthItems";
+import { usePlan } from "@/hooks/usePlan";
 import { cn } from "@/lib/utils";
 
 const EMPTY_FORM: BudgetFormState = {
@@ -58,6 +60,7 @@ type ActiveField = keyof BudgetFormState | null;
 export default function ClientBudget() {
   const { holdings } = useClientHoldings();
   const { manualLiabilities } = useNetWorthItems();
+  const { advisorName } = usePlan();
   const hasSyncedContributions = useRef(false);
   const skipNextHoldingSaveRef = useRef(true);
   const holdingContribSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -208,6 +211,12 @@ export default function ClientBudget() {
     ? "Estimated monthly spend"
     : "This month's other investment contributions";
 
+  const savingsRatePct = incomeTotal > 0 ? Math.round((netSurplus / incomeTotal) * 100) : 0;
+  const biggestExpense = EXPENSE_CATEGORIES
+    .map(cat => ({ label: cat.label, value: n(form[cat.key]) }))
+    .sort((a, b) => b.value - a.value)[0];
+  const advisorFirstName = advisorName?.split(" ")[0] ?? null;
+
   return (
     <ClientAppShell>
       <div className="space-y-[14px] pb-12">
@@ -229,12 +238,39 @@ export default function ClientBudget() {
           onChange={handleMonthChange}
         />
 
-        <BudgetSummaryCard
-          incomeTotal={incomeTotal}
-          expenseTotal={expenseTotal}
-          investTotal={investTotal}
-          netSurplus={netSurplus}
-        />
+        {incomeTotal > 0 && biggestExpense && biggestExpense.value > 0 && (
+          <SolNarration
+            line={`You kept ${savingsRatePct}% of income ${monthTitle(selectedMonth)}. ${biggestExpense.label} is your biggest category at $${Math.round(biggestExpense.value).toLocaleString()}.`}
+            detail="A savings rate near 20-30% is strong by most standards. Small month-to-month drift in one category matters far less than the rate holding steady over time."
+            advisorFirstName={advisorFirstName}
+          />
+        )}
+
+        <div className="bg-forest rounded-[26px] p-[22px]">
+          <p className="text-[12.5px] font-semibold text-mint">Kept this {monthTitle(selectedMonth)}</p>
+          <div className="flex items-baseline gap-2.5">
+            <span className="font-display text-[40px] font-semibold text-paper tracking-[-0.03em] tabular-nums">
+              <CurrencyField amountUsd={netSurplus} compact showSign={netSurplus < 0} />
+            </span>
+            {incomeTotal > 0 && (
+              <span className="text-[14px] font-semibold text-sun">{savingsRatePct}% rate</span>
+            )}
+          </div>
+          <div className="grid grid-cols-3 gap-2.5 mt-4">
+            <div>
+              <div className="text-[11.5px] text-mint">Income</div>
+              <div className="text-[16px] font-semibold text-paper tabular-nums"><CurrencyField amountUsd={incomeTotal} compact /></div>
+            </div>
+            <div>
+              <div className="text-[11.5px] text-mint">Spent</div>
+              <div className="text-[16px] font-semibold text-paper tabular-nums"><CurrencyField amountUsd={expenseTotal} compact /></div>
+            </div>
+            <div>
+              <div className="text-[11.5px] text-mint">Invested</div>
+              <div className="text-[16px] font-semibold text-paper tabular-nums"><CurrencyField amountUsd={investTotal} compact /></div>
+            </div>
+          </div>
+        </div>
 
         <SurplusCTA surplus={netSurplus} monthKey={selectedMonth.slice(0, 7)} />
 
