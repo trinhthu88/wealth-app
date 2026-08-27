@@ -15,6 +15,7 @@ import {
 } from "@/components/client/budget/BudgetFieldInput";
 import { useClientBudget, type InvestmentContribution } from "@/hooks/useClientBudget";
 import { useClientHoldings } from "@/hooks/useClientHoldings";
+import { useNetWorthItems } from "@/hooks/useNetWorthItems";
 import { cn } from "@/lib/utils";
 
 const EMPTY_FORM: BudgetFormState = {
@@ -56,6 +57,7 @@ type ActiveField = keyof BudgetFormState | null;
 
 export default function ClientBudget() {
   const { holdings } = useClientHoldings();
+  const { manualLiabilities } = useNetWorthItems();
   const hasSyncedContributions = useRef(false);
   const skipNextHoldingSaveRef = useRef(true);
   const holdingContribSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -102,8 +104,13 @@ export default function ClientBudget() {
     .filter(c => c.source_type === "advised_plan");
   const holdingsById = Object.fromEntries(holdings.map(h => [h.id, h]));
 
+  // Auto-synced, read-only: the sum of "Monthly repayment" set on each
+  // liability (Net Worth page), counted as an expense here — not one of the
+  // user-editable EXPENSE_CATEGORIES.
+  const debtPaymentsTotal = manualLiabilities.reduce((s, l) => s + (l.monthlyPaymentUsd ?? 0), 0);
+
   const incomeTotal = totalOf(form, INCOME_CATEGORIES);
-  const expenseTotal = totalOf(form, EXPENSE_CATEGORIES);
+  const expenseTotal = totalOf(form, EXPENSE_CATEGORIES) + debtPaymentsTotal;
   const advisedInvest = advisedPlanContributions.reduce((s, c) => s + c.amount, 0);
   const holdingInvest = holdingContributions.reduce((s, e) => s + n(e.amount), 0);
   const investTotal = advisedInvest + holdingInvest + n(form.otherInvestments);
@@ -141,6 +148,7 @@ export default function ClientBudget() {
         foodDining: form.foodDining || "0", entertainment: form.entertainment || "0",
         shopping: form.shopping || "0", health: form.health || "0",
         education: form.education || "0", otherExpenses: form.otherExpenses || "0",
+        debtPayments: String(debtPaymentsTotal),
         investmentContributions: all,
       } as any);
     } catch {
@@ -264,7 +272,7 @@ export default function ClientBudget() {
               ${Math.round(expenseTotal).toLocaleString()}
             </span>
           </div>
-          {EXPENSE_CATEGORIES.map((cat, i) => {
+          {EXPENSE_CATEGORIES.map(cat => {
             const val = n(form[cat.key]);
             const overThirty = incomeTotal > 0 && val > incomeTotal * 0.3;
             return (
@@ -273,11 +281,20 @@ export default function ClientBudget() {
                 label={cat.label}
                 value={val}
                 tint={overThirty}
-                noBorder={i === EXPENSE_CATEGORIES.length - 1}
                 onClick={() => !isReadOnly && setActiveField(cat.key)}
               />
             );
           })}
+
+          {debtPaymentsTotal > 0 && (
+            <div className="pt-3">
+              <InvestmentContributionRow
+                tone="clay"
+                contribution={{ label: "Debt payments", amount: debtPaymentsTotal, source_id: "liabilities", source_type: "liabilities" }}
+                hint="Synced from your liabilities' monthly repayments — edit these on the Net Worth page."
+              />
+            </div>
+          )}
         </div>
 
         {/* Investments */}

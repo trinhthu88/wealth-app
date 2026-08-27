@@ -65,17 +65,18 @@ export default function LiabilitySection({
 
       {/* Monthly payments footer */}
       {totalMonthlyPayment > 0 && (
-        <div className="bg-paper border border-hairline rounded-[18px] px-4 py-3 flex items-center justify-between">
+        <div className="bg-paper border border-hairline rounded-[18px] px-4 py-3 flex items-center justify-between gap-3">
           <div>
             <p className="text-xs text-ink-40">Total monthly debt payments</p>
             <p className="text-sm font-semibold text-forest">
               <CurrencyField amountUsd={totalMonthlyPayment} compact />
               <span className="text-ink-30 font-normal text-xs">/mo</span>
             </p>
+            <p className="text-[11px] text-ink-30 mt-1">Counted automatically as an expense in your budget.</p>
           </div>
           <Link
             href="/client/budget"
-            className="text-xs text-green font-medium hover:text-forest"
+            className="text-xs text-green font-medium hover:text-forest shrink-0"
           >
             See budget →
           </Link>

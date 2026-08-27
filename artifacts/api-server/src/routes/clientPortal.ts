@@ -632,13 +632,22 @@ router.post("/client/budget", requireAuth, async (req, res): Promise<void> => {
   const toStr = (v: unknown) => v != null ? String(v) : "0";
   const contributions = Array.isArray(investmentContributions) ? investmentContributions : [];
 
+  // debtPayments is never trusted from the request body — it's always
+  // resynced here from the live sum of the client's liabilities, the same
+  // way advised-plan contributions are synced server-side rather than
+  // client-submitted, so it can't go stale or be spoofed.
+  const liabilityRows = await db.select({ value: liabilitiesTable.monthlyPaymentUsd })
+    .from(liabilitiesTable).where(eq(liabilitiesTable.userId, userId));
+  const debtPayments = liabilityRows.reduce((sum, l) => sum + n(l.value), 0);
+
   // totalIncome/totalExpenses/totalInvestments/netSurplus/savingsRatePct are
   // computed here from the category fields, not trusted from the request body —
   // a client (or a frontend bug) submitting a category breakdown that doesn't
   // match its own totals would otherwise go uncaught.
   const totalIncome = n(primaryIncome) + n(secondaryIncome) + n(rentalIncome) + n(otherIncome);
   const totalExpenses = n(housing) + n(utilities) + n(transport) + n(insurance)
-    + n(foodDining) + n(entertainment) + n(shopping) + n(health) + n(education) + n(otherExpenses);
+    + n(foodDining) + n(entertainment) + n(shopping) + n(health) + n(education) + n(otherExpenses)
+    + debtPayments;
   const totalInvestments = contributions.reduce((sum: number, c: any) => sum + n(c?.amount), 0);
   const netSurplus = totalIncome - totalExpenses - totalInvestments;
   const savingsRatePct = totalIncome > 0 ? (netSurplus / totalIncome) * 100 : 0;
@@ -652,6 +661,7 @@ router.post("/client/budget", requireAuth, async (req, res): Promise<void> => {
     foodDining: toStr(foodDining), entertainment: toStr(entertainment),
     shopping: toStr(shopping), health: toStr(health),
     education: toStr(education), otherExpenses: toStr(otherExpenses),
+    debtPayments: String(debtPayments),
     investmentContributions: contributions,
     totalIncome: String(totalIncome), totalExpenses: String(totalExpenses),
     totalInvestments: String(totalInvestments), netSurplus: String(netSurplus),

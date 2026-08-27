@@ -30,6 +30,8 @@ export interface ClientBudgetMonth {
   health: string;
   education: string;
   otherExpenses: string;
+  /** Synced server-side from the sum of the client's liabilities' monthly payments — read-only. */
+  debtPayments: string;
   investmentContributions: InvestmentContribution[];
   totalIncome: string;
   totalExpenses: string;
@@ -46,7 +48,8 @@ export function computeTotals(data: Partial<ClientBudgetMonth>): Partial<ClientB
 
   const totalIncome = n(data.primaryIncome) + n(data.secondaryIncome) + n(data.rentalIncome) + n(data.otherIncome);
   const totalExpenses = n(data.housing) + n(data.utilities) + n(data.transport) + n(data.insurance)
-    + n(data.foodDining) + n(data.entertainment) + n(data.shopping) + n(data.health) + n(data.education) + n(data.otherExpenses);
+    + n(data.foodDining) + n(data.entertainment) + n(data.shopping) + n(data.health) + n(data.education) + n(data.otherExpenses)
+    + n(data.debtPayments);
   const contributions = (data.investmentContributions as InvestmentContribution[]) ?? [];
   const totalInvestments = contributions.reduce((sum, c) => sum + (c.amount || 0), 0);
   const netSurplus = totalIncome - totalExpenses - totalInvestments;

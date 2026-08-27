@@ -28,6 +28,11 @@ export const clientBudgetMonthsTable = pgTable("client_budget_months", {
   education: numeric("education").notNull().default("0"),
   otherExpenses: numeric("other_expenses").notNull().default("0"),
 
+  // Auto-synced from the sum of client_liabilities.monthly_payment_usd at
+  // save time (see /client/budget) — not a user-entered category, so it has
+  // no keypad row of its own on the budget page, just a read-only synced row.
+  debtPayments: numeric("debt_payments").notNull().default("0"),
+
   investmentContributions: jsonb("investment_contributions").notNull().default([]),
 
   totalIncome: numeric("total_income").notNull().default("0"),
