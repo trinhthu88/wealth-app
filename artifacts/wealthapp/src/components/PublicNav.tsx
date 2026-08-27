@@ -28,8 +28,8 @@ export default function PublicNav() {
     : "/free/dashboard";
 
   return (
-    <nav className="sticky top-0 z-50 bg-paper/90 backdrop-blur-sm border-b border-hairline">
-      <div className="max-w-6xl mx-auto px-6 h-[72px] flex items-center justify-between">
+    <nav className="sticky top-0 z-50 bg-paper/90 backdrop-blur-sm border-b border-hairline" aria-label="Public navigation">
+      <div className="max-w-6xl mx-auto px-5 sm:px-6 h-[72px] flex items-center justify-between">
         <Link href="/" className="hover:opacity-85 transition-opacity">
           <SolWordmark />
         </Link>
@@ -47,30 +47,36 @@ export default function PublicNav() {
               <Link href="/sign-in" className="text-forest hover:text-green transition-colors">
                 Sign In
               </Link>
-              <Link href="/sign-up" className="bg-green text-white px-5 py-2.5 rounded-xl hover:bg-forest transition-colors">
+              <Link href="/sign-up" className="bg-green text-paper px-5 py-2.5 rounded-full hover:bg-forest transition-colors shadow-[0_3px_10px_rgba(29,158,117,.16)]">
                 Get Started
               </Link>
             </div>
           )}
         </div>
 
-        <button className="md:hidden text-forest p-2 -mr-2" onClick={() => setOpen(v => !v)}>
+        <button
+          className="md:hidden text-forest p-2 -mr-2 rounded-full hover:bg-surface"
+          onClick={() => setOpen(v => !v)}
+          aria-label={open ? "Close navigation menu" : "Open navigation menu"}
+          aria-expanded={open}
+          aria-controls="public-mobile-menu"
+        >
           {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
         </button>
       </div>
 
       {open && (
-        <div className="md:hidden border-t border-hairline bg-surface px-6 py-4 space-y-2 shadow-lg absolute left-0 right-0">
+        <div id="public-mobile-menu" className="md:hidden border-t border-hairline bg-surface px-5 py-4 space-y-2 shadow-lg absolute left-0 right-0">
           <Link href="/tools" className="block py-3 text-[16px] font-semibold text-forest" onClick={() => setOpen(false)}>Free Tools</Link>
           <Link href="/blog" className="block py-3 text-[16px] font-semibold text-forest" onClick={() => setOpen(false)}>Insights</Link>
           {isSignedIn ? (
             <Link href={dashLink} className="block py-3 text-[16px] font-semibold text-green" onClick={() => setOpen(false)}>My Dashboard</Link>
           ) : (
             <div className="pt-4 flex flex-col gap-3">
-              <Link href="/sign-in" className="flex items-center justify-center w-full h-12 rounded-xl border border-hairline text-forest font-semibold" onClick={() => setOpen(false)}>
+              <Link href="/sign-in" className="flex items-center justify-center w-full h-12 rounded-full border border-hairline text-forest font-semibold" onClick={() => setOpen(false)}>
                 Sign In
               </Link>
-              <Link href="/sign-up" className="flex items-center justify-center w-full h-12 rounded-xl bg-green text-white font-semibold" onClick={() => setOpen(false)}>
+              <Link href="/sign-up" className="flex items-center justify-center w-full h-12 rounded-full bg-green text-paper font-semibold" onClick={() => setOpen(false)}>
                 Get Started Free
               </Link>
             </div>

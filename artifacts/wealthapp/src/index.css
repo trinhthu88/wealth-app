@@ -151,6 +151,8 @@
     @apply font-sans antialiased; 
     background-color: var(--paper); 
     color: var(--forest);
+    min-width: 320px;
+    text-rendering: optimizeLegibility;
   }
   h1, h2, h3 { 
     font-family: var(--app-font-display); 
@@ -159,6 +161,61 @@
   h4, h5, h6 { 
     font-family: var(--app-font-display);
     @apply font-semibold tracking-[-0.01em]; 
+  }
+
+  :where(button, a, input, select, textarea):focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--green) 42%, transparent);
+    outline-offset: 3px;
+  }
+
+  ::selection {
+    background: var(--sun);
+    color: var(--sun-ink);
+  }
+}
+
+@layer components {
+  .sunrise-card {
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    border-radius: 26px;
+    box-shadow: 0 2px 14px rgba(20, 52, 42, 0.06);
+  }
+
+  .sunrise-control {
+    min-height: 44px;
+    border: 1px solid var(--hairline-2);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--forest);
+    transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+  }
+
+  .sunrise-control:hover {
+    border-color: var(--green-300);
+  }
+
+  .sunrise-control:focus-within {
+    border-color: var(--green);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 16%, transparent);
+  }
+
+  .sunrise-button-primary {
+    min-height: 44px;
+    border-radius: 999px;
+    background: var(--green);
+    color: var(--paper);
+    font-weight: 600;
+    transition: background-color 150ms ease, transform 150ms ease, box-shadow 150ms ease;
+  }
+
+  .sunrise-button-primary:hover {
+    background: var(--forest-700);
+    box-shadow: 0 4px 14px rgba(29, 158, 117, 0.2);
+  }
+
+  .sunrise-button-primary:active {
+    transform: translateY(1px);
   }
 }
 
@@ -190,6 +247,24 @@
   @keyframes riseUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
   @keyframes drawIn { from { stroke-dashoffset: 400; } to { stroke-dashoffset: 0; } }
   @keyframes sparkle { 0%,100% { opacity: 0; transform: scale(.4); } 50% { opacity: 1; transform: scale(1); } }
+
+  /* Compatibility aliases for the older utility vocabulary. Keeping these
+     token-based lets the long tail of CRUD screens inherit Sunrise without
+     changing their behavior or data contracts. */
+  .bg-white { background-color: var(--surface) !important; }
+  .bg-slate-50, .bg-slate-100, .bg-gray-50 { background-color: var(--paper) !important; }
+  .bg-slate-200, .bg-gray-100 { background-color: var(--hairline) !important; }
+  .text-slate-950, .text-slate-900, .text-slate-800, .text-gray-900 { color: var(--forest) !important; }
+  .text-slate-700, .text-slate-600, .text-gray-700 { color: var(--ink-60) !important; }
+  .text-slate-500, .text-slate-400, .text-gray-500, .text-gray-400 { color: var(--ink-40) !important; }
+  .text-slate-300, .text-gray-300 { color: var(--ink-20) !important; }
+  .border-slate-100, .border-slate-200, .border-gray-100, .border-gray-200 { border-color: var(--hairline) !important; }
+  .border-slate-300, .border-gray-300 { border-color: var(--hairline-2) !important; }
+  .bg-blue-50, .bg-blue-100 { background-color: var(--green-tint) !important; }
+  .bg-blue-500, .bg-blue-600, .bg-indigo-500, .bg-indigo-600 { background-color: var(--green) !important; }
+  .text-blue-500, .text-blue-600, .text-indigo-500, .text-indigo-600 { color: var(--green) !important; }
+  .border-blue-200, .border-blue-300, .border-indigo-200 { border-color: var(--green-300) !important; }
+  .font-mono { font-family: var(--app-font-sans); }
 }
 
 @media (prefers-reduced-motion: reduce) {

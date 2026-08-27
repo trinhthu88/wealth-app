@@ -91,7 +91,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </div>
 
-      <nav className="flex-1 px-3 py-6 space-y-1 overflow-y-auto" aria-label="Primary">
+        <nav className="flex-1 px-3 py-6 space-y-1 overflow-y-auto" aria-label="Workspace navigation">
         {nav.map(item => (
           <NavLink key={item.href} item={item} collapsed={collapsed} />
         ))}
@@ -163,7 +163,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       )}
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <header className="h-14 md:hidden border-b border-hairline bg-surface/80 backdrop-blur flex items-center px-6 gap-3 shrink-0">
+        <header className="h-16 md:hidden border-b border-hairline bg-surface/90 backdrop-blur flex items-center px-5 gap-3 shrink-0">
           <button
             className="text-forest hover:text-green transition-colors"
             onClick={() => setMobileOpen(v => !v)}
@@ -172,11 +172,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           >
             {mobileOpen ? <X className="h-6 w-6" aria-hidden="true" /> : <Menu className="h-6 w-6" aria-hidden="true" />}
           </button>
-          <div className="flex-1" />
+          <div className="flex-1 flex items-center gap-2">
+            <Sol size="xs" animate="idle" showRays={false} />
+            <span className="font-display text-lg font-semibold tracking-[-0.02em] text-forest">tala</span>
+          </div>
           <UserButton appearance={{ elements: { avatarBox: "h-8 w-8" } }} />
         </header>
 
-        <main className="flex-1 overflow-y-auto px-[22px] md:px-[26px] pb-28 md:pb-[26px] pt-4 md:pt-[26px] max-w-[440px] md:max-w-none mx-auto w-full md:pr-10 lg:pl-10">
+        <main className="flex-1 overflow-y-auto px-[20px] sm:px-[22px] md:px-[26px] pb-28 md:pb-[26px] pt-5 md:pt-[26px] max-w-[460px] md:max-w-none mx-auto w-full md:pr-10 lg:pl-10">
           {children}
         </main>
       </div>

@@ -208,10 +208,10 @@ export default function ToolsPage() {
           </div>
         </Tabs>
 
-        <div className="mt-10 bg-gradient-to-br from-[#042C53] to-[#0a4a7a] rounded-xl p-6 text-white text-center">
+        <div className="mt-10 bg-forest rounded-[26px] p-6 text-paper text-center shadow-[0_2px_14px_rgba(20,52,42,.06)]">
           <h3 className="font-bold text-lg mb-2">Want a Full Financial Plan?</h3>
           <p className="text-white/70 text-sm mb-4">Sign up free and get your personalized financial pathway, health score, and budgeting tools.</p>
-          <Link href="/sign-up"><Button className="bg-[#1D9E75] hover:bg-[#178a65] border-0">Get Started Free</Button></Link>
+          <Link href="/sign-up"><Button className="bg-green hover:bg-forest-700 border-0 text-paper">Get Started Free</Button></Link>
         </div>
       </div>
     </div>
