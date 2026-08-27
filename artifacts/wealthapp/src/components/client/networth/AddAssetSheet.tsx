@@ -63,13 +63,13 @@ export default function AddAssetSheet({ isOpen, onClose, onSave }: Props) {
     <BottomSheet isOpen={isOpen} onClose={() => { reset(); onClose(); }} title="Add an asset">
       <div className="space-y-5 pb-4">
         {/* Category note for investment */}
-        <div className="bg-[#1D9E75]/5 border border-[#1D9E75]/20 rounded-xl p-3 text-xs text-slate-600">
-          <span className="font-semibold text-[#1D9E75]">Investment assets</span> are synced automatically from your Portfolio page and shown separately.
+        <div className="bg-green-tint border border-green/20 rounded-xl p-3 text-xs text-ink-60">
+          <span className="font-semibold text-green">Investment assets</span> are synced automatically from your Portfolio page and shown separately.
         </div>
 
         {/* Category picker */}
         <div className="space-y-2">
-          <label className="text-sm font-medium text-[#042C53]">Category *</label>
+          <label className="text-sm font-medium text-forest">Category *</label>
           <div className="flex flex-wrap gap-2">
             {ASSET_CATEGORIES.map(cat => (
               <button
@@ -78,8 +78,8 @@ export default function AddAssetSheet({ isOpen, onClose, onSave }: Props) {
                 className={cn(
                   "px-3 py-1.5 rounded-lg text-sm border transition-all flex items-center gap-1.5",
                   category === cat.value
-                    ? "border-[#1D9E75] bg-[#1D9E75]/10 text-[#1D9E75] font-medium"
-                    : "border-slate-200 text-slate-600 hover:border-[#1D9E75]/40"
+                    ? "border-green bg-green-tint text-green font-medium"
+                    : "border-hairline text-ink-60 hover:border-green/40"
                 )}
               >
                 <cat.icon className="w-4 h-4" />
@@ -91,19 +91,19 @@ export default function AddAssetSheet({ isOpen, onClose, onSave }: Props) {
 
         {/* Label */}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-[#042C53]">Label *</label>
+          <label className="text-sm font-medium text-forest">Label *</label>
           <input
             type="text"
             value={name}
             onChange={e => setName(e.target.value)}
             placeholder={catInfo?.placeholder ?? "Describe this asset"}
-            className="w-full px-4 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#042C53] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/30 focus:border-[#1D9E75]"
+            className="w-full px-4 py-2.5 rounded-xl border border-hairline text-sm text-forest placeholder:text-ink-30 focus:outline-none focus:ring-2 focus:ring-green/30 focus:border-green"
           />
         </div>
 
         {/* Value */}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-[#042C53]">Current value *</label>
+          <label className="text-sm font-medium text-forest">Current value *</label>
           <div className="flex gap-2">
             <input
               type="number"
@@ -112,16 +112,16 @@ export default function AddAssetSheet({ isOpen, onClose, onSave }: Props) {
               placeholder="0"
               min={0}
               style={{ MozAppearance: "textfield" } as React.CSSProperties}
-              className="flex-1 px-4 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#042C53] focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/30 focus:border-[#1D9E75] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              className="flex-1 px-4 py-2.5 rounded-xl border border-hairline text-sm text-forest focus:outline-none focus:ring-2 focus:ring-green/30 focus:border-green [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
-            <div className="inline-flex items-center bg-slate-100 rounded-xl p-0.5">
+            <div className="inline-flex items-center bg-paper rounded-xl p-0.5">
               {CURRENCIES.map(c => (
                 <button
                   key={c}
                   onClick={() => setCurrency(c)}
                   className={cn(
                     "px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all",
-                    currency === c ? "bg-white text-[#042C53] shadow-sm" : "text-slate-500"
+                    currency === c ? "bg-surface text-forest shadow-sm" : "text-ink-40"
                   )}
                 >
                   {c}
@@ -131,12 +131,12 @@ export default function AddAssetSheet({ isOpen, onClose, onSave }: Props) {
           </div>
         </div>
 
-        {error && <p className="text-sm text-red-500">{error}</p>}
+        {error && <p className="text-sm text-clay">{error}</p>}
 
         <button
           onClick={handleSave}
           disabled={!name.trim() || numVal <= 0 || saving}
-          className="w-full py-3 rounded-xl bg-[#1D9E75] text-white font-semibold text-sm hover:bg-[#0F6E56] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="w-full py-3 rounded-xl bg-green text-white font-semibold text-sm hover:bg-forest-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {saving ? "Saving…" : "Add asset"}
         </button>

@@ -1,21 +1,21 @@
 import { useEffect, useRef, useState } from "react";
 import ClientAppShell from "@/components/client/AppShell";
-import BottomSheet from "@/components/client/BottomSheet";
 import BudgetMonthStrip from "@/components/client/budget/BudgetMonthStrip";
 import BudgetSummaryCard from "@/components/client/budget/BudgetSummaryCard";
-import BudgetCategoryRow from "@/components/client/budget/BudgetCategoryRow";
+import BudgetLineRow from "@/components/client/budget/BudgetLineRow";
+import NumericKeypadSheet from "@/components/client/budget/NumericKeypadSheet";
 import InvestmentContributionRow from "@/components/client/budget/InvestmentContributionRow";
 import HoldingContributionPicker, { type HoldingContributionEntry } from "@/components/client/budget/HoldingContributionPicker";
 import SurplusCTA from "@/components/client/budget/SurplusCTA";
-import GoalFundingGaps from "@/components/client/budget/GoalFundingGaps";
 import BudgetHistoryChart from "@/components/client/budget/BudgetHistoryChart";
 import BudgetTrackBCTA from "@/components/client/budget/BudgetTrackBCTA";
 import {
-  NumberInput, INCOME_CATEGORIES, EXPENSE_CATEGORIES, n, totalOf,
+  INCOME_CATEGORIES, EXPENSE_CATEGORIES, n, totalOf,
   type BudgetFormState,
 } from "@/components/client/budget/BudgetFieldInput";
 import { useClientBudget, type InvestmentContribution } from "@/hooks/useClientBudget";
 import { useClientHoldings } from "@/hooks/useClientHoldings";
+import { cn } from "@/lib/utils";
 
 const EMPTY_FORM: BudgetFormState = {
   primaryIncome: "", secondaryIncome: "", rentalIncome: "", otherIncome: "",
@@ -23,6 +23,10 @@ const EMPTY_FORM: BudgetFormState = {
   foodDining: "", entertainment: "", shopping: "", health: "", education: "", otherExpenses: "",
   otherInvestments: "",
 };
+
+const EXPENSE_KEYS = new Set(EXPENSE_CATEGORIES.map(c => c.key));
+const INCOME_LABELS: Record<string, string> = Object.fromEntries(INCOME_CATEGORIES.map(c => [c.key, c.label]));
+const EXPENSE_LABELS: Record<string, string> = Object.fromEntries(EXPENSE_CATEGORIES.map(c => [c.key, c.label]));
 
 function rowToForm(data: Record<string, string | null | undefined> | null): BudgetFormState {
   if (!data) return { ...EMPTY_FORM };
@@ -48,21 +52,23 @@ function daysLeftInMonth(): number {
   return lastDay.getDate() - now.getDate();
 }
 
-type SheetKey = "income" | "expenses" | "investments" | null;
+type ActiveField = keyof BudgetFormState | null;
 
 export default function ClientBudget() {
   const { holdings } = useClientHoldings();
   const hasSyncedContributions = useRef(false);
+  const skipNextHoldingSaveRef = useRef(true);
+  const holdingContribSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const currentMonthStr = new Date().toISOString().slice(0, 7) + "-01";
   const [selectedMonth, setSelectedMonth] = useState<string>(currentMonthStr);
 
-  const { currentMonth: monthData, months, loading, saving, saveMonth, syncInvestmentContributions } = useClientBudget(selectedMonth);
+  const { currentMonth: monthData, months, loading, saveMonth, syncInvestmentContributions } = useClientBudget(selectedMonth);
 
   const [form, setForm] = useState<BudgetFormState>({ ...EMPTY_FORM });
   const [isReadOnly, setIsReadOnly] = useState(false);
   const [holdingContributions, setHoldingContributions] = useState<HoldingContributionEntry[]>([]);
-  const [openSheet, setOpenSheet] = useState<SheetKey>(null);
+  const [activeField, setActiveField] = useState<ActiveField>(null);
 
   useEffect(() => {
     if (!loading) {
@@ -71,6 +77,9 @@ export default function ClientBudget() {
         .filter(c => c.source_type === "self_holding")
         .map(c => ({ holdingId: c.source_id, amount: String(c.amount) }));
       setHoldingContributions(selfHolding);
+      // The next holdingContributions-change effect run is this same load,
+      // not a user edit — skip it so we don't immediately re-save on mount.
+      skipNextHoldingSaveRef.current = true;
     }
   }, [monthData?.id, loading]);
 
@@ -101,12 +110,11 @@ export default function ClientBudget() {
 
   // Prefer the saved month's own totals/surplus when viewing a saved month
   // (read-only past months show what was actually saved); fall back to live
-  // form totals for the current, still-editable month.
-  const netSurplus = monthData ? parseFloat(monthData.netSurplus ?? "0") || 0 : incomeTotal - expenseTotal - investTotal;
-  const savingsRatePct = monthData ? parseFloat(monthData.savingsRatePct ?? "0") || 0
-    : (incomeTotal > 0 ? ((incomeTotal - expenseTotal - investTotal) / incomeTotal) * 100 : 0);
+  // form totals — recalculated on every keystroke — for the editable month.
+  const netSurplus = monthData && isReadOnly ? parseFloat(monthData.netSurplus ?? "0") || 0 : incomeTotal - expenseTotal - investTotal;
+  const expensesOverThreshold = incomeTotal > 0 && expenseTotal > incomeTotal * 0.7;
 
-  async function handleSave() {
+  async function persist() {
     const all: InvestmentContribution[] = [
       ...advisedPlanContributions,
       ...holdingContributions
@@ -135,11 +143,35 @@ export default function ClientBudget() {
         education: form.education || "0", otherExpenses: form.otherExpenses || "0",
         investmentContributions: all,
       } as any);
-      setOpenSheet(null);
     } catch {
       // mutation's onError already shows a toast
     }
   }
+
+  function closeKeypad() {
+    setActiveField(null);
+  }
+
+  async function handleKeypadDone() {
+    setActiveField(null);
+    if (!isReadOnly) await persist();
+  }
+
+  // Holding-contribution rows aren't driven through the keypad's own Done
+  // button, so debounce-save whenever one changes instead.
+  useEffect(() => {
+    if (skipNextHoldingSaveRef.current) {
+      skipNextHoldingSaveRef.current = false;
+      return;
+    }
+    if (isReadOnly) return;
+    if (holdingContribSaveTimer.current) clearTimeout(holdingContribSaveTimer.current);
+    holdingContribSaveTimer.current = setTimeout(() => { persist(); }, 900);
+    return () => {
+      if (holdingContribSaveTimer.current) clearTimeout(holdingContribSaveTimer.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [holdingContributions, isReadOnly]);
 
   function handleMonthChange(month: string) {
     setSelectedMonth(month);
@@ -156,6 +188,17 @@ export default function ClientBudget() {
       </ClientAppShell>
     );
   }
+
+  const activeIsIncome = activeField != null && activeField in INCOME_LABELS;
+  const activeIsExpense = activeField != null && EXPENSE_KEYS.has(activeField as any);
+  const activeLabel = activeField
+    ? (INCOME_LABELS[activeField] ?? EXPENSE_LABELS[activeField] ?? "Other investments")
+    : "";
+  const activeHint = activeIsIncome
+    ? `This month's expected ${activeLabel.toLowerCase()}`
+    : activeIsExpense
+    ? "Estimated monthly spend"
+    : "This month's other investment contributions";
 
   return (
     <ClientAppShell>
@@ -187,36 +230,79 @@ export default function ClientBudget() {
 
         <SurplusCTA surplus={netSurplus} monthKey={selectedMonth.slice(0, 7)} />
 
-        <div className="bg-surface rounded-[26px] p-[6px_20px] shadow-[0_2px_14px_rgba(20,52,42,.06)]">
-          <BudgetCategoryRow
-            label="Income"
-            subtitle="Primary & other"
-            value={incomeTotal}
-            color="var(--forest)"
-            onClick={() => setOpenSheet("income")}
-          />
-          <BudgetCategoryRow
-            label="Expenses"
-            subtitle="Housing, utilities, etc."
-            value={expenseTotal}
-            color="var(--clay)"
-            onClick={() => setOpenSheet("expenses")}
-          />
-          <BudgetCategoryRow
-            label="Investments"
-            subtitle="Advised & self-managed"
-            value={investTotal}
-            color="var(--green)"
-            noBorder
-            onClick={() => setOpenSheet("investments")}
-          />
-        </div>
-
-        {investTotal > 0 && (
-          <div className="bg-surface rounded-[26px] p-[18px_20px] shadow-[0_2px_14px_rgba(20,52,42,.06)]">
-            <GoalFundingGaps totalMonthlyInvestments={investTotal} />
+        {isReadOnly && (
+          <div className="flex items-center justify-between bg-paper border border-hairline rounded-xl px-4 py-2.5">
+            <p className="text-sm text-ink-40">Viewing past month — read only</p>
+            <button onClick={() => setIsReadOnly(false)} className="text-sm text-green font-semibold hover:text-forest">
+              Edit this month
+            </button>
           </div>
         )}
+
+        {/* Income */}
+        <div className="bg-surface rounded-[26px] p-[16px_20px] shadow-[0_2px_14px_rgba(20,52,42,.06)]">
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-[15px] font-semibold text-forest">Income</p>
+            <span className="text-[14px] font-semibold text-forest tabular-nums">${Math.round(incomeTotal).toLocaleString()}</span>
+          </div>
+          {INCOME_CATEGORIES.map((cat, i) => (
+            <BudgetLineRow
+              key={cat.key}
+              label={cat.label}
+              value={n(form[cat.key])}
+              noBorder={i === INCOME_CATEGORIES.length - 1}
+              onClick={() => !isReadOnly && setActiveField(cat.key)}
+            />
+          ))}
+        </div>
+
+        {/* Expenses */}
+        <div className="bg-surface rounded-[26px] p-[16px_20px] shadow-[0_2px_14px_rgba(20,52,42,.06)]">
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-[15px] font-semibold text-forest">Expenses</p>
+            <span className={cn("text-[14px] font-semibold tabular-nums", expensesOverThreshold ? "text-clay" : "text-forest")}>
+              ${Math.round(expenseTotal).toLocaleString()}
+            </span>
+          </div>
+          {EXPENSE_CATEGORIES.map((cat, i) => {
+            const val = n(form[cat.key]);
+            const overThirty = incomeTotal > 0 && val > incomeTotal * 0.3;
+            return (
+              <BudgetLineRow
+                key={cat.key}
+                label={cat.label}
+                value={val}
+                tint={overThirty}
+                noBorder={i === EXPENSE_CATEGORIES.length - 1}
+                onClick={() => !isReadOnly && setActiveField(cat.key)}
+              />
+            );
+          })}
+        </div>
+
+        {/* Investments */}
+        <div className="bg-surface rounded-[26px] p-[16px_20px] shadow-[0_2px_14px_rgba(20,52,42,.06)] space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-[15px] font-semibold text-forest">Investments</p>
+            <span className="text-[14px] font-semibold text-green tabular-nums">${Math.round(investTotal).toLocaleString()}</span>
+          </div>
+          <p className="text-xs text-ink-30">Fixed monthly amounts going into your investments.</p>
+          {advisedPlanContributions.map(c => (
+            <InvestmentContributionRow key={c.source_id} contribution={c} />
+          ))}
+          <HoldingContributionPicker
+            holdings={holdings}
+            entries={holdingContributions}
+            onChange={setHoldingContributions}
+            isReadOnly={isReadOnly}
+          />
+          <BudgetLineRow
+            label="Other investments"
+            value={n(form.otherInvestments)}
+            noBorder
+            onClick={() => !isReadOnly && setActiveField("otherInvestments")}
+          />
+        </div>
 
         <div className="bg-surface rounded-[26px] p-[18px_20px] shadow-[0_2px_14px_rgba(20,52,42,.06)]">
           <BudgetHistoryChart months={months} />
@@ -225,114 +311,15 @@ export default function ClientBudget() {
         <BudgetTrackBCTA surplus={netSurplus} />
       </div>
 
-      {/* Income sheet */}
-      <BottomSheet isOpen={openSheet === "income"} onClose={() => setOpenSheet(null)} title="Income">
-        <div className="space-y-4">
-          {isReadOnly && (
-            <div className="flex items-center justify-between bg-paper border border-hairline rounded-xl px-4 py-2.5">
-              <p className="text-sm text-ink-40">Viewing past month — read only</p>
-              <button onClick={() => setIsReadOnly(false)} className="text-sm text-green font-semibold hover:text-forest">
-                Edit this month
-              </button>
-            </div>
-          )}
-          {INCOME_CATEGORIES.map(cat => (
-            <NumberInput
-              key={cat.key}
-              label={<>{cat.icon}{cat.label}</>}
-              value={form[cat.key]}
-              onChange={v => handleChange(cat.key, v)}
-              placeholder={"placeholder" in cat ? cat.placeholder : undefined}
-              readOnly={isReadOnly}
-            />
-          ))}
-          {!isReadOnly && (
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="w-full min-h-11 py-3 rounded-xl bg-forest text-paper font-semibold text-sm hover:bg-forest-700 disabled:opacity-50 transition-colors"
-            >
-              {saving ? "Saving…" : "Save"}
-            </button>
-          )}
-        </div>
-      </BottomSheet>
-
-      {/* Expenses sheet */}
-      <BottomSheet isOpen={openSheet === "expenses"} onClose={() => setOpenSheet(null)} title="Expenses">
-        <div className="space-y-4">
-          {isReadOnly && (
-            <div className="flex items-center justify-between bg-paper border border-hairline rounded-xl px-4 py-2.5">
-              <p className="text-sm text-ink-40">Viewing past month — read only</p>
-              <button onClick={() => setIsReadOnly(false)} className="text-sm text-green font-semibold hover:text-forest">
-                Edit this month
-              </button>
-            </div>
-          )}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {EXPENSE_CATEGORIES.map(cat => (
-              <NumberInput
-                key={cat.key}
-                label={<>{cat.icon}{cat.label}</>}
-                value={form[cat.key]}
-                onChange={v => handleChange(cat.key, v)}
-                readOnly={isReadOnly}
-              />
-            ))}
-          </div>
-          {!isReadOnly && (
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="w-full min-h-11 py-3 rounded-xl bg-forest text-paper font-semibold text-sm hover:bg-forest-700 disabled:opacity-50 transition-colors"
-            >
-              {saving ? "Saving…" : "Save"}
-            </button>
-          )}
-        </div>
-      </BottomSheet>
-
-      {/* Investments sheet */}
-      <BottomSheet isOpen={openSheet === "investments"} onClose={() => setOpenSheet(null)} title="Investments">
-        <div className="space-y-4">
-          {isReadOnly && (
-            <div className="flex items-center justify-between bg-paper border border-hairline rounded-xl px-4 py-2.5">
-              <p className="text-sm text-ink-40">Viewing past month — read only</p>
-              <button onClick={() => setIsReadOnly(false)} className="text-sm text-green font-semibold hover:text-forest">
-                Edit this month
-              </button>
-            </div>
-          )}
-          <p className="text-xs text-ink-30">Fixed monthly amounts going into your investments.</p>
-          <div className="space-y-3">
-            {advisedPlanContributions.map(c => (
-              <InvestmentContributionRow key={c.source_id} contribution={c} />
-            ))}
-            <HoldingContributionPicker
-              holdings={holdings}
-              entries={holdingContributions}
-              onChange={setHoldingContributions}
-              isReadOnly={isReadOnly}
-            />
-            <NumberInput
-              label="Unattributed / other contributions"
-              value={form.otherInvestments}
-              onChange={v => handleChange("otherInvestments", v)}
-              placeholder="e.g. brokerage top-ups, crypto buys"
-              readOnly={isReadOnly}
-            />
-          </div>
-          {!isReadOnly && (
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="w-full min-h-11 py-3 rounded-xl bg-forest text-paper font-semibold text-sm hover:bg-forest-700 disabled:opacity-50 transition-colors"
-            >
-              {saving ? "Saving…" : "Save"}
-            </button>
-          )}
-        </div>
-      </BottomSheet>
+      <NumericKeypadSheet
+        isOpen={activeField !== null}
+        onClose={closeKeypad}
+        title={activeLabel}
+        hint={activeHint}
+        value={activeField ? form[activeField] : ""}
+        onChange={v => activeField && handleChange(activeField, v)}
+        onDone={handleKeypadDone}
+      />
     </ClientAppShell>
   );
 }

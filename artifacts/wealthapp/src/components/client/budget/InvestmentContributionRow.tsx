@@ -11,17 +11,17 @@ function fmtUsd(n: number) {
 
 export default function InvestmentContributionRow({ contribution }: Props) {
   return (
-    <div className="flex items-center justify-between py-2.5 px-3 bg-[#F0FDF8] border border-[#1D9E75]/20 rounded-xl">
+    <div className="flex items-center justify-between py-2.5 px-3 bg-green-tint border border-green/20 rounded-xl">
       <div className="flex items-center gap-2 min-w-0 flex-1">
         <div className="min-w-0">
-          <p className="text-sm font-medium text-[#042C53] truncate">{contribution.label}</p>
+          <p className="text-sm font-medium text-forest truncate">{contribution.label}</p>
           <SyncedItemBadge />
         </div>
       </div>
       <div className="flex items-center gap-2 shrink-0 ml-2">
-        <span className="text-sm font-semibold text-[#042C53]">{fmtUsd(contribution.amount)}/mo</span>
+        <span className="text-sm font-semibold text-forest">{fmtUsd(contribution.amount)}/mo</span>
         <span
-          className="text-[10px] text-slate-400 cursor-help"
+          className="text-[10px] text-ink-30 cursor-help"
           title="Update this in Portfolio if your premium changes."
         >
           ?

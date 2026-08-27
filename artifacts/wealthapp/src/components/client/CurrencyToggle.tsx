@@ -12,7 +12,7 @@ export default function CurrencyToggle({ className }: CurrencyToggleProps) {
   const active = profile?.preferredCurrency ?? "USD";
 
   return (
-    <div className={cn("inline-flex items-center bg-slate-100 rounded-lg p-0.5", className)}>
+    <div className={cn("inline-flex items-center bg-paper rounded-lg p-0.5", className)}>
       {CURRENCIES.map((c) => (
         <button
           key={c}
@@ -20,8 +20,8 @@ export default function CurrencyToggle({ className }: CurrencyToggleProps) {
           className={cn(
             "px-3 py-1 text-xs font-medium rounded-md transition-all",
             active === c
-              ? "bg-white text-[#042C53] shadow-sm"
-              : "text-slate-500 hover:text-slate-700"
+              ? "bg-surface text-forest shadow-sm"
+              : "text-ink-40 hover:text-forest"
           )}
         >
           {c}

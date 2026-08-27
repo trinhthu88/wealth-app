@@ -22,16 +22,16 @@ export default function AssetSection({
       {/* Section header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <h2 className="text-base font-semibold text-[#042C53]">Assets</h2>
+          <h2 className="font-display text-base font-semibold text-forest">Assets</h2>
           {!allEmpty && (
-            <span className="text-sm font-semibold text-[#1D9E75]">
+            <span className="text-sm font-semibold text-green">
               <CurrencyField amountUsd={totalAssets} compact />
             </span>
           )}
         </div>
         <button
           onClick={onAddClick}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[#1D9E75] text-[#1D9E75] text-sm font-medium hover:bg-[#1D9E75]/5 transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-green text-green text-sm font-medium hover:bg-green-tint transition-colors"
         >
           <Plus className="h-4 w-4" />
           Add asset
@@ -40,11 +40,11 @@ export default function AssetSection({
 
       {/* Synced section */}
       {syncedAssets.length > 0 && (
-        <div className="bg-[#F0FDF8] border border-[#1D9E75]/20 rounded-xl overflow-hidden">
-          <p className="text-[11px] font-semibold text-[#1D9E75] uppercase tracking-wide px-3 sm:px-4 py-2 border-b border-[#1D9E75]/10">
+        <div className="bg-green-tint border border-green/20 rounded-[18px] overflow-hidden">
+          <p className="text-[11px] font-semibold text-green uppercase tracking-wide px-3 sm:px-4 py-2 border-b border-green/10">
             Synced from portfolio — updates automatically
           </p>
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-hairline">
             {syncedAssets.map(item => (
               <SyncedAssetRow key={item.id} item={item} />
             ))}
@@ -54,7 +54,7 @@ export default function AssetSection({
 
       {/* Manual items */}
       {manualAssets.length > 0 && (
-        <div className="bg-white border border-[#E2E8F0] rounded-xl overflow-hidden divide-y divide-slate-50">
+        <div className="bg-surface border border-hairline rounded-[18px] overflow-hidden divide-y divide-hairline">
           {manualAssets.map(item => (
             <ManualAssetRow
               key={item.id}
@@ -68,9 +68,9 @@ export default function AssetSection({
 
       {/* Empty state */}
       {allEmpty && (
-        <div className="border-2 border-dashed border-slate-200 rounded-xl py-10 text-center">
-          <p className="text-sm font-medium text-slate-400">No assets tracked yet</p>
-          <p className="text-xs text-slate-300 mt-1">Click "Add asset" to get started</p>
+        <div className="border-2 border-dashed border-hairline rounded-[18px] py-10 text-center">
+          <p className="text-sm font-medium text-ink-40">No assets tracked yet</p>
+          <p className="text-xs text-ink-30 mt-1">Click "Add asset" to get started</p>
         </div>
       )}
     </div>

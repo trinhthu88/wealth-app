@@ -38,7 +38,6 @@ const ClientMessages = lazy(() => import("@/pages/client/messages"));
 const ClientOnboarding = lazy(() => import("@/pages/client/ClientOnboarding"));
 const ClientPackageDetail = lazy(() => import("@/pages/client/package-detail"));
 const ClientScenarios = lazy(() => import("@/pages/client/ClientScenarios"));
-const ClientHealthScore = lazy(() => import("@/pages/client/ClientHealthScore"));
 const ClientBudget = lazy(() => import("@/pages/client/budget"));
 
 const AdvisorDashboard = lazy(() => import("@/pages/advisor/dashboard"));
@@ -237,7 +236,8 @@ function AppRoutes() {
       <Route path="/client/packages" component={() => <Redirect to="/client/portfolio" />} />
       <Route path="/client/transactions" component={() => <Redirect to="/client/portfolio" />} />
       <Route path="/client/scenarios" component={() => <ProtectedRoute component={ClientScenarios} role={["investment_client", "super_admin"]} />} />
-      <Route path="/client/health-score" component={() => <ProtectedRoute component={ClientHealthScore} role={["investment_client", "super_admin"]} />} />
+      {/* Wealth Score is now a home-screen card + bottom sheet only (no standalone page). */}
+      <Route path="/client/health-score" component={() => <Redirect to="/client/dashboard" />} />
       <Route path="/client/plan" component={() => <ProtectedRoute component={ClientPlan} role={["investment_client", "super_admin"]} />} />
       <Route path="/client/goals" component={() => <ProtectedRoute component={ClientGoals} role={["investment_client", "super_admin"]} />} />
       <Route path="/client/networth" component={() => <ProtectedRoute component={ClientNetWorth} role={["investment_client", "super_admin"]} />} />

@@ -6,8 +6,8 @@ import { cn } from "@/lib/utils";
 import Sol from "../Sol";
 import { Drawer } from "vaul";
 import {
-  LayoutDashboard, PieChart, Calculator, Target,
-  Wallet, MessageSquare, FolderOpen, ChevronLeft, ChevronRight, Activity, Map, MoreHorizontal, LogOut
+  LayoutDashboard, PieChart, Calculator, Target, Landmark,
+  Wallet, MessageSquare, FolderOpen, ChevronLeft, ChevronRight, Map, MoreHorizontal, LogOut
 } from "lucide-react";
 
 interface NavItem {
@@ -21,8 +21,8 @@ const SIDEBAR_NAV: NavItem[] = [
   { label: "Portfolio",      href: "/client/portfolio",    icon: PieChart },
   { label: "Pathway",        href: "/client/plan",         icon: Map },
   { label: "Scenarios",      href: "/client/scenarios",    icon: Calculator },
-  { label: "Health score",   href: "/client/health-score", icon: Activity },
   { label: "Goals",          href: "/client/goals",        icon: Target },
+  { label: "Net Worth",      href: "/client/networth",     icon: Landmark },
   { label: "Budget",         href: "/client/budget",       icon: Wallet },
   { label: "Messages",       href: "/client/messages",     icon: MessageSquare },
   { label: "Documents",      href: "/client/documents",    icon: FolderOpen },

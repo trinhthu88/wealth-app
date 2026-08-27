@@ -19,20 +19,18 @@ import AddLiabilitySheet from "@/components/client/networth/AddLiabilitySheet";
 import { EditAssetSheet, EditLiabilitySheet } from "@/components/client/networth/EditItemSheet";
 import {
   useNetWorthItems,
-  buildSyncedAssets,
-  buildSyncedLiabilities,
   type ManualAsset,
   type ManualLiability,
 } from "@/hooks/useNetWorthItems";
+import { useNetWorthSummary } from "@/hooks/useNetWorthSummary";
 import { useNetWorthTrend } from "@/hooks/useNetWorthTrend";
-import { useAdvisedPlans } from "@/hooks/useAdvisedPlans";
-import { useClientHoldings } from "@/hooks/useClientHoldings";
 
 export default function ClientNetWorth() {
-  const { plans } = useAdvisedPlans();
-  const { holdings } = useClientHoldings();
   const {
-    manualAssets, manualLiabilities, loading,
+    syncedAssets, syncedLiabilities, manualAssets, manualLiabilities,
+    totalAssets, totalLiabilities, netWorth, assetCount, liabilityCount, loading,
+  } = useNetWorthSummary();
+  const {
     addAsset, updateAsset, deleteAsset,
     addLiability, updateLiability, deleteLiability,
     saveSnapshot,
@@ -43,21 +41,6 @@ export default function ClientNetWorth() {
   const [showAddLiability, setShowAddLiability] = useState(false);
   const [editAsset, setEditAsset] = useState<ManualAsset | null>(null);
   const [editLiability, setEditLiability] = useState<ManualLiability | null>(null);
-
-  // Compute synced items from live portfolio data
-  const syncedAssets = buildSyncedAssets(plans, holdings);
-  const syncedLiabilities = buildSyncedLiabilities(holdings);
-
-  // Totals
-  const totalSyncedAssets = syncedAssets.reduce((s, a) => s + a.valueUsd, 0);
-  const totalManualAssets = manualAssets.reduce((s, a) => s + a.valueUsd, 0);
-  const totalAssets = totalSyncedAssets + totalManualAssets;
-
-  const totalSyncedLiabs = syncedLiabilities.reduce((s, l) => s + l.balanceUsd, 0);
-  const totalManualLiabs = manualLiabilities.reduce((s, l) => s + l.balanceUsd, 0);
-  const totalLiabilities = totalSyncedLiabs + totalManualLiabs;
-
-  const netWorth = totalAssets - totalLiabilities;
 
   // Build liability by category for summary bar
   const liabilityByCategory: Record<string, number> = {};
@@ -76,9 +59,6 @@ export default function ClientNetWorth() {
       if (snapshotTimerRef.current) clearTimeout(snapshotTimerRef.current);
     };
   }, [totalAssets, totalLiabilities, loading]);
-
-  const assetCount = syncedAssets.length + manualAssets.length;
-  const liabilityCount = syncedLiabilities.length + manualLiabilities.length;
 
   return (
     <ClientAppShell>

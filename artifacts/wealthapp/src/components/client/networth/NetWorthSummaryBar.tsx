@@ -2,27 +2,27 @@ import { useState } from "react";
 import type { SyncedAsset, ManualAsset } from "@/hooks/useNetWorthItems";
 
 const ASSET_CATEGORIES: Record<string, { label: string; color: string }> = {
-  investment:  { label: "Investments",   color: "#042C53" },
-  property:    { label: "Property",      color: "#3B82F6" },
-  cash:        { label: "Cash & savings",color: "#0EA5E9" },
-  pension:     { label: "Pension",       color: "#8B5CF6" },
-  business:    { label: "Business",      color: "#F59E0B" },
-  other_asset: { label: "Other assets",  color: "#94A3B8" },
+  investment:  { label: "Investments",   color: "var(--green)" },
+  property:    { label: "Property",      color: "var(--forest)" },
+  cash:        { label: "Cash & savings",color: "var(--mint)" },
+  pension:     { label: "Pension",       color: "var(--violet)" },
+  business:    { label: "Business",      color: "var(--sun)" },
+  other_asset: { label: "Other assets",  color: "var(--sand)" },
   // Legacy free-tier categories
-  savings:     { label: "Savings",       color: "#0EA5E9" },
-  real_estate: { label: "Real estate",   color: "#3B82F6" },
+  savings:     { label: "Savings",       color: "var(--mint)" },
+  real_estate: { label: "Real estate",   color: "var(--forest)" },
 };
 
 const LIABILITY_CATEGORIES: Record<string, { label: string; color: string }> = {
-  mortgage:         { label: "Mortgage",      color: "#DC2626" },
-  personal_loan:    { label: "Personal loan", color: "#EF4444" },
-  credit_card:      { label: "Credit card",   color: "#F87171" },
-  business_debt:    { label: "Business debt", color: "#B91C1C" },
-  other_liability:  { label: "Other",         color: "#FECACA" },
+  mortgage:         { label: "Mortgage",      color: "var(--clay-ink)" },
+  personal_loan:    { label: "Personal loan", color: "var(--clay)" },
+  credit_card:      { label: "Credit card",   color: "#F2A98A" },
+  business_debt:    { label: "Business debt", color: "var(--clay-ink)" },
+  other_liability:  { label: "Other",         color: "#F6C7B4" },
   // Legacy
-  car_loan:         { label: "Car loan",      color: "#EF4444" },
-  student_loan:     { label: "Student loan",  color: "#F87171" },
-  other:            { label: "Other debt",    color: "#FECACA" },
+  car_loan:         { label: "Car loan",      color: "var(--clay)" },
+  student_loan:     { label: "Student loan",  color: "#F2A98A" },
+  other:            { label: "Other debt",    color: "#F6C7B4" },
 };
 
 function fmtUsd(v: number) {
@@ -60,7 +60,7 @@ export default function NetWorthSummaryBar({
       cat,
       value: v,
       label: ASSET_CATEGORIES[cat]?.label ?? cat,
-      color: ASSET_CATEGORIES[cat]?.color ?? "#94A3B8",
+      color: ASSET_CATEGORIES[cat]?.color ?? "var(--ink-20)",
       pct: totalAssets > 0 ? (v / totalAssets) * 100 : 0,
     }));
 
@@ -70,26 +70,26 @@ export default function NetWorthSummaryBar({
       cat,
       value: v,
       label: LIABILITY_CATEGORIES[cat]?.label ?? cat,
-      color: LIABILITY_CATEGORIES[cat]?.color ?? "#EF4444",
+      color: LIABILITY_CATEGORIES[cat]?.color ?? "var(--clay)",
       pct: totalLiabilities > 0 ? (v / totalLiabilities) * 100 : 0,
     }));
 
   if (assetSegments.length === 0 && liabSegments.length === 0) {
     return (
-      <div className="bg-white border border-[#E2E8F0] rounded-xl p-4 text-sm text-slate-400 text-center">
+      <div className="bg-surface border border-hairline rounded-[18px] p-4 text-sm text-ink-40 text-center">
         Add your assets and liabilities to see your breakdown.
       </div>
     );
   }
 
   return (
-    <div className="bg-white border border-[#E2E8F0] rounded-xl p-4 space-y-4">
-      <p className="text-xs font-semibold text-[#64748B] uppercase tracking-wide">Breakdown</p>
+    <div className="bg-surface border border-hairline rounded-[18px] p-4 space-y-4">
+      <p className="text-xs font-semibold text-ink-40 uppercase tracking-wide">Breakdown</p>
 
       {/* Asset bar */}
       {assetSegments.length > 0 && (
         <div className="space-y-2">
-          <p className="text-xs text-slate-500">Assets</p>
+          <p className="text-xs text-ink-40">Assets</p>
           <div className="flex rounded-lg overflow-hidden h-3">
             {assetSegments.map(seg => (
               <div
@@ -111,10 +111,10 @@ export default function NetWorthSummaryBar({
                 onMouseLeave={() => setHovered(null)}
               >
                 <div className="h-2 w-2 rounded-full shrink-0" style={{ background: seg.color }} />
-                <span className={hovered === seg.cat ? "font-semibold text-[#042C53]" : "text-slate-500"}>
+                <span className={hovered === seg.cat ? "font-semibold text-forest" : "text-ink-40"}>
                   {seg.label}
                 </span>
-                <span className="font-medium text-[#042C53]">{fmtUsd(seg.value)}</span>
+                <span className="font-medium text-forest">{fmtUsd(seg.value)}</span>
               </div>
             ))}
           </div>
@@ -124,7 +124,7 @@ export default function NetWorthSummaryBar({
       {/* Liability bar */}
       {liabSegments.length > 0 && (
         <div className="space-y-2">
-          <p className="text-xs text-slate-500">Liabilities</p>
+          <p className="text-xs text-ink-40">Liabilities</p>
           <div className="flex rounded-lg overflow-hidden h-1.5">
             {liabSegments.map(seg => (
               <div
@@ -139,8 +139,8 @@ export default function NetWorthSummaryBar({
             {liabSegments.map(seg => (
               <div key={seg.cat} className="flex items-center gap-1.5 text-xs">
                 <div className="h-2 w-2 rounded-full shrink-0" style={{ background: seg.color }} />
-                <span className="text-slate-500">{seg.label}</span>
-                <span className="font-medium text-red-500">{fmtUsd(seg.value)}</span>
+                <span className="text-ink-40">{seg.label}</span>
+                <span className="font-medium text-clay">{fmtUsd(seg.value)}</span>
               </div>
             ))}
           </div>

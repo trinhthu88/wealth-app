@@ -94,7 +94,7 @@ export default function CurrencyField({
         {formatted}
       </span>
       {isUsdEquivalent && (
-        <span className="text-xs text-slate-400 cursor-help" title="USD equivalent">
+        <span className="text-xs text-ink-30 cursor-help" title="USD equivalent">
           ≈
         </span>
       )}

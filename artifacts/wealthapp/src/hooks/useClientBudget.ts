@@ -90,7 +90,7 @@ export function useClientBudget(selectedMonth?: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["client-budget"] });
       qc.invalidateQueries({ queryKey: ["dashboard-networth"] });
-      toast.success("Budget saved");
+      toast.success("Saved", { duration: 1500 });
     },
     onError: () => toast.error("Failed to save budget"),
   });

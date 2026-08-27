@@ -91,21 +91,21 @@ export default function BottomSheet({ isOpen, onClose, title, children, height =
             role="dialog"
             aria-modal="true"
             aria-labelledby={titleId}
-            className={`relative z-10 w-full bg-white rounded-t-2xl shadow-2xl flex flex-col overflow-hidden ${heightClass[height]}`}
+            className={`relative z-10 w-full bg-surface rounded-t-[26px] shadow-2xl flex flex-col overflow-hidden ${heightClass[height]}`}
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0">
-              <h2 id={titleId} className="text-base font-semibold text-[#042C53]">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-hairline shrink-0">
+              <h2 id={titleId} className="font-display text-base font-semibold text-forest">
                 {title}
               </h2>
               <button
                 aria-label="Close"
                 onClick={onClose}
-                className="h-8 w-8 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                className="h-8 w-8 flex items-center justify-center rounded-full text-ink-40 hover:text-forest hover:bg-hairline/50 transition-colors"
               >
                 <X className="h-4 w-4" />
               </button>

@@ -76,7 +76,7 @@ export default function HoldingContributionPicker({ holdings, entries, onChange,
               <button
                 onClick={() => removeEntry(i)}
                 aria-label="Remove contribution"
-                className="shrink-0 h-8 w-8 flex items-center justify-center text-slate-400 hover:text-red-500"
+                className="shrink-0 h-8 w-8 flex items-center justify-center text-ink-30 hover:text-clay"
               >
                 <X className="h-4 w-4" />
               </button>
