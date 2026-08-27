@@ -96,7 +96,8 @@ export default function ClientNetWorth() {
         />
 
         <LiabilitySection
-          manualLiabilities={[...syncedLiabilities, ...manualLiabilities]}
+          syncedLiabilities={syncedLiabilities}
+          manualLiabilities={manualLiabilities}
           totalLiabilities={totalLiabilities}
           onAddClick={() => setShowAddLiability(true)}
           onEditLiability={setEditLiability}

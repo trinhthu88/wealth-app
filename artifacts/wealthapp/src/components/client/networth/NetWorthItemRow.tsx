@@ -22,6 +22,10 @@ interface ManualLiabilityRowProps {
   onDelete: (id: string) => void;
 }
 
+interface SyncedLiabilityRowProps {
+  item: ManualLiability;
+}
+
 function fmtDate(date: string | null) {
   if (!date) return null;
   try {
@@ -133,6 +137,38 @@ export function ManualAssetRow({ item, onEdit, onDelete }: ManualAssetRowProps) 
             </button>
           </>
         )}
+      </div>
+    </div>
+  );
+}
+
+// Liabilities derived from a Property holding's outstanding mortgage balance —
+// there's no row in the `liabilities` table behind these (their `id` is a
+// synthetic `mortgage-<holdingId>` string), so they must never be sent to the
+// liabilities edit/delete API. Edit the balance from the holding itself.
+export function SyncedLiabilityRow({ item }: SyncedLiabilityRowProps) {
+  const dot = CATEGORY_DOTS[item.category] ?? "var(--clay)";
+  return (
+    <div className="flex items-center justify-between py-3 px-3 sm:px-4">
+      <div className="flex items-center gap-3 min-w-0 flex-1">
+        <div className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: dot }} />
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-forest truncate">{item.name}</p>
+          <div className="flex items-center gap-2 mt-0.5">
+            <SyncedItemBadge />
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center gap-2 shrink-0 ml-2">
+        <span className="text-sm font-semibold text-clay">
+          <CurrencyField amountUsd={item.balanceUsd} compact />
+        </span>
+        <Link
+          href="/client/portfolio"
+          className="text-[11px] text-green font-medium flex items-center gap-0.5 hover:text-forest"
+        >
+          Portfolio <ExternalLink className="h-3 w-3" />
+        </Link>
       </div>
     </div>
   );

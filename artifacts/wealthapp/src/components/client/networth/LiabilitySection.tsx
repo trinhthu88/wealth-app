@@ -1,10 +1,11 @@
 import { Plus } from "lucide-react";
 import { Link } from "wouter";
-import { ManualLiabilityRow } from "./NetWorthItemRow";
+import { SyncedLiabilityRow, ManualLiabilityRow } from "./NetWorthItemRow";
 import type { ManualLiability } from "@/hooks/useNetWorthItems";
 import CurrencyField from "@/components/shared/CurrencyField";
 
 interface Props {
+  syncedLiabilities: ManualLiability[];
   manualLiabilities: ManualLiability[];
   totalLiabilities: number;
   onAddClick: () => void;
@@ -13,10 +14,10 @@ interface Props {
 }
 
 export default function LiabilitySection({
-  manualLiabilities, totalLiabilities, onAddClick, onEditLiability, onDeleteLiability,
+  syncedLiabilities, manualLiabilities, totalLiabilities, onAddClick, onEditLiability, onDeleteLiability,
 }: Props) {
-  const isEmpty = manualLiabilities.length === 0;
-  const totalMonthlyPayment = manualLiabilities.reduce(
+  const isEmpty = syncedLiabilities.length === 0 && manualLiabilities.length === 0;
+  const totalMonthlyPayment = [...syncedLiabilities, ...manualLiabilities].reduce(
     (s, l) => s + (l.monthlyPaymentUsd ?? 0), 0
   );
 
@@ -41,8 +42,22 @@ export default function LiabilitySection({
         </button>
       </div>
 
-      {/* Liability items */}
-      {!isEmpty && (
+      {/* Synced (from a Property holding's outstanding mortgage) — read-only */}
+      {syncedLiabilities.length > 0 && (
+        <div className="bg-clay-tint border border-clay/20 rounded-[18px] overflow-hidden">
+          <p className="text-[11px] font-semibold text-clay-ink uppercase tracking-wide px-3 sm:px-4 py-2 border-b border-clay/10">
+            Synced from a property holding — edit the balance there
+          </p>
+          <div className="divide-y divide-hairline">
+            {syncedLiabilities.map(item => (
+              <SyncedLiabilityRow key={item.id} item={item} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Manual items */}
+      {manualLiabilities.length > 0 && (
         <div className="bg-surface border border-hairline rounded-[18px] overflow-hidden divide-y divide-hairline">
           {manualLiabilities.map(item => (
             <ManualLiabilityRow

@@ -5,6 +5,19 @@ import { requireAuth, requireRole, requireAdvisorOwnsLead } from "../middlewares
 
 const router: IRouter = Router();
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Assets/liabilities also include client-side-only "synced" rows (e.g. a
+// mortgage derived from a property holding's balance, id `mortgage-<uuid>`)
+// that were never inserted into these tables. Their ids reach here only if a
+// client mistakenly sends one back — reject before it hits Postgres and
+// crashes with an "invalid input syntax for type uuid" 500.
+function isValidId(rawId: string, res: import("express").Response): boolean {
+  if (UUID_RE.test(rawId)) return true;
+  res.status(400).json({ error: "Invalid id" });
+  return false;
+}
+
 // Shared by the client's own routes below and the advisor-owns-lead route —
 // net worth data exists on a userId regardless of the account's current role.
 function getAssetsForUser(userId: string) {
@@ -33,6 +46,7 @@ router.post("/assets", requireAuth, async (req, res): Promise<void> => {
 router.put("/assets/:id", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  if (!isValidId(rawId, res)) return;
   const { name, category, valueUsd, currencyOriginal, valueOriginal, notes } = req.body;
   const [updated] = await db.update(assetsTable).set({
     name, category, valueUsd: valueUsd?.toString(), currencyOriginal, valueOriginal: valueOriginal?.toString() ?? null, notes, updatedAt: new Date(),
@@ -44,6 +58,7 @@ router.put("/assets/:id", requireAuth, async (req, res): Promise<void> => {
 router.delete("/assets/:id", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  if (!isValidId(rawId, res)) return;
   await db.delete(assetsTable).where(and(eq(assetsTable.id, rawId), eq(assetsTable.userId, userId)));
   res.sendStatus(204);
 });
@@ -85,6 +100,7 @@ router.post("/liabilities", requireAuth, async (req, res): Promise<void> => {
 router.put("/liabilities/:id", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  if (!isValidId(rawId, res)) return;
   const { name, category, balanceUsd, interestRatePercent, monthlyPaymentUsd, currencyOriginal, balanceOriginal } = req.body;
   const [updated] = await db.update(liabilitiesTable).set({
     name, category, balanceUsd: balanceUsd?.toString(), interestRatePercent: interestRatePercent?.toString() ?? null,
@@ -110,6 +126,7 @@ router.post("/liabilities/upsert-by-name", requireAuth, async (req, res): Promis
 router.delete("/liabilities/:id", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  if (!isValidId(rawId, res)) return;
   await db.delete(liabilitiesTable).where(and(eq(liabilitiesTable.id, rawId), eq(liabilitiesTable.userId, userId)));
   res.sendStatus(204);
 });
