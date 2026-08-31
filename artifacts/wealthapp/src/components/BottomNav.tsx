@@ -1,15 +1,24 @@
 import { Link, useLocation, useRoute } from "wouter";
 import { UserButton } from "@clerk/react";
 import { cn } from "@/lib/utils";
-import SolChat from "./SolChat";
 import { useState } from "react";
 import { Drawer } from "vaul";
-import { BarChart3, HeartPulse, LayoutDashboard, Map, MoreHorizontal, Target, Wallet } from "lucide-react";
+import { BarChart3, Briefcase, HeartPulse, LayoutDashboard, Map, MoreHorizontal, Settings, Target, Wallet } from "lucide-react";
 
+// Mirrors the investment client's 5-slot mobile bottom nav (Home, Portfolio,
+// Goals, Budget, More) — Pathway/Net Worth/Health Score/Settings live in More.
 const TABS = [
-  { label: "Home", href: "/free/dashboard", icon: LayoutDashboard },
-  { label: "Pathway", href: "/free/pathway", icon: Map },
-  { label: "Goals", href: "/free/goals", icon: Target },
+  { label: "Home",      href: "/free/dashboard", icon: LayoutDashboard },
+  { label: "Portfolio", href: "/free/portfolio", icon: Briefcase },
+  { label: "Goals",     href: "/free/goals",     icon: Target },
+  { label: "Budget",    href: "/free/budget",    icon: Wallet },
+];
+
+const MORE_ITEMS = [
+  { label: "Pathway",     href: "/free/pathway",      icon: Map },
+  { label: "Net worth",   href: "/free/networth",     icon: BarChart3 },
+  { label: "Health score", href: "/free/health-score", icon: HeartPulse },
+  { label: "Settings",    href: "/free/settings",     icon: Settings },
 ];
 
 function Tab({ href, label, icon: Icon }: { href: string; label: string; icon: React.ElementType }) {
@@ -25,16 +34,10 @@ function Tab({ href, label, icon: Icon }: { href: string; label: string; icon: R
 }
 
 export default function BottomNav() {
-  const [solOpen, setSolOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [location] = useLocation();
 
-  const moreItems = [
-    { label: "Budget", href: "/free/budget", icon: Wallet },
-    { label: "Net worth", href: "/free/networth", icon: BarChart3 },
-    { label: "Health score", href: "/free/health-score", icon: HeartPulse },
-    { label: "Milestones", href: "/free/milestones", icon: Target },
-  ];
+  const isMoreRoute = MORE_ITEMS.some(item => item.href === location);
 
   return (
     <>
@@ -43,22 +46,10 @@ export default function BottomNav() {
         className="fixed bottom-0 left-0 right-0 md:hidden z-40 bg-surface border-t border-hairline-2 h-[88px]"
       >
         <div className="flex items-start justify-around pt-3 h-full pb-[env(safe-area-inset-bottom)]">
-          <Tab href={TABS[0].href} label={TABS[0].label} icon={TABS[0].icon} />
-          <Tab href={TABS[1].href} label={TABS[1].label} icon={TABS[1].icon} />
-          
-          <button 
-            onClick={() => setSolOpen(true)}
-            className="flex flex-col items-center gap-[5px] flex-1 cursor-pointer -mt-1.5"
-            aria-label="Talk to Sol"
-          >
-            <div className="w-[34px] h-[34px] rounded-full bg-sun flex items-center justify-center shadow-[0_2px_8px_rgba(255,182,39,0.4)]">
-              <div className="w-[12px] h-[12px] rounded-full bg-sun-ink/80" />
-            </div>
-            <span className="text-[11.5px] font-semibold text-sun-deep">Sol</span>
-          </button>
+          {TABS.map(tab => (
+            <Tab key={tab.href} href={tab.href} label={tab.label} icon={tab.icon} />
+          ))}
 
-          <Tab href={TABS[2].href} label={TABS[2].label} icon={TABS[2].icon} />
-          
           <button
             type="button"
             onClick={() => setMoreOpen(true)}
@@ -66,38 +57,19 @@ export default function BottomNav() {
             aria-label="Open more navigation"
             aria-expanded={moreOpen}
           >
-            <MoreHorizontal className={cn("h-[22px] w-[22px]", moreOpen || moreItems.some(item => item.href === location) ? "text-green" : "text-ink-20")} aria-hidden="true" />
-            <span className={cn("text-[11.5px] font-semibold", moreOpen || moreItems.some(item => item.href === location) ? "text-green" : "text-ink-20")}>More</span>
+            <MoreHorizontal className={cn("h-[22px] w-[22px]", moreOpen || isMoreRoute ? "text-green" : "text-ink-20")} aria-hidden="true" />
+            <span className={cn("text-[11.5px] font-semibold", moreOpen || isMoreRoute ? "text-green" : "text-ink-20")}>More</span>
           </button>
         </div>
       </nav>
-
-      <Drawer.Root open={solOpen} onOpenChange={setSolOpen}>
-        <Drawer.Portal>
-          <Drawer.Overlay className="fixed inset-0 bg-forest/40 z-50 backdrop-blur-sm" />
-          <Drawer.Content className="bg-paper flex flex-col rounded-t-[32px] h-[80vh] mt-24 fixed bottom-0 left-0 right-0 z-50 focus:outline-none">
-            <Drawer.Title className="sr-only">Talk to Sol</Drawer.Title>
-            <Drawer.Description className="sr-only">
-              Ask TALA's financial coach about your pathway, goals, or financial health.
-            </Drawer.Description>
-            <div className="pt-4 bg-paper rounded-t-[32px] flex-1 flex flex-col min-h-0">
-              <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-hairline mb-8" />
-              <SolChat
-                open={solOpen}
-                greeting="Hello! I'm Sol. I'm here to help you model your pathway, update your goals, or just chat about your financial health. What's on your mind?"
-              />
-            </div>
-          </Drawer.Content>
-        </Drawer.Portal>
-      </Drawer.Root>
 
       <Drawer.Root open={moreOpen} onOpenChange={setMoreOpen}>
         <Drawer.Portal>
           <Drawer.Overlay className="fixed inset-0 bg-forest/40 z-50 backdrop-blur-sm" />
           <Drawer.Content className="bg-paper rounded-t-[32px] max-h-[82vh] fixed bottom-0 left-0 right-0 z-50 focus:outline-none max-w-[440px] mx-auto">
-            <Drawer.Title className="sr-only">More free tools</Drawer.Title>
+            <Drawer.Title className="sr-only">More navigation</Drawer.Title>
             <Drawer.Description className="sr-only">
-              Open your budget, net worth, health score, or milestones.
+              Open your pathway, net worth, health score, or settings.
             </Drawer.Description>
             <div className="overflow-y-auto px-5 pb-[calc(28px+env(safe-area-inset-bottom))]">
               <div className="mx-auto my-4 h-1.5 w-12 rounded-full bg-hairline" />
@@ -109,7 +81,7 @@ export default function BottomNav() {
                 </div>
               </div>
               <nav aria-label="More free destinations" className="mt-4 grid grid-cols-2 gap-2">
-                {moreItems.map(item => {
+                {MORE_ITEMS.map(item => {
                   const Icon = item.icon;
                   const active = location === item.href;
                   return (

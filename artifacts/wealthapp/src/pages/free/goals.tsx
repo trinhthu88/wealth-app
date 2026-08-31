@@ -14,6 +14,7 @@ import AppShell from "@/components/AppShell";
 import FreeTierBanner from "@/components/FreeTierBanner";
 import GoalCard, { toGoalCardData } from "@/components/shared/GoalCard";
 import LockedGoalSlotCard from "@/components/LockedGoalSlotCard";
+import GhostGoalCard from "@/components/GhostGoalCard";
 import CurrencyField from "@/components/shared/CurrencyField";
 import BottomNav from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
@@ -358,6 +359,16 @@ export default function GoalsPage() {
 
   const isFormBusy = addGoalMutation.isPending || editGoalMutation.isPending;
 
+  // Ghost "suggested for you" goals — a concrete preview of what a client's
+  // unlocked 2nd+ goal slot would show, personalised from live budget data.
+  const existingGoalTypes = goals.map(g => g.goalType);
+  const ghostGoals = [
+    existingGoalTypes.includes("emergency_fund")
+      ? { icon: Plane, title: "Dream Holiday", description: "A 2-week trip to Southeast Asia or Europe", targetLabel: `${sym}5,000` }
+      : { icon: ShieldAlert, title: "Emergency Fund", description: expenses > 0 ? `3 months of your ${sym}${Math.round(expenses).toLocaleString()} expenses` : "3 months of your expenses", targetLabel: `${sym}${Math.round(Math.max(expenses, 1) * 3).toLocaleString()}` },
+    { icon: Palmtree, title: "Retirement Gap", description: "Estimated amount needed by retirement", targetLabel: income > 0 ? `${sym}${Math.round(income * 12 * 15).toLocaleString()}` : "Add your income to estimate" },
+  ];
+
   // ── Loading ───────────────────────────────────────────────────────────────
   if (isLoading) return (
     <AppShell>
@@ -493,7 +504,17 @@ export default function GoalsPage() {
         })}
 
         {/* Locked 2nd goal slot — free users at the 1-goal cap */}
-        {profile?.role === "free_user" && goals.length >= 1 && <LockedGoalSlotCard />}
+        {profile?.role === "free_user" && goals.length >= 1 && (
+          <div className="space-y-3">
+            <LockedGoalSlotCard />
+            <p className="text-[11px] tracking-[0.11em] uppercase text-ink-40 px-1">Suggested for you</p>
+            <div className="space-y-3">
+              {ghostGoals.map((g, i) => (
+                <GhostGoalCard key={i} icon={g.icon} title={g.title} description={g.description} targetLabel={g.targetLabel} />
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Upgrade CTA — contextual (skip when the locked slot above already carries this message) */}
         {!(profile?.role === "free_user" && goals.length >= 1) && (() => {

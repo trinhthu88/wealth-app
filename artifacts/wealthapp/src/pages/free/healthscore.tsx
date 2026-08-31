@@ -10,6 +10,7 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
+import { Link } from "wouter";
 import AppShell from "@/components/AppShell";
 import HealthScoreRing from "@/components/shared/HealthScoreRing";
 import BenchmarkCard from "@/components/BenchmarkCard";
@@ -18,7 +19,7 @@ import WeeklyTipCard from "@/components/WeeklyTipCard";
 import { apiFetch } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
 import { toast } from "sonner";
-import { RefreshCw, TrendingUp, ShieldAlert, CreditCard, Landmark } from "lucide-react";
+import { RefreshCw, TrendingUp, ShieldAlert, CreditCard, Landmark, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LineChart, Line, ResponsiveContainer, Tooltip } from "recharts";
 import { useProfile } from "@/hooks/useProfile";
@@ -261,6 +262,8 @@ export default function HealthScorePage() {
       badge: srBadge,
       detail: effectiveSavingsRate > 0 ? `${Math.round(effectiveSavingsRate)}% of income saved` : "No income data yet",
       tip: srTip,
+      actionLabel: "Update my budget",
+      actionRoute: "/free/budget",
     },
     {
       label: "Emergency fund",
@@ -271,6 +274,8 @@ export default function HealthScorePage() {
         ? `${emergencyMonths.toFixed(1)} months covered`
         : savingsBalance > 0 ? `${sym}${Math.round(savingsBalance).toLocaleString()} saved` : "Build yours now",
       tip: efTip,
+      actionLabel: "Set an Emergency Fund goal",
+      actionRoute: "/free/goals",
     },
     {
       label: "Debt load",
@@ -281,6 +286,8 @@ export default function HealthScorePage() {
         ? `${sym}${Math.round(totalDebt).toLocaleString()} total debt`
         : "Debt-free",
       tip: dlTip,
+      actionLabel: "Update my budget",
+      actionRoute: "/free/budget",
     },
     {
       label: "Investment activity",
@@ -291,6 +298,8 @@ export default function HealthScorePage() {
         ? `${sym}${Math.round(investmentBalance).toLocaleString()} invested`
         : "Not started yet",
       tip: invTip,
+      actionLabel: "Talk to an advisor about investing",
+      actionRoute: "/book",
     },
   ];
 
@@ -446,11 +455,17 @@ export default function HealthScorePage() {
                     </div>
                   </div>
 
-                  {/* Inline tip for scores below 70 */}
+                  {/* Inline tip for scores below 70, always paired with a next-step action */}
                   {dim.tip && (
-                    <div className="mt-1.5 mx-1 rounded-xl px-3 py-2.5 flex items-start gap-2 bg-sun-tint border border-sun/40">
-                      <span className="text-[13px] flex-shrink-0 mt-px" aria-hidden="true"></span>
+                    <div className="mt-1.5 mx-1 rounded-xl px-3 py-2.5 bg-sun-tint border border-sun/40">
                       <p className="text-[12px] text-amber-ink leading-normal">{dim.tip}</p>
+                      <Link
+                        href={dim.actionRoute}
+                        className="inline-flex items-center gap-1 text-[12px] font-semibold text-green mt-1.5"
+                      >
+                        {dim.actionLabel}
+                        <ChevronRight className="h-3 w-3" />
+                      </Link>
                     </div>
                   )}
                 </div>

@@ -7,8 +7,8 @@
 // ✗ BANNED:  Inline style={{ color: '#hexcode' }} — use Tailwind tokens only
 // ✗ BANNED:  Double bottom nav — AppShell is the ONLY nav
 
-import { useState, useEffect, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import AppShell from "@/components/AppShell";
@@ -17,14 +17,16 @@ import SmartUpgradeCard from "@/components/SmartUpgradeCard";
 import GoalCard, { toGoalCardData } from "@/components/shared/GoalCard";
 import HealthScoreRing from "@/components/shared/HealthScoreRing";
 import StatCard from "@/components/shared/StatCard";
+import NetWorthDeltaCard from "@/components/shared/NetWorthDeltaCard";
 import MilestoneChips from "@/components/MilestoneChips";
 import BottomNav from "@/components/BottomNav";
 import { apiFetch } from "@/lib/api";
 import { useProfile } from "@/hooks/useProfile";
 import { queryClient } from "@/lib/queryClient";
 import { toast } from "sonner";
-import { X, Phone, TrendingUp, BarChart3, Target } from "lucide-react";
+import { X, Phone, TrendingUp, BarChart3, Target, RefreshCw } from "lucide-react";
 import { generateWeeklyTip, getAgeBenchmarkSavingsRate } from "@/lib/tipEngine";
+import type { Tip } from "@/lib/tipEngine";
 import {
   checkAndAwardMilestones,
   getEarnedMilestones,
@@ -40,8 +42,18 @@ interface BudgetTransaction { id: string; amount: string; type: string; category
 interface Asset { id: string; valueUsd: string; category: string; }
 interface Liability { id: string; balanceUsd: string; }
 interface Pathway { stepNumber: number; status: string; formData?: Record<string, unknown> | null; }
+interface NetWorthSnapshot { id: string; snapshotDate: string; netWorthUsd: string; }
 
 const currentMk = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
+
+function getWeekKey(userId: string) {
+  const d = new Date();
+  const monday = new Date(d);
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  monday.setDate(diff);
+  return `advisor_insight_${userId}_${monday.toISOString().slice(0, 10)}`;
+}
 
 function fmt(n: number) {
   if (Math.abs(n) >= 1_000_000) return (n < 0 ? "-$" : "$") + (Math.abs(n) / 1_000_000).toFixed(1) + "M";
@@ -85,6 +97,11 @@ export default function FreeDashboard() {
   const { data: currentMonthTx = [] } = useQuery<BudgetTransaction[]>({
     queryKey: ["budget-transactions", currentMk],
     queryFn: () => apiFetch<BudgetTransaction[]>(`/budget/transactions?month=${currentMk}`),
+    retry: false,
+  });
+  const { data: nwSnapshots = [] } = useQuery<NetWorthSnapshot[]>({
+    queryKey: ["nw-snapshots"],
+    queryFn: () => apiFetch<NetWorthSnapshot[]>("/client/networth/snapshots"),
     retry: false,
   });
 
@@ -152,6 +169,24 @@ export default function FreeDashboard() {
     ? totalAssetsInDB
     : (projectedSavings + projectedInvestments + accumulatedCash);
   const netWorth = (effectiveTotalAssets > 0 || totalLiabilities > 0) ? effectiveTotalAssets - totalLiabilities : null;
+
+  // Record today's net worth so a monthly trend accumulates for the delta card below.
+  const snapshotTaken = useRef(false);
+  const saveSnapshot = useMutation({
+    mutationFn: (body: { totalAssetsUsd: number; totalLiabilitiesUsd: number; netWorthUsd: number }) =>
+      apiFetch("/client/networth/snapshot", { method: "POST", body: JSON.stringify(body) }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["nw-snapshots"] }),
+  });
+  useEffect(() => {
+    if (snapshotTaken.current || netWorth === null) return;
+    snapshotTaken.current = true;
+    saveSnapshot.mutate({ totalAssetsUsd: effectiveTotalAssets, totalLiabilitiesUsd: totalLiabilities, netWorthUsd: netWorth });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [netWorth]);
+
+  const netWorthDelta = nwSnapshots.length >= 2
+    ? parseFloat(nwSnapshots[nwSnapshots.length - 1].netWorthUsd) - parseFloat(nwSnapshots[nwSnapshots.length - 2].netWorthUsd)
+    : null;
 
   const monthlyReturns = savingsBalance * (savRatePct / 100 / 12) + investmentValue * (invRatePct / 100 / 12);
   const effectiveSavingsRate = income > 0 ? ((monthlyCashSaved + monthlyReturns) / income) * 100 : 0;
@@ -234,7 +269,7 @@ export default function FreeDashboard() {
         title: "Start with the basics",
         body: "Set up your budget and financial pathway to get personalised weekly insights and your Financial Health Score.",
         actionLabel: "Start your pathway",
-        actionRoute: "/free/pathway",
+        actionRoute: "/free/onboarding",
       };
     }
     return generateWeeklyTip({
@@ -246,9 +281,33 @@ export default function FreeDashboard() {
       streakWeeks,
       isExpat: profile?.isExpat ?? false,
       investmentRatePercent: invRatePct,
+      netWorthDelta,
+      pathwayComplete: completedSteps >= 6,
+      currency: profile?.preferredCurrency ?? "USD",
     });
-  }, [effectiveSavingsRate, score?.overallScore, topGoal, goalStatus, benchmarkSavingsRate, streakWeeks, profile?.isExpat, invRatePct, totalIncome]);
+  }, [effectiveSavingsRate, score?.overallScore, topGoal, goalStatus, benchmarkSavingsRate, streakWeeks, profile?.isExpat, invRatePct, totalIncome, netWorthDelta, completedSteps, profile?.preferredCurrency]);
 
+  // Cache the advisor insight for the week so it doesn't change on every reload —
+  // only when the user taps refresh or a new week starts.
+  const [cachedTip, setCachedTip] = useState<Tip | null>(null);
+  useEffect(() => {
+    if (!profile?.id) return;
+    const stored = localStorage.getItem(getWeekKey(profile.id));
+    if (stored) { try { setCachedTip(JSON.parse(stored)); } catch { setCachedTip(null); } }
+    else setCachedTip(null);
+  }, [profile?.id]);
+  useEffect(() => {
+    if (!profile?.id || cachedTip) return;
+    if (totalIncome === 0 && !score?.overallScore) return;
+    localStorage.setItem(getWeekKey(profile.id), JSON.stringify(weeklyTip));
+    setCachedTip(weeklyTip);
+  }, [profile?.id, cachedTip, weeklyTip, totalIncome, score?.overallScore]);
+  const advisorTip = cachedTip ?? weeklyTip;
+  function refreshAdvisorTip() {
+    if (!profile?.id) return;
+    localStorage.setItem(getWeekKey(profile.id), JSON.stringify(weeklyTip));
+    setCachedTip(weeklyTip);
+  }
 
   const scoreVal = score?.overallScore || 0;
   const ringR = 68;
@@ -293,7 +352,7 @@ export default function FreeDashboard() {
                 <div className="h-1 rounded-full bg-green-tint overflow-hidden mb-2.5">
                   <div className="h-full rounded-full bg-green transition-[width] duration-300 ease-in-out" style={{ width: `${pathwayPct}%` }} />
                 </div>
-                <Link href="/free/pathway">
+                <Link href="/free/onboarding">
                   <span className="text-[12px] font-bold text-green">
                     {completedSteps === 0 ? "Start your financial pathway →" : "Continue setup →"}
                   </span>
@@ -301,6 +360,13 @@ export default function FreeDashboard() {
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/* Net worth card */}
+          {netWorth !== null && (
+            <Link href="/free/networth">
+              <NetWorthDeltaCard netWorth={netWorth} deltaAbs={netWorthDelta} currency={profile?.preferredCurrency ?? "USD"} className="cursor-pointer hover:opacity-[0.97] transition-opacity" />
+            </Link>
+          )}
 
           {/* Score card */}
           <Link href="/free/health-score">
@@ -420,18 +486,31 @@ export default function FreeDashboard() {
             />
           </div>
 
-          {/* Weekly tip */}
+          {/* Advisor insight */}
           <div>
-            <p className="text-[11px] tracking-[0.11em] uppercase text-ink-40 mb-2">
-              This week's insight
-            </p>
-            <div
-              className="flex items-start gap-3 rounded-[16px] bg-green-tint px-4 py-3.5"
-            >
-              <Sol size="xs" animate="idle" showFace />
-              <p className="text-[13px] text-green leading-[1.55] font-medium flex-1">
-                {weeklyTip.body}
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[11px] tracking-[0.11em] uppercase text-ink-40">
+                What your advisor would say
               </p>
+              <button onClick={refreshAdvisorTip} aria-label="Refresh insight" className="flex items-center justify-center text-ink-40 hover:text-green transition-colors min-w-8 min-h-8">
+                <RefreshCw className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            <div className="rounded-[16px] bg-green-tint px-4 py-3.5">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-forest text-white text-[11px] font-bold">
+                  TA
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-semibold text-forest mb-0.5">{advisorTip.title}</p>
+                  <p className="text-[13px] text-green leading-[1.55] font-medium">
+                    {advisorTip.body}
+                  </p>
+                </div>
+              </div>
+              <a href="/book" className="mt-3 inline-flex items-center justify-center w-full rounded-full bg-green text-white text-[12px] font-semibold py-2.5 hover:bg-forest-700 transition-colors">
+                Talk to a real advisor →
+              </a>
             </div>
           </div>
 

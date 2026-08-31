@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, and } from "drizzle-orm";
-import { db, portfolioHoldingsTable } from "@workspace/db";
+import { db, portfolioHoldingsTable, profilesTable } from "@workspace/db";
 import { requireAuth, requireRole, requireAdvisorOwnsClient } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
@@ -14,6 +14,17 @@ router.post("/portfolio", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
   const { assetName, assetClass, currentValueUsd, currencyOriginal, weightPercent, tickerSymbol, notes } = req.body;
   if (!assetName || !assetClass || !currentValueUsd) { res.status(400).json({ error: "Missing required fields" }); return; }
+
+  // Enforce 2-holding limit for free users
+  const [[profile], existing] = await Promise.all([
+    db.select({ role: profilesTable.role }).from(profilesTable).where(eq(profilesTable.id, userId)),
+    db.select({ id: portfolioHoldingsTable.id }).from(portfolioHoldingsTable).where(eq(portfolioHoldingsTable.userId, userId)),
+  ]);
+  if (profile?.role === "free_user" && existing.length >= 2) {
+    res.status(403).json({ error: "Free users can only track 2 holdings. Upgrade to Investment Client to unlock unlimited holdings and live pricing." });
+    return;
+  }
+
   const [h] = await db.insert(portfolioHoldingsTable).values({
     userId, assetName, assetClass, currentValueUsd: currentValueUsd.toString(),
     currencyOriginal: currencyOriginal ?? "USD",

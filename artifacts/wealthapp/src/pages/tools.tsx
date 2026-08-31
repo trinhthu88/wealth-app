@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calculator, TrendingUp, Globe, Brain } from "lucide-react";
+import { Calculator, TrendingUp, Brain } from "lucide-react";
 import { Link } from "wouter";
 
 function CompoundInterestCalc() {
@@ -81,55 +81,6 @@ function SavingsGoalCalc() {
   );
 }
 
-function ExpatCostCalc() {
-  const [salary, setSalary] = useState("5000");
-  const [city, setCity] = useState("Singapore");
-  const [result, setResult] = useState<{ breakdown: Record<string, number>; total: number; savings: number } | null>(null);
-
-  const CITY_MULTIPLIERS: Record<string, Record<string, number>> = {
-    Singapore: { Housing: 1800, Food: 600, Transport: 200, Utilities: 150, Healthcare: 200, Entertainment: 300 },
-    "Kuala Lumpur": { Housing: 700, Food: 300, Transport: 150, Utilities: 100, Healthcare: 100, Entertainment: 200 },
-    Bangkok: { Housing: 800, Food: 350, Transport: 120, Utilities: 80, Healthcare: 120, Entertainment: 200 },
-    Jakarta: { Housing: 900, Food: 300, Transport: 100, Utilities: 90, Healthcare: 100, Entertainment: 150 },
-    Manila: { Housing: 700, Food: 280, Transport: 100, Utilities: 100, Healthcare: 120, Entertainment: 180 },
-  };
-
-  const calculate = () => {
-    const s = parseFloat(salary) || 0;
-    const breakdown = CITY_MULTIPLIERS[city] ?? CITY_MULTIPLIERS["Singapore"];
-    const total = Object.values(breakdown).reduce((a, b) => a + b, 0);
-    setResult({ breakdown, total, savings: s - total });
-  };
-
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div><Label>Monthly Salary ($)</Label><Input value={salary} onChange={e => setSalary(e.target.value)} type="number" /></div>
-        <div>
-          <Label>City</Label>
-          <select value={city} onChange={e => setCity(e.target.value)} className="w-full h-9 px-3 border border-input rounded-md text-sm bg-background">
-            {Object.keys(CITY_MULTIPLIERS).map(c => <option key={c}>{c}</option>)}
-          </select>
-        </div>
-      </div>
-      <Button onClick={calculate} className="w-full">Calculate</Button>
-      {result && (
-        <div className="mt-4 space-y-2">
-          <div className="bg-primary/5 border border-primary/20 rounded-xl p-4">
-            {Object.entries(result.breakdown).map(([k, v]) => (
-              <div key={k} className="flex justify-between text-sm py-1 border-b border-border last:border-0">
-                <span className="text-muted-foreground">{k}</span><span>${v.toLocaleString()}</span>
-              </div>
-            ))}
-            <div className="flex justify-between text-sm py-1 mt-1 font-semibold"><span>Total Expenses</span><span>${result.total.toLocaleString()}</span></div>
-            <div className="flex justify-between text-sm py-1"><span className={result.savings >= 0 ? "text-green-600" : "text-red-500"}>Monthly Savings</span><span className={result.savings >= 0 ? "text-green-600 font-bold" : "text-red-500 font-bold"}>${result.savings.toLocaleString()}</span></div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 function RiskQuiz() {
   const questions = [
     { q: "How long until you need this money?", opts: ["< 1 year", "1-3 years", "3-7 years", "7+ years"], scores: [1, 2, 3, 4] },
@@ -194,16 +145,14 @@ export default function ToolsPage() {
           <p className="text-muted-foreground">Professional-grade calculators to guide your financial decisions — no sign-up required.</p>
         </div>
         <Tabs defaultValue="compound">
-          <TabsList className="grid grid-cols-4 w-full mb-6">
+          <TabsList className="grid grid-cols-3 w-full mb-6">
             <TabsTrigger value="compound" className="flex items-center gap-1.5 text-xs"><Calculator className="h-3.5 w-3.5" />Compound</TabsTrigger>
             <TabsTrigger value="savings" className="flex items-center gap-1.5 text-xs"><TrendingUp className="h-3.5 w-3.5" />Savings</TabsTrigger>
-            <TabsTrigger value="expat" className="flex items-center gap-1.5 text-xs"><Globe className="h-3.5 w-3.5" />Expat Cost</TabsTrigger>
             <TabsTrigger value="risk" className="flex items-center gap-1.5 text-xs"><Brain className="h-3.5 w-3.5" />Risk Quiz</TabsTrigger>
           </TabsList>
           <div className="bg-card border border-card-border rounded-xl p-6">
             <TabsContent value="compound"><h2 className="font-semibold mb-4">Compound Interest Calculator</h2><CompoundInterestCalc /></TabsContent>
             <TabsContent value="savings"><h2 className="font-semibold mb-4">Savings Goal Calculator</h2><SavingsGoalCalc /></TabsContent>
-            <TabsContent value="expat"><h2 className="font-semibold mb-4">Expat Cost of Living Calculator</h2><ExpatCostCalc /></TabsContent>
             <TabsContent value="risk"><h2 className="font-semibold mb-4">Investment Risk Quiz</h2><RiskQuiz /></TabsContent>
           </div>
         </Tabs>

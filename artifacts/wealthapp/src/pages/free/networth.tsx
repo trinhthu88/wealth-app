@@ -7,7 +7,7 @@
 // ✗ BANNED:  Inline style={{ color: '#hexcode' }} — use Tailwind tokens only
 // ✗ BANNED:  Double bottom nav — AppShell is the ONLY nav
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import AppShell from "@/components/AppShell";
@@ -19,11 +19,14 @@ import { apiFetch } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
 import { Plus, Trash2, X, ChevronDown, Landmark, PiggyBank, TrendingUp, Briefcase, Home, FileText, CreditCard, Wallet, AlertCircle, Car, GraduationCap } from "lucide-react";
 import { toast } from "sonner";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { useProfile } from "@/hooks/useProfile";
 
 interface Asset { id: string; name: string; category: string; valueUsd: string; currencyOriginal: string; }
 interface Liability { id: string; name: string; category: string; balanceUsd: string; interestRatePercent: string | null; }
+interface NetWorthSnapshot { id: string; snapshotDate: string; netWorthUsd: string; }
+
+const FREE_HISTORY_MONTHS = 3;
 
 // Free-tier: exactly 5 asset categories.
 // The design system's palette is brand-semantic (green/sun/clay + neutrals), not a
@@ -77,10 +80,36 @@ export default function NetWorthPage() {
 
   const { data: assets = [] }      = useQuery<Asset[]>({ queryKey: ["assets"],      queryFn: () => apiFetch<Asset[]>("/assets") });
   const { data: liabilities = [] } = useQuery<Liability[]>({ queryKey: ["liabilities"], queryFn: () => apiFetch<Liability[]>("/liabilities") });
+  const { data: snapshots = [] }   = useQuery<NetWorthSnapshot[]>({ queryKey: ["nw-snapshots"], queryFn: () => apiFetch<NetWorthSnapshot[]>("/client/networth/snapshots") });
 
   const totalAssets      = assets.reduce((s, a) => s + parseFloat(a.valueUsd), 0);
   const totalLiabilities = liabilities.reduce((s, l) => s + parseFloat(l.balanceUsd), 0);
   const netWorth         = totalAssets - totalLiabilities;
+
+  // Keep a monthly snapshot accumulating for the trend chart and MoM delta.
+  const snapshotTaken = useRef(false);
+  const saveSnapshot = useMutation({
+    mutationFn: (body: { totalAssetsUsd: number; totalLiabilitiesUsd: number; netWorthUsd: number }) =>
+      apiFetch("/client/networth/snapshot", { method: "POST", body: JSON.stringify(body) }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["nw-snapshots"] }),
+  });
+  useEffect(() => {
+    if (snapshotTaken.current || (totalAssets === 0 && totalLiabilities === 0)) return;
+    snapshotTaken.current = true;
+    saveSnapshot.mutate({ totalAssetsUsd: totalAssets, totalLiabilitiesUsd: totalLiabilities, netWorthUsd: netWorth });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [totalAssets, totalLiabilities]);
+
+  const isFreeUser = profile?.role === "free_user";
+  const visibleSnapshots = isFreeUser ? snapshots.slice(-FREE_HISTORY_MONTHS) : snapshots;
+  const netWorthDelta = visibleSnapshots.length >= 2
+    ? parseFloat(visibleSnapshots[visibleSnapshots.length - 1].netWorthUsd) - parseFloat(visibleSnapshots[visibleSnapshots.length - 2].netWorthUsd)
+    : null;
+  const trendData = visibleSnapshots.map(s => ({
+    date: s.snapshotDate,
+    value: parseFloat(s.netWorthUsd),
+    label: new Date(s.snapshotDate).toLocaleDateString("en-US", { month: "short" }),
+  }));
 
   const addAsset = useMutation({
     mutationFn: () => apiFetch("/assets", {
@@ -169,6 +198,31 @@ export default function NetWorthPage() {
         {/* Cream content area */}
         <div className="-mx-4 md:-mx-6 bg-paper rounded-t-[24px] -mt-6 p-[22px_16px_0] min-h-full">
           <div className="space-y-4">
+
+            {/* Trend */}
+            {trendData.length >= 2 && (
+              <div className="bg-surface rounded-[20px] p-[18px] shadow-[0_4px_14px_rgba(20,52,42,.06)]">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-[11px] tracking-[0.11em] uppercase text-ink-40">History</p>
+                  {netWorthDelta !== null && netWorthDelta !== 0 && (
+                    <span className={`text-[13px] font-semibold ${netWorthDelta > 0 ? "text-green" : "text-clay"}`}>
+                      {netWorthDelta > 0 ? "+" : "-"}{fmt(Math.abs(netWorthDelta))} this month
+                    </span>
+                  )}
+                </div>
+                <ResponsiveContainer width="100%" height={120}>
+                  <LineChart data={trendData}>
+                    <XAxis dataKey="label" tick={{ fontSize: 11, fill: "var(--ink-40)" }} axisLine={false} tickLine={false} />
+                    <YAxis hide />
+                    <Tooltip formatter={(v: number) => [fmt(v), "Net worth"]} />
+                    <Line type="monotone" dataKey="value" stroke="var(--green)" strokeWidth={2} dot={{ fill: "var(--green)", r: 3 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+                {isFreeUser && snapshots.length > FREE_HISTORY_MONTHS && (
+                  <p className="text-[11px] text-ink-40 mt-2 text-center">History beyond {FREE_HISTORY_MONTHS} months is available to clients.</p>
+                )}
+              </div>
+            )}
 
             {/* Chart */}
             {(assets.length > 0 || liabilities.length > 0) && (

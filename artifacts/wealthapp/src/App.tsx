@@ -20,11 +20,14 @@ const ToolsPage = lazy(() => import("@/pages/tools"));
 
 const FreeDashboard = lazy(() => import("@/pages/free/dashboard"));
 const PathwayPage = lazy(() => import("@/pages/free/pathway"));
+const FreeOnboardingPage = lazy(() => import("@/pages/free/onboarding"));
 const BudgetPage = lazy(() => import("@/pages/free/budget"));
 const GoalsPage = lazy(() => import("@/pages/free/goals"));
 const NetWorthPage = lazy(() => import("@/pages/free/networth"));
 const HealthScorePage = lazy(() => import("@/pages/free/healthscore"));
 const MilestonesPage = lazy(() => import("@/pages/free/milestones"));
+const FreePortfolioPage = lazy(() => import("@/pages/free/portfolio"));
+const FreeSettingsPage = lazy(() => import("@/pages/free/settings"));
 
 const ClientDashboard = lazy(() => import("@/pages/client/ClientDashboard"));
 const ClientPortfolio = lazy(() => import("@/pages/client/ClientPortfolio"));
@@ -220,12 +223,15 @@ function AppRoutes() {
       <Route path="/dashboard" component={() => <RoleRedirect />} />
 
       <Route path="/free/dashboard" component={() => <ProtectedRoute component={FreeDashboard} />} />
+      <Route path="/free/onboarding" component={() => <ProtectedRoute component={FreeOnboardingPage} />} />
       <Route path="/free/pathway" component={() => <ProtectedRoute component={PathwayPage} />} />
       <Route path="/free/budget" component={() => <ProtectedRoute component={BudgetPage} />} />
       <Route path="/free/goals" component={() => <ProtectedRoute component={GoalsPage} />} />
       <Route path="/free/networth" component={() => <ProtectedRoute component={NetWorthPage} />} />
       <Route path="/free/health-score" component={() => <ProtectedRoute component={HealthScorePage} />} />
       <Route path="/free/milestones" component={() => <ProtectedRoute component={MilestonesPage} />} />
+      <Route path="/free/portfolio" component={() => <ProtectedRoute component={FreePortfolioPage} />} />
+      <Route path="/free/settings" component={() => <ProtectedRoute component={FreeSettingsPage} />} />
 
       <Route path="/client/onboarding" component={() => <ProtectedRoute component={ClientOnboarding} role={["investment_client", "super_admin"]} />} />
       <Route path="/client/dashboard" component={() => <ProtectedRoute component={ClientDashboard} role={["investment_client", "super_admin"]} />} />

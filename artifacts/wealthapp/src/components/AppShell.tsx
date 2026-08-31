@@ -5,20 +5,26 @@ import { useProfile } from "@/hooks/useProfile";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { cn } from "@/lib/utils";
 import Sol from "./Sol";
-import { 
+import {
   Menu, X, LayoutDashboard, Map, DollarSign, Target, TrendingUp, Heart,
-  Users, ClipboardList, Star, BookOpen, Building2, ChevronLeft, ChevronRight
+  Users, ClipboardList, Star, BookOpen, Building2, ChevronLeft, ChevronRight,
+  Briefcase, Settings
 } from "lucide-react";
 
 interface NavItem { label: string; href: string; icon: React.ElementType }
 
+// Mirrors the investment client's SIDEBAR_NAV order (Home, Portfolio, Pathway,
+// Goals, Net Worth, Budget) — free swaps out Scenarios/Messages/Documents for
+// Health Score and Settings, since those tools aren't available on the free plan.
 const FREE_NAV: NavItem[] = [
   { label: "Home",         href: "/free/dashboard",    icon: LayoutDashboard },
-  { label: "My Pathway",   href: "/free/pathway",      icon: Map },
-  { label: "Budget",       href: "/free/budget",       icon: DollarSign },
+  { label: "Portfolio",    href: "/free/portfolio",    icon: Briefcase },
+  { label: "Pathway",      href: "/free/pathway",      icon: Map },
   { label: "Goals",        href: "/free/goals",        icon: Target },
   { label: "Net Worth",    href: "/free/networth",     icon: TrendingUp },
+  { label: "Budget",       href: "/free/budget",       icon: DollarSign },
   { label: "Health Score", href: "/free/health-score", icon: Heart },
+  { label: "Settings",     href: "/free/settings",     icon: Settings },
 ];
 
 const ADVISOR_NAV: NavItem[] = [

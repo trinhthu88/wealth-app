@@ -7,6 +7,9 @@ export interface TipData {
   streakWeeks: number;
   isExpat: boolean;
   investmentRatePercent: number;
+  netWorthDelta?: number | null;
+  pathwayComplete?: boolean;
+  currency?: string;
 }
 
 export interface Tip {
@@ -27,7 +30,11 @@ export function generateWeeklyTip(data: TipData): Tip {
     streakWeeks,
     isExpat,
     investmentRatePercent,
+    netWorthDelta,
+    pathwayComplete,
+    currency = "USD",
   } = data;
+  const sym = currency === "VND" ? "₫" : "$";
 
   if (goal && goalStatus === "off_track") {
     return {
@@ -69,13 +76,43 @@ export function generateWeeklyTip(data: TipData): Tip {
     };
   }
 
+  if (netWorthDelta !== null && netWorthDelta !== undefined && netWorthDelta > 0) {
+    return {
+      type: "milestone",
+      title: "Your net worth grew this month",
+      body: `Net worth is up ${sym}${Math.round(netWorthDelta).toLocaleString()} since last month — momentum is building. Keep your savings rate consistent and consider whether your surplus could be working harder.`,
+      actionLabel: "Talk to an advisor",
+      actionRoute: "/book",
+    };
+  }
+
+  if (netWorthDelta !== null && netWorthDelta !== undefined && netWorthDelta < 0) {
+    return {
+      type: "benchmark",
+      title: "Net worth dipped this month",
+      body: `Net worth is down ${sym}${Math.round(Math.abs(netWorthDelta)).toLocaleString()} since last month. One down month isn't cause for alarm — reviewing your budget usually reveals whether it was a one-off or a pattern.`,
+      actionLabel: "Review my budget",
+      actionRoute: "/free/budget",
+    };
+  }
+
   if (healthScore < 60) {
     return {
       type: "score_tip",
       title: "Three quick wins for your score",
       body: `Your score is ${healthScore}/100. Reach 20% savings (+5 pts), complete your pathway (+5 pts), and set a goal target date (+5 pts).`,
       actionLabel: "See my score",
-      actionRoute: "/free/healthscore",
+      actionRoute: "/free/health-score",
+    };
+  }
+
+  if (pathwayComplete === false) {
+    return {
+      type: "market_context",
+      title: "Finish setting up your profile",
+      body: "Your financial pathway isn't fully complete yet. A complete profile gives you — and any advisor you work with — a much clearer picture, and it takes less than 5 minutes to finish.",
+      actionLabel: "Continue your pathway",
+      actionRoute: "/free/onboarding",
     };
   }
 

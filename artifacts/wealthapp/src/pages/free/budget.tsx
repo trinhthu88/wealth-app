@@ -13,6 +13,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import AppShell from "@/components/AppShell";
 import FreeTierBanner from "@/components/FreeTierBanner";
 import CurrencyField from "@/components/shared/CurrencyField";
+import InvestableSurplusCard from "@/components/shared/InvestableSurplusCard";
 import BottomNav from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
@@ -369,6 +370,8 @@ export default function BudgetPage() {
         {/* Cream content area */}
         <div className="-mx-4 md:-mx-6 bg-paper rounded-t-[24px] -mt-6 p-[22px_16px_0] min-h-full">
         <div className="space-y-4">
+
+        {totalIncome > 0 && <InvestableSurplusCard surplus={saved} currency={currency} />}
 
         {/* Carry-forward banner */}
         <AnimatePresence>
