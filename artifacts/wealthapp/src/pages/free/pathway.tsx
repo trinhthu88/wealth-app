@@ -14,6 +14,7 @@ import AppShell from "@/components/AppShell";
 import BottomNav from "@/components/BottomNav";
 import { apiFetch } from "@/lib/api";
 import { useProfile } from "@/hooks/useProfile";
+import { track } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 import { Check, Edit2, Map, Phone } from "lucide-react";
 
@@ -129,6 +130,7 @@ export default function PathwayPage() {
             </p>
             <a
               href="mailto:hello@tala.app?subject=Upgrade"
+              onClick={() => track("upgrade_cta_clicked", { location: "pathway_recap" })}
               className="flex items-center justify-center gap-2 w-full h-12 rounded-xl bg-green text-white text-[15px] font-semibold hover:bg-forest-700 transition-colors"
             >
               <Phone className="h-4 w-4" />Talk to an advisor

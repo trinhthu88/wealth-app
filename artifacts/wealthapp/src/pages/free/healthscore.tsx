@@ -18,6 +18,7 @@ import BottomNav from "@/components/BottomNav";
 import WeeklyTipCard from "@/components/WeeklyTipCard";
 import { apiFetch } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
+import { track } from "@/lib/analytics";
 import { toast } from "sonner";
 import { RefreshCw, TrendingUp, ShieldAlert, CreditCard, Landmark, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -174,6 +175,7 @@ export default function HealthScorePage() {
       queryClient.invalidateQueries({ queryKey: ["assets"] });
       queryClient.invalidateQueries({ queryKey: ["liabilities"] });
       queryClient.invalidateQueries({ queryKey: ["health-score-history"] });
+      track("health_score_calculated", { score: data.overallScore });
       toast.success("Health score updated!");
     },
     onError: () => toast.error("Failed to calculate score"),

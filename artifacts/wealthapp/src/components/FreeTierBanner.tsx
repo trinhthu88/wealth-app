@@ -1,5 +1,10 @@
 import { useState } from "react";
 import { X, Lock } from "lucide-react";
+import PlanPicker from "@/components/PlanPicker";
+import BottomSheet from "@/components/client/BottomSheet";
+import { useProfile } from "@/hooks/useProfile";
+import { useManageSubscription } from "@/hooks/useManageSubscription";
+import { track } from "@/lib/analytics";
 
 interface Props {
   feature: string;
@@ -11,8 +16,23 @@ export default function FreeTierBanner({ feature, benefit, storageKey }: Props) 
   const [dismissed, setDismissed] = useState(
     () => localStorage.getItem(`free_banner_${storageKey}`) === "1"
   );
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const { profile } = useProfile();
+  const isSubscribed = profile?.role === "investment_client";
+  const manageSubscription = useManageSubscription();
 
   if (dismissed) return null;
+
+  const location = `free_tier_banner_${storageKey}`;
+
+  function handleCtaClick() {
+    track("upgrade_cta_clicked", { location, action: isSubscribed ? "manage_subscription" : "open_plan_picker" });
+    if (isSubscribed) {
+      manageSubscription.mutate();
+      return;
+    }
+    setSheetOpen(true);
+  }
 
   return (
     <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-[#042C53]/5 border border-[#042C53]/10 text-sm">
@@ -20,12 +40,14 @@ export default function FreeTierBanner({ feature, benefit, storageKey }: Props) 
       <p className="flex-1 text-slate-600 text-xs leading-relaxed">
         <span className="font-semibold text-[#042C53]">Free plan:</span> {feature}.{" "}
         <span className="text-slate-500">{benefit}</span>{" "}
-        <a
-          href="mailto:hello@tala.app?subject=Upgrade%20to%20Investment%20Account"
-          className="text-[#1D9E75] font-medium hover:underline whitespace-nowrap"
+        <button
+          type="button"
+          onClick={handleCtaClick}
+          disabled={manageSubscription.isPending}
+          className="text-[#1D9E75] font-medium hover:underline whitespace-nowrap disabled:opacity-60"
         >
-          Talk to an advisor →
-        </a>
+          {isSubscribed ? "Manage subscription" : "Upgrade your plan"} →
+        </button>
       </p>
       <button
         onClick={() => {
@@ -37,6 +59,10 @@ export default function FreeTierBanner({ feature, benefit, storageKey }: Props) 
       >
         <X className="h-3.5 w-3.5" />
       </button>
+
+      <BottomSheet isOpen={sheetOpen} onClose={() => setSheetOpen(false)} title="Choose your plan">
+        <PlanPicker />
+      </BottomSheet>
     </div>
   );
 }

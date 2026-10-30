@@ -10,6 +10,7 @@ import { useProfile } from "@/hooks/useProfile";
 import { useOnboardingTrackComplete } from "@/hooks/useClientTrack";
 import { resolveRoleRedirectPath } from "@/lib/roleRedirect";
 import { setTokenGetter } from "@/lib/api";
+import { trackPageView, resetUser } from "@/lib/analytics";
 import { useEffect, useRef, lazy, Suspense } from "react";
 import Sol from "@/components/Sol";
 
@@ -17,6 +18,9 @@ const LandingPage = lazy(() => import("@/pages/landing"));
 const BlogListPage = lazy(() => import("@/pages/blog/list"));
 const BlogPostPage = lazy(() => import("@/pages/blog/post"));
 const ToolsPage = lazy(() => import("@/pages/tools"));
+
+const BillingSuccess = lazy(() => import("@/pages/billing/success"));
+const BillingCancel = lazy(() => import("@/pages/billing/cancel"));
 
 const FreeDashboard = lazy(() => import("@/pages/free/dashboard"));
 const PathwayPage = lazy(() => import("@/pages/free/pathway"));
@@ -165,6 +169,7 @@ function ClerkQueryClientCacheInvalidator() {
       const userId = user?.id ?? null;
       if (prevUserIdRef.current !== undefined && prevUserIdRef.current !== userId) {
         qc.clear();
+        if (userId === null) resetUser();
       }
       prevUserIdRef.current = userId;
     });
@@ -216,6 +221,9 @@ function AppRoutes() {
       <Route path="/blog" component={BlogListPage} />
       <Route path="/blog/:slug" component={BlogPostPage} />
       <Route path="/tools" component={ToolsPage} />
+
+      <Route path="/billing/success" component={BillingSuccess} />
+      <Route path="/billing/cancel" component={BillingCancel} />
 
       <Route path="/sign-in/*?" component={SignInPage} />
       <Route path="/sign-up/*?" component={SignUpPage} />
@@ -276,7 +284,12 @@ function AppRoutes() {
 }
 
 function ClerkProviderWithRoutes() {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
+
+  useEffect(() => {
+    trackPageView(location);
+  }, [location]);
+
   return (
     <ClerkProvider
       publishableKey={clerkPubKey}

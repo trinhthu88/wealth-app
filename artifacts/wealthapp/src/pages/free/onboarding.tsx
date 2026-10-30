@@ -22,8 +22,18 @@ import Sol from "@/components/Sol";
 import { ArrowLeft, Check, ShieldAlert, Briefcase, Car, GraduationCap, Home, Palmtree, Rocket, Plane, Target, Utensils, Bus, Zap, Ticket, MoreHorizontal, CreditCard, Building, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { saveRatesToStorage } from "@/lib/milestones";
+import { track } from "@/lib/analytics";
 
 interface Step { stepNumber: number; stepName: string; status: string; formData: Record<string, unknown>; }
+
+const STEP_NAMES: Record<number, string> = {
+  1: "About you",
+  2: "Income",
+  3: "Monthly expenses",
+  4: "Goal",
+  5: "Net worth snapshot",
+  6: "Risk profile",
+};
 
 type FormData = {
   age: number; lifeStage: string; isExpat: boolean | null; currency: string;
@@ -229,16 +239,20 @@ export default function FreeOnboardingPage() {
     try {
       if (s === 1) {
         await saveStep.mutateAsync({ stepNumber: 1, formData: { age: form.age, lifeStage: form.lifeStage, isExpat: form.isExpat, currency: form.currency }, status: "completed" });
+        track("onboarding_step_completed", { step: 1, stepName: STEP_NAMES[1] });
         update.mutate({ preferredCurrency: form.currency, isExpat: form.isExpat } as any);
         advance(1);
       } else if (s === 2) {
         await saveStep.mutateAsync({ stepNumber: 2, formData: { income: form.income }, status: "completed" });
+        track("onboarding_step_completed", { step: 2, stepName: STEP_NAMES[2] });
         setShowReward(1);
       } else if (s === 3) {
         await saveStep.mutateAsync({ stepNumber: 3, formData: { housing: form.housing, food: form.food, transport: form.transport, utilities: form.utilities, entertainment: form.entertainment, other: form.other }, status: "completed" });
+        track("onboarding_step_completed", { step: 3, stepName: STEP_NAMES[3] });
         // Save complete budget entry with income + all expenses so savings rate calculations work
+        const budgetMonth = new Date().toISOString().slice(0, 7);
         await apiFetch("/budget", { method: "POST", body: JSON.stringify({
-          periodMonth: new Date().toISOString().slice(0, 7),
+          periodMonth: budgetMonth,
           currency: form.currency,
           income: String(form.income),
           housing: String(form.housing),
@@ -247,15 +261,19 @@ export default function FreeOnboardingPage() {
           utilities: String(form.utilities),
           entertainment: String(form.entertainment),
           other: String(form.other),
-        }) }).catch(() => {});
+        }) }).then(() => track("budget_saved", { month: budgetMonth })).catch(() => {});
         advance(3);
       } else if (s === 4) {
         await saveStep.mutateAsync({ stepNumber: 4, formData: { goalType: form.goalType, goalTitle: form.goalTitle, goalTarget: form.goalTarget, goalMonth: form.goalMonth, goalYear: form.goalYear }, status: "completed" });
+        track("onboarding_step_completed", { step: 4, stepName: STEP_NAMES[4] });
         const goalTargetDate = `${form.goalYear}-${String(MONTHS.indexOf(form.goalMonth) + 1).padStart(2, "0")}-01`;
-        await apiFetch("/goals/upsert-from-pathway", { method: "POST", body: JSON.stringify({ title: form.goalTitle || GOAL_OPTIONS.find(g => g.type === form.goalType)?.name, goalType: form.goalType, targetAmount: String(form.goalTarget), targetDate: goalTargetDate, currency: form.currency }) }).catch(() => {});
+        await apiFetch("/goals/upsert-from-pathway", { method: "POST", body: JSON.stringify({ title: form.goalTitle || GOAL_OPTIONS.find(g => g.type === form.goalType)?.name, goalType: form.goalType, targetAmount: String(form.goalTarget), targetDate: goalTargetDate, currency: form.currency }) })
+          .then(() => track("goal_created", { goalType: form.goalType, currency: form.currency }))
+          .catch(() => {});
         setShowReward(2);
       } else if (s === 5) {
         await saveStep.mutateAsync({ stepNumber: 5, formData: { savings: form.savings, investments: form.investments, debts: form.debts, savingsRatePercent: form.savingsRatePercent, investmentRatePercent: form.investmentRatePercent }, status: "completed" });
+        track("onboarding_step_completed", { step: 5, stepName: STEP_NAMES[5] });
         if (form.savings > 0) await apiFetch("/assets/upsert-by-name", { method: "POST", body: JSON.stringify({ name: "Cash & Savings", category: "savings", valueUsd: String(form.savings), currencyOriginal: form.currency }) }).catch(() => {});
         if (form.investments > 0) await apiFetch("/assets/upsert-by-name", { method: "POST", body: JSON.stringify({ name: "Investments", category: "investment", valueUsd: String(form.investments), currencyOriginal: form.currency }) }).catch(() => {});
         if (form.debts > 0) await apiFetch("/liabilities/upsert-by-name", { method: "POST", body: JSON.stringify({ name: "Total Debts", category: "loan", balanceUsd: String(form.debts), currencyOriginal: form.currency }) }).catch(() => {});
@@ -271,7 +289,10 @@ export default function FreeOnboardingPage() {
       } else if (s === 6) {
         const rp = getRiskProfile(form.riskAnswers);
         await saveStep.mutateAsync({ stepNumber: 6, formData: { riskProfile: rp }, status: "completed" });
-        await apiFetch("/health-score", { method: "POST" }).catch(() => {});
+        track("onboarding_step_completed", { step: 6, stepName: STEP_NAMES[6] });
+        await apiFetch("/health-score", { method: "POST" })
+          .then((data: any) => track("health_score_calculated", { score: data?.overallScore }))
+          .catch(() => {});
         update.mutate({ riskProfile: rp, onboardingComplete: true } as any);
         confetti({ particleCount: 160, spread: 90, origin: { y: 0.6 } });
         setTimeout(() => confetti({ particleCount: 80, spread: 120, origin: { y: 0.4 }, angle: 60 }), 300);

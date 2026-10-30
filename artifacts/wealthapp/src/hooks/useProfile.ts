@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useUser } from "@clerk/react";
+import { useEffect } from "react";
 import { apiFetch } from "@/lib/api";
+import { identifyUser } from "@/lib/analytics";
 
 export interface Profile {
   id: string;
@@ -28,6 +30,16 @@ export function useProfile() {
     queryFn: () => apiFetch<Profile>("/profiles/me"),
     enabled: isLoaded && !!user,
   });
+
+  useEffect(() => {
+    if (query.data) {
+      identifyUser(query.data.id, {
+        role: query.data.role,
+        isExpat: !!query.data.isExpat,
+        countryCode: query.data.countryCode,
+      });
+    }
+  }, [query.data]);
 
   const qc = useQueryClient();
   const upsert = useMutation({

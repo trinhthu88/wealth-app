@@ -3,6 +3,7 @@ import { TrendingUp, X } from "lucide-react";
 import { Link } from "wouter";
 import { useClientTrack } from "@/hooks/useClientTrack";
 import { useCreateLeadFromInterest } from "@/hooks/useCreateLeadFromInterest";
+import { track } from "@/lib/analytics";
 import type { GoalStatus } from "@/hooks/useGoalProgress";
 
 interface Props {
@@ -50,7 +51,11 @@ export default function GoalScenarioCTA({ goalId, goalTitle, status }: Props) {
         ) : (
           <>
             An advised investment plan could help accelerate "{goalTitle}".{" "}
-            <Link href="/client/messages" onClick={markInterest} className="font-semibold text-[#1D9E75] hover:underline">
+            <Link
+              href="/client/messages"
+              onClick={() => { markInterest(); track("upgrade_cta_clicked", { location: "goal_scenario_cta" }); }}
+              className="font-semibold text-[#1D9E75] hover:underline"
+            >
               See how an advisor can help →
             </Link>
           </>

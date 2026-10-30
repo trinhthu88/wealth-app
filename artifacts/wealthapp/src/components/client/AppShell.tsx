@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useLocation, useRoute } from "wouter";
 import { UserButton, useClerk } from "@clerk/react";
 import { useProfile } from "@/hooks/useProfile";
+import { resetUser } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 import Sol from "../Sol";
 import { Drawer } from "vaul";
@@ -214,6 +215,7 @@ export default function ClientAppShell({ children }: { children: React.ReactNode
                 <button
                   onClick={() => {
                     setMenuOpen(false);
+                    resetUser();
                     signOut();
                   }}
                   className="mt-2 flex w-full min-h-14 items-center gap-3 rounded-[18px] border border-hairline bg-surface px-3.5 py-3 text-[14px] font-semibold text-clay hover:bg-clay-tint"

@@ -18,6 +18,7 @@ import BottomNav from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
+import { track } from "@/lib/analytics";
 import { toast } from "sonner";
 import { ChevronLeft, ChevronRight, Pencil, Check, Plus, Trash2, X, RefreshCw, ChevronDown, ChevronUp, Home, Utensils, Bus, Zap, Ticket, MoreHorizontal, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -164,7 +165,11 @@ export default function BudgetPage() {
       if (entry?.id) return apiFetch(`/budget/${entry.id}`, { method: "PUT", body });
       return apiFetch("/budget", { method: "POST", body });
     },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["budget"] }); toast.success("Monthly estimates saved!"); },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["budget"] });
+      track("budget_saved", { month: mk });
+      toast.success("Monthly estimates saved!");
+    },
     onError: () => toast.error("Failed to save"),
   });
 

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useUser } from "@clerk/react";
 import { apiFetch } from "@/lib/api";
+import { track } from "@/lib/analytics";
 import { toast } from "sonner";
 
 export interface InvestmentContribution {
@@ -90,9 +91,10 @@ export function useClientBudget(selectedMonth?: string) {
       const withTotals = computeTotals(data);
       return apiFetch("/client/budget", { method: "POST", body: JSON.stringify(withTotals) });
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       qc.invalidateQueries({ queryKey: ["client-budget"] });
       qc.invalidateQueries({ queryKey: ["dashboard-networth"] });
+      track("budget_saved", { month: variables.month });
       toast.success("Saved", { duration: 1500 });
     },
     onError: () => toast.error("Failed to save budget"),

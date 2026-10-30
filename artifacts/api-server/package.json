@@ -27,7 +27,8 @@
     "http-proxy-middleware": "^4.0.0",
     "pg": "^8.20.0",
     "pino": "^9",
-    "pino-http": "^10"
+    "pino-http": "^10",
+    "stripe": "^22.6.0"
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.10",

@@ -14,6 +14,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import AppShell from "@/components/AppShell";
 import Sol from "@/components/Sol";
 import SmartUpgradeCard from "@/components/SmartUpgradeCard";
+import PlanPicker from "@/components/PlanPicker";
+import BottomSheet from "@/components/client/BottomSheet";
 import GoalCard, { toGoalCardData } from "@/components/shared/GoalCard";
 import HealthScoreRing from "@/components/shared/HealthScoreRing";
 import StatCard from "@/components/shared/StatCard";
@@ -22,7 +24,9 @@ import MilestoneChips from "@/components/MilestoneChips";
 import BottomNav from "@/components/BottomNav";
 import { apiFetch } from "@/lib/api";
 import { useProfile } from "@/hooks/useProfile";
+import { useManageSubscription } from "@/hooks/useManageSubscription";
 import { queryClient } from "@/lib/queryClient";
+import { track } from "@/lib/analytics";
 import { toast } from "sonner";
 import { X, Phone, TrendingUp, BarChart3, Target, RefreshCw } from "lucide-react";
 import { generateWeeklyTip, getAgeBenchmarkSavingsRate } from "@/lib/tipEngine";
@@ -77,6 +81,18 @@ function formatDashboardDate() {
 
 export default function FreeDashboard() {
   const { profile } = useProfile();
+  const isSubscribed = profile?.role === "investment_client";
+  const manageSubscription = useManageSubscription();
+  const [planPickerOpen, setPlanPickerOpen] = useState(false);
+
+  function handleConversionCtaClick(location: string) {
+    track("upgrade_cta_clicked", { location, action: isSubscribed ? "manage_subscription" : "open_plan_picker" });
+    if (isSubscribed) {
+      manageSubscription.mutate();
+      return;
+    }
+    setPlanPickerOpen(true);
+  }
   const [pathwayDismissed, setPathwayDismissed] = useState(false);
   const [streakWeeks, setStreakWeeks] = useState(0);
   const [earnedMilestones, setEarnedMilestones] = useState<string[]>([]);
@@ -508,9 +524,14 @@ export default function FreeDashboard() {
                   </p>
                 </div>
               </div>
-              <a href="/book" className="mt-3 inline-flex items-center justify-center w-full rounded-full bg-green text-white text-[12px] font-semibold py-2.5 hover:bg-forest-700 transition-colors">
-                Talk to a real advisor →
-              </a>
+              <button
+                type="button"
+                onClick={() => handleConversionCtaClick("dashboard_advisor_tip")}
+                disabled={manageSubscription.isPending}
+                className="mt-3 inline-flex items-center justify-center w-full rounded-full bg-green text-white text-[12px] font-semibold py-2.5 hover:bg-forest-700 transition-colors disabled:opacity-60"
+              >
+                {isSubscribed ? "Manage subscription →" : "Get an investment plan →"}
+              </button>
             </div>
           </div>
 
@@ -564,13 +585,22 @@ export default function FreeDashboard() {
                 </div>
               </Link>
             ))}
-            <a href="/book" className="flex items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2 transition-colors bg-hairline border border-hairline text-[13px] font-medium text-forest">
-              <Phone className="h-3.5 w-3.5" /><span>Book a call</span>
-            </a>
+            <button
+              type="button"
+              onClick={() => handleConversionCtaClick("dashboard_quick_actions")}
+              disabled={manageSubscription.isPending}
+              className="flex items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2 transition-colors bg-hairline border border-hairline text-[13px] font-medium text-forest disabled:opacity-60"
+            >
+              <Phone className="h-3.5 w-3.5" /><span>{isSubscribed ? "Manage plan" : "Get a plan"}</span>
+            </button>
           </div>
 
         </div>
       </div>
+
+      <BottomSheet isOpen={planPickerOpen} onClose={() => setPlanPickerOpen(false)} title="Choose your plan">
+        <PlanPicker />
+      </BottomSheet>
 
       <BottomNav />
     </AppShell>

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useUser } from "@clerk/react";
 import { apiFetch } from "@/lib/api";
+import { track } from "@/lib/analytics";
 import { toast } from "sonner";
 import { computeGoalProgress, type GoalStatus } from "./useGoalProgress";
 import { useAdvisedPlans } from "./useAdvisedPlans";
@@ -175,7 +176,11 @@ export function useGoals() {
         notes: data.notes ?? null,
       }),
     }),
-    onSuccess: () => { invalidate(); toast.success("Goal added"); },
+    onSuccess: (_data, variables) => {
+      invalidate();
+      track("goal_created", { goalType: variables.goalType });
+      toast.success("Goal added");
+    },
     onError: (e: Error) => toast.error(e.message || "Failed to add goal"),
   });
 

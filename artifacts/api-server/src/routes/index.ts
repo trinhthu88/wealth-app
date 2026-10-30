@@ -22,6 +22,7 @@ import clientPortalRouter from "./clientPortal";
 import coastPointRouter from "./coastPoint";
 import clientHealthScoreRouter from "./clientHealthScore";
 import solRouter from "./sol";
+import billingRouter from "./billing";
 
 const router: IRouter = Router();
 
@@ -48,5 +49,6 @@ router.use(investmentsRouter);
 router.use(coastPointRouter);
 router.use(clientHealthScoreRouter);
 router.use(solRouter);
+router.use(billingRouter);
 
 export default router;

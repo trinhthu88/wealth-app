@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import CurrencyField from "@/components/shared/CurrencyField";
 import { apiFetch } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
+import { track } from "@/lib/analytics";
 import { Plus, Trash2, X, ChevronDown, Lock, LineChart as LineChartIcon, Bitcoin, Landmark, Home, PiggyBank, HelpCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useProfile } from "@/hooks/useProfile";
@@ -201,7 +202,7 @@ export default function FreePortfolioPage() {
                   </p>
                   <p className="text-[11px] text-ink-40 mt-1">Property, pensions, and multi-currency accounts included.</p>
                   <Button variant="outline" size="sm" className="mt-3 text-xs border-primary text-primary hover:bg-primary/5" asChild>
-                    <a href="/book">See what's included →</a>
+                    <a href="/book" onClick={() => track("upgrade_cta_clicked", { location: "portfolio_locked_card" })}>See what's included →</a>
                   </Button>
                 </div>
               </div>

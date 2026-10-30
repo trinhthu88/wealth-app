@@ -1,3 +1,5 @@
+import { track } from "@/lib/analytics";
+
 export interface MilestoneCheck {
   goalsCount: number;
   pathwayComplete: boolean;
@@ -93,6 +95,7 @@ export function checkAndAwardMilestones(data: MilestoneCheck): string[] {
   }
   if (newlyEarned.length > 0) {
     localStorage.setItem(LS_KEY, JSON.stringify([...earned, ...newlyEarned]));
+    for (const milestone of newlyEarned) track("milestone_earned", { milestone });
   }
   return newlyEarned;
 }

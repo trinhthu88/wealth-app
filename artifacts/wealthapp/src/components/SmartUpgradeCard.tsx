@@ -1,20 +1,26 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 import Sol from "@/components/Sol";
-import { useCreateLeadFromInterest } from "@/hooks/useCreateLeadFromInterest";
+import PlanPicker from "@/components/PlanPicker";
+import BottomSheet from "@/components/client/BottomSheet";
+import { useProfile } from "@/hooks/useProfile";
+import { useManageSubscription } from "@/hooks/useManageSubscription";
+import { track } from "@/lib/analytics";
 
 interface Props {
   condition: boolean;
   insightText: string;
   ctaText: string;
-  ctaHref?: string;
   ctaType: string;
 }
 
-export default function SmartUpgradeCard({ condition, insightText, ctaText, ctaHref = "/book", ctaType }: Props) {
+export default function SmartUpgradeCard({ condition, insightText, ctaText, ctaType }: Props) {
   const key = `upgrade_dismissed_${ctaType}`;
   const [dismissed, setDismissed] = useState(() => localStorage.getItem(key) === "1");
-  const createLead = useCreateLeadFromInterest();
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const { profile } = useProfile();
+  const isSubscribed = profile?.role === "investment_client";
+  const manageSubscription = useManageSubscription();
 
   if (!condition || dismissed) return null;
 
@@ -23,17 +29,13 @@ export default function SmartUpgradeCard({ condition, insightText, ctaText, ctaH
     setDismissed(true);
   };
 
-  // ctaHref is a real external page (e.g. /book) — a plain <a> click would
-  // unload this page immediately, which can abort an in-flight fetch. Await
-  // the (best-effort) lead-creation call first, then navigate.
-  async function handleCtaClick(e: React.MouseEvent<HTMLAnchorElement>) {
-    e.preventDefault();
-    try {
-      await createLead.mutateAsync("smart_upgrade_card");
-    } catch {
-      // never block navigation on this — it's a side effect, not the point of the click
+  function handleCtaClick() {
+    track("upgrade_cta_clicked", { location: ctaType, action: isSubscribed ? "manage_subscription" : "open_plan_picker" });
+    if (isSubscribed) {
+      manageSubscription.mutate();
+      return;
     }
-    window.location.href = ctaHref;
+    setSheetOpen(true);
   }
 
   return (
@@ -49,15 +51,20 @@ export default function SmartUpgradeCard({ condition, insightText, ctaText, ctaH
         <Sol size="xs" animate="idle" showFace className="shrink-0 mt-0.5" />
         <div>
           <p className="text-sm text-foreground leading-snug">{insightText}</p>
-          <a
-            href={ctaHref}
+          <button
+            type="button"
             onClick={handleCtaClick}
-            className="text-xs text-primary font-medium mt-1.5 inline-block hover:underline"
+            disabled={manageSubscription.isPending}
+            className="text-xs text-primary font-medium mt-1.5 inline-block hover:underline disabled:opacity-60"
           >
-            {ctaText} →
-          </a>
+            {isSubscribed ? "Manage subscription" : ctaText} →
+          </button>
         </div>
       </div>
+
+      <BottomSheet isOpen={sheetOpen} onClose={() => setSheetOpen(false)} title="Choose your plan">
+        <PlanPicker />
+      </BottomSheet>
     </div>
   );
 }

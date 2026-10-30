@@ -11,6 +11,7 @@ import { useProfile } from "@/hooks/useProfile";
 import { usePlan } from "@/hooks/usePlan";
 import { useNetWorthSummary } from "@/hooks/useNetWorthSummary";
 import { useNetWorthTrend } from "@/hooks/useNetWorthTrend";
+import { track } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 
 function getGreeting(): string {
@@ -291,7 +292,11 @@ export default function ClientDashboard() {
             <div className="text-[14.5px] text-[#A67523] mb-4 text-pretty leading-snug">
               Unlock personalized strategies, goal projections, and a dedicated advisor to accelerate your wealth.
             </div>
-            <Link href="/client/messages" className="bg-amber-ink text-paper rounded-full py-2.5 px-5 text-[14px] font-semibold inline-block hover:opacity-90 transition-opacity">
+            <Link
+              href="/client/messages"
+              onClick={() => track("upgrade_cta_clicked", { location: "client_dashboard_track_b_cta" })}
+              className="bg-amber-ink text-paper rounded-full py-2.5 px-5 text-[14px] font-semibold inline-block hover:opacity-90 transition-opacity"
+            >
               Talk to an advisor
             </Link>
           </div>

@@ -1,5 +1,6 @@
 import { Lock } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { track } from "@/lib/analytics";
 
 interface Props {
   icon: LucideIcon;
@@ -15,7 +16,7 @@ interface Props {
  */
 export default function GhostGoalCard({ icon: Icon, title, description, targetLabel }: Props) {
   return (
-    <a href="/book" className="relative block rounded-2xl border border-hairline bg-surface p-5 overflow-hidden">
+    <a href="/book" onClick={() => track("upgrade_cta_clicked", { location: "ghost_goal_card" })} className="relative block rounded-2xl border border-hairline bg-surface p-5 overflow-hidden">
       <div className="absolute inset-0 z-10 flex items-center justify-center backdrop-blur-[2px] bg-surface/50">
         <span className="flex items-center gap-1.5 rounded-full bg-green text-white text-[11px] font-semibold px-3 py-1.5">
           <Lock className="h-3 w-3" />Unlock as a client

@@ -1,5 +1,6 @@
 import { Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { track } from "@/lib/analytics";
 
 /**
  * A persistent, non-dismissible placeholder representing a free user's locked
@@ -19,7 +20,7 @@ export default function LockedGoalSlotCard() {
           </p>
           <p className="text-xs text-ink-40 mt-0.5">Free plan is limited to 1 goal. Upgrade to track as many as you need.</p>
           <Button variant="outline" size="sm" className="mt-3 text-xs border-primary text-primary hover:bg-primary/5" asChild>
-            <a href="/book">Unlock with upgrade →</a>
+            <a href="/book" onClick={() => track("upgrade_cta_clicked", { location: "locked_goal_slot_card" })}>Unlock with upgrade →</a>
           </Button>
         </div>
       </div>

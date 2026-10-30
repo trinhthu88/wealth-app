@@ -20,6 +20,7 @@ import BottomNav from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
+import { track } from "@/lib/analytics";
 import { toast } from "sonner";
 import { Lock, X, TrendingUp, Plus, Trash2, ChevronDown, Home, Palmtree, ShieldAlert, Rocket, CreditCard, GraduationCap, Plane, Car, Briefcase, Landmark, Target } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
@@ -267,9 +268,10 @@ export default function GoalsPage() {
 
   // ── Mutations ─────────────────────────────────────────────────────────────
   const addGoalMutation = useMutation({
-    mutationFn: (body: object) => apiFetch("/goals", { method: "POST", body: JSON.stringify(body) }),
-    onSuccess: () => {
+    mutationFn: (body: { goalType: string; currency: string }) => apiFetch("/goals", { method: "POST", body: JSON.stringify(body) }),
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["goals"] });
+      track("goal_created", { goalType: variables.goalType, currency: variables.currency });
       toast.success("Goal added!");
       closeGoalForm();
     },
