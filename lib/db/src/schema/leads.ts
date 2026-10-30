@@ -1,4 +1,5 @@
-import { pgTable, text, integer, timestamp, uuid } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, timestamp, uuid, check } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { profilesTable } from "./profiles";
@@ -20,6 +21,7 @@ export const leadsTable = pgTable("leads", {
   source: text("source"),
   quizResult: text("quiz_result"),
   healthScore: integer("health_score"),
+  // leads owns the pre-client relationship pipeline until promotion.
   status: text("status").notNull().default("unassigned"),
   assignedAdvisorId: text("assigned_advisor_id"),
   notes: text("notes"),
@@ -35,7 +37,9 @@ export const leadsTable = pgTable("leads", {
   convertedUserId: text("converted_user_id").references(() => profilesTable.id),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
-});
+}, (t) => [
+  check("leads_status_check", sql`${t.status} IN ('unassigned', 'active', 'cold', 'churned', 'client')`),
+]);
 
 export const insertLeadSchema = createInsertSchema(leadsTable).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertLead = z.infer<typeof insertLeadSchema>;

@@ -7,6 +7,7 @@ import {
   scenarioRunsTable, financialGoalsTable, netWorthSnapshotsTable, assetsTable, liabilitiesTable,
   financialPlansTable, planMilestonesTable, milestoneCommentsTable,
   conversationsTable, messagesTable, advisedStrategyReturnsTable,
+  advisedPlanStatusSchema,
 } from "@workspace/db";
 import { requireAuth, requireRole, requireAdvisorOwnsClient, requireAdvisorOwnsLead, requireAdvisorOwnsClientOrLead, requireAdvisorOwnsPlan } from "../middlewares/requireAuth";
 import { resolveHoldingBenchmark, getDeviationWarning } from "../lib/benchmarks";
@@ -131,6 +132,8 @@ router.post("/advisor/clients/:id/advised-plans", requireAuth, requireRole("advi
     res.status(400).json({ error: "providerName and productName required" });
     return;
   }
+  const parsedStatus = advisedPlanStatusSchema.safeParse(status ?? "scenario");
+  if (!parsedStatus.success) { res.status(400).json({ error: "Invalid advised plan status" }); return; }
 
   const [plan] = await db.insert(advisedPlansTable).values({
     userId, advisorId,
@@ -142,7 +145,7 @@ router.post("/advisor/clients/:id/advised-plans", requireAuth, requireRole("advi
     // A plan starts as a scenario an advisor runs for a lead — it only becomes
     // "inforce" once policyNumber is filled and the advisor explicitly flips it
     // (see the lead-detail plan-status endpoint added for the lead pipeline).
-    status: status ?? "scenario",
+    status: parsedStatus.data,
     latestAccountValue: latestAccountValue ?? "0", latestNetContribution: latestNetContribution ?? "0",
     latestStatementDate: latestStatementDate ?? null,
     nickname: nickname ?? null, advisorNotes: advisorNotes ?? null,
@@ -298,19 +301,20 @@ router.post("/advisor/clients/:clientId/advised-plans/:planId/statements", requi
 router.put("/advised-plans/:id/status", requireAuth, requireRole("advisor", "super_admin"), requireAdvisorOwnsPlan("id"), async (req, res): Promise<void> => {
   const id = req.params.id as string;
   const { status, policyNumber } = req.body;
-  if (!status) { res.status(400).json({ error: "status required" }); return; }
+  const parsedStatus = advisedPlanStatusSchema.safeParse(status);
+  if (!parsedStatus.success) { res.status(400).json({ error: "Invalid advised plan status" }); return; }
 
   const [plan] = await db.select().from(advisedPlansTable).where(eq(advisedPlansTable.id, id));
   if (!plan) { res.status(404).json({ error: "Not found" }); return; }
 
   const resolvedPolicyNumber = policyNumber !== undefined ? policyNumber : plan.policyNumber;
-  if (status === "inforce" && !resolvedPolicyNumber) {
+  if (parsedStatus.data === "inforce" && !resolvedPolicyNumber) {
     res.status(400).json({ error: "policyNumber is required to mark a plan in-force" });
     return;
   }
 
   const [updated] = await db.update(advisedPlansTable).set({
-    status,
+    status: parsedStatus.data,
     ...(policyNumber !== undefined ? { policyNumber } : {}),
     updatedAt: new Date(),
   }).where(eq(advisedPlansTable.id, id)).returning();

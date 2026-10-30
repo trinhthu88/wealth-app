@@ -277,7 +277,7 @@ export default function ClientOnboarding() {
             currentAmount: existingGoal.currentAmount ? parseFloat(existingGoal.currentAmount) : 0,
             targetDate,
             currency: goalCurrency,
-            status: "on_track",
+            status: "active",
             priority: "high",
           }),
         });
@@ -290,7 +290,7 @@ export default function ClientOnboarding() {
             targetAmount: goalTargetAmount ? parseFloat(goalTargetAmount) : null,
             targetDate,
             currency: goalCurrency,
-            status: "on_track",
+            status: "active",
             priority: "high",
           }),
         });

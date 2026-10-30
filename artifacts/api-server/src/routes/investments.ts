@@ -12,6 +12,7 @@ import {
   scenariosTable,
   clientProfilesTable,
   profilesTable,
+  clientStatusSchema,
 } from "@workspace/db";
 import { requireAuth, requireRole, requireAdvisorOwnsClient, requirePackageReadAccess, requireAdvisorOwnsPackage } from "../middlewares/requireAuth";
 
@@ -148,7 +149,12 @@ router.get("/client-profile/me", requireAuth, async (req, res): Promise<void> =>
 
 router.put("/client-profile/me", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
-  const updates = pickSelfServiceClientProfileFields(req.body ?? {});
+  const body = req.body ?? {};
+  if (Object.prototype.hasOwnProperty.call(body, "status") && !clientStatusSchema.safeParse(body.status).success) {
+    res.status(400).json({ error: "Invalid client status" });
+    return;
+  }
+  const updates = pickSelfServiceClientProfileFields(body);
   const existing = await db.select().from(clientProfilesTable).where(eq(clientProfilesTable.userId, userId));
   let cp;
   if (existing.length > 0) {

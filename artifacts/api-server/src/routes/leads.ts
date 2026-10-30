@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { and, asc, eq, ne } from "drizzle-orm";
-import { db, leadsTable, profilesTable } from "@workspace/db";
+import { db, leadsTable, profilesTable, leadStatusSchema } from "@workspace/db";
 import { requireAuth, requireRole, requireAdvisorOwnsLeadById } from "../middlewares/requireAuth";
 import { createUserWithProfile } from "../lib/createUserWithProfile";
 import { promoteLeadToClient } from "../lib/promoteLead";
@@ -71,10 +71,12 @@ router.post("/leads/from-interest", requireAuth, async (req, res): Promise<void>
 router.post("/leads", async (req, res): Promise<void> => {
   const { email, firstName, source, quizResult, healthScore, status, notes } = req.body;
   if (!email) { res.status(400).json({ error: "email required" }); return; }
+  const parsedStatus = status === undefined ? undefined : leadStatusSchema.safeParse(status);
+  if (parsedStatus && !parsedStatus.success) { res.status(400).json({ error: "Invalid lead status" }); return; }
   const [lead] = await db.insert(leadsTable).values({
     email, firstName: firstName ?? null, source: source ?? null,
     quizResult: quizResult ?? null, healthScore: healthScore ?? null,
-    status: status ?? "unassigned", notes: notes ?? null,
+    status: parsedStatus?.success ? parsedStatus.data : "unassigned", notes: notes ?? null,
   }).returning();
   res.status(201).json(lead);
 });
@@ -97,6 +99,10 @@ function pickLeadAdvisorEditableFields(body: Record<string, unknown>): Record<st
 router.put("/leads/:id", ...leadGuard, async (req, res): Promise<void> => {
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const updates = pickLeadAdvisorEditableFields(req.body ?? {});
+  if (updates.status !== undefined && !leadStatusSchema.safeParse(updates.status).success) {
+    res.status(400).json({ error: "Invalid lead status" });
+    return;
+  }
 
   const [lead] = await db.select().from(leadsTable).where(eq(leadsTable.id, rawId));
   if (!lead) { res.status(404).json({ error: "Not found" }); return; }

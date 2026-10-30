@@ -236,7 +236,7 @@ export default function FreeDashboard() {
       streakWeeks,
       netWorth: netWorth ?? 0,
       effectiveSavingsRate,
-      goalOnTrack: projection?.status === "on_track" || topGoal?.status === "on_track",
+      goalOnTrack: projection?.status === "on_track" || topGoal?.status === "active",
       healthScore: score?.overallScore ?? 0,
       budgetMonthsCount: budgets.length,
     };

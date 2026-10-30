@@ -53,7 +53,7 @@ beforeAll(async () => {
   // Goal at 50% progress via its own currentAmount (no goal_holding_links).
   await db.insert(financialGoalsTable).values({
     userId: scoredClientId, title: "Test goal", goalType: "custom",
-    targetAmount: "5000", currentAmount: "2500", status: "on_track",
+    targetAmount: "5000", currentAmount: "2500", status: "active",
   });
 
   // $2,000 liability against $10,000 of assets (the holding above) -> 80% score.

@@ -158,8 +158,15 @@ async function toolGetPortfolioHoldings(userId: string) {
 }
 
 async function toolGetHealthScore(userId: string) {
+  const [profile] = await db.select({ role: profilesTable.role })
+    .from(profilesTable)
+    .where(eq(profilesTable.id, userId));
+  const tier = profile?.role === "investment_client" ? "client" : "free";
   const [score] = await db.select().from(healthScoresTable)
-    .where(eq(healthScoresTable.userId, userId))
+    .where(and(
+      eq(healthScoresTable.userId, userId),
+      eq(healthScoresTable.tier, tier),
+    ))
     .orderBy(desc(healthScoresTable.createdAt)).limit(1);
   if (!score) return { available: false };
   return {

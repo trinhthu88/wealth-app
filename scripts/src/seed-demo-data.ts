@@ -154,9 +154,9 @@ async function run() {
     riskProfile: "moderate",
     totalSavings: "18500",
     goals: [
-      { title: "Emergency Fund", goalType: "emergency_fund", targetAmount: "20000", currentAmount: "14200", monthlyContribution: "500", targetDate: "2026-12-01", priority: "high", status: "on_track" },
-      { title: "House Down Payment", goalType: "home_purchase", targetAmount: "80000", currentAmount: "22000", monthlyContribution: "800", targetDate: "2028-06-01", priority: "high", status: "on_track" },
-      { title: "Japan Trip", goalType: "travel", targetAmount: "6000", currentAmount: "3200", monthlyContribution: "200", targetDate: "2027-03-01", priority: "low", status: "on_track" },
+      { title: "Emergency Fund", goalType: "emergency_fund", targetAmount: "20000", currentAmount: "14200", monthlyContribution: "500", targetDate: "2026-12-01", priority: "high", status: "active" },
+      { title: "House Down Payment", goalType: "home_purchase", targetAmount: "80000", currentAmount: "22000", monthlyContribution: "800", targetDate: "2028-06-01", priority: "high", status: "active" },
+      { title: "Japan Trip", goalType: "travel", targetAmount: "6000", currentAmount: "3200", monthlyContribution: "200", targetDate: "2027-03-01", priority: "low", status: "active" },
     ],
     budgets: [
       { periodMonth: "2026-06-01", income: "6200", housing: "1800", food: "650", transport: "300", utilities: "220", entertainment: "250", other: "180", needsActual: "2320", wantsActual: "1080", savingsActual: "800", savingsRatePercent: "13" },
@@ -194,8 +194,8 @@ async function run() {
     riskProfile: "conservative",
     totalSavings: "1800",
     goals: [
-      { title: "Emergency Fund", goalType: "emergency_fund", targetAmount: "10000", currentAmount: "1800", monthlyContribution: "150", targetDate: "2028-01-01", priority: "high", status: "behind" },
-      { title: "Pay Off Credit Card", goalType: "debt_payoff", targetAmount: "4500", currentAmount: "1200", monthlyContribution: "300", targetDate: "2027-02-01", priority: "high", status: "on_track" },
+      { title: "Emergency Fund", goalType: "emergency_fund", targetAmount: "10000", currentAmount: "1800", monthlyContribution: "150", targetDate: "2028-01-01", priority: "high", status: "active" },
+      { title: "Pay Off Credit Card", goalType: "debt_payoff", targetAmount: "4500", currentAmount: "1200", monthlyContribution: "300", targetDate: "2027-02-01", priority: "high", status: "active" },
     ],
     budgets: [
       { periodMonth: "2026-08-01", income: "3800", housing: "1400", food: "420", transport: "180", utilities: "150", entertainment: "120", other: "90", needsActual: "1750", wantsActual: "1860", savingsActual: "190", savingsRatePercent: "5" },
@@ -270,7 +270,7 @@ async function run() {
   await db.insert(financialGoalsTable).values({
     userId: elenaId, title: "Retirement at 60", goalType: "retirement",
     targetAmount: "800000", currentAmount: "185000", monthlyContribution: "1200",
-    targetDate: "2049-01-01", priority: "high", status: "on_track", isAdvisorManaged: true,
+    targetDate: "2049-01-01", priority: "high", status: "active", isAdvisorManaged: true,
   });
 
   const [elenaPackage] = await db.insert(clientPackagesTable).values({
@@ -311,8 +311,8 @@ async function run() {
   ]);
 
   await db.insert(financialGoalsTable).values([
-    { userId: jamesId, title: "Financial Independence by 55", goalType: "financial_independence", targetAmount: "1500000", currentAmount: "142000", monthlyContribution: "2000", targetDate: "2041-01-01", priority: "high", status: "on_track" },
-    { userId: jamesId, title: "Kids' College Fund", goalType: "education", targetAmount: "120000", currentAmount: "18000", monthlyContribution: "400", targetDate: "2034-08-01", priority: "medium", status: "on_track" },
+    { userId: jamesId, title: "Financial Independence by 55", goalType: "financial_independence", targetAmount: "1500000", currentAmount: "142000", monthlyContribution: "2000", targetDate: "2041-01-01", priority: "high", status: "active" },
+    { userId: jamesId, title: "Kids' College Fund", goalType: "education", targetAmount: "120000", currentAmount: "18000", monthlyContribution: "400", targetDate: "2034-08-01", priority: "medium", status: "active" },
   ]);
 
   await db.insert(clientBudgetMonthsTable).values([

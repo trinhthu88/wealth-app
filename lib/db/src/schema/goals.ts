@@ -1,4 +1,5 @@
-import { pgTable, text, numeric, timestamp, uuid, date, boolean, unique, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, numeric, timestamp, uuid, date, boolean, unique, jsonb, check } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { profilesTable } from "./profiles";
@@ -14,12 +15,15 @@ export const financialGoalsTable = pgTable("financial_goals", {
   targetDate: date("target_date"),
   currency: text("currency").notNull().default("USD"),
   priority: text("priority").notNull().default("medium"),
-  status: text("status").notNull().default("on_track"),
+  // financial_goals owns lifecycle only; pacing is derived from goal data.
+  status: text("status").notNull().default("active"),
   notes: text("notes"),
   isAdvisorManaged: boolean("is_advisor_managed").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
-});
+}, (t) => [
+  check("financial_goals_lifecycle_check", sql`${t.status} IN ('active', 'completed', 'cancelled')`),
+]);
 
 export const goalHoldingLinksTable = pgTable("goal_holding_links", {
   id: uuid("id").primaryKey().defaultRandom(),

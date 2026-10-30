@@ -148,7 +148,6 @@ router.post("/client/networth/snapshot", requireAuth, async (req, res): Promise<
     res.status(400).json({ error: "Missing required fields" }); return;
   }
   const today = new Date().toISOString().slice(0, 10);
-  // Upsert by date — one snapshot per day
   const existing = await db.select({ id: netWorthSnapshotsTable.id })
     .from(netWorthSnapshotsTable)
     .where(and(
@@ -157,32 +156,28 @@ router.post("/client/networth/snapshot", requireAuth, async (req, res): Promise<
     ))
     .limit(1);
 
-  if (existing.length > 0) {
-    const [row] = await db.update(netWorthSnapshotsTable)
-      .set({
-        totalAssetsUsd: String(totalAssetsUsd),
-        totalLiabilitiesUsd: String(totalLiabilitiesUsd),
-        netWorthUsd: String(netWorthUsd),
-        notes: notes ?? null,
-      })
-      .where(and(
-        eq(netWorthSnapshotsTable.userId, userId),
-        eq(netWorthSnapshotsTable.snapshotDate, today)
-      ))
-      .returning();
-    res.json(row);
-  } else {
-    const [row] = await db.insert(netWorthSnapshotsTable).values({
-      userId,
-      snapshotDate: today,
+  const values = {
+    userId,
+    snapshotDate: today,
+    totalAssetsUsd: String(totalAssetsUsd),
+    totalLiabilitiesUsd: String(totalLiabilitiesUsd),
+    netWorthUsd: String(netWorthUsd),
+    notes: notes ?? null,
+    createdBy: "client",
+  };
+  const [row] = await db.insert(netWorthSnapshotsTable).values(values)
+    .onConflictDoUpdate({
+      target: [netWorthSnapshotsTable.userId, netWorthSnapshotsTable.snapshotDate],
+      set: {
       totalAssetsUsd: String(totalAssetsUsd),
       totalLiabilitiesUsd: String(totalLiabilitiesUsd),
       netWorthUsd: String(netWorthUsd),
       notes: notes ?? null,
-      createdBy: "client",
-    }).returning();
-    res.status(201).json(row);
-  }
+        createdBy: "client",
+      },
+    })
+    .returning();
+  res.status(existing.length > 0 ? 200 : 201).json(row);
 });
 
 // Advisor read-only view of a lead's net worth (manually-entered assets and

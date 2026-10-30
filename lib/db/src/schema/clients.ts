@@ -1,4 +1,5 @@
-import { pgTable, text, integer, numeric, timestamp, uuid, date, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, numeric, timestamp, uuid, date, boolean, check } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 // NOTE: milestone_comments table requires SQL migration (see Prompt 8 Step 1)
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
@@ -13,6 +14,7 @@ export const clientProfilesTable = pgTable("client_profiles", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: text("user_id").notNull().unique(),
   advisorId: text("advisor_id"),
+  // client_profiles owns the advisor relationship and client lifecycle status.
   status: text("status").notNull().default("active"),
   kycStatus: text("kyc_status").notNull().default("not_started"),
   riskProfile: text("risk_profile"),
@@ -34,7 +36,9 @@ export const clientProfilesTable = pgTable("client_profiles", {
   onboardingTrackComplete: boolean("onboarding_track_complete").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
-});
+}, (t) => [
+  check("client_profiles_status_check", sql`${t.status} IN ('active', 'paused', 'churned')`),
+]);
 
 export const kycDocumentsTable = pgTable("kyc_documents", {
   id: uuid("id").primaryKey().defaultRandom(),

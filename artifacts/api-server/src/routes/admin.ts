@@ -3,6 +3,7 @@ import { eq, inArray, desc } from "drizzle-orm";
 import {
   db, profilesTable, clientProfilesTable, clientPackagesTable, portfolioSnapshotsTable,
   assetClassBenchmarksTable, advisedStrategyReturnsTable, advisedPlansTable,
+  roleSchema, clientStatusSchema,
 } from "@workspace/db";
 import { requireAuth, requireRole } from "../middlewares/requireAuth";
 import { createUserWithProfile } from "../lib/createUserWithProfile";
@@ -26,7 +27,13 @@ router.get("/admin/users/:id", ...adminGuard, async (req, res): Promise<void> =>
 
 router.post("/admin/users", ...adminGuard, async (req, res): Promise<void> => {
   const { email, password, fullName, role, advisorId, riskProfile, status } = req.body;
-  const result = await createUserWithProfile({ email, password, fullName, role, advisorId, riskProfile, status });
+  const parsedRole = role === undefined ? undefined : roleSchema.safeParse(role);
+  const parsedStatus = status === undefined ? undefined : clientStatusSchema.safeParse(status);
+  if (parsedRole && !parsedRole.success) { res.status(400).json({ error: "Invalid role" }); return; }
+  if (parsedStatus && !parsedStatus.success) { res.status(400).json({ error: "Invalid client status" }); return; }
+  const normalizedRole = parsedRole?.success ? parsedRole.data : undefined;
+  const normalizedStatus = parsedStatus?.success ? parsedStatus.data : undefined;
+  const result = await createUserWithProfile({ email, password, fullName, role: normalizedRole, advisorId, riskProfile, status: normalizedStatus });
   if (!result.ok) { res.status(result.httpStatus).json({ error: result.error }); return; }
   res.status(201).json(result.profile);
 });
@@ -34,9 +41,12 @@ router.post("/admin/users", ...adminGuard, async (req, res): Promise<void> => {
 router.put("/admin/users/:id", ...adminGuard, async (req, res): Promise<void> => {
   const id = req.params.id as string;
   const { fullName, role, preferredCurrency, advisorId } = req.body;
+  const parsedRole = role === undefined ? undefined : roleSchema.safeParse(role);
+  if (parsedRole && !parsedRole.success) { res.status(400).json({ error: "Invalid role" }); return; }
+  const normalizedRole = parsedRole?.success ? parsedRole.data : undefined;
   const [updated] = await db.update(profilesTable).set({
     ...(fullName !== undefined ? { fullName } : {}),
-    ...(role !== undefined ? { role } : {}),
+    ...(role !== undefined ? { role: normalizedRole } : {}),
     ...(preferredCurrency !== undefined ? { preferredCurrency } : {}),
     updatedAt: new Date(),
   }).where(eq(profilesTable.id, id)).returning();

@@ -1,6 +1,7 @@
 import {
-  pgTable, text, numeric, timestamp, uuid, date, boolean, integer, unique,
+  pgTable, text, numeric, timestamp, uuid, date, boolean, integer, unique, check,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { profilesTable } from "./profiles";
@@ -27,6 +28,7 @@ export const advisedPlansTable = pgTable("advised_plans", {
   // holding yet) | inforce (requires a non-null policyNumber — enforced
   // app-level where status is set to inforce, not a DB constraint) | matured |
   // surrender.
+  // advised_plans owns the lifecycle of an advised policy or scenario.
   status: text("status").notNull().default("scenario"),
 
   latestAccountValue: numeric("latest_account_value").notNull().default("0"),
@@ -39,7 +41,9 @@ export const advisedPlansTable = pgTable("advised_plans", {
 
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
-});
+}, (t) => [
+  check("advised_plans_status_check", sql`${t.status} IN ('scenario', 'inforce', 'matured', 'surrender')`),
+]);
 
 export const advisedPlanStatementsTable = pgTable("advised_plan_statements", {
   id: uuid("id").primaryKey().defaultRandom(),

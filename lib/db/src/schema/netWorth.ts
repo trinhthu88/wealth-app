@@ -1,4 +1,4 @@
-import { pgTable, text, numeric, timestamp, uuid, date } from "drizzle-orm/pg-core";
+import { pgTable, text, numeric, timestamp, uuid, date, unique } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -12,7 +12,9 @@ export const netWorthSnapshotsTable = pgTable("net_worth_snapshots", {
   notes: text("notes"),
   createdBy: text("created_by"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (t) => [
+  unique("net_worth_snapshots_user_date_unique").on(t.userId, t.snapshotDate),
+]);
 
 export const assetsTable = pgTable("assets", {
   id: uuid("id").primaryKey().defaultRandom(),

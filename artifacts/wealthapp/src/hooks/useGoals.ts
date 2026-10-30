@@ -172,7 +172,7 @@ export function useGoals() {
         targetAmount: data.targetAmount != null && data.targetAmount > 0 ? String(data.targetAmount) : null,
         targetDate: data.targetDate ?? null,
         priority: data.priority ?? "medium",
-        status: "on_track",
+        status: "active",
         notes: data.notes ?? null,
       }),
     }),

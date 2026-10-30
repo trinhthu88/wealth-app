@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import {
   db, healthScoresTable, budgetEntriesTable, financialGoalsTable,
   pathwayProgressTable, assetsTable, liabilitiesTable, profilesTable,
@@ -53,7 +53,7 @@ export function scoreWealthGrowthRate(pct: number): number {
 router.get("/health-score", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
   const [score] = await db.select().from(healthScoresTable)
-    .where(eq(healthScoresTable.userId, userId))
+    .where(and(eq(healthScoresTable.userId, userId), eq(healthScoresTable.tier, "free")))
     .orderBy(desc(healthScoresTable.createdAt))
     .limit(1);
   if (!score) { res.status(404).json({ error: "No health score yet" }); return; }
@@ -63,7 +63,7 @@ router.get("/health-score", requireAuth, async (req, res): Promise<void> => {
 router.get("/health-score/history", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
   const scores = await db.select().from(healthScoresTable)
-    .where(eq(healthScoresTable.userId, userId))
+    .where(and(eq(healthScoresTable.userId, userId), eq(healthScoresTable.tier, "free")))
     .orderBy(desc(healthScoresTable.scoreDate))
     .limit(12);
   res.json(scores);
@@ -155,9 +155,10 @@ router.post("/health-score", requireAuth, async (req, res): Promise<void> => {
       });
       goalsScore = scoreGoalProjection(projectedAmount, targetAmt, true);
     } else {
-      // No target date set — use stored status as fallback
-      if (topGoal.status === "on_track" || topGoal.status === "achieved") goalsScore = 25;
-      else if (topGoal.status === "almost") goalsScore = 15;
+      // Temporary lifecycle-compatible fallback. Phase 3 will derive pace from
+      // goal data rather than treating lifecycle as a pacing state.
+      if (topGoal.status === "active" || topGoal.status === "completed") goalsScore = 25;
+      else if (topGoal.status === "cancelled") goalsScore = 15;
       else goalsScore = 5;
     }
   }
@@ -190,12 +191,13 @@ router.post("/health-score", requireAuth, async (req, res): Promise<void> => {
     savingsScoreFinal + goalsScoreFinal + netWorthScoreFinal + wealthScoreFinal + planScoreFinal,
   );
 
-  const goalsOnTrack = goals.filter(g => g.status === "on_track" || g.status === "achieved").length;
+  const goalsOnTrack = goals.filter(g => g.status === "active" || g.status === "completed").length;
 
   const today = new Date().toISOString().split("T")[0];
-  const [score] = await db.insert(healthScoresTable).values({
+  const values = {
     userId,
     scoreDate: today,
+    tier: "free" as const,
     overallScore: overall,
     savingsScore: savingsScoreFinal,
     budgetScore: savingsScoreFinal,
@@ -209,8 +211,27 @@ router.post("/health-score", requireAuth, async (req, res): Promise<void> => {
       netWorth: Math.round(netWorth),
       goalsOnTrack,
     },
-  }).returning();
-  res.json(score);
+  };
+  const [existingToday] = await db.select({ id: healthScoresTable.id }).from(healthScoresTable)
+    .where(and(
+      eq(healthScoresTable.userId, userId),
+      eq(healthScoresTable.scoreDate, today),
+      eq(healthScoresTable.tier, "free"),
+    )).limit(1);
+  const [score] = await db.insert(healthScoresTable).values(values)
+    .onConflictDoUpdate({
+      target: [healthScoresTable.userId, healthScoresTable.scoreDate, healthScoresTable.tier],
+      set: {
+        overallScore: overall,
+        budgetScore: savingsScoreFinal,
+        goalsScore: goalsScoreFinal,
+        netWorthScore: netWorthScoreFinal,
+        savingsScore: savingsScoreFinal,
+        insights: values.insights,
+      },
+    })
+    .returning();
+  res.status(existingToday ? 200 : 201).json(score);
 });
 
 export default router;

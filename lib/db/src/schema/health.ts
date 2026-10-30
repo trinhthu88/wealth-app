@@ -1,10 +1,14 @@
-import { pgTable, text, integer, timestamp, uuid, date, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, timestamp, uuid, date, jsonb, unique, check } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
 export const healthScoresTable = pgTable("health_scores", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: text("user_id").notNull(),
+  // One score-history stream per user and tier; tier is assigned by the
+  // server from the scoring route, never inferred by a client.
+  tier: text("tier").notNull().default("free"),
   scoreDate: date("score_date").notNull(),
   overallScore: integer("overall_score"),
   budgetScore: integer("budget_score"),
@@ -21,7 +25,10 @@ export const healthScoresTable = pgTable("health_scores", {
   // per-score metadata) so the two tiers' shapes never collide in one column.
   details: jsonb("details"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (t) => [
+  check("health_scores_tier_check", sql`${t.tier} IN ('free', 'client')`),
+  unique("health_scores_user_date_tier_unique").on(t.userId, t.scoreDate, t.tier),
+]);
 
 export const insertHealthScoreSchema = createInsertSchema(healthScoresTable).omit({ id: true, createdAt: true });
 export type InsertHealthScore = z.infer<typeof insertHealthScoreSchema>;

@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, and } from "drizzle-orm";
-import { db, financialGoalsTable, profilesTable, goalHoldingLinksTable } from "@workspace/db";
+import { db, financialGoalsTable, profilesTable, goalHoldingLinksTable, goalLifecycleSchema } from "@workspace/db";
 import { requireAuth, requireRole, requireAdvisorOwnsClient, requireAdvisorOwnsLead } from "../middlewares/requireAuth";
 import { getRemainingPct } from "../lib/goalAllocation";
 import { getProgressMovement } from "../lib/goalProgressSnapshot";
@@ -27,6 +27,8 @@ router.post("/goals", requireAuth, async (req, res): Promise<void> => {
     res.status(400).json({ error: "title and goalType required" });
     return;
   }
+  const parsedStatus = status === undefined ? undefined : goalLifecycleSchema.safeParse(status);
+  if (parsedStatus && !parsedStatus.success) { res.status(400).json({ error: "Invalid goal lifecycle status" }); return; }
 
   // Enforce 1-goal limit for free users
   const [[profile], existing] = await Promise.all([
@@ -44,7 +46,7 @@ router.post("/goals", requireAuth, async (req, res): Promise<void> => {
     currentAmount: currentAmount?.toString() ?? "0",
     monthlyContribution: monthlyContribution?.toString() ?? "0",
     targetDate: targetDate ?? null, currency: currency ?? "USD",
-    priority: priority ?? "medium", status: status ?? "on_track", notes: notes ?? null,
+    priority: priority ?? "medium", status: parsedStatus?.success ? parsedStatus.data : "active", notes: notes ?? null,
   }).returning();
   res.status(201).json(goal);
 });
@@ -53,11 +55,13 @@ router.put("/goals/:id", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const { title, goalType, targetAmount, currentAmount, monthlyContribution, targetDate, currency, priority, status, notes } = req.body;
+  const parsedStatus = status === undefined ? undefined : goalLifecycleSchema.safeParse(status);
+  if (parsedStatus && !parsedStatus.success) { res.status(400).json({ error: "Invalid goal lifecycle status" }); return; }
   const [updated] = await db.update(financialGoalsTable).set({
     title, goalType, targetAmount: targetAmount?.toString() ?? null,
     currentAmount: currentAmount?.toString() ?? "0",
     monthlyContribution: monthlyContribution?.toString() ?? "0",
-    targetDate: targetDate ?? null, currency, priority, status, notes, updatedAt: new Date(),
+    targetDate: targetDate ?? null, currency, priority, status: parsedStatus?.success ? parsedStatus.data : undefined, notes, updatedAt: new Date(),
   }).where(and(eq(financialGoalsTable.id, rawId), eq(financialGoalsTable.userId, userId))).returning();
   if (!updated) { res.status(404).json({ error: "Not found" }); return; }
   res.json(updated);
@@ -118,7 +122,7 @@ router.post("/goals/upsert-from-pathway", requireAuth, async (req, res): Promise
       targetDate: targetDate ?? null,
       currency: currency ?? "USD",
       priority: "medium",
-      status: "on_track",
+      status: "active",
     }).returning();
     res.status(201).json(created);
   }
@@ -220,9 +224,9 @@ router.patch("/goals/:id/status", requireAuth, async (req, res): Promise<void> =
   const userId = (req as any).userId;
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const { status } = req.body;
-  const allowed = ["active", "completed", "paused", "cancelled"];
-  if (!allowed.includes(status)) { res.status(400).json({ error: "Invalid status" }); return; }
-  const [updated] = await db.update(financialGoalsTable).set({ status, updatedAt: new Date() })
+  const parsedStatus = goalLifecycleSchema.safeParse(status);
+  if (!parsedStatus.success) { res.status(400).json({ error: "Invalid goal lifecycle status" }); return; }
+  const [updated] = await db.update(financialGoalsTable).set({ status: parsedStatus.data, updatedAt: new Date() })
     .where(and(eq(financialGoalsTable.id, rawId), eq(financialGoalsTable.userId, userId)))
     .returning();
   if (!updated) { res.status(404).json({ error: "Not found" }); return; }

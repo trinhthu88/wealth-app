@@ -49,7 +49,11 @@ router.get("/client/health-score", requireAuth, async (req, res): Promise<void> 
 
   const today = new Date().toISOString().slice(0, 10);
   const [existingToday] = await db.select().from(healthScoresTable)
-    .where(and(eq(healthScoresTable.userId, userId), eq(healthScoresTable.scoreDate, today)))
+    .where(and(
+      eq(healthScoresTable.userId, userId),
+      eq(healthScoresTable.scoreDate, today),
+      eq(healthScoresTable.tier, "client"),
+    ))
     .orderBy(desc(healthScoresTable.createdAt))
     .limit(1);
   if (existingToday?.details) { res.json({ ...existingToday, gated: false }); return; }
@@ -126,6 +130,7 @@ router.get("/client/health-score", requireAuth, async (req, res): Promise<void> 
   const values = {
     userId,
     scoreDate: today,
+    tier: "client" as const,
     overallScore,
     savingsScore: Math.round(savingsConsistency),
     goalsScore: Math.round(goalProgress),
@@ -135,12 +140,20 @@ router.get("/client/health-score", requireAuth, async (req, res): Promise<void> 
     details,
   };
 
-  let score;
-  if (existingToday) {
-    [score] = await db.update(healthScoresTable).set(values).where(eq(healthScoresTable.id, existingToday.id)).returning();
-  } else {
-    [score] = await db.insert(healthScoresTable).values(values).returning();
-  }
+  const [score] = await db.insert(healthScoresTable).values(values)
+    .onConflictDoUpdate({
+      target: [healthScoresTable.userId, healthScoresTable.scoreDate, healthScoresTable.tier],
+      set: {
+        overallScore: values.overallScore,
+        savingsScore: values.savingsScore,
+        goalsScore: values.goalsScore,
+        netWorthScore: values.netWorthScore,
+        budgetScore: values.budgetScore,
+        debtToAssetScore: values.debtToAssetScore,
+        details: values.details,
+      },
+    })
+    .returning();
 
   res.json({ ...score, gated: false });
 });
@@ -148,7 +161,7 @@ router.get("/client/health-score", requireAuth, async (req, res): Promise<void> 
 router.get("/client/health-score/history", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
   const scores = await db.select().from(healthScoresTable)
-    .where(eq(healthScoresTable.userId, userId))
+    .where(and(eq(healthScoresTable.userId, userId), eq(healthScoresTable.tier, "client")))
     .orderBy(desc(healthScoresTable.scoreDate))
     .limit(12);
   res.json(scores);
