@@ -978,6 +978,70 @@ export const AdminUpdateUserResponse = zod.object({
 });
 
 /**
+ * @summary Get the current server-computed net worth
+ */
+export const ClientGetNetWorthSummaryResponse = zod.object({
+  asOf: zod.coerce.date(),
+  currency: zod.enum(["USD"]),
+  totalAssets: zod.number(),
+  totalLiabilities: zod.number(),
+  netWorth: zod.number(),
+  portfolio: zod.object({
+    selfManaged: zod.number(),
+    advised: zod.number(),
+    total: zod.number(),
+  }),
+  items: zod.array(
+    zod.object({
+      source: zod.enum([
+        "holding",
+        "advised_plan",
+        "asset",
+        "liability",
+        "mortgage",
+      ]),
+      id: zod.string(),
+      label: zod.string(),
+      category: zod.string(),
+      value: zod.number(),
+      currency: zod.enum(["USD"]),
+    }),
+  ),
+});
+
+/**
+ * @summary Get the dashboard net-worth summary
+ */
+export const ClientGetDashboardNetWorthResponse = zod.object({
+  asOf: zod.coerce.date(),
+  currency: zod.enum(["USD"]),
+  totalAssets: zod.number(),
+  totalLiabilities: zod.number(),
+  netWorth: zod.number(),
+  portfolio: zod.object({
+    selfManaged: zod.number(),
+    advised: zod.number(),
+    total: zod.number(),
+  }),
+  items: zod.array(
+    zod.object({
+      source: zod.enum([
+        "holding",
+        "advised_plan",
+        "asset",
+        "liability",
+        "mortgage",
+      ]),
+      id: zod.string(),
+      label: zod.string(),
+      category: zod.string(),
+      value: zod.number(),
+      currency: zod.enum(["USD"]),
+    }),
+  ),
+});
+
+/**
  * @summary List clients assigned to advisor
  */
 export const AdvisorListClientsResponseItem = zod.object({
@@ -990,10 +1054,48 @@ export const AdvisorListClientsResponseItem = zod.object({
   onboardingStep: zod.number().nullish(),
   advisorId: zod.string().nullish(),
   createdAt: zod.string(),
+  portfolioValue: zod.number(),
+  netWorth: zod.number(),
 });
 export const AdvisorListClientsResponse = zod.array(
   AdvisorListClientsResponseItem,
 );
+
+/**
+ * @summary Get an assigned client's current net-worth summary
+ */
+export const AdvisorGetClientNetWorthSummaryParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const AdvisorGetClientNetWorthSummaryResponse = zod.object({
+  asOf: zod.coerce.date(),
+  currency: zod.enum(["USD"]),
+  totalAssets: zod.number(),
+  totalLiabilities: zod.number(),
+  netWorth: zod.number(),
+  portfolio: zod.object({
+    selfManaged: zod.number(),
+    advised: zod.number(),
+    total: zod.number(),
+  }),
+  items: zod.array(
+    zod.object({
+      source: zod.enum([
+        "holding",
+        "advised_plan",
+        "asset",
+        "liability",
+        "mortgage",
+      ]),
+      id: zod.string(),
+      label: zod.string(),
+      category: zod.string(),
+      value: zod.number(),
+      currency: zod.enum(["USD"]),
+    }),
+  ),
+});
 
 export const AdvisorGetClientPortfolioParams = zod.object({
   id: zod.coerce.string(),

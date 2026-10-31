@@ -7,7 +7,7 @@
 // ✗ BANNED:  Inline style={{ color: '#hexcode' }} — use Tailwind tokens only
 // ✗ BANNED:  Double bottom nav — AppShell is the ONLY nav
 
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import AppShell from "@/components/AppShell";
@@ -85,20 +85,6 @@ export default function NetWorthPage() {
   const totalAssets      = assets.reduce((s, a) => s + parseFloat(a.valueUsd), 0);
   const totalLiabilities = liabilities.reduce((s, l) => s + parseFloat(l.balanceUsd), 0);
   const netWorth         = totalAssets - totalLiabilities;
-
-  // Keep a monthly snapshot accumulating for the trend chart and MoM delta.
-  const snapshotTaken = useRef(false);
-  const saveSnapshot = useMutation({
-    mutationFn: (body: { totalAssetsUsd: number; totalLiabilitiesUsd: number; netWorthUsd: number }) =>
-      apiFetch("/client/networth/snapshot", { method: "POST", body: JSON.stringify(body) }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["nw-snapshots"] }),
-  });
-  useEffect(() => {
-    if (snapshotTaken.current || (totalAssets === 0 && totalLiabilities === 0)) return;
-    snapshotTaken.current = true;
-    saveSnapshot.mutate({ totalAssetsUsd: totalAssets, totalLiabilitiesUsd: totalLiabilities, netWorthUsd: netWorth });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [totalAssets, totalLiabilities]);
 
   const isFreeUser = profile?.role === "free_user";
   const visibleSnapshots = isFreeUser ? snapshots.slice(-FREE_HISTORY_MONTHS) : snapshots;

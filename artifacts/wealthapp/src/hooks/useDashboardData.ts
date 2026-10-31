@@ -1,5 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { useUser } from "@clerk/react";
+import {
+  useClientGetNetWorthSummary,
+  getClientGetNetWorthSummaryQueryKey,
+  type NetWorthSummary,
+} from "@workspace/api-client-react";
 import { apiFetch } from "@/lib/api";
 import { useClientTrack } from "./useClientTrack";
 import { useAdvisedPlans } from "./useAdvisedPlans";
@@ -7,6 +12,8 @@ import { useClientHoldings } from "./useClientHoldings";
 import { usePortfolioTotals } from "./usePortfolioTotals";
 import { useProfile } from "./useProfile";
 import type { ClientBudgetMonth } from "./useClientBudget";
+
+export type { NetWorthSummary };
 
 export interface DashboardGoal {
   id: string;
@@ -34,12 +41,6 @@ export interface ScenarioAlert {
   createdAt: string;
 }
 
-export interface NetWorthSummary {
-  totalAssets: number;
-  totalLiabilities: number;
-  netWorth: number;
-}
-
 export function useDashboardData() {
   const { user, isLoaded } = useUser();
   const { profile } = useProfile();
@@ -63,10 +64,11 @@ export function useDashboardData() {
     enabled,
   });
 
-  const netWorthQuery = useQuery<NetWorthSummary>({
-    queryKey: ["dashboard-networth"],
-    queryFn: () => apiFetch("/client/dashboard/networth"),
-    enabled,
+  const netWorthQuery = useClientGetNetWorthSummary({
+    query: {
+      queryKey: getClientGetNetWorthSummaryQueryKey(),
+      enabled,
+    },
   });
 
   const scenarioAlertQuery = useQuery<ScenarioAlert | null>({

@@ -3,9 +3,7 @@ import {
   db, clientHoldingsTable, advisedPlansTable, advisedStrategyReturnsTable, priceCacheTable,
 } from "@workspace/db";
 import { resolveHoldingBenchmark } from "./benchmarks";
-import { resolveHoldingValueUsd } from "./goalProgressSnapshot";
-
-const TICKER_BASED_TYPES = new Set(["stock_etf", "etf", "mutual_fund", "commodity", "bond"]);
+import { TICKER_BASED_TYPES, valueOfHolding } from "./netWorthService";
 
 export interface BlendedRateResult {
   ratePct: number;
@@ -51,7 +49,7 @@ export async function resolveBlendedRate(userId: string): Promise<BlendedRateRes
     // price with cost-basis fallback for ticker/crypto types, direct balance fields
     // for cash/property/pension/other. Reused, not re-derived, so this can't drift
     // from the number the client sees on their Goals page for the same holding.
-    const value = resolveHoldingValueUsd(h, priceBySymbol);
+    const value = valueOfHolding(h, priceBySymbol);
     if (value <= 0) continue;
 
     const { value: ratePct } = await resolveHoldingBenchmark({

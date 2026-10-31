@@ -18,6 +18,7 @@
     "dedupe-net-worth-snapshots": "tsx ./src/dedupe-net-worth-snapshots.ts",
     "migrate-health-score-tier": "tsx ./src/migrate-health-score-tier.ts",
     "apply-phase1-constraints": "tsx ./src/apply-phase1-constraints.ts",
+    "nightly-snapshots": "tsx ./src/nightly-snapshots.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
@@ -28,6 +29,7 @@
     "@types/pg": "^8.18.0",
     "@workspace/db": "workspace:*",
     "drizzle-orm": "catalog:",
+    "@workspace/net-worth": "workspace:*",
     "pg": "^8.20.0",
     "postgres": "^3.4.9"
   }

@@ -1,7 +1,7 @@
 # Restructure progress
 
 ## Current phase
-P1 — Enums, constraints, unique indexes — implementation and verification complete; commit pending
+P2 — Net worth service — complete; Phase 3 not started
 
 ## Baseline (Phase 0)
 - typecheck: passed (`pnpm run typecheck`; all libraries and leaf workspaces completed).
@@ -25,6 +25,10 @@ Audit counts / backfills:
 Tests: typecheck passed; API suite 16 files and 136 tests passed.
 Decisions made by agent:
 - Backups are local, ignored files and will not be committed because they contain client financial and identity data.
+Files changed:
+- `.gitignore`
+- `docs/client-restructure/OWNERS.md`
+- `docs/client-restructure/PROGRESS.md`
 
 ### P1 — Enums, constraints, unique indexes
 Plan:
@@ -50,14 +54,107 @@ Audit counts / backfills:
 - Verified all six CHECK constraints and all four unique constraints in PostgreSQL; `financial_goals.status` now defaults to `active`.
 - All 24 goals have a target date, so Phase 1's legacy free-score fallback for goals without a target is not used by current rows.
 Tests: `pnpm run typecheck` passed; `pnpm --filter @workspace/api-server test` passed (17 files, 139 tests).
+Commit: `fe8e53b` — `[restructure P1] enforce lifecycle and snapshot constraints`.
 Decisions made by agent:
 - Define `onboardingStage` and `firstFocus` shared enums in P1, but defer their CHECK constraints until P5 adds the columns; neither column exists today.
 - Before deleting duplicate snapshot rows, keep the newest `created_at` row, with `id` as a deterministic tie-breaker, as required by the brief's “keep latest” rule.
 - The standard schema push proposed truncating 6 rows in `advised_plan_statements`; it was declined and not retried. Applied only the audited P1 additions using targeted scripts, leaving that unrelated schema drift untouched.
+Files changed:
+- `artifacts/api-server/src/routes/__tests__/advisorLeadReads.test.ts`
+- `artifacts/api-server/src/routes/__tests__/clientHealthScore.test.ts`
+- `artifacts/api-server/src/routes/__tests__/coastPoint.test.ts`
+- `artifacts/api-server/src/routes/__tests__/goalHoldingLinks.test.ts`
+- `artifacts/api-server/src/routes/__tests__/healthscore.test.ts`
+- `artifacts/api-server/src/routes/__tests__/offTrackTasks.test.ts`
+- `artifacts/api-server/src/routes/__tests__/statusEnums.test.ts`
+- `artifacts/api-server/src/routes/admin.ts`
+- `artifacts/api-server/src/routes/clientHealthScore.ts`
+- `artifacts/api-server/src/routes/clientPortal.ts`
+- `artifacts/api-server/src/routes/goals.ts`
+- `artifacts/api-server/src/routes/healthscore.ts`
+- `artifacts/api-server/src/routes/investments.ts`
+- `artifacts/api-server/src/routes/leads.ts`
+- `artifacts/api-server/src/routes/networth.ts`
+- `artifacts/api-server/src/routes/sol.ts`
+- `artifacts/wealthapp/src/hooks/useGoals.ts`
+- `artifacts/wealthapp/src/pages/client/ClientOnboarding.tsx`
+- `artifacts/wealthapp/src/pages/free/dashboard.tsx`
+- `lib/db/src/schema/advisedPlans.ts`
+- `lib/db/src/schema/clients.ts`
+- `lib/db/src/schema/enums.ts`
+- `lib/db/src/schema/goals.ts`
+- `lib/db/src/schema/health.ts`
+- `lib/db/src/schema/index.ts`
+- `lib/db/src/schema/leads.ts`
+- `lib/db/src/schema/netWorth.ts`
+- `lib/db/src/schema/profiles.ts`
+- `scripts/package.json`
+- `scripts/src/apply-phase1-constraints.ts`
+- `scripts/src/dedupe-net-worth-snapshots.ts`
+- `scripts/src/migrate-goal-lifecycle.ts`
+- `scripts/src/migrate-health-score-tier.ts`
+- `scripts/src/seed-demo-data.ts`
+- `scripts/src/set-goal-lifecycle-default.ts`
 
 ## Blocked / questions for the product owner
 - P1 CHECK constraints for `onboarding_stage` and `first_focus` are deferred until P5 introduces their columns; their shared enums are defined in P1.
 - `pnpm --filter @workspace/db run push` remains blocked by pre-existing drift: Drizzle proposed truncating 6 `advised_plan_statements` rows to add a unique constraint. The safe “No” option was selected. Do not rerun or accept a truncation prompt; targeted P1 changes have been applied without touching that table.
 
+### P2 — Net worth service
+Plan:
+- Port the current client net-worth valuation rules to `artifacts/api-server/src/lib/netWorthService.ts`, using one exported `valueOfHolding` helper backed by the existing price-cache valuation logic.
+- Add authenticated client and advisor-owned summary endpoints; update `lib/api-spec/openapi.yaml` and regenerate API client/schema code.
+- Replace current net-worth reads in the client Net Worth page, dashboard ring, Sol, investment-client wealth score, coast point portfolio value, and advisor/admin client-list `portfolioValue` with the service result.
+- Remove browser snapshot POSTs from client and free-tier pages; keep the snapshot route but return 410 after the browser callers are gone. Have the service upsert today's snapshot and add an idempotent nightly investment-client snapshot script.
+- Add API coverage for seeded sources (holding, visible/in-force advised plan, manual asset, liability, mortgage) and assert the shared total across the summary, dashboard, Sol net-worth tool, and advisor list.
+- Run the full typecheck and API test suite, verify snapshot and list behavior, record results and changed files, then commit with the required P2 prefix.
+Done:
+- Added the shared server computation and `valueOfHolding` in `lib/net-worth`, re-exported through `artifacts/api-server/src/lib/netWorthService.ts`; the same valuation helper is now used by goal funding and blended portfolio calculations.
+- Added authenticated client and advisor-owned summary endpoints, retained the dashboard endpoint as a compatibility alias, documented the endpoints in OpenAPI, and regenerated API client/Zod outputs.
+- Switched the client Net Worth page, dashboard ring, Sol summary tool, wealth score, coast point, and advisor/admin client lists to the shared service. Advisor/admin list `portfolioValue` remains the service's portfolio total; each list also returns `netWorth` from that same summary.
+- Removed all browser POST callers for net-worth snapshots. The legacy POST now returns 410. Summary reads upsert one idempotent snapshot for today.
+- Added `pnpm --filter @workspace/scripts run nightly-snapshots` to calculate snapshots for all investment clients.
+- Seeded acceptance test values: assets $115,100; liabilities $43,000; net worth $72,100; portfolio total $110,100. Client summary, dashboard, Sol, advisor summary, and list `netWorth` agree; coast-point and list `portfolioValue` use the shared portfolio total.
+- No Phase 2 database schema changes were made; no schema push was run.
+Audit counts / backfills:
+- Not applicable in Phase 2.
+Tests: `pnpm run typecheck` passed; `pnpm --filter @workspace/api-server test` passed (18 files, 143 tests).
+Replit schedule instructions (documented only; not configured or deployed):
+- In Replit's Publishing tool, create a Scheduled Deployment, choose a daily cron schedule and timezone, and set the run command to `pnpm --filter @workspace/scripts run nightly-snapshots`. Set a build command if the Publishing tool requires one. Scheduled Deployments do not serve web traffic. Do not create or publish it as part of this restructure.
+Files changed:
+- `artifacts/api-server/package.json`
+- `artifacts/api-server/src/lib/blendedRate.ts`
+- `artifacts/api-server/src/lib/goalProgressSnapshot.ts`
+- `artifacts/api-server/src/lib/netWorthService.ts`
+- `artifacts/api-server/src/routes/__tests__/netWorthSummary.test.ts`
+- `artifacts/api-server/src/routes/admin.ts`
+- `artifacts/api-server/src/routes/clientHealthScore.ts`
+- `artifacts/api-server/src/routes/clientPortal.ts`
+- `artifacts/api-server/src/routes/clients.ts`
+- `artifacts/api-server/src/routes/coastPoint.ts`
+- `artifacts/api-server/src/routes/networth.ts`
+- `artifacts/api-server/src/routes/sol.ts`
+- `artifacts/api-server/tsconfig.json`
+- `artifacts/wealthapp/src/hooks/useDashboardData.ts`
+- `artifacts/wealthapp/src/hooks/useNetWorthItems.ts`
+- `artifacts/wealthapp/src/hooks/useNetWorthSummary.ts`
+- `artifacts/wealthapp/src/pages/client/ClientNetWorth.tsx`
+- `artifacts/wealthapp/src/pages/free/dashboard.tsx`
+- `artifacts/wealthapp/src/pages/free/networth.tsx`
+- `lib/api-client-react/src/generated/api.schemas.ts`
+- `lib/api-client-react/src/generated/api.ts`
+- `lib/api-client-react/src/index.ts`
+- `lib/api-spec/openapi.yaml`
+- `lib/api-zod/src/generated/api.ts`
+- `lib/api-zod/src/index.ts`
+- `lib/net-worth/package.json`
+- `lib/net-worth/src/index.ts`
+- `lib/net-worth/tsconfig.json`
+- `pnpm-lock.yaml`
+- `scripts/package.json`
+- `scripts/src/nightly-snapshots.ts`
+- `scripts/tsconfig.json`
+- `tsconfig.json`
+
 ## Next agent: start here
-- Finish the P1 commit, then read the complete Phase 2 section and listed callers in the master prompt. Before coding P2, add its plan to this file; implement the single server-side net-worth service and summary endpoint, move every listed consumer to it, stop browser snapshot POSTs, and add the cross-consumer seeded-client acceptance test. Do not start Phase 3.
+- Begin Phase 3 from `docs/client-restructure/MASTER_PROMPT.md`: first record the Phase 3 plan in this file, then work only on goal funding and goal status. Do not repeat Phases 0–2. Before any schema change, back up affected tables; reject and record any schema push warning about data loss, truncation, rename, or drop. Do not publish or deploy.

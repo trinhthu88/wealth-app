@@ -7,7 +7,7 @@
 // ✗ BANNED:  Inline style={{ color: '#hexcode' }} — use Tailwind tokens only
 // ✗ BANNED:  Double bottom nav — AppShell is the ONLY nav
 
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import ClientAppShell from "@/components/client/AppShell";
 import SolNarration from "@/components/client/SolNarration";
 import NetWorthHeader from "@/components/client/networth/NetWorthHeader";
@@ -18,11 +18,7 @@ import LiabilitySection from "@/components/client/networth/LiabilitySection";
 import AddAssetSheet from "@/components/client/networth/AddAssetSheet";
 import AddLiabilitySheet from "@/components/client/networth/AddLiabilitySheet";
 import { EditAssetSheet, EditLiabilitySheet } from "@/components/client/networth/EditItemSheet";
-import {
-  useNetWorthItems,
-  type ManualAsset,
-  type ManualLiability,
-} from "@/hooks/useNetWorthItems";
+import type { ManualAsset, ManualLiability } from "@/hooks/useNetWorthItems";
 import { useNetWorthSummary } from "@/hooks/useNetWorthSummary";
 import { useNetWorthTrend } from "@/hooks/useNetWorthTrend";
 import { usePlan } from "@/hooks/usePlan";
@@ -33,13 +29,9 @@ export default function ClientNetWorth() {
   const {
     syncedAssets, syncedLiabilities, manualAssets, manualLiabilities,
     totalAssets, totalLiabilities, netWorth, assetCount, liabilityCount, loading,
+    addAsset, updateAsset, deleteAsset, addLiability, updateLiability, deleteLiability,
   } = useNetWorthSummary();
   const { advisorName } = usePlan();
-  const {
-    addAsset, updateAsset, deleteAsset,
-    addLiability, updateLiability, deleteLiability,
-    saveSnapshot,
-  } = useNetWorthItems();
   const { trendData, hasHistory, trendDelta, loading: trendLoading } = useNetWorthTrend();
 
   const [showAddAsset, setShowAddAsset] = useState(false);
@@ -52,18 +44,6 @@ export default function ClientNetWorth() {
   for (const l of [...syncedLiabilities, ...manualLiabilities]) {
     liabilityByCategory[l.category] = (liabilityByCategory[l.category] ?? 0) + l.balanceUsd;
   }
-
-  const snapshotTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => {
-    if (loading || (totalAssets === 0 && totalLiabilities === 0)) return;
-    if (snapshotTimerRef.current) clearTimeout(snapshotTimerRef.current);
-    snapshotTimerRef.current = setTimeout(() => {
-      saveSnapshot(totalAssets, totalLiabilities);
-    }, 1000);
-    return () => {
-      if (snapshotTimerRef.current) clearTimeout(snapshotTimerRef.current);
-    };
-  }, [totalAssets, totalLiabilities, loading]);
 
   const cashValue = [...syncedAssets, ...manualAssets]
     .filter(a => CASH_CATEGORIES.has(a.category))

@@ -3,39 +3,9 @@ import {
   db, goalProgressSnapshotsTable, goalHoldingLinksTable,
   advisedPlansTable, clientHoldingsTable, financialGoalsTable, priceCacheTable,
 } from "@workspace/db";
+import { TICKER_BASED_TYPES, valueOfHolding } from "./netWorthService";
 
-// Mirrors useClientHoldings.ts's enrichHolding() valuation exactly — a holding's
-// "current value" depends on its type, and for ticker/crypto types on a live price
-// this snapshot has to look up itself (the frontend hook does the same lookup via
-// usePriceCache). Falls back to cost basis (units * average cost) when no cached
-// price exists yet, same as the frontend does.
-const TICKER_BASED_TYPES = new Set(["stock_etf", "etf", "mutual_fund", "commodity", "bond"]);
-
-export function resolveHoldingValueUsd(holding: {
-  holdingType: string;
-  unitsHeld: string | null;
-  averageCostPrice: string | null;
-  ticker: string | null;
-  coinSymbol: string | null;
-  currentEstimatedValue: string | null;
-  currentBalance: string | null;
-  currentBalancePension: string | null;
-  currentValueOther: string | null;
-}, priceBySymbol: Map<string, number>): number {
-  const type = holding.holdingType;
-
-  if (TICKER_BASED_TYPES.has(type) || type === "crypto") {
-    const symbol = (type === "crypto" ? holding.coinSymbol : holding.ticker)?.toUpperCase() ?? "";
-    const units = parseFloat(holding.unitsHeld ?? "0") || 0;
-    const avgCost = parseFloat(holding.averageCostPrice ?? "0") || 0;
-    const livePrice = priceBySymbol.get(symbol);
-    return units * (livePrice ?? avgCost);
-  }
-  if (type === "property") return parseFloat(holding.currentEstimatedValue ?? "0") || 0;
-  if (type === "cash") return parseFloat(holding.currentBalance ?? "0") || 0;
-  if (type === "pension") return parseFloat(holding.currentBalancePension ?? "0") || 0;
-  return parseFloat(holding.currentValueOther ?? "0") || 0;
-}
+export { valueOfHolding as resolveHoldingValueUsd };
 
 export interface LinkBreakdownEntry {
   sourceType: string;
@@ -88,7 +58,7 @@ export async function computeCurrentBreakdown(userId: string, goalId: string): P
     : [];
   const priceBySymbol = new Map(priceRows.map(p => [p.symbol.toUpperCase(), parseFloat(p.priceUsd) || 0]));
 
-  const holdingValueById = new Map(holdings.map(h => [h.id, resolveHoldingValueUsd(h, priceBySymbol)]));
+  const holdingValueById = new Map(holdings.map(h => [h.id, valueOfHolding(h, priceBySymbol)]));
 
   const linkBreakdown: LinkBreakdownEntry[] = links.map(l => {
     const allocationPct = parseFloat(l.allocationPct) || 0;

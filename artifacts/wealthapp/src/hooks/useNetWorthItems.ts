@@ -1,18 +1,16 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useUser } from "@clerk/react";
+import { getClientGetNetWorthSummaryQueryKey } from "@workspace/api-client-react";
 import { apiFetch } from "@/lib/api";
 import { toast } from "sonner";
-import { useCallback, useRef } from "react";
-import { useCurrencyRates } from "./useCurrencyRates";
-import { convertCurrency } from "@/lib/currencyUtils";
-import type { AdvisedPlan } from "./useAdvisedPlans";
-import type { ClientHolding } from "./useClientHoldings";
+
+const netWorthSummaryQueryKey = getClientGetNetWorthSummaryQueryKey();
 
 // Synced read-only item derived from portfolio data
 export interface SyncedAsset {
   id: string;
   label: string;
-  category: "investment" | "property" | "cash" | "pension";
+  category: string;
   valueUsd: number;
   currency: string;
   source: "portfolio_sync" | "holding_sync";
@@ -44,73 +42,10 @@ export interface ManualLiability {
   createdAt: string;
 }
 
-export function buildSyncedAssets(
-  plans: AdvisedPlan[],
-  holdings: ClientHolding[]
-): SyncedAsset[] {
-  const items: SyncedAsset[] = [];
-
-  // All advised plans → investment category
-  for (const plan of plans) {
-    if (plan.status !== "inforce" || !plan.isVisibleToClient) continue;
-    items.push({
-      id: `plan-${plan.id}`,
-      label: plan.nickname ?? plan.productName,
-      category: "investment",
-      valueUsd: parseFloat(plan.latestAccountValue) || 0,
-      currency: plan.currency,
-      source: "portfolio_sync",
-      sourceId: plan.id,
-      lastUpdated: plan.latestStatementDate,
-    });
-  }
-
-  // Property / cash / pension holdings → their respective categories
-  for (const h of holdings) {
-    if (!h.isActive) continue;
-    if (!["property", "cash", "pension"].includes(h.holdingType)) continue;
-    items.push({
-      id: `holding-${h.id}`,
-      label: h.label,
-      category: h.holdingType as "property" | "cash" | "pension",
-      valueUsd: h.currentValue,
-      currency: h.currency,
-      source: "holding_sync",
-      sourceId: h.id,
-      lastUpdated: h.updatedAt?.slice(0, 10) ?? null,
-    });
-  }
-
-  return items;
-}
-
-export function buildSyncedLiabilities(holdings: ClientHolding[]): ManualLiability[] {
-  const items: ManualLiability[] = [];
-  for (const h of holdings) {
-    if (!h.isActive || h.holdingType !== "property") continue;
-    const mortgage = parseFloat(h.outstandingMortgage ?? "0") || 0;
-    if (mortgage <= 0) continue;
-    items.push({
-      id: `mortgage-${h.id}`,
-      name: `${h.label} mortgage`,
-      category: "mortgage",
-      balanceUsd: mortgage,
-      interestRatePercent: null,
-      monthlyPaymentUsd: null,
-      currencyOriginal: h.currency,
-      notes: `__synced:holding:${h.id}`,
-      createdAt: h.createdAt,
-    });
-  }
-  return items;
-}
-
 export function useNetWorthItems() {
   const { user, isLoaded } = useUser();
   const qc = useQueryClient();
   const enabled = isLoaded && !!user;
-  const snapshotTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const { rates } = useCurrencyRates();
 
   const assetsQuery = useQuery<Array<{
     id: string; name: string; category: string; valueUsd: string;
@@ -168,6 +103,7 @@ export function useNetWorthItems() {
     }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["nw-assets"] });
+      qc.invalidateQueries({ queryKey: netWorthSummaryQueryKey });
       toast.success("Asset added");
     },
     onError: () => toast.error("Failed to add asset"),
@@ -188,6 +124,7 @@ export function useNetWorthItems() {
     }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["nw-assets"] });
+      qc.invalidateQueries({ queryKey: netWorthSummaryQueryKey });
       toast.success("Updated");
     },
   });
@@ -196,6 +133,7 @@ export function useNetWorthItems() {
     mutationFn: (id: string) => apiFetch(`/assets/${id}`, { method: "DELETE" }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["nw-assets"] });
+      qc.invalidateQueries({ queryKey: netWorthSummaryQueryKey });
       toast.success("Asset removed");
     },
   });
@@ -218,6 +156,7 @@ export function useNetWorthItems() {
     }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["nw-liabilities"] });
+      qc.invalidateQueries({ queryKey: netWorthSummaryQueryKey });
       toast.success("Liability added");
     },
     onError: () => toast.error("Failed to add liability"),
@@ -242,6 +181,7 @@ export function useNetWorthItems() {
     }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["nw-liabilities"] });
+      qc.invalidateQueries({ queryKey: netWorthSummaryQueryKey });
       toast.success("Updated");
     },
   });
@@ -250,26 +190,10 @@ export function useNetWorthItems() {
     mutationFn: (id: string) => apiFetch(`/liabilities/${id}`, { method: "DELETE" }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["nw-liabilities"] });
+      qc.invalidateQueries({ queryKey: netWorthSummaryQueryKey });
       toast.success("Liability removed");
     },
   });
-
-  // Debounced snapshot save
-  const saveSnapshot = useCallback((totalAssetsUsd: number, totalLiabilitiesUsd: number) => {
-    if (snapshotTimerRef.current) clearTimeout(snapshotTimerRef.current);
-    snapshotTimerRef.current = setTimeout(() => {
-      apiFetch("/client/networth/snapshot", {
-        method: "POST",
-        body: JSON.stringify({
-          totalAssetsUsd,
-          totalLiabilitiesUsd,
-          netWorthUsd: totalAssetsUsd - totalLiabilitiesUsd,
-        }),
-      }).then(() => {
-        qc.invalidateQueries({ queryKey: ["nw-snapshots"] });
-      }).catch(() => {});
-    }, 5000);
-  }, [qc]);
 
   return {
     manualAssets,
@@ -283,7 +207,5 @@ export function useNetWorthItems() {
     updateLiability: (id: string, data: Parameters<typeof updateLiabMutation.mutateAsync>[0]["data"]) =>
       updateLiabMutation.mutateAsync({ id, data }),
     deleteLiability: deleteLiabMutation.mutateAsync,
-    saveSnapshot,
-    rates,
   };
 }

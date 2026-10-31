@@ -1,7 +1,9 @@
 import { Router, type IRouter } from "express";
 import { eq, and, desc } from "drizzle-orm";
 import { db, assetsTable, liabilitiesTable, netWorthSnapshotsTable } from "@workspace/db";
-import { requireAuth, requireRole, requireAdvisorOwnsLead } from "../middlewares/requireAuth";
+import { ClientGetNetWorthSummaryResponse } from "@workspace/api-zod";
+import { requireAuth, requireRole, requireAdvisorOwnsClient, requireAdvisorOwnsLead } from "../middlewares/requireAuth";
+import { computeNetWorth } from "../lib/netWorthService";
 
 const router: IRouter = Router();
 
@@ -141,43 +143,28 @@ router.get("/client/networth/snapshots", requireAuth, async (req, res): Promise<
   res.json(rows.reverse()); // return ASC for charting
 });
 
-router.post("/client/networth/snapshot", requireAuth, async (req, res): Promise<void> => {
+router.get("/client/networth/summary", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
-  const { totalAssetsUsd, totalLiabilitiesUsd, netWorthUsd, notes } = req.body;
-  if (totalAssetsUsd == null || totalLiabilitiesUsd == null || netWorthUsd == null) {
-    res.status(400).json({ error: "Missing required fields" }); return;
-  }
-  const today = new Date().toISOString().slice(0, 10);
-  const existing = await db.select({ id: netWorthSnapshotsTable.id })
-    .from(netWorthSnapshotsTable)
-    .where(and(
-      eq(netWorthSnapshotsTable.userId, userId),
-      eq(netWorthSnapshotsTable.snapshotDate, today)
-    ))
-    .limit(1);
+  const summary = await computeNetWorth(userId, { currency: "USD" });
+  ClientGetNetWorthSummaryResponse.parse(summary);
+  res.json(summary);
+});
 
-  const values = {
-    userId,
-    snapshotDate: today,
-    totalAssetsUsd: String(totalAssetsUsd),
-    totalLiabilitiesUsd: String(totalLiabilitiesUsd),
-    netWorthUsd: String(netWorthUsd),
-    notes: notes ?? null,
-    createdBy: "client",
-  };
-  const [row] = await db.insert(netWorthSnapshotsTable).values(values)
-    .onConflictDoUpdate({
-      target: [netWorthSnapshotsTable.userId, netWorthSnapshotsTable.snapshotDate],
-      set: {
-      totalAssetsUsd: String(totalAssetsUsd),
-      totalLiabilitiesUsd: String(totalLiabilitiesUsd),
-      netWorthUsd: String(netWorthUsd),
-      notes: notes ?? null,
-        createdBy: "client",
-      },
-    })
-    .returning();
-  res.status(existing.length > 0 ? 200 : 201).json(row);
+router.get(
+  "/advisor/clients/:id/networth/summary",
+  requireAuth,
+  requireRole("advisor", "super_admin"),
+  requireAdvisorOwnsClient("id"),
+  async (req, res): Promise<void> => {
+    const userId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const summary = await computeNetWorth(userId, { currency: "USD" });
+    ClientGetNetWorthSummaryResponse.parse(summary);
+    res.json(summary);
+  },
+);
+
+router.post("/client/networth/snapshot", requireAuth, (_req, res): void => {
+  res.status(410).json({ error: "Net worth snapshots are server-managed." });
 });
 
 // Advisor read-only view of a lead's net worth (manually-entered assets and

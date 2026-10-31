@@ -13,6 +13,56 @@ export interface Error {
   error: string;
 }
 
+export type NetWorthItemSource =
+  (typeof NetWorthItemSource)[keyof typeof NetWorthItemSource];
+
+export const NetWorthItemSource = {
+  holding: "holding",
+  advised_plan: "advised_plan",
+  asset: "asset",
+  liability: "liability",
+  mortgage: "mortgage",
+} as const;
+
+export type NetWorthItemCurrency =
+  (typeof NetWorthItemCurrency)[keyof typeof NetWorthItemCurrency];
+
+export const NetWorthItemCurrency = {
+  USD: "USD",
+} as const;
+
+export interface NetWorthItem {
+  source: NetWorthItemSource;
+  id: string;
+  label: string;
+  category: string;
+  value: number;
+  currency: NetWorthItemCurrency;
+}
+
+export interface NetWorthPortfolio {
+  selfManaged: number;
+  advised: number;
+  total: number;
+}
+
+export type NetWorthSummaryCurrency =
+  (typeof NetWorthSummaryCurrency)[keyof typeof NetWorthSummaryCurrency];
+
+export const NetWorthSummaryCurrency = {
+  USD: "USD",
+} as const;
+
+export interface NetWorthSummary {
+  asOf: string;
+  currency: NetWorthSummaryCurrency;
+  totalAssets: number;
+  totalLiabilities: number;
+  netWorth: number;
+  portfolio: NetWorthPortfolio;
+  items: NetWorthItem[];
+}
+
 export interface Profile {
   id: string;
   email: string;
@@ -516,6 +566,8 @@ export interface AdvisorClient {
   /** @nullable */
   advisorId?: string | null;
   createdAt: string;
+  portfolioValue: number;
+  netWorth: number;
 }
 
 export interface AdminUpdateUserBody {

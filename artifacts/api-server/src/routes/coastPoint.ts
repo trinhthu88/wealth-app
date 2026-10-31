@@ -3,6 +3,7 @@ import { eq, and, inArray } from "drizzle-orm";
 import { db, financialGoalsTable } from "@workspace/db";
 import { requireAuth } from "../middlewares/requireAuth";
 import { resolveBlendedRate } from "../lib/blendedRate";
+import { computeNetWorth } from "../lib/netWorthService";
 import { solveCoastPoint } from "@workspace/goal-math";
 
 const router: IRouter = Router();
@@ -49,7 +50,11 @@ router.get("/client/plan/coast-point", requireAuth, async (req, res): Promise<vo
     return;
   }
 
-  const { ratePct, totalValue } = await resolveBlendedRate(userId);
+  const [{ ratePct }, netWorth] = await Promise.all([
+    resolveBlendedRate(userId),
+    computeNetWorth(userId, { currency: "USD" }),
+  ]);
+  const totalValue = netWorth.portfolio.total;
   const monthlyContribution = parseFloat(goal.monthlyContribution ?? "0") || 0;
 
   const base = solveCoastPoint({

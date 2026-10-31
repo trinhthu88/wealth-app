@@ -9,7 +9,7 @@ import {
 } from "@workspace/db";
 import { requireAuth } from "../middlewares/requireAuth";
 import { computeCurrentBreakdown, resolveHoldingValueUsd } from "../lib/goalProgressSnapshot";
-import { resolveBlendedRate } from "../lib/blendedRate";
+import { computeNetWorth, TICKER_BASED_TYPES } from "../lib/netWorthService";
 import { computeGoalProgress } from "@workspace/goal-math";
 import { SOL_SYSTEM_PROMPT } from "../lib/solPersona";
 
@@ -34,24 +34,16 @@ const MAX_TOOL_TURNS = 5;
 
 // Mirrors blendedRate.ts's own local copy of this set — see that file's note
 // on why it isn't shared as a single export.
-const TICKER_BASED_TYPES = new Set(["stock_etf", "etf", "mutual_fund", "commodity", "bond"]);
-
 // ── Tools — each wraps an existing calculation/query, never re-derives one ──
 
-async function toolGetNetWorthSummary(userId: string) {
-  const [assets, liabilities, blended] = await Promise.all([
-    db.select().from(assetsTable).where(eq(assetsTable.userId, userId)),
-    db.select().from(liabilitiesTable).where(eq(liabilitiesTable.userId, userId)),
-    resolveBlendedRate(userId),
-  ]);
-  const totalAssets = assets.reduce((s, a) => s + (parseFloat(a.valueUsd ?? "0") || 0), 0);
-  const totalLiabilities = liabilities.reduce((s, l) => s + (parseFloat(l.balanceUsd ?? "0") || 0), 0);
-  const portfolioValue = blended.totalValue;
+export async function toolGetNetWorthSummary(userId: string) {
+  const summary = await computeNetWorth(userId, { currency: "USD" });
   return {
-    totalAssets: Math.round(totalAssets),
-    totalLiabilities: Math.round(totalLiabilities),
-    portfolioValue: Math.round(portfolioValue),
-    netWorth: Math.round(totalAssets + portfolioValue - totalLiabilities),
+    ...summary,
+    totalAssets: Math.round(summary.totalAssets),
+    totalLiabilities: Math.round(summary.totalLiabilities),
+    portfolioValue: Math.round(summary.portfolio.total),
+    netWorth: Math.round(summary.netWorth),
   };
 }
 

@@ -45,6 +45,7 @@ import type {
   Lead,
   Liability,
   Message,
+  NetWorthSummary,
   Notification,
   PathwayStep,
   PlanMilestone,
@@ -4581,6 +4582,241 @@ export const useAdminUpdateUser = <
 };
 
 /**
+ * @summary Get the current server-computed net worth
+ */
+export const getClientGetNetWorthSummaryUrl = () => {
+  return `/api/client/networth/summary`;
+};
+
+export const clientGetNetWorthSummary = async (
+  options?: RequestInit,
+): Promise<NetWorthSummary> => {
+  return customFetch<NetWorthSummary>(getClientGetNetWorthSummaryUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getClientGetNetWorthSummaryQueryKey = () => {
+  return [`/api/client/networth/summary`] as const;
+};
+
+export const getClientGetNetWorthSummaryQueryOptions = <
+  TData = Awaited<ReturnType<typeof clientGetNetWorthSummary>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof clientGetNetWorthSummary>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getClientGetNetWorthSummaryQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof clientGetNetWorthSummary>>
+  > = ({ signal }) => clientGetNetWorthSummary({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof clientGetNetWorthSummary>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ClientGetNetWorthSummaryQueryResult = NonNullable<
+  Awaited<ReturnType<typeof clientGetNetWorthSummary>>
+>;
+export type ClientGetNetWorthSummaryQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get the current server-computed net worth
+ */
+
+export function useClientGetNetWorthSummary<
+  TData = Awaited<ReturnType<typeof clientGetNetWorthSummary>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof clientGetNetWorthSummary>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getClientGetNetWorthSummaryQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get the dashboard net-worth summary
+ */
+export const getClientGetDashboardNetWorthUrl = () => {
+  return `/api/client/dashboard/networth`;
+};
+
+export const clientGetDashboardNetWorth = async (
+  options?: RequestInit,
+): Promise<NetWorthSummary> => {
+  return customFetch<NetWorthSummary>(getClientGetDashboardNetWorthUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getClientGetDashboardNetWorthQueryKey = () => {
+  return [`/api/client/dashboard/networth`] as const;
+};
+
+export const getClientGetDashboardNetWorthQueryOptions = <
+  TData = Awaited<ReturnType<typeof clientGetDashboardNetWorth>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof clientGetDashboardNetWorth>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getClientGetDashboardNetWorthQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof clientGetDashboardNetWorth>>
+  > = ({ signal }) => clientGetDashboardNetWorth({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof clientGetDashboardNetWorth>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ClientGetDashboardNetWorthQueryResult = NonNullable<
+  Awaited<ReturnType<typeof clientGetDashboardNetWorth>>
+>;
+export type ClientGetDashboardNetWorthQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get the dashboard net-worth summary
+ */
+
+export function useClientGetDashboardNetWorth<
+  TData = Awaited<ReturnType<typeof clientGetDashboardNetWorth>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof clientGetDashboardNetWorth>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getClientGetDashboardNetWorthQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @deprecated
+ * @summary Deprecated browser snapshot write
+ */
+export const getClientRejectNetWorthSnapshotUrl = () => {
+  return `/api/client/networth/snapshot`;
+};
+
+export const clientRejectNetWorthSnapshot = async (
+  options?: RequestInit,
+): Promise<unknown> => {
+  return customFetch<unknown>(getClientRejectNetWorthSnapshotUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getClientRejectNetWorthSnapshotMutationOptions = <
+  TError = ErrorType<Error>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof clientRejectNetWorthSnapshot>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof clientRejectNetWorthSnapshot>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["clientRejectNetWorthSnapshot"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof clientRejectNetWorthSnapshot>>,
+    void
+  > = () => {
+    return clientRejectNetWorthSnapshot(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ClientRejectNetWorthSnapshotMutationResult = NonNullable<
+  Awaited<ReturnType<typeof clientRejectNetWorthSnapshot>>
+>;
+
+export type ClientRejectNetWorthSnapshotMutationError = ErrorType<Error>;
+
+/**
+ * @deprecated
+ * @summary Deprecated browser snapshot write
+ */
+export const useClientRejectNetWorthSnapshot = <
+  TError = ErrorType<Error>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof clientRejectNetWorthSnapshot>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof clientRejectNetWorthSnapshot>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(getClientRejectNetWorthSnapshotMutationOptions(options));
+};
+
+/**
  * @summary List clients assigned to advisor
  */
 export const getAdvisorListClientsUrl = () => {
@@ -4647,6 +4883,101 @@ export function useAdvisorListClients<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getAdvisorListClientsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get an assigned client's current net-worth summary
+ */
+export const getAdvisorGetClientNetWorthSummaryUrl = (id: string) => {
+  return `/api/advisor/clients/${id}/networth/summary`;
+};
+
+export const advisorGetClientNetWorthSummary = async (
+  id: string,
+  options?: RequestInit,
+): Promise<NetWorthSummary> => {
+  return customFetch<NetWorthSummary>(
+    getAdvisorGetClientNetWorthSummaryUrl(id),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getAdvisorGetClientNetWorthSummaryQueryKey = (id: string) => {
+  return [`/api/advisor/clients/${id}/networth/summary`] as const;
+};
+
+export const getAdvisorGetClientNetWorthSummaryQueryOptions = <
+  TData = Awaited<ReturnType<typeof advisorGetClientNetWorthSummary>>,
+  TError = ErrorType<Error>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof advisorGetClientNetWorthSummary>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getAdvisorGetClientNetWorthSummaryQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof advisorGetClientNetWorthSummary>>
+  > = ({ signal }) =>
+    advisorGetClientNetWorthSummary(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof advisorGetClientNetWorthSummary>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type AdvisorGetClientNetWorthSummaryQueryResult = NonNullable<
+  Awaited<ReturnType<typeof advisorGetClientNetWorthSummary>>
+>;
+export type AdvisorGetClientNetWorthSummaryQueryError = ErrorType<Error>;
+
+/**
+ * @summary Get an assigned client's current net-worth summary
+ */
+
+export function useAdvisorGetClientNetWorthSummary<
+  TData = Awaited<ReturnType<typeof advisorGetClientNetWorthSummary>>,
+  TError = ErrorType<Error>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof advisorGetClientNetWorthSummary>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getAdvisorGetClientNetWorthSummaryQueryOptions(
+    id,
+    options,
+  );
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

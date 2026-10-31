@@ -1,12 +1,13 @@
 import { Router, type IRouter } from "express";
 import { eq, inArray, desc } from "drizzle-orm";
 import {
-  db, profilesTable, clientProfilesTable, clientPackagesTable, portfolioSnapshotsTable,
-  assetClassBenchmarksTable, advisedStrategyReturnsTable, advisedPlansTable,
+  db, profilesTable, clientProfilesTable, assetClassBenchmarksTable,
+  advisedStrategyReturnsTable, advisedPlansTable,
   roleSchema, clientStatusSchema,
 } from "@workspace/db";
 import { requireAuth, requireRole } from "../middlewares/requireAuth";
 import { createUserWithProfile } from "../lib/createUserWithProfile";
+import { computeNetWorth } from "../lib/netWorthService";
 
 const router: IRouter = Router();
 const adminGuard = [requireAuth, requireRole("super_admin")];
@@ -113,27 +114,8 @@ router.get("/admin/clients", ...adminGuard, async (req, res): Promise<void> => {
     .where(eq(profilesTable.role, "investment_client"))
     .orderBy(desc(profilesTable.createdAt));
 
-  // Get all packages for these clients
   const clientIds = clients.map(c => c.id);
   if (clientIds.length === 0) { res.json([]); return; }
-
-  const packages = await db.select({
-    userId: clientPackagesTable.userId,
-    status: clientPackagesTable.status,
-    id: clientPackagesTable.id,
-  }).from(clientPackagesTable).where(inArray(clientPackagesTable.userId, clientIds));
-
-  // Get latest snapshot per package
-  const pkgIds = packages.map(p => p.id);
-  const snapshots = pkgIds.length > 0
-    ? await db.select({
-        clientPackageId: portfolioSnapshotsTable.clientPackageId,
-        totalValueUsd: portfolioSnapshotsTable.totalValueUsd,
-        snapshotDate: portfolioSnapshotsTable.snapshotDate,
-      }).from(portfolioSnapshotsTable)
-        .where(inArray(portfolioSnapshotsTable.clientPackageId, pkgIds))
-        .orderBy(desc(portfolioSnapshotsTable.snapshotDate))
-    : [];
 
   // Get advisors for name lookup
   const advisorIds = [...new Set(clients.map(c => c.advisorId).filter(Boolean) as string[])];
@@ -143,30 +125,27 @@ router.get("/admin/clients", ...adminGuard, async (req, res): Promise<void> => {
     : [];
   const advisorMap = Object.fromEntries(advisors.map(a => [a.id, a.fullName ?? a.email]));
 
-  // Build latest snapshot map per package
-  const latestSnap: Record<string, number> = {};
-  for (const s of snapshots) {
-    if (!latestSnap[s.clientPackageId]) {
-      latestSnap[s.clientPackageId] = parseFloat(s.totalValueUsd as string);
-    }
-  }
-
   // advised_plans, not client_packages, is what an advisor can actually create
   // for a client now (see client-detail.tsx's Packages-tab removal) — "plans"/
   // "active plans" here reflect that going-forward model. inforce is the
   // advised_plans equivalent of a package's "active" status.
   const plans = await db.select({ userId: advisedPlansTable.userId, status: advisedPlansTable.status })
     .from(advisedPlansTable).where(inArray(advisedPlansTable.userId, clientIds));
+  const netWorthByClient = new Map(await Promise.all(clients.map(async (client) => {
+    const summary = await computeNetWorth(client.id, { currency: "USD" });
+    return [client.id, summary] as const;
+  })));
 
   const result = clients.map(c => {
-    const clientPkgs = packages.filter(p => p.userId === c.id);
-    const portfolioValue = clientPkgs.reduce((sum, p) => sum + (latestSnap[p.id] ?? 0), 0);
+    const summary = netWorthByClient.get(c.id);
+    const portfolioValue = summary?.portfolio.total ?? 0;
     const clientPlans = plans.filter(p => p.userId === c.id);
     const activePlans = clientPlans.filter(p => p.status === "inforce");
     return {
       ...c,
       advisorName: c.advisorId ? advisorMap[c.advisorId] ?? null : null,
       portfolioValue,
+      netWorth: summary?.netWorth ?? 0,
       plansCount: clientPlans.length,
       activePlans: activePlans.length,
     };

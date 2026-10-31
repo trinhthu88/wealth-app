@@ -1,7 +1,8 @@
 import { Router, type IRouter } from "express";
 import { eq, inArray, desc } from "drizzle-orm";
-import { db, clientProfilesTable, profilesTable, clientPackagesTable, portfolioSnapshotsTable, advisedPlansTable } from "@workspace/db";
+import { db, clientProfilesTable, profilesTable, advisedPlansTable } from "@workspace/db";
 import { requireAuth, requireRole, requireAdvisorOwnsClient } from "../middlewares/requireAuth";
+import { computeNetWorth } from "../lib/netWorthService";
 
 const router: IRouter = Router();
 
@@ -104,40 +105,21 @@ router.get("/advisor/clients", ...advisorGuard, async (req, res): Promise<void> 
   const clientIds = clients.map(c => c.id);
   if (clientIds.length === 0) { res.json([]); return; }
 
-  const packages = await db.select({
-    userId: clientPackagesTable.userId,
-    id: clientPackagesTable.id,
-    status: clientPackagesTable.status,
-  }).from(clientPackagesTable).where(inArray(clientPackagesTable.userId, clientIds));
-
-  const pkgIds = packages.map(p => p.id);
-  const snapshots = pkgIds.length > 0
-    ? await db.select({
-        clientPackageId: portfolioSnapshotsTable.clientPackageId,
-        totalValueUsd: portfolioSnapshotsTable.totalValueUsd,
-      }).from(portfolioSnapshotsTable)
-        .where(inArray(portfolioSnapshotsTable.clientPackageId, pkgIds))
-        .orderBy(desc(portfolioSnapshotsTable.snapshotDate))
-    : [];
-
-  const latestSnap: Record<string, number> = {};
-  for (const s of snapshots) {
-    if (!latestSnap[s.clientPackageId]) {
-      latestSnap[s.clientPackageId] = parseFloat(s.totalValueUsd as string);
-    }
-  }
-
   // advised_plans, not client_packages, is what an advisor can actually create
   // for a client now (see client-detail.tsx's Packages-tab removal) — the
   // client-list "plans" count reflects that going-forward model.
   const plans = await db.select({ userId: advisedPlansTable.userId })
     .from(advisedPlansTable).where(inArray(advisedPlansTable.userId, clientIds));
 
+  const netWorthByClient = new Map(await Promise.all(clients.map(async (client) => {
+    const summary = await computeNetWorth(client.id, { currency: "USD" });
+    return [client.id, summary] as const;
+  })));
   const result = clients.map(c => {
-    const clientPkgs = packages.filter(p => p.userId === c.id);
-    const portfolioValue = clientPkgs.reduce((sum, p) => sum + (latestSnap[p.id] ?? 0), 0);
+    const summary = netWorthByClient.get(c.id);
+    const portfolioValue = summary?.portfolio.total ?? 0;
     const plansCount = plans.filter(p => p.userId === c.id).length;
-    return { ...c, portfolioValue, plansCount };
+    return { ...c, portfolioValue, netWorth: summary?.netWorth ?? 0, plansCount };
   });
 
   res.json(result);

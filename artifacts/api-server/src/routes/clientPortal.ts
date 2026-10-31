@@ -4,7 +4,7 @@ import {
   db, profilesTable, clientProfilesTable,
   advisedPlansTable, advisedPlanStatementsTable, advisedPlanHoldingsTable,
   clientHoldingsTable, clientHoldingTransactionsTable, clientBudgetMonthsTable, advisedPlanTransactionsTable,
-  scenarioRunsTable, financialGoalsTable, netWorthSnapshotsTable, assetsTable, liabilitiesTable,
+  scenarioRunsTable, financialGoalsTable, assetsTable, liabilitiesTable,
   financialPlansTable, planMilestonesTable, milestoneCommentsTable,
   conversationsTable, messagesTable, advisedStrategyReturnsTable,
   advisedPlanStatusSchema,
@@ -13,6 +13,7 @@ import { requireAuth, requireRole, requireAdvisorOwnsClient, requireAdvisorOwnsL
 import { resolveHoldingBenchmark, getDeviationWarning } from "../lib/benchmarks";
 import { recordHoldingTransaction, upsertMonthlyHoldingLedgerEntry, getOrCreateDefaultCashHolding } from "../lib/holdingTransactions";
 import { syncAdvisedPlanContributionsToBudget } from "../lib/advisedPlanBudgetSync";
+import { computeNetWorth } from "../lib/netWorthService";
 
 const router: IRouter = Router();
 
@@ -1032,38 +1033,7 @@ router.patch("/client/scenarios/:id/status", requireAuth, async (req, res): Prom
 // ── Dashboard: net worth summary ─────────────────────────────────────────
 router.get("/client/dashboard/networth", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
-
-  // Try latest snapshot first
-  const [snapshot] = await db.select().from(netWorthSnapshotsTable)
-    .where(eq(netWorthSnapshotsTable.userId, userId))
-    .orderBy(desc(netWorthSnapshotsTable.snapshotDate))
-    .limit(1);
-
-  if (snapshot) {
-    res.json({
-      totalAssets: parseFloat(snapshot.totalAssetsUsd as string) || 0,
-      totalLiabilities: parseFloat(snapshot.totalLiabilitiesUsd as string) || 0,
-      netWorth: parseFloat(snapshot.netWorthUsd as string) || 0,
-      source: "snapshot",
-    });
-    return;
-  }
-
-  // Fall back to assets/liabilities tables
-  const assets = await db.select({ value: assetsTable.valueUsd }).from(assetsTable)
-    .where(eq(assetsTable.userId, userId));
-  const liabilities = await db.select({ value: liabilitiesTable.balanceUsd }).from(liabilitiesTable)
-    .where(eq(liabilitiesTable.userId, userId));
-
-  const totalAssets = assets.reduce((s, a) => s + (parseFloat(a.value as string) || 0), 0);
-  const totalLiabilities = liabilities.reduce((s, l) => s + (parseFloat(l.value as string) || 0), 0);
-
-  res.json({
-    totalAssets,
-    totalLiabilities,
-    netWorth: totalAssets - totalLiabilities,
-    source: "computed",
-  });
+  res.json(await computeNetWorth(userId, { currency: "USD" }));
 });
 
 // ── Dashboard: advisor profile ────────────────────────────────────────────

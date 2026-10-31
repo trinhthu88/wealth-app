@@ -1021,6 +1021,46 @@ paths:
               schema:
                 $ref: "#/components/schemas/Profile"
 
+  /client/networth/summary:
+    get:
+      operationId: clientGetNetWorthSummary
+      tags: [networth]
+      summary: Get the current server-computed net worth
+      responses:
+        "200":
+          description: Current net-worth summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NetWorthSummary"
+
+  /client/dashboard/networth:
+    get:
+      operationId: clientGetDashboardNetWorth
+      tags: [networth]
+      summary: Get the dashboard net-worth summary
+      responses:
+        "200":
+          description: Current net-worth summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NetWorthSummary"
+
+  /client/networth/snapshot:
+    post:
+      operationId: clientRejectNetWorthSnapshot
+      tags: [networth]
+      deprecated: true
+      summary: Deprecated browser snapshot write
+      responses:
+        "410":
+          description: Snapshots are server-managed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
   /advisor/clients:
     get:
       operationId: advisorListClients
@@ -1035,6 +1075,31 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/AdvisorClient"
+
+  /advisor/clients/{id}/networth/summary:
+    get:
+      operationId: advisorGetClientNetWorthSummary
+      tags: [networth]
+      summary: Get an assigned client's current net-worth summary
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Current net-worth summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NetWorthSummary"
+        "403":
+          description: Client is not assigned to this advisor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
   /advisor/clients/{id}/portfolio:
     get:
@@ -1230,6 +1295,59 @@ components:
         error:
           type: string
       required: [error]
+
+    NetWorthItem:
+      type: object
+      properties:
+        source:
+          type: string
+          enum: [holding, advised_plan, asset, liability, mortgage]
+        id:
+          type: string
+        label:
+          type: string
+        category:
+          type: string
+        value:
+          type: number
+        currency:
+          type: string
+          enum: [USD]
+      required: [source, id, label, category, value, currency]
+
+    NetWorthPortfolio:
+      type: object
+      properties:
+        selfManaged:
+          type: number
+        advised:
+          type: number
+        total:
+          type: number
+      required: [selfManaged, advised, total]
+
+    NetWorthSummary:
+      type: object
+      properties:
+        asOf:
+          type: string
+          format: date
+        currency:
+          type: string
+          enum: [USD]
+        totalAssets:
+          type: number
+        totalLiabilities:
+          type: number
+        netWorth:
+          type: number
+        portfolio:
+          $ref: "#/components/schemas/NetWorthPortfolio"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/NetWorthItem"
+      required: [asOf, currency, totalAssets, totalLiabilities, netWorth, portfolio, items]
 
     Profile:
       type: object
@@ -2031,7 +2149,11 @@ components:
           type: ["string", "null"]
         createdAt:
           type: string
-      required: [id, email, role, createdAt]
+        portfolioValue:
+          type: number
+        netWorth:
+          type: number
+      required: [id, email, role, createdAt, portfolioValue, netWorth]
 
     AdminUpdateUserBody:
       type: object

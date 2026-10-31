@@ -7,7 +7,7 @@
 // ✗ BANNED:  Inline style={{ color: '#hexcode' }} — use Tailwind tokens only
 // ✗ BANNED:  Double bottom nav — AppShell is the ONLY nav
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
@@ -185,20 +185,6 @@ export default function FreeDashboard() {
     ? totalAssetsInDB
     : (projectedSavings + projectedInvestments + accumulatedCash);
   const netWorth = (effectiveTotalAssets > 0 || totalLiabilities > 0) ? effectiveTotalAssets - totalLiabilities : null;
-
-  // Record today's net worth so a monthly trend accumulates for the delta card below.
-  const snapshotTaken = useRef(false);
-  const saveSnapshot = useMutation({
-    mutationFn: (body: { totalAssetsUsd: number; totalLiabilitiesUsd: number; netWorthUsd: number }) =>
-      apiFetch("/client/networth/snapshot", { method: "POST", body: JSON.stringify(body) }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["nw-snapshots"] }),
-  });
-  useEffect(() => {
-    if (snapshotTaken.current || netWorth === null) return;
-    snapshotTaken.current = true;
-    saveSnapshot.mutate({ totalAssetsUsd: effectiveTotalAssets, totalLiabilitiesUsd: totalLiabilities, netWorthUsd: netWorth });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [netWorth]);
 
   const netWorthDelta = nwSnapshots.length >= 2
     ? parseFloat(nwSnapshots[nwSnapshots.length - 1].netWorthUsd) - parseFloat(nwSnapshots[nwSnapshots.length - 2].netWorthUsd)

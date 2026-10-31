@@ -2,11 +2,11 @@ import { Router, type IRouter } from "express";
 import { eq, and, desc } from "drizzle-orm";
 import {
   db, healthScoresTable, clientBudgetMonthsTable, clientHoldingsTable,
-  advisedPlansTable, financialGoalsTable, assetsTable, liabilitiesTable, profilesTable,
+  advisedPlansTable, financialGoalsTable, profilesTable,
 } from "@workspace/db";
 import { requireAuth } from "../middlewares/requireAuth";
-import { resolveBlendedRate } from "../lib/blendedRate";
 import { computeCurrentBreakdown } from "../lib/goalProgressSnapshot";
+import { computeNetWorth } from "../lib/netWorthService";
 
 const router: IRouter = Router();
 
@@ -58,7 +58,7 @@ router.get("/client/health-score", requireAuth, async (req, res): Promise<void> 
     .limit(1);
   if (existingToday?.details) { res.json({ ...existingToday, gated: false }); return; }
 
-  const [budgetMonths, holdings, plans, goals, assets, liabilities] = await Promise.all([
+  const [budgetMonths, holdings, plans, goals, netWorth] = await Promise.all([
     db.select().from(clientBudgetMonthsTable)
       .where(eq(clientBudgetMonthsTable.userId, userId))
       .orderBy(desc(clientBudgetMonthsTable.month)).limit(3),
@@ -66,8 +66,7 @@ router.get("/client/health-score", requireAuth, async (req, res): Promise<void> 
       .where(and(eq(clientHoldingsTable.userId, userId), eq(clientHoldingsTable.isActive, true))),
     db.select().from(advisedPlansTable).where(eq(advisedPlansTable.userId, userId)),
     db.select().from(financialGoalsTable).where(eq(financialGoalsTable.userId, userId)),
-    db.select().from(assetsTable).where(eq(assetsTable.userId, userId)),
-    db.select().from(liabilitiesTable).where(eq(liabilitiesTable.userId, userId)),
+    computeNetWorth(userId, { currency: "USD" }),
   ]);
 
   const activeGoals = goals.filter(g => g.status !== "completed" && g.status !== "cancelled");
@@ -80,7 +79,7 @@ router.get("/client/health-score", requireAuth, async (req, res): Promise<void> 
 
   // ── Investment Growth ──────────────────────────────────────────────────
   const inforcePlans = plans.filter(p => p.status === "inforce");
-  const { totalValue: currentValue } = await resolveBlendedRate(userId);
+  const currentValue = netWorth.portfolio.total;
   const totalNetContribution = inforcePlans.reduce((s, p) => s + (parseFloat(p.latestNetContribution ?? "0") || 0), 0)
     + holdings.reduce((s, h) => s + holdingCostBasis(h), 0);
   const investmentGrowth = totalNetContribution > 0
@@ -99,8 +98,8 @@ router.get("/client/health-score", requireAuth, async (req, res): Promise<void> 
   }
 
   // ── Debt-to-Asset Ratio ────────────────────────────────────────────────
-  const totalAssets = currentValue + assets.reduce((s, a) => s + (parseFloat(a.valueUsd ?? "0") || 0), 0);
-  const totalLiabilities = liabilities.reduce((s, l) => s + (parseFloat(l.balanceUsd ?? "0") || 0), 0);
+  const totalAssets = netWorth.totalAssets;
+  const totalLiabilities = netWorth.totalLiabilities;
   const debtToAsset = totalAssets > 0 ? clamp(100 - (totalLiabilities / totalAssets) * 100) : 100;
 
   // ── Budget Surplus ─────────────────────────────────────────────────────
