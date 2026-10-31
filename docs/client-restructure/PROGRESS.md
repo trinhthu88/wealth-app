@@ -252,7 +252,7 @@ Audit counts / backfills:
 - Before: `client_profiles` 4 rows, 4 assigned; backup row count 4.
 - After backfill and after the test suite: `client_profiles` 4 rows; `advisor_assignments` 4 rows, 4 open; 0 duplicate open-client groups; 0 assigned clients missing matching open history; partial unique index present.
 Tests: `pnpm run typecheck` passed; `pnpm --filter @workspace/api-server test` passed (21 files, 151 tests).
-Commit: pending local commit with `[restructure P4]`.
+Commit: `c3c68bf` — `[restructure P4] centralize advisor ownership and assignment history`.
 Files changed in P4:
 - `artifacts/api-server/src/lib/createUserWithProfile.ts`
 - `artifacts/api-server/src/lib/currentAdvisor.ts`
