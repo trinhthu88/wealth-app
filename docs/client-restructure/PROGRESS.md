@@ -1,7 +1,7 @@
 # Restructure progress
 
 ## Current phase
-P2.5 — Align advised-plan statement uniqueness — in progress
+P2.5 — Align advised-plan statement uniqueness — complete; normal schema push blocked by unrelated truncation warning
 
 ## Baseline (Phase 0)
 - typecheck: passed (`pnpm run typecheck`; all libraries and leaf workspaces completed).
@@ -98,7 +98,7 @@ Files changed:
 
 ## Blocked / questions for the product owner
 - P1 CHECK constraints for `onboarding_stage` and `first_focus` are deferred until P5 introduces their columns; their shared enums are defined in P1.
-- `pnpm --filter @workspace/db run push` remains blocked by pre-existing drift: Drizzle proposed truncating 6 `advised_plan_statements` rows to add a unique constraint. The safe “No” option was selected. Do not rerun or accept a truncation prompt; targeted P1 changes have been applied without touching that table.
+- P2.5 schema push is blocked by a `client_holding_transactions` warning. Exact prompt: `You're about to add client_holding_transactions_holding_id_source_month_source_unique unique constraint to the table, which contains 1 items. If this statement fails, you will receive an error from the database. Do you want to truncate client_holding_transactions table?` Choices: `No, add the constraint without truncating the table` / `Yes, truncate the table`. The safe No choice remained highlighted; the command timed out before proceeding. No truncate option was accepted and no schema/data change was observed. A read-only recheck found 1 row, 0 duplicate groups/excess rows for `(holding_id, source_month, source)`, and an existing validated UNIQUE constraint `client_holding_transactions_holding_id_source_month_source_uniq` on that key. Do not accept this prompt or rerun push as part of Phases 3–4.
 
 ### P2 — Net worth service
 Plan:
@@ -169,6 +169,17 @@ Observed before schema change:
 - The table contains 6 rows; duplicate key audit on `(advised_plan_id, period_start, period_end)` found 0 duplicate groups and 0 excess rows.
 - PostgreSQL reports an existing validated UNIQUE constraint named `advised_plan_statements_advised_plan_id_period_start_period_end` (`contype = 'u'`), backed by a valid unique btree index of the same name on the expected columns.
 - Drizzle's expected literal name is 70 characters, while PostgreSQL's `max_identifier_length` is 63; truncating the expected name yields exactly the existing constraint name. It is already a UNIQUE constraint, not a standalone index, so renaming/attaching would be a no-op and could not produce a distinct 70-character database name.
+Done:
+- Made the Drizzle declaration explicit with the PostgreSQL-stored 63-character name, equivalent to PostgreSQL's truncation of the auto-generated 70-character name.
+- The first normal schema push showed the exact advised-plan prompt: `You're about to add advised_plan_statements_advised_plan_id_period_start_period_end_unique unique constraint to the table, which contains 6 items. If this statement fails, you will receive an error from the database. Do you want to truncate advised_plan_statements table?` Choices: `No, add the constraint without truncating the table` / `Yes, truncate the table`. No truncation was selected; the table stayed at 6 rows.
+- After naming alignment, the second normal schema push no longer warned on `advised_plan_statements`, but stopped at the separate `client_holding_transactions` prompt recorded under Blocked. No schema push completed.
+- Requeried `advised_plan_statements`: 6 rows before/after, 0 duplicate groups/excess rows, and the same validated UNIQUE constraint/index remain present.
+Audit counts / backfills:
+- `advised_plan_statements`: 6 rows; 0 duplicate groups / 0 excess rows for `(advised_plan_id, period_start, period_end)`.
+Tests: `pnpm run typecheck` passed; `pnpm --filter @workspace/api-server test` passed (18 files, 143 tests).
+Decisions made by agent:
+- The 70-character generated identifier cannot be stored verbatim; explicitly declaring its 63-character PostgreSQL-stored form aligns Drizzle with the existing constraint without touching data.
+- Do not accept the unrelated schema-push prompt for `client_holding_transactions`; the user directed continuing with Phases 3–4 if the push still warns.
 
 ## Next agent: start here
 - Begin Phase 3 from `docs/client-restructure/MASTER_PROMPT.md`: first record the Phase 3 plan in this file, then work only on goal funding and goal status. Do not repeat Phases 0–2. Before any schema change, back up affected tables; reject and record any schema push warning about data loss, truncation, rename, or drop. Do not publish or deploy.
