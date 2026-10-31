@@ -36,6 +36,7 @@ beforeAll(async () => {
     userId: clientId,
     title: "Test Goal",
     goalType: "retirement",
+    status: "active",
   }).returning();
   goalId = goal.id;
 
@@ -43,6 +44,7 @@ beforeAll(async () => {
     userId: clientId,
     title: "Test Goal B",
     goalType: "home_purchase",
+    status: "active",
   }).returning();
   goalBId = goalB.id;
 });

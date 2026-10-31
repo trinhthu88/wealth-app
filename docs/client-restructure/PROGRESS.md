@@ -1,7 +1,7 @@
 # Restructure progress
 
 ## Current phase
-P1 — Enums, constraints, unique indexes — in progress
+P1 — Enums, constraints, unique indexes — implementation and verification complete; commit pending
 
 ## Baseline (Phase 0)
 - typecheck: passed (`pnpm run typecheck`; all libraries and leaf workspaces completed).
@@ -36,21 +36,28 @@ Plan:
 - Replace affected route status/role string validation with shared Zod enums and add supertest coverage for invalid values.
 - Run full typecheck and API tests, verify resulting constraints/indexes, record outcomes, then commit with the required P1 prefix.
 Done:
-- Fresh P1 backups exported for all nine affected tables before the first schema change; files are ignored.
+- Exported all nine affected tables to ignored backups before schema/data changes, then refreshed those backups before constraint creation and before changing the goal status default.
+- Added shared Zod enums and database CHECK constraints for profile role, client status, goal lifecycle, advised-plan status, lead status, and health-score tier.
+- Added the `health_scores.tier` column with the documented details-based backfill; added the net-worth and health-score unique constraints. The budget-month and goal-progress unique constraints already existed and were verified.
+- Mapped 24 legacy goal rows (`21 on_track`, `3 behind`) to lifecycle `active`; changed the database default from `on_track` to `active`.
+- Kept the latest row per key while deduplicating 4 excess net-worth snapshots and 27 excess health-score snapshots.
+- Updated API validators, free/client score history isolation, and daily net-worth/health-score upserts. Updated goal creation callers and fixtures to use lifecycle `active`; added invalid-status API tests.
 Audit counts / backfills:
 - Preliminary read-only audit: profiles 15 (all 4 requested roles); client_profiles 4 (all active); financial_goals 24 (21 `on_track`, 3 `behind`, both require lifecycle mapping); advised_plans 4 (all `inforce`); leads 0.
 - Preliminary duplicate-key audit: client_budget_months 0; net_worth_snapshots 4 groups (4 excess rows); health_scores 3 groups (27 excess rows when tier is derived from `details`); goal_progress_snapshots 0.
-- The live database already has the budget-month and goal-progress unique indexes; it has no unique index yet for net worth snapshots or health scores.
+- Health-score tier backfill changed 5 rows; after backfill, 3 duplicate groups/27 excess rows were removed. Net-worth deduplication removed 4 rows across 4 groups.
+- Final pre-constraint audit: zero invalid profile roles, client statuses, goal statuses, advised-plan statuses, lead statuses, or health-score tiers; zero duplicate keys for budgets, net-worth snapshots, health scores, and goal-progress snapshots.
+- Verified all six CHECK constraints and all four unique constraints in PostgreSQL; `financial_goals.status` now defaults to `active`.
 - All 24 goals have a target date, so Phase 1's legacy free-score fallback for goals without a target is not used by current rows.
-Tests: pending.
+Tests: `pnpm run typecheck` passed; `pnpm --filter @workspace/api-server test` passed (17 files, 139 tests).
 Decisions made by agent:
 - Define `onboardingStage` and `firstFocus` shared enums in P1, but defer their CHECK constraints until P5 adds the columns; neither column exists today.
 - Before deleting duplicate snapshot rows, keep the newest `created_at` row, with `id` as a deterministic tie-breaker, as required by the brief's “keep latest” rule.
-- Because the standard schema push stopped at the existing `advised_plan_statements` truncation prompt, do not rerun it; if safe to proceed, apply only P1's audited additive column/constraints with an idempotent script and leave that unrelated drift untouched.
+- The standard schema push proposed truncating 6 rows in `advised_plan_statements`; it was declined and not retried. Applied only the audited P1 additions using targeted scripts, leaving that unrelated schema drift untouched.
 
 ## Blocked / questions for the product owner
 - P1 CHECK constraints for `onboarding_stage` and `first_focus` are deferred until P5 introduces their columns; their shared enums are defined in P1.
-- `pnpm --filter @workspace/db run push` stopped at a pre-existing drift prompt: Drizzle proposed adding `advised_plan_statements_advised_plan_id_period_start_period_end_unique` on a table with 6 rows and asked whether to truncate it. The safe “No” option was selected; no schema changes occurred (verified: `health_scores.tier` is still absent). Do not rerun or accept a truncation prompt.
+- `pnpm --filter @workspace/db run push` remains blocked by pre-existing drift: Drizzle proposed truncating 6 `advised_plan_statements` rows to add a unique constraint. The safe “No” option was selected. Do not rerun or accept a truncation prompt; targeted P1 changes have been applied without touching that table.
 
 ## Next agent: start here
-- Finish the P1 audits and idempotent repairs, then add the P1 constraints and route validators; do not start P2 until P1 checks pass and its commit is recorded.
+- Finish the P1 commit, then read the complete Phase 2 section and listed callers in the master prompt. Before coding P2, add its plan to this file; implement the single server-side net-worth service and summary endpoint, move every listed consumer to it, stop browser snapshot POSTs, and add the cross-consumer seeded-client acceptance test. Do not start Phase 3.

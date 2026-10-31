@@ -33,7 +33,10 @@ router.post("/admin/users", ...adminGuard, async (req, res): Promise<void> => {
   if (parsedStatus && !parsedStatus.success) { res.status(400).json({ error: "Invalid client status" }); return; }
   const normalizedRole = parsedRole?.success ? parsedRole.data : undefined;
   const normalizedStatus = parsedStatus?.success ? parsedStatus.data : undefined;
-  const result = await createUserWithProfile({ email, password, fullName, role: normalizedRole, advisorId, riskProfile, status: normalizedStatus });
+  const result = await createUserWithProfile({
+    email, password, fullName, role: normalizedRole ?? "free_user", advisorId, riskProfile,
+    ...(normalizedStatus !== undefined ? { status: normalizedStatus } : {}),
+  });
   if (!result.ok) { res.status(result.httpStatus).json({ error: result.error }); return; }
   res.status(201).json(result.profile);
 });

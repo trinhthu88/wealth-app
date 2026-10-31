@@ -33,7 +33,7 @@ beforeAll(async () => {
     email: `lead-user-${RUN_ID}@test.local`, userId: leadUserId, status: "active", assignedAdvisorId: advisorA,
   });
   await db.insert(financialGoalsTable).values({
-    userId: leadUserId, title: "House deposit", goalType: "home_purchase",
+    userId: leadUserId, title: "House deposit", goalType: "home_purchase", status: "active",
   });
   await db.insert(assetsTable).values({
     userId: leadUserId, name: "Savings account", category: "cash", valueUsd: "5000",

@@ -39,19 +39,19 @@ beforeAll(async () => {
 
   const [offTrack] = await db.insert(financialGoalsTable).values({
     userId: clientId, title: "House deposit", goalType: "home_purchase",
-    targetAmount: "100000", currentAmount: "1000", targetDate: today, createdAt,
+    targetAmount: "100000", currentAmount: "1000", targetDate: today, createdAt, status: "active",
   }).returning();
   offTrackGoalId = offTrack.id;
 
   const [onTrack] = await db.insert(financialGoalsTable).values({
     userId: clientId, title: "Retirement", goalType: "retirement",
-    targetAmount: "100000", currentAmount: "95000", targetDate: today, createdAt,
+    targetAmount: "100000", currentAmount: "95000", targetDate: today, createdAt, status: "active",
   }).returning();
   onTrackGoalId = onTrack.id;
 
   const [recovering] = await db.insert(financialGoalsTable).values({
     userId: clientId, title: "Education fund", goalType: "education",
-    targetAmount: "100000", currentAmount: "1000", targetDate: today, createdAt,
+    targetAmount: "100000", currentAmount: "1000", targetDate: today, createdAt, status: "active",
   }).returning();
   recoveringGoalId = recovering.id;
 });

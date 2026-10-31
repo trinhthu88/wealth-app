@@ -54,7 +54,7 @@ beforeAll(async () => {
   const [goal] = await db.insert(financialGoalsTable).values({
     userId: clientId, title: "Retirement", goalType: "retire",
     targetAmount: "1000000", targetDate: tenYearsOut.toISOString().slice(0, 10),
-    monthlyContribution: "500",
+    monthlyContribution: "500", status: "active",
   }).returning();
   goalId = goal.id;
 });
@@ -117,7 +117,7 @@ describe("GET /client/plan/coast-point", () => {
     const [legacyGoal] = await db.insert(financialGoalsTable).values({
       userId: seedStyleId, title: "Retirement at 60", goalType: "retirement",
       targetAmount: "800000", targetDate: tenYearsOut.toISOString().slice(0, 10),
-      monthlyContribution: "500",
+      monthlyContribution: "500", status: "active",
     }).returning();
     try {
       const res = await request(app).get("/api/client/plan/coast-point").set(asUser(seedStyleId)).expect(200);

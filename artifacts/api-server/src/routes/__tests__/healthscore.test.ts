@@ -98,7 +98,7 @@ describe("POST /health-score", () => {
 
     // noBudgetUser: has a goal, but no budget_entries row at all (income should resolve to 0).
     await db.insert(financialGoalsTable).values({
-      userId: noBudgetUser, title: "Emergency fund", goalType: "emergency", targetAmount: "10000", currentAmount: "0",
+      userId: noBudgetUser, title: "Emergency fund", goalType: "emergency", targetAmount: "10000", currentAmount: "0", status: "active",
     });
 
     // maxedUser: everything maxed out — savings rate, goal already met, huge net worth, high growth.
@@ -114,6 +114,7 @@ describe("POST /health-score", () => {
       userId: maxedUser, title: "Already there", goalType: "wealth",
       targetAmount: "100000", currentAmount: "200000",
       targetDate: new Date(new Date().getFullYear() + 1, 0, 1).toISOString().split("T")[0],
+      status: "active",
     });
     await db.insert(assetsTable).values({
       userId: maxedUser, name: "Brokerage", category: "investment", valueUsd: "500000",
@@ -134,7 +135,7 @@ describe("POST /health-score", () => {
     const res = await request(app)
       .post("/api/health-score")
       .set(asUser(noGoalsUser))
-      .expect(200);
+      .expect(201);
     expect(res.body.goalsScore).toBe(0);
     expect(Number.isFinite(res.body.overallScore)).toBe(true);
   });
@@ -143,7 +144,7 @@ describe("POST /health-score", () => {
     const res = await request(app)
       .post("/api/health-score")
       .set(asUser(noBudgetUser))
-      .expect(200);
+      .expect(201);
     expect(res.body.savingsScore).toBe(0);
     expect(Number.isFinite(res.body.insights.effectiveSavingsRate)).toBe(true);
     expect(res.body.insights.effectiveSavingsRate).toBe(0);
@@ -153,7 +154,7 @@ describe("POST /health-score", () => {
     const res = await request(app)
       .post("/api/health-score")
       .set(asUser(maxedUser))
-      .expect(200);
+      .expect(201);
     expect(res.body.overallScore).toBeLessThanOrEqual(100);
     expect(res.body.savingsScore).toBeLessThanOrEqual(25);
     expect(res.body.goalsScore).toBeLessThanOrEqual(25);

@@ -14,6 +14,7 @@
     "migrate-client-profiles-status": "tsx ./src/migrate-client-profiles-status.ts",
     "migrate-kyc-to-documents": "tsx ./src/migrate-kyc-to-documents.ts",
     "migrate-goal-lifecycle": "tsx ./src/migrate-goal-lifecycle.ts",
+    "set-goal-lifecycle-default": "tsx ./src/set-goal-lifecycle-default.ts",
     "dedupe-net-worth-snapshots": "tsx ./src/dedupe-net-worth-snapshots.ts",
     "migrate-health-score-tier": "tsx ./src/migrate-health-score-tier.ts",
     "apply-phase1-constraints": "tsx ./src/apply-phase1-constraints.ts",

@@ -120,5 +120,8 @@ describe("GET /client/health-score", () => {
     const first = await request(app).get("/api/client/health-score").set(asUser(scoredClientId)).expect(200);
     const second = await request(app).get("/api/client/health-score").set(asUser(scoredClientId)).expect(200);
     expect(second.body.id).toBe(first.body.id);
+    expect(second.body.tier).toBe("client");
+    const rows = await db.select().from(healthScoresTable).where(eq(healthScoresTable.userId, scoredClientId));
+    expect(rows.filter(row => row.tier === "client")).toHaveLength(1);
   });
 });
