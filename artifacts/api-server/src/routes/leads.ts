@@ -97,6 +97,7 @@ function pickLeadAdvisorEditableFields(body: Record<string, unknown>): Record<st
 }
 
 router.put("/leads/:id", ...leadGuard, async (req, res): Promise<void> => {
+  const userId = (req as any).userId as string;
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const updates = pickLeadAdvisorEditableFields(req.body ?? {});
   if (updates.status !== undefined && !leadStatusSchema.safeParse(updates.status).success) {
@@ -108,7 +109,7 @@ router.put("/leads/:id", ...leadGuard, async (req, res): Promise<void> => {
   if (!lead) { res.status(404).json({ error: "Not found" }); return; }
 
   if (updates.status === "client" && lead.status !== "client") {
-    const promotion = await promoteLeadToClient(lead);
+    const promotion = await promoteLeadToClient(lead, userId);
     if (!promotion.ok) { res.status(promotion.httpStatus).json({ error: promotion.error }); return; }
   }
 
@@ -165,6 +166,7 @@ router.post("/leads/:id/convert", ...leadGuard, async (req, res): Promise<void> 
     fullName: lead.firstName,
     role: "investment_client",
     advisorId: lead.assignedAdvisorId || userId,
+    assignedBy: userId,
     riskProfile: riskProfile ?? null,
     status: "active",
   });

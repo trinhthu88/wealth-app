@@ -1,4 +1,4 @@
-import { db, profilesTable, clientProfilesTable } from "@workspace/db";
+import { db, profilesTable, clientProfilesTable, advisorAssignmentsTable } from "@workspace/db";
 
 export interface CreateUserInput {
   email: string;
@@ -6,6 +6,7 @@ export interface CreateUserInput {
   fullName?: string | null;
   role: string;
   advisorId?: string | null;
+  assignedBy?: string | null;
   riskProfile?: string | null;
   status?: string | null;
 }
@@ -21,7 +22,7 @@ export type CreateUserResult =
  * so they can't drift apart.
  */
 export async function createUserWithProfile(input: CreateUserInput): Promise<CreateUserResult> {
-  const { email, password, fullName, role, advisorId, riskProfile, status } = input;
+  const { email, password, fullName, role, advisorId, assignedBy, riskProfile, status } = input;
   if (!email || !password) return { ok: false, httpStatus: 400, error: "email and password required" };
 
   const clerkSecretKey = process.env.CLERK_SECRET_KEY;
@@ -55,24 +56,35 @@ export async function createUserWithProfile(input: CreateUserInput): Promise<Cre
 
   const clerkUser = await clerkRes.json() as { id: string };
 
-  const [profile] = await db.insert(profilesTable).values({
-    id: clerkUser.id,
-    email,
-    fullName: fullName || null,
-    role: role || "free_user",
-  }).returning();
+  const profile = await db.transaction(async (tx) => {
+    const [createdProfile] = await tx.insert(profilesTable).values({
+      id: clerkUser.id,
+      email,
+      fullName: fullName || null,
+      role: role || "free_user",
+    }).returning();
 
-  if (role === "investment_client") {
-    // client_profiles.status is account health for an already-promoted client
-    // now (active | paused | churned) — a row created here is one, so "active"
-    // is the only sensible default (see clients.ts's clientProfilesTable comment).
-    await db.insert(clientProfilesTable).values({
-      userId: clerkUser.id,
-      advisorId: advisorId || null,
-      riskProfile: riskProfile || null,
-      status: status || "active",
-    });
-  }
+    if (role === "investment_client") {
+      // client_profiles.status is account health for an already-promoted client
+      // now (active | paused | churned) — a row created here is one, so "active"
+      // is the only sensible default (see clients.ts's clientProfilesTable comment).
+      const assignedAdvisorId = advisorId || null;
+      await tx.insert(clientProfilesTable).values({
+        userId: clerkUser.id,
+        advisorId: assignedAdvisorId,
+        riskProfile: riskProfile || null,
+        status: status || "active",
+      });
+      if (assignedAdvisorId) {
+        await tx.insert(advisorAssignmentsTable).values({
+          clientUserId: clerkUser.id,
+          advisorId: assignedAdvisorId,
+          assignedBy: assignedBy ?? null,
+        });
+      }
+    }
+    return createdProfile;
+  });
 
   return { ok: true, profile };
 }

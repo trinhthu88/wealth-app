@@ -9,6 +9,7 @@ import { profilesTable } from "./profiles";
 export const advisedPlansTable = pgTable("advised_plans", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: text("user_id").notNull().references(() => profilesTable.id, { onDelete: "cascade" }),
+  // Deprecated authorization copy. Current ownership comes from client_profiles.advisor_id.
   advisorId: text("advisor_id").references(() => profilesTable.id),
 
   providerName: text("provider_name").notNull(),

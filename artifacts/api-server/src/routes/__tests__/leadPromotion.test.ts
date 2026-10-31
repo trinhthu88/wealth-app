@@ -8,7 +8,7 @@ vi.mock("@clerk/express", () => ({
 
 const { default: app } = await import("../../app");
 const {
-  db, profilesTable, leadsTable, clientProfilesTable, advisedPlansTable,
+  db, profilesTable, leadsTable, clientProfilesTable, advisedPlansTable, advisorAssignmentsTable,
 } = await import("@workspace/db");
 const { eq } = await import("drizzle-orm");
 
@@ -20,6 +20,7 @@ function asUser(id: string) {
 }
 
 async function cleanupUser(userId: string) {
+  await db.delete(advisorAssignmentsTable).where(eq(advisorAssignmentsTable.clientUserId, userId));
   await db.delete(advisedPlansTable).where(eq(advisedPlansTable.userId, userId));
   await db.delete(clientProfilesTable).where(eq(clientProfilesTable.userId, userId));
   await db.delete(leadsTable).where(eq(leadsTable.userId, userId));

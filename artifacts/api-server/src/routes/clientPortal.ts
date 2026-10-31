@@ -14,8 +14,25 @@ import { resolveHoldingBenchmark, getDeviationWarning } from "../lib/benchmarks"
 import { recordHoldingTransaction, upsertMonthlyHoldingLedgerEntry, getOrCreateDefaultCashHolding } from "../lib/holdingTransactions";
 import { syncAdvisedPlanContributionsToBudget } from "../lib/advisedPlanBudgetSync";
 import { computeNetWorth } from "../lib/netWorthService";
+import { getCurrentAdvisorIdForClient } from "../lib/currentAdvisor";
 
 const router: IRouter = Router();
+
+async function getMilestoneCommentContext(milestoneId: string, userId: string) {
+  const [milestone] = await db.select({ planId: planMilestonesTable.planId })
+    .from(planMilestonesTable).where(eq(planMilestonesTable.id, milestoneId));
+  if (!milestone) return null;
+  const [plan] = await db.select({ clientId: financialPlansTable.clientId })
+    .from(financialPlansTable).where(eq(financialPlansTable.id, milestone.planId));
+  if (!plan) return null;
+  const [profile] = await db.select({ role: profilesTable.role })
+    .from(profilesTable).where(eq(profilesTable.id, userId));
+  const isCurrentAdvisor = (await getCurrentAdvisorIdForClient(plan.clientId)) === userId;
+  const authorized = profile?.role === "super_admin"
+    || plan.clientId === userId
+    || (profile?.role === "advisor" && isCurrentAdvisor);
+  return { authorized, authorRole: profile?.role ?? null };
+}
 
 // ── Client profile track (used by useClientTrack) ─────────────────────────
 router.get("/client/profile/track", requireAuth, async (req, res): Promise<void> => {
@@ -1126,51 +1143,48 @@ router.get("/client/plan", requireAuth, async (req, res): Promise<void> => {
 
 // ── Milestone comments ────────────────────────────────────────────────────
 router.get("/client/plan/milestones/:id/comments", requireAuth, async (req, res): Promise<void> => {
+  const userId = (req as any).userId;
   const milestoneId = req.params.id as string;
-  try {
-    const comments = await db.select({
-      id: milestoneCommentsTable.id,
-      milestoneId: milestoneCommentsTable.milestoneId,
-      userId: milestoneCommentsTable.userId,
-      authorRole: milestoneCommentsTable.authorRole,
-      content: milestoneCommentsTable.content,
-      createdAt: milestoneCommentsTable.createdAt,
-      authorName: profilesTable.fullName,
-    })
-      .from(milestoneCommentsTable)
-      .leftJoin(profilesTable, eq(milestoneCommentsTable.userId, profilesTable.id))
-      .where(eq(milestoneCommentsTable.milestoneId, milestoneId))
-      .orderBy(milestoneCommentsTable.createdAt);
-    res.json(comments);
-  } catch {
-    res.json([]); // graceful degrade if table doesn't exist
-  }
+  const context = await getMilestoneCommentContext(milestoneId, userId);
+  if (!context) { res.status(404).json({ error: "Milestone not found" }); return; }
+  if (!context.authorized) { res.status(403).json({ error: "Forbidden" }); return; }
+  const comments = await db.select({
+    id: milestoneCommentsTable.id,
+    milestoneId: milestoneCommentsTable.milestoneId,
+    userId: milestoneCommentsTable.userId,
+    authorRole: milestoneCommentsTable.authorRole,
+    content: milestoneCommentsTable.content,
+    createdAt: milestoneCommentsTable.createdAt,
+    authorName: profilesTable.fullName,
+  })
+    .from(milestoneCommentsTable)
+    .leftJoin(profilesTable, eq(milestoneCommentsTable.userId, profilesTable.id))
+    .where(eq(milestoneCommentsTable.milestoneId, milestoneId))
+    .orderBy(milestoneCommentsTable.createdAt);
+  res.json(comments);
 });
 
 router.post("/client/plan/milestones/:id/comments", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
   const milestoneId = req.params.id as string;
   const { content } = req.body;
-  if (!content?.trim()) { res.status(400).json({ error: "content required" }); return; }
-  try {
-    const [comment] = await db.insert(milestoneCommentsTable).values({
-      milestoneId, userId, authorRole: "client", content: content.trim(),
-    }).returning();
-    res.status(201).json(comment);
-  } catch (err: any) {
-    if (err?.message?.includes("does not exist")) {
-      res.status(503).json({ error: "Comments require a database migration. Please run the SQL migration." });
-    } else {
-      res.status(500).json({ error: "Failed to add comment" });
-    }
-  }
+  if (typeof content !== "string" || !content.trim()) { res.status(400).json({ error: "content required" }); return; }
+  const context = await getMilestoneCommentContext(milestoneId, userId);
+  if (!context) { res.status(404).json({ error: "Milestone not found" }); return; }
+  if (!context.authorized || !context.authorRole) { res.status(403).json({ error: "Forbidden" }); return; }
+  const [comment] = await db.insert(milestoneCommentsTable).values({
+    milestoneId, userId, authorRole: context.authorRole, content: content.trim(),
+  }).returning();
+  res.status(201).json(comment);
 });
 
 // ── Review request message ────────────────────────────────────────────────
 router.post("/client/plan/review-request", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
-  const { advisorId, message } = req.body;
-  if (!advisorId || !message) { res.status(400).json({ error: "advisorId and message required" }); return; }
+  const { message } = req.body;
+  if (typeof message !== "string" || !message.trim()) { res.status(400).json({ error: "message required" }); return; }
+  const advisorId = await getCurrentAdvisorIdForClient(userId);
+  if (!advisorId) { res.status(409).json({ error: "No current advisor is assigned to this client" }); return; }
 
   // Find or create conversation
   let [conv] = await db.select().from(conversationsTable)
@@ -1183,7 +1197,7 @@ router.post("/client/plan/review-request", requireAuth, async (req, res): Promis
   }
 
   const [msg] = await db.insert(messagesTable).values({
-    conversationId: conv.id, senderId: userId, senderRole: "client", content: message,
+    conversationId: conv.id, senderId: userId, senderRole: (req as any).userRole ?? "investment_client", content: message.trim(),
   }).returning();
 
   res.status(201).json({ conversationId: conv.id, message: msg });

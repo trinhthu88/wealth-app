@@ -1,7 +1,7 @@
 # Restructure progress
 
 ## Current phase
-P3 — Goal funding and goal status — complete; typecheck and API suite passed
+P4 — One advisor pointer — complete; typecheck and API suite passed
 
 ## Baseline (Phase 0)
 - typecheck: passed (`pnpm run typecheck`; all libraries and leaf workspaces completed).
@@ -206,6 +206,7 @@ Done:
 Audit counts / backfills:
 - No schema changes or database backfills in Phase 3.
 Tests: `pnpm run typecheck` passed; `pnpm --filter @workspace/api-server test` passed (20 files, 148 tests).
+Commit: `2495813` — `[restructure P3] centralize goal funding and currency values`.
 Files changed in P3:
 - `artifacts/api-server/src/lib/blendedRate.ts`
 - `artifacts/api-server/src/lib/goalProgressSnapshot.ts`
@@ -225,5 +226,50 @@ Files changed in P3:
 - `lib/net-worth/src/currencyRates.ts`
 - `lib/net-worth/src/index.ts`
 
+### P4 — One advisor pointer
+Read-only baseline before the phase:
+- `advisor_assignments` does not exist in the development database.
+- `client_profiles` has 4 rows; all 4 currently have `advisor_id` set.
+- The existing `client_profiles.advisor_id` pointer and lead assignment fallback are the authorization sources; several legacy plan/conversation rows also store advisor IDs.
+Plan:
+- Add the additive `advisor_assignments` table and backfill one open row for each currently assigned client. Keep `assigned_by` nullable for historical backfill rows and use the migration cutover time for `started_at`; do not invent historical assignment actors or dates.
+- Before changing schema, export `client_profiles` to `backups/2026-10-31-client_profiles-p4.sql`, record its row count, and verify the count is unchanged afterwards. The table is new, so there is no existing `advisor_assignments` table to back up.
+- Do not run `drizzle-kit push`: the previously recorded unrelated `client_holding_transactions` truncate warning still blocks a clean push. Create only the new table with additive development-database SQL, then backfill and audit before adding a partial unique index for one open assignment per client. Do not drop or alter existing columns/tables.
+- Make admin reassignment update `client_profiles.advisor_id` and close/open assignment history in one transaction; write `assigned_by` for new assignments. Create initial assignment history for newly created clients when an advisor is already assigned.
+- Resolve authorization for advised plans, financial plans, milestones, conversations, and documents from the current client pointer; retain the lead assignment fallback for pre-promotion leads. Keep legacy advisor ID columns, but stop reading them for authorization.
+- Make review requests ignore request-body `advisorId` and route to the current advisor. Restrict milestone comments to the client, current advisor, or super_admin, and record the authenticated profile role.
+- Add API tests for A→B reassignment (B access, A gets 403, review request reaches B), assignment history, milestone comment roles/access, and admin-created plans remaining manageable by the current advisor.
+- Run full typecheck and API suite, record the final counts and changed files, then commit with `[restructure P4]`.
+Done:
+- Created `advisor_assignments` using additive SQL only; backfilled one open row per assigned client with nullable `assigned_by` and the database cutover timestamp.
+- Backed up `client_profiles` to `backups/2026-10-31-client_profiles-p4.sql` before the schema change. The backup contains 4 rows; the table remained at 4 rows afterwards.
+- Audited the backfill before creating the partial unique index: 4 assigned clients, 4 assignment rows, 0 duplicate open-client groups, and 0 assigned clients missing a matching open history row. Verified `advisor_assignments_one_open_per_client_uidx` exists.
+- Admin reassignment now updates the current pointer and closes/opens assignment history transactionally. New-client creation and lead promotion also create/synchronize assignment history.
+- Authorization for advised plans, financial plans, milestones, conversations, and documents now follows the current client advisor; legacy advisor columns remain and are marked deprecated. Review requests ignore body `advisorId`; milestone comments check current parties and store the authenticated profile role.
+- Added A→B reassignment coverage, including B access and A 403s, review routing to B, stale conversation/document/plan ownership, real comment roles, and admin-created plans remaining manageable by the current advisor.
+- No schema push was run because the previously recorded unrelated `client_holding_transactions` truncate warning remains; no tables or columns were dropped, no publish/deploy was performed.
+Audit counts / backfills:
+- Before: `client_profiles` 4 rows, 4 assigned; backup row count 4.
+- After backfill and after the test suite: `client_profiles` 4 rows; `advisor_assignments` 4 rows, 4 open; 0 duplicate open-client groups; 0 assigned clients missing matching open history; partial unique index present.
+Tests: `pnpm run typecheck` passed; `pnpm --filter @workspace/api-server test` passed (21 files, 151 tests).
+Commit: pending local commit with `[restructure P4]`.
+Files changed in P4:
+- `artifacts/api-server/src/lib/createUserWithProfile.ts`
+- `artifacts/api-server/src/lib/currentAdvisor.ts`
+- `artifacts/api-server/src/lib/promoteLead.ts`
+- `artifacts/api-server/src/middlewares/requireAuth.ts`
+- `artifacts/api-server/src/routes/__tests__/advisedPlanOwnership.test.ts`
+- `artifacts/api-server/src/routes/__tests__/advisorAssignments.test.ts`
+- `artifacts/api-server/src/routes/__tests__/leadPromotion.test.ts`
+- `artifacts/api-server/src/routes/admin.ts`
+- `artifacts/api-server/src/routes/clientPortal.ts`
+- `artifacts/api-server/src/routes/leads.ts`
+- `artifacts/api-server/src/routes/messages.ts`
+- `artifacts/api-server/src/routes/plans.ts`
+- `docs/client-restructure/PROGRESS.md`
+- `lib/db/src/schema/advisedPlans.ts`
+- `lib/db/src/schema/clients.ts`
+- `lib/db/src/schema/messages.ts`
+
 ## Next agent: start here
-- Begin Phase 3 from `docs/client-restructure/MASTER_PROMPT.md`: first record the Phase 3 plan in this file, then work only on goal funding and goal status. Do not repeat Phases 0–2. Before any schema change, back up affected tables; reject and record any schema push warning about data loss, truncation, rename, or drop. Do not publish or deploy.
+- Start Phase 5 from `docs/client-restructure/MASTER_PROMPT.md`: inspect the profile, client-profile, and onboarding code; write the Phase 5 plan here before edits; back up affected tables before schema changes; begin with `profiles.preferred_currency` ownership and the documented backfill. Do not accept schema-push warnings about data loss, truncation, renames, or drops; do not drop tables/columns or publish/deploy.

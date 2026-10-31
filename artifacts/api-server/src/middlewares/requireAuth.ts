@@ -104,8 +104,12 @@ export function requireAdvisorOwnsClientOrLead(paramName: string = "id") {
       .select({ advisorId: clientProfilesTable.advisorId })
       .from(clientProfilesTable)
       .where(eq(clientProfilesTable.userId, targetUserId));
-    if (cp?.advisorId === userId) {
-      next();
+    if (cp) {
+      if (cp.advisorId === userId) {
+        next();
+        return;
+      }
+      res.status(403).json({ error: "Forbidden" });
       return;
     }
     const [lead] = await db
@@ -122,9 +126,9 @@ export function requireAdvisorOwnsClientOrLead(paramName: string = "id") {
 
 /**
  * Must run after requireAuth + requireRole("advisor", "super_admin"). For routes
- * keyed by an advised_plans.id (req.params[paramName]) — checks ownership via the
- * plan's own advisorId rather than looking up the owning client/lead, since a
- * plan's advisorId doesn't change across the lead→client promotion.
+ * keyed by an advised_plans.id (req.params[paramName]) — checks ownership through
+ * the client's current assignment, with the lead assignment used only before a
+ * client_profiles row exists.
  */
 export function requireAdvisorOwnsPlan(paramName: string = "id") {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -138,11 +142,9 @@ export function requireAdvisorOwnsPlan(paramName: string = "id") {
     const { db, advisedPlansTable } = await import("@workspace/db");
     const { eq } = await import("drizzle-orm");
     const [plan] = await db
-      .select({ advisorId: advisedPlansTable.advisorId })
+      .select({ userId: advisedPlansTable.userId })
       .from(advisedPlansTable)
       .where(eq(advisedPlansTable.id, planId));
-    // A nonexistent plan and one the caller can't manage both 404, so an
-    // unauthorized caller can't use the response to enumerate valid plan IDs.
     if (!plan) {
       res.status(404).json({ error: "Not found" });
       return;
@@ -151,8 +153,9 @@ export function requireAdvisorOwnsPlan(paramName: string = "id") {
       next();
       return;
     }
-    if (plan.advisorId !== userId) {
-      res.status(404).json({ error: "Not found" });
+    const { getCurrentAdvisorIdForClient } = await import("../lib/currentAdvisor");
+    if (await getCurrentAdvisorIdForClient(plan.userId) !== userId) {
+      res.status(403).json({ error: "Forbidden" });
       return;
     }
     next();
@@ -179,13 +182,8 @@ export function requireAdvisorOwnsLead(paramName: string = "id") {
       res.status(400).json({ error: `Missing ${paramName} param` });
       return;
     }
-    const { db, leadsTable } = await import("@workspace/db");
-    const { eq } = await import("drizzle-orm");
-    const [lead] = await db
-      .select({ assignedAdvisorId: leadsTable.assignedAdvisorId })
-      .from(leadsTable)
-      .where(eq(leadsTable.userId, leadUserId));
-    if (!lead || lead.assignedAdvisorId !== userId) {
+    const { getCurrentAdvisorIdForClient } = await import("../lib/currentAdvisor");
+    if (await getCurrentAdvisorIdForClient(leadUserId) !== userId) {
       res.status(403).json({ error: "Forbidden" });
       return;
     }

@@ -1,4 +1,4 @@
-import { pgTable, text, integer, numeric, timestamp, uuid, date, boolean, check } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, numeric, timestamp, uuid, date, boolean, check, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 // NOTE: milestone_comments table requires SQL migration (see Prompt 8 Step 1)
 import { createInsertSchema } from "drizzle-zod";
@@ -40,6 +40,24 @@ export const clientProfilesTable = pgTable("client_profiles", {
   check("client_profiles_status_check", sql`${t.status} IN ('active', 'paused', 'churned')`),
 ]);
 
+// client_profiles.advisor_id is the current advisor pointer; this table is the
+// append-only history of assignments. Older advisorId columns on related rows
+// are retained for compatibility and must not be used for authorization.
+export const advisorAssignmentsTable = pgTable("advisor_assignments", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  clientUserId: text("client_user_id").notNull(),
+  advisorId: text("advisor_id").notNull(),
+  assignedBy: text("assigned_by"),
+  startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+  endedAt: timestamp("ended_at", { withTimezone: true }),
+}, (t) => [
+  index("advisor_assignments_client_user_id_idx").on(t.clientUserId),
+  index("advisor_assignments_advisor_id_idx").on(t.advisorId),
+  uniqueIndex("advisor_assignments_one_open_per_client_uidx")
+    .on(t.clientUserId)
+    .where(sql`${t.endedAt} IS NULL`),
+]);
+
 export const kycDocumentsTable = pgTable("kyc_documents", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: text("user_id").notNull(),
@@ -56,6 +74,7 @@ export const kycDocumentsTable = pgTable("kyc_documents", {
 export const financialPlansTable = pgTable("financial_plans", {
   id: uuid("id").primaryKey().defaultRandom(),
   clientId: text("client_id").notNull(),
+  // Deprecated authorization copy. Current ownership comes from client_profiles.advisor_id.
   advisorId: text("advisor_id"),
   title: text("title").notNull(),
   status: text("status").notNull().default("draft"),

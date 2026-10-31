@@ -1,5 +1,7 @@
-import { and, eq } from "drizzle-orm";
-import { db, profilesTable, clientProfilesTable, leadsTable, advisedPlansTable } from "@workspace/db";
+import { and, eq, isNull } from "drizzle-orm";
+import {
+  db, profilesTable, clientProfilesTable, leadsTable, advisedPlansTable, advisorAssignmentsTable,
+} from "@workspace/db";
 
 export type PromoteLeadResult =
   | { ok: true; profile: typeof profilesTable.$inferSelect; clientProfile: typeof clientProfilesTable.$inferSelect }
@@ -21,7 +23,10 @@ export type PromoteLeadResult =
  * single transaction — a promotion that partially succeeds (role flipped but
  * no client_profiles row, or vice versa) is worse than not promoting at all.
  */
-export async function promoteLeadToClient(lead: typeof leadsTable.$inferSelect): Promise<PromoteLeadResult> {
+export async function promoteLeadToClient(
+  lead: typeof leadsTable.$inferSelect,
+  assignedBy?: string | null,
+): Promise<PromoteLeadResult> {
   if (!lead.userId) {
     return { ok: false, httpStatus: 409, error: "This lead has no linked account yet — convert it instead of promoting it." };
   }
@@ -29,6 +34,7 @@ export async function promoteLeadToClient(lead: typeof leadsTable.$inferSelect):
     return { ok: false, httpStatus: 409, error: "Assign this lead to an advisor before promoting it to client." };
   }
   const userId = lead.userId;
+  const advisorId = lead.assignedAdvisorId;
 
   const [profile] = await db.select().from(profilesTable).where(eq(profilesTable.id, userId));
   if (!profile) {
@@ -48,11 +54,37 @@ export async function promoteLeadToClient(lead: typeof leadsTable.$inferSelect):
     const [existingCp] = await tx.select().from(clientProfilesTable).where(eq(clientProfilesTable.userId, userId));
     const nextCp = existingCp
       ? (await tx.update(clientProfilesTable).set({
-          advisorId: lead.assignedAdvisorId, status: "active", clientTrack, updatedAt: new Date(),
+          advisorId, status: "active", clientTrack, updatedAt: new Date(),
         }).where(eq(clientProfilesTable.userId, userId)).returning())[0]
       : (await tx.insert(clientProfilesTable).values({
-          userId, advisorId: lead.assignedAdvisorId, status: "active", clientTrack,
+          userId, advisorId, status: "active", clientTrack,
         }).returning())[0];
+
+    const openAssignments = await tx.select({
+      id: advisorAssignmentsTable.id,
+      advisorId: advisorAssignmentsTable.advisorId,
+    }).from(advisorAssignmentsTable).where(and(
+      eq(advisorAssignmentsTable.clientUserId, userId),
+      isNull(advisorAssignmentsTable.endedAt),
+    ));
+    const assignmentNeedsSync = existingCp?.advisorId !== advisorId
+      || openAssignments.some((assignment) => assignment.advisorId !== advisorId)
+      || openAssignments.length === 0;
+    if (assignmentNeedsSync) {
+      if (openAssignments.length > 0) {
+        await tx.update(advisorAssignmentsTable)
+          .set({ endedAt: new Date() })
+          .where(and(
+            eq(advisorAssignmentsTable.clientUserId, userId),
+            isNull(advisorAssignmentsTable.endedAt),
+          ));
+      }
+      await tx.insert(advisorAssignmentsTable).values({
+        clientUserId: userId,
+        advisorId,
+        assignedBy: assignedBy ?? null,
+      });
+    }
 
     if (!lead.convertedUserId) {
       await tx.update(leadsTable).set({ convertedUserId: userId, updatedAt: new Date() }).where(eq(leadsTable.id, lead.id));

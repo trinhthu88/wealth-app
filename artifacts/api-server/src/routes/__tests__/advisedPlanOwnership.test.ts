@@ -96,12 +96,12 @@ describe("PUT /advised-plans/:id/status", () => {
     expect(res.body.error).toMatch(/policyNumber/);
   });
 
-  it("404s an advisor who doesn't own the plan (enumeration-safe)", async () => {
+  it("returns 403 for an advisor who doesn't own the plan", async () => {
     await request(app)
       .put(`/api/advised-plans/${scenarioPlanId}/status`)
       .set(asUser(advisorB))
       .send({ status: "inforce", policyNumber: "POL-123" })
-      .expect(404);
+      .expect(403);
   });
 
   it("allows flipping to inforce when policyNumber is supplied in the same request", async () => {
@@ -130,12 +130,12 @@ describe("PUT /advised-plans/:id/contribution", () => {
     await db.delete(advisedPlansTable).where(eq(advisedPlansTable.id, planId));
   });
 
-  it("404s an advisor who doesn't own the plan", async () => {
+  it("returns 403 for an advisor who doesn't own the plan", async () => {
     await request(app)
       .put(`/api/advised-plans/${planId}/contribution`)
       .set(asUser(advisorB))
       .send({ annualPremium: 2400 })
-      .expect(404);
+      .expect(403);
   });
 
   it("updates annualPremium without touching status or policyNumber", async () => {

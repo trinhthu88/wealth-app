@@ -5,6 +5,7 @@ import { z } from "zod/v4";
 export const conversationsTable = pgTable("conversations", {
   id: uuid("id").primaryKey().defaultRandom(),
   clientId: text("client_id"),
+  // Deprecated authorization copy. Current ownership comes from client_profiles.advisor_id.
   advisorId: text("advisor_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

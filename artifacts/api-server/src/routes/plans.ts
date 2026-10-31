@@ -1,14 +1,32 @@
 import { Router, type IRouter } from "express";
-import { eq, or } from "drizzle-orm";
+import { eq, inArray, or } from "drizzle-orm";
 import { db, financialPlansTable, planMilestonesTable } from "@workspace/db";
 import { requireAuth, requireRole, requireAdvisorOwnsClient, isSuperAdmin } from "../middlewares/requireAuth";
+import { getClientUserIdsForAdvisor, getCurrentAdvisorIdForClient } from "../lib/currentAdvisor";
 
 const router: IRouter = Router();
 
+async function canAccessFinancialPlan(plan: typeof financialPlansTable.$inferSelect, userId: string) {
+  return plan.clientId === userId
+    || await isSuperAdmin(userId)
+    || (await getCurrentAdvisorIdForClient(plan.clientId)) === userId;
+}
+
+async function canManageFinancialPlan(plan: typeof financialPlansTable.$inferSelect, userId: string) {
+  return await isSuperAdmin(userId)
+    || (await getCurrentAdvisorIdForClient(plan.clientId)) === userId;
+}
+
 router.get("/plans", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
-  const plans = await db.select().from(financialPlansTable)
-    .where(or(eq(financialPlansTable.clientId, userId), eq(financialPlansTable.advisorId, userId)));
+  if (await isSuperAdmin(userId)) {
+    res.json(await db.select().from(financialPlansTable));
+    return;
+  }
+  const clientIds = await getClientUserIdsForAdvisor(userId);
+  const filters = [eq(financialPlansTable.clientId, userId)];
+  if (clientIds.length > 0) filters.push(inArray(financialPlansTable.clientId, clientIds));
+  const plans = await db.select().from(financialPlansTable).where(or(...filters));
   res.json(plans);
 });
 
@@ -17,7 +35,7 @@ router.get("/plans/:id", requireAuth, async (req, res): Promise<void> => {
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const [plan] = await db.select().from(financialPlansTable).where(eq(financialPlansTable.id, rawId));
   if (!plan) { res.status(404).json({ error: "Not found" }); return; }
-  if (plan.clientId !== userId && plan.advisorId !== userId && !(await isSuperAdmin(userId))) {
+  if (!(await canAccessFinancialPlan(plan, userId))) {
     res.status(403).json({ error: "Forbidden" });
     return;
   }
@@ -29,7 +47,7 @@ router.put("/plans/:id", requireAuth, async (req, res): Promise<void> => {
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const [existing] = await db.select().from(financialPlansTable).where(eq(financialPlansTable.id, rawId));
   if (!existing) { res.status(404).json({ error: "Not found" }); return; }
-  if (existing.advisorId !== userId && !(await isSuperAdmin(userId))) {
+  if (!(await canManageFinancialPlan(existing, userId))) {
     res.status(403).json({ error: "Forbidden" });
     return;
   }
@@ -46,7 +64,7 @@ router.get("/plans/:id/milestones", requireAuth, async (req, res): Promise<void>
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const [plan] = await db.select().from(financialPlansTable).where(eq(financialPlansTable.id, rawId));
   if (!plan) { res.status(404).json({ error: "Not found" }); return; }
-  if (plan.clientId !== userId && plan.advisorId !== userId && !(await isSuperAdmin(userId))) {
+  if (!(await canAccessFinancialPlan(plan, userId))) {
     res.status(403).json({ error: "Forbidden" });
     return;
   }
@@ -58,7 +76,7 @@ router.post("/plans/:id/milestones", requireAuth, async (req, res): Promise<void
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const [plan] = await db.select().from(financialPlansTable).where(eq(financialPlansTable.id, rawId));
   if (!plan) { res.status(404).json({ error: "Not found" }); return; }
-  if (plan.advisorId !== userId && !(await isSuperAdmin(userId))) {
+  if (!(await canManageFinancialPlan(plan, userId))) {
     res.status(403).json({ error: "Forbidden" });
     return;
   }

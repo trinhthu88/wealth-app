@@ -1,8 +1,8 @@
 import { Router, type IRouter } from "express";
-import { eq, inArray, desc } from "drizzle-orm";
+import { and, eq, inArray, desc, isNull } from "drizzle-orm";
 import {
   db, profilesTable, clientProfilesTable, assetClassBenchmarksTable,
-  advisedStrategyReturnsTable, advisedPlansTable,
+  advisedStrategyReturnsTable, advisedPlansTable, advisorAssignmentsTable,
   roleSchema, clientStatusSchema,
 } from "@workspace/db";
 import { requireAuth, requireRole } from "../middlewares/requireAuth";
@@ -36,6 +36,7 @@ router.post("/admin/users", ...adminGuard, async (req, res): Promise<void> => {
   const normalizedStatus = parsedStatus?.success ? parsedStatus.data : undefined;
   const result = await createUserWithProfile({
     email, password, fullName, role: normalizedRole ?? "free_user", advisorId, riskProfile,
+    assignedBy: (req as any).userId,
     ...(normalizedStatus !== undefined ? { status: normalizedStatus } : {}),
   });
   if (!result.ok) { res.status(result.httpStatus).json({ error: result.error }); return; }
@@ -44,38 +45,83 @@ router.post("/admin/users", ...adminGuard, async (req, res): Promise<void> => {
 
 router.put("/admin/users/:id", ...adminGuard, async (req, res): Promise<void> => {
   const id = req.params.id as string;
+  const assignedBy = (req as any).userId as string;
   const { fullName, role, preferredCurrency, advisorId } = req.body;
   const parsedRole = role === undefined ? undefined : roleSchema.safeParse(role);
   if (parsedRole && !parsedRole.success) { res.status(400).json({ error: "Invalid role" }); return; }
+  if (advisorId !== undefined && advisorId !== null && typeof advisorId !== "string") {
+    res.status(400).json({ error: "advisorId must be a string or null" });
+    return;
+  }
   const normalizedRole = parsedRole?.success ? parsedRole.data : undefined;
-  const [updated] = await db.update(profilesTable).set({
-    ...(fullName !== undefined ? { fullName } : {}),
-    ...(role !== undefined ? { role: normalizedRole } : {}),
-    ...(preferredCurrency !== undefined ? { preferredCurrency } : {}),
-    updatedAt: new Date(),
-  }).where(eq(profilesTable.id, id)).returning();
+  const updated = await db.transaction(async (tx) => {
+    const [profile] = await tx.update(profilesTable).set({
+      ...(fullName !== undefined ? { fullName } : {}),
+      ...(role !== undefined ? { role: normalizedRole } : {}),
+      ...(preferredCurrency !== undefined ? { preferredCurrency } : {}),
+      updatedAt: new Date(),
+    }).where(eq(profilesTable.id, id)).returning();
+    if (!profile) return undefined;
+
+    const [existingClientProfile] = await tx.select().from(clientProfilesTable)
+      .where(eq(clientProfilesTable.userId, id));
+    const shouldHaveClientProfile = profile.role === "investment_client" || !!existingClientProfile;
+    if (!shouldHaveClientProfile) return profile;
+
+    const nextAdvisorId = advisorId === undefined
+      ? existingClientProfile?.advisorId ?? null
+      : (typeof advisorId === "string" && advisorId.trim() ? advisorId.trim() : null);
+
+    if (existingClientProfile) {
+      if (advisorId !== undefined) {
+        await tx.update(clientProfilesTable)
+          .set({ advisorId: nextAdvisorId, updatedAt: new Date() })
+          .where(eq(clientProfilesTable.userId, id));
+      }
+    } else {
+      await tx.insert(clientProfilesTable).values({
+        userId: id,
+        advisorId: nextAdvisorId,
+        status: "active",
+      });
+    }
+
+    if (advisorId !== undefined || !existingClientProfile) {
+      const openAssignments = await tx.select({ id: advisorAssignmentsTable.id })
+        .from(advisorAssignmentsTable)
+        .where(and(
+          eq(advisorAssignmentsTable.clientUserId, id),
+          isNull(advisorAssignmentsTable.endedAt),
+        ));
+      const previousAdvisorId = existingClientProfile?.advisorId ?? null;
+      if (previousAdvisorId !== nextAdvisorId || (nextAdvisorId === null && openAssignments.length > 0)) {
+        if (openAssignments.length > 0) {
+          await tx.update(advisorAssignmentsTable)
+            .set({ endedAt: new Date() })
+            .where(and(
+              eq(advisorAssignmentsTable.clientUserId, id),
+              isNull(advisorAssignmentsTable.endedAt),
+            ));
+        }
+        if (nextAdvisorId) {
+          await tx.insert(advisorAssignmentsTable).values({
+            clientUserId: id,
+            advisorId: nextAdvisorId,
+            assignedBy,
+          });
+        }
+      } else if (nextAdvisorId && openAssignments.length === 0) {
+        await tx.insert(advisorAssignmentsTable).values({
+          clientUserId: id,
+          advisorId: nextAdvisorId,
+          assignedBy,
+        });
+      }
+    }
+
+    return profile;
+  });
   if (!updated) { res.status(404).json({ error: "Not found" }); return; }
-
-  // Handle advisorId assignment for investment clients
-  if (advisorId !== undefined) {
-    const existing = await db.select().from(clientProfilesTable).where(eq(clientProfilesTable.userId, id));
-    if (existing.length > 0) {
-      await db.update(clientProfilesTable).set({ advisorId: advisorId || null, updatedAt: new Date() }).where(eq(clientProfilesTable.userId, id));
-    } else if (role === "investment_client" || updated.role === "investment_client") {
-      await db.insert(clientProfilesTable).values({ userId: id, advisorId: advisorId || null });
-    }
-  }
-
-  // If role changed TO investment_client, auto-create client_profiles.
-  // status: "active" — this table is account health for an already-promoted
-  // client now, not the pre-client pipeline (see clients.ts's schema comment).
-  if (role === "investment_client") {
-    const existing = await db.select().from(clientProfilesTable).where(eq(clientProfilesTable.userId, id));
-    if (existing.length === 0) {
-      await db.insert(clientProfilesTable).values({ userId: id, status: "active" });
-    }
-  }
-
   res.json(updated);
 });
 
