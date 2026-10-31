@@ -71,7 +71,13 @@ export const advisedPlanStatementsTable = pgTable("advised_plan_statements", {
   entryMode: text("entry_mode").notNull().default("summary"),
 
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-}, (t) => [unique().on(t.advisedPlanId, t.periodStart, t.periodEnd)]);
+}, (t) => [
+  unique("advised_plan_statements_advised_plan_id_period_start_period_end").on(
+    t.advisedPlanId,
+    t.periodStart,
+    t.periodEnd,
+  ),
+]);
 
 export const advisedPlanHoldingsTable = pgTable("advised_plan_holdings", {
   id: uuid("id").primaryKey().defaultRandom(),

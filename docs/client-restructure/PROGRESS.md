@@ -1,7 +1,7 @@
 # Restructure progress
 
 ## Current phase
-P2 — Net worth service — complete; Phase 3 not started
+P2.5 — Align advised-plan statement uniqueness — in progress
 
 ## Baseline (Phase 0)
 - typecheck: passed (`pnpm run typecheck`; all libraries and leaf workspaces completed).
@@ -156,6 +156,19 @@ Files changed:
 - `scripts/src/nightly-snapshots.ts`
 - `scripts/tsconfig.json`
 - `tsconfig.json`
+
+### P2.5 — Align advised-plan statement uniqueness
+Plan:
+- Inspect the current dev database index/constraint name and type for `advised_plan_statements (advised_plan_id, period_start, period_end)` and verify duplicate count is zero.
+- Export `advised_plan_statements` to a fresh ignored data-only backup, then record its row count before any schema change.
+- Rename the existing unique constraint or attach the existing unique index as a constraint named `advised_plan_statements_advised_plan_id_period_start_period_end_unique`, without changing table data.
+- Verify the row count is unchanged and the expected constraint is valid; run the normal schema push. If it still warns about truncation, drops, renames, or data loss, answer no and record the exact prompt.
+- Run full typecheck and API tests, record results and the database operation, then commit with `[restructure P2.5]`.
+Observed before schema change:
+- Backup created at `backups/2026-10-31-advised_plan_statements-p2.5.sql` (data-only; 2,634 bytes; ignored).
+- The table contains 6 rows; duplicate key audit on `(advised_plan_id, period_start, period_end)` found 0 duplicate groups and 0 excess rows.
+- PostgreSQL reports an existing validated UNIQUE constraint named `advised_plan_statements_advised_plan_id_period_start_period_end` (`contype = 'u'`), backed by a valid unique btree index of the same name on the expected columns.
+- Drizzle's expected literal name is 70 characters, while PostgreSQL's `max_identifier_length` is 63; truncating the expected name yields exactly the existing constraint name. It is already a UNIQUE constraint, not a standalone index, so renaming/attaching would be a no-op and could not produce a distinct 70-character database name.
 
 ## Next agent: start here
 - Begin Phase 3 from `docs/client-restructure/MASTER_PROMPT.md`: first record the Phase 3 plan in this file, then work only on goal funding and goal status. Do not repeat Phases 0–2. Before any schema change, back up affected tables; reject and record any schema push warning about data loss, truncation, rename, or drop. Do not publish or deploy.
