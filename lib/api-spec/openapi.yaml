@@ -206,7 +206,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/FinancialGoal"
+                  $ref: "#/components/schemas/GoalSummary"
     post:
       operationId: createGoal
       tags: [goals]
@@ -1163,7 +1163,27 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/FinancialGoal"
+                  $ref: "#/components/schemas/GoalSummary"
+
+  /advisor/leads/{id}/goals:
+    get:
+      operationId: advisorGetLeadGoals
+      tags: [goals]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Goals
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GoalSummary"
 
   /advisor/clients/{id}/plan:
     get:
@@ -1538,6 +1558,54 @@ components:
         updatedAt:
           type: string
       required: [id, userId, title, goalType, currentAmount, monthlyContribution, currency, priority, status, isAdvisorManaged, createdAt, updatedAt]
+
+    GoalSummary:
+      allOf:
+        - $ref: "#/components/schemas/FinancialGoal"
+        - type: object
+          properties:
+            funding:
+              type: object
+              properties:
+                currentAmount:
+                  type: number
+                currency:
+                  type: string
+                  enum: [USD]
+                source:
+                  type: string
+                  enum: [links, manual]
+                breakdown:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      sourceType:
+                        type: string
+                      sourceId:
+                        type: string
+                      allocationPct:
+                        type: number
+                      sourceValueUsd:
+                        type: number
+                      contributionUsd:
+                        type: number
+                    required: [sourceType, sourceId, allocationPct, sourceValueUsd, contributionUsd]
+              required: [currentAmount, currency, source, breakdown]
+            targetAmountUsd:
+              type: ["number", "null"]
+            pacing:
+              type: string
+              enum: [no_target, on_track, at_risk, off_track, completed]
+            progressPct:
+              type: ["number", "null"]
+            expectedPct:
+              type: ["number", "null"]
+            monthsRemaining:
+              type: ["integer", "null"]
+            projectedCompletionDate:
+              type: ["string", "null"]
+          required: [funding, targetAmountUsd, pacing, progressPct, expectedPct, monthsRemaining, projectedCompletionDate]
 
     CreateGoalBody:
       type: object

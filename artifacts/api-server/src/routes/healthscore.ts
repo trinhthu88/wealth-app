@@ -5,7 +5,9 @@ import {
   pathwayProgressTable, assetsTable, liabilitiesTable, profilesTable,
 } from "@workspace/db";
 import { requireAuth } from "../middlewares/requireAuth";
-import { calculateProjection } from "@workspace/goal-math";
+import { calculateProjection, computeGoalProgress } from "@workspace/goal-math";
+import { convertToUsd, getCurrencyRatesFor } from "@workspace/net-worth";
+import { computeGoalFundingSummary } from "../lib/goalProgressSnapshot";
 
 const router: IRouter = Router();
 
@@ -90,6 +92,21 @@ router.post("/health-score", requireAuth, async (req, res): Promise<void> => {
     db.select().from(liabilitiesTable).where(eq(liabilitiesTable.userId, userId)),
     db.select().from(profilesTable).where(eq(profilesTable.id, userId)),
   ]);
+  const rates = await getCurrencyRatesFor([
+    ...assets.map((asset) => asset.currencyOriginal),
+    ...liabilities.map((liability) => liability.currencyOriginal),
+  ]);
+  const assetValueUsd = (asset: typeof assets[number]) => convertToUsd(
+    parseFloat(asset.valueOriginal ?? asset.valueUsd ?? "0") || 0,
+    asset.currencyOriginal,
+    rates,
+  );
+  const liabilityValueUsd = (liability: typeof liabilities[number]) => convertToUsd(
+    parseFloat(liability.balanceOriginal ?? liability.balanceUsd ?? "0") || 0,
+    liability.currencyOriginal,
+    rates,
+  );
+  const goalSummaries = await Promise.all(goals.map(goal => computeGoalFundingSummary(userId, goal)));
 
   // ── Shared values ──────────────────────────────────────────────────────────
   // Income: only from latest budget entry — pathway formData is not used as a fallback
@@ -100,8 +117,8 @@ router.post("/health-score", requireAuth, async (req, res): Promise<void> => {
     : 0;
   const monthlyCashSaved = Math.max(0, income - totalExpenses);
 
-  const totalAssetsVal = assets.reduce((s, a) => s + parseFloat(a.valueUsd ?? "0"), 0);
-  const totalLiabVal = liabilities.reduce((s, l) => s + parseFloat(l.balanceUsd ?? "0"), 0);
+  const totalAssetsVal = assets.reduce((s, a) => s + assetValueUsd(a), 0);
+  const totalLiabVal = liabilities.reduce((s, l) => s + liabilityValueUsd(l), 0);
 
   const savingsBal = parseFloat(profile?.totalSavings ?? "0");
   const investBal = parseFloat(profile?.totalInvestments ?? "0");
@@ -112,10 +129,10 @@ router.post("/health-score", requireAuth, async (req, res): Promise<void> => {
   // Cash + Savings categories both count toward the savings/emergency-fund balance
   const assetsSavingsVal = assets
     .filter(a => a.category === "savings" || a.category === "cash")
-    .reduce((s, a) => s + parseFloat(a.valueUsd ?? "0"), 0);
+    .reduce((s, a) => s + assetValueUsd(a), 0);
   const assetsInvestVal = assets
     .filter(a => (a as any).category === "investment")
-    .reduce((s, a) => s + parseFloat(a.valueUsd ?? "0"), 0);
+    .reduce((s, a) => s + assetValueUsd(a), 0);
   const effectiveSavingsBal = assetsSavingsVal > 0 ? assetsSavingsVal : savingsBal;
   const effectiveInvestBal = assetsInvestVal > 0 ? assetsInvestVal : investBal;
   const effectiveTotalAssets = totalAssetsVal > 0 ? totalAssetsVal : (effectiveSavingsBal + effectiveInvestBal);
@@ -133,14 +150,23 @@ router.post("/health-score", requireAuth, async (req, res): Promise<void> => {
 
   // ── Component 2: Goal on-track via dynamic projection (25 pts) ────────────
   let goalsScore = 0;
+  let topGoalPacing: "no_target" | "on_track" | "at_risk" | "off_track" | "completed" = "no_target";
   if (goals.length > 0) {
     const topGoal = goals[0];
+    const topGoalSummary = goalSummaries[0];
     // current_amount = goal progress + savings principal + investment principal (same as frontend
     // free-tier model — see the tier note in @workspace/goal-math for why this doesn't apply
     // to the investment-client tier's currentAmount semantics)
-    const goalCurrentAmt = parseFloat(topGoal.currentAmount ?? "0");
+    const goalCurrentAmt = topGoalSummary?.funding.currentAmount ?? 0;
     const effectiveCurrentAmt = goalCurrentAmt + effectiveSavingsBal + effectiveInvestBal;
-    const targetAmt = parseFloat(topGoal.targetAmount ?? "0");
+    const targetAmt = topGoalSummary?.targetAmountUsd ?? 0;
+    const derivedPacing = computeGoalProgress({
+      currentAmount: effectiveCurrentAmt,
+      targetAmount: targetAmt > 0 ? targetAmt : null,
+      targetDate: topGoal.targetDate,
+      createdAt: topGoal.createdAt.toISOString(),
+    });
+    topGoalPacing = topGoal.status === "completed" ? "completed" : derivedPacing.status;
 
     if (topGoal.targetDate && targetAmt > 0) {
       const { projectedAmount } = calculateProjection({
@@ -155,11 +181,9 @@ router.post("/health-score", requireAuth, async (req, res): Promise<void> => {
       });
       goalsScore = scoreGoalProjection(projectedAmount, targetAmt, true);
     } else {
-      // Temporary lifecycle-compatible fallback. Phase 3 will derive pace from
-      // goal data rather than treating lifecycle as a pacing state.
-      if (topGoal.status === "active" || topGoal.status === "completed") goalsScore = 25;
-      else if (topGoal.status === "cancelled") goalsScore = 15;
-      else goalsScore = 5;
+      if (topGoalPacing === "completed" || topGoalPacing === "on_track") goalsScore = 25;
+      else if (topGoalPacing === "at_risk") goalsScore = 15;
+      else if (topGoalPacing === "off_track") goalsScore = 5;
     }
   }
 
@@ -191,7 +215,11 @@ router.post("/health-score", requireAuth, async (req, res): Promise<void> => {
     savingsScoreFinal + goalsScoreFinal + netWorthScoreFinal + wealthScoreFinal + planScoreFinal,
   );
 
-  const goalsOnTrack = goals.filter(g => g.status === "active" || g.status === "completed").length;
+  const goalsOnTrack = goalSummaries.filter((goal, index) => {
+    if (goals[index]?.status === "cancelled") return false;
+    const pacing = index === 0 ? topGoalPacing : goal.pacing;
+    return pacing === "on_track" || pacing === "completed";
+  }).length;
 
   const today = new Date().toISOString().split("T")[0];
   const values = {

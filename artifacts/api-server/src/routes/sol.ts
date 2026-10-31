@@ -8,9 +8,9 @@ import {
   priceCacheTable,
 } from "@workspace/db";
 import { requireAuth } from "../middlewares/requireAuth";
-import { computeCurrentBreakdown, resolveHoldingValueUsd } from "../lib/goalProgressSnapshot";
+import { computeGoalFundingSummary, resolveHoldingValueUsd } from "../lib/goalProgressSnapshot";
 import { computeNetWorth, TICKER_BASED_TYPES } from "../lib/netWorthService";
-import { computeGoalProgress } from "@workspace/goal-math";
+import { convertToUsd, getCurrencyRatesFor } from "@workspace/net-worth";
 import { SOL_SYSTEM_PROMPT } from "../lib/solPersona";
 
 const router: IRouter = Router();
@@ -63,20 +63,14 @@ async function toolGetGoalProgress(userId: string, input: { goalId?: string }) {
         targetDate: g.targetDate, status: g.status, progressPct: null,
       };
     }
-    const { computedCurrentAmount } = await computeCurrentBreakdown(userId, g.id);
-    const progress = computeGoalProgress({
-      currentAmount: computedCurrentAmount,
-      targetAmount: parseFloat(g.targetAmount),
-      targetDate: g.targetDate,
-      createdAt: g.createdAt.toISOString(),
-    });
+    const summary = await computeGoalFundingSummary(userId, g);
     return {
       id: g.id, title: g.title, goalType: g.goalType,
-      targetAmount: parseFloat(g.targetAmount),
-      currentAmount: Math.round(computedCurrentAmount),
+      targetAmount: summary.targetAmountUsd,
+      currentAmount: Math.round(summary.funding.currentAmount),
       targetDate: g.targetDate,
-      status: progress.status,
-      progressPct: progress.progressPct != null ? Math.round(progress.progressPct) : null,
+      status: summary.pacing,
+      progressPct: summary.progressPct != null ? Math.round(summary.progressPct) : null,
     };
   }));
   return { goals };
@@ -125,6 +119,10 @@ async function toolGetPortfolioHoldings(userId: string) {
     db.select().from(clientHoldingsTable).where(and(eq(clientHoldingsTable.userId, userId), eq(clientHoldingsTable.isActive, true))),
     db.select().from(advisedPlansTable).where(and(eq(advisedPlansTable.userId, userId), eq(advisedPlansTable.status, "inforce"))),
   ]);
+  const rates = await getCurrencyRatesFor([
+    ...holdings.map((holding) => holding.currency),
+    ...plans.map((plan) => plan.currency),
+  ]);
 
   const symbols = holdings
     .filter(h => TICKER_BASED_TYPES.has(h.holdingType) || h.holdingType === "crypto")
@@ -139,11 +137,11 @@ async function toolGetPortfolioHoldings(userId: string) {
   const holdingsOut = holdings.map(h => ({
     label: h.ticker ? `${h.label} · ${h.ticker}` : h.label,
     holdingType: h.holdingType,
-    valueUsd: Math.round(resolveHoldingValueUsd(h, priceBySymbol)),
+    valueUsd: Math.round(resolveHoldingValueUsd(h, priceBySymbol, rates)),
   }));
   const plansOut = plans.map(p => ({
     label: p.nickname ?? p.productName,
-    valueUsd: Math.round(parseFloat(p.latestAccountValue ?? "0") || 0),
+    valueUsd: Math.round(convertToUsd(parseFloat(p.latestAccountValue ?? "0") || 0, p.currency, rates)),
   }));
   const totalValue = holdingsOut.reduce((s, h) => s + h.valueUsd, 0) + plansOut.reduce((s, p) => s + p.valueUsd, 0);
   return { holdings: holdingsOut, advisedPlans: plansOut, totalValue };

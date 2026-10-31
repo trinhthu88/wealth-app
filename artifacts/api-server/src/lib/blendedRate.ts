@@ -2,6 +2,7 @@ import { eq, and, inArray } from "drizzle-orm";
 import {
   db, clientHoldingsTable, advisedPlansTable, advisedStrategyReturnsTable, priceCacheTable,
 } from "@workspace/db";
+import { convertToUsd, getCurrencyRatesFor } from "@workspace/net-worth";
 import { resolveHoldingBenchmark } from "./benchmarks";
 import { TICKER_BASED_TYPES, valueOfHolding } from "./netWorthService";
 
@@ -33,6 +34,10 @@ export async function resolveBlendedRate(userId: string): Promise<BlendedRateRes
 
   let weightedSum = 0;
   let totalValue = 0;
+  const rates = await getCurrencyRatesFor([
+    ...holdings.map((holding) => holding.currency),
+    ...plans.map((plan) => plan.currency),
+  ]);
 
   const symbols = holdings
     .filter(h => TICKER_BASED_TYPES.has(h.holdingType) || h.holdingType === "crypto")
@@ -49,7 +54,7 @@ export async function resolveBlendedRate(userId: string): Promise<BlendedRateRes
     // price with cost-basis fallback for ticker/crypto types, direct balance fields
     // for cash/property/pension/other. Reused, not re-derived, so this can't drift
     // from the number the client sees on their Goals page for the same holding.
-    const value = valueOfHolding(h, priceBySymbol);
+    const value = valueOfHolding(h, priceBySymbol, rates);
     if (value <= 0) continue;
 
     const { value: ratePct } = await resolveHoldingBenchmark({
@@ -61,7 +66,7 @@ export async function resolveBlendedRate(userId: string): Promise<BlendedRateRes
   }
 
   for (const p of plans) {
-    const value = parseFloat(p.latestAccountValue ?? "0") || 0;
+    const value = convertToUsd(parseFloat(p.latestAccountValue ?? "0") || 0, p.currency, rates);
     if (value <= 0) continue;
     const [row] = await db.select().from(advisedStrategyReturnsTable)
       .where(eq(advisedStrategyReturnsTable.planType, p.planType));

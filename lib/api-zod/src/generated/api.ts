@@ -211,23 +211,54 @@ export const UpdateBudgetEntryResponse = zod.object({
 /**
  * @summary List goals for current user
  */
-export const ListGoalsResponseItem = zod.object({
-  id: zod.string(),
-  userId: zod.string(),
-  title: zod.string(),
-  goalType: zod.string(),
-  targetAmount: zod.string().nullish(),
-  currentAmount: zod.string(),
-  monthlyContribution: zod.string(),
-  targetDate: zod.string().nullish(),
-  currency: zod.string(),
-  priority: zod.string(),
-  status: zod.string(),
-  notes: zod.string().nullish(),
-  isAdvisorManaged: zod.boolean(),
-  createdAt: zod.string(),
-  updatedAt: zod.string(),
-});
+export const ListGoalsResponseItem = zod
+  .object({
+    id: zod.string(),
+    userId: zod.string(),
+    title: zod.string(),
+    goalType: zod.string(),
+    targetAmount: zod.string().nullish(),
+    currentAmount: zod.string(),
+    monthlyContribution: zod.string(),
+    targetDate: zod.string().nullish(),
+    currency: zod.string(),
+    priority: zod.string(),
+    status: zod.string(),
+    notes: zod.string().nullish(),
+    isAdvisorManaged: zod.boolean(),
+    createdAt: zod.string(),
+    updatedAt: zod.string(),
+  })
+  .and(
+    zod.object({
+      funding: zod.object({
+        currentAmount: zod.number(),
+        currency: zod.enum(["USD"]),
+        source: zod.enum(["links", "manual"]),
+        breakdown: zod.array(
+          zod.object({
+            sourceType: zod.string(),
+            sourceId: zod.string(),
+            allocationPct: zod.number(),
+            sourceValueUsd: zod.number(),
+            contributionUsd: zod.number(),
+          }),
+        ),
+      }),
+      targetAmountUsd: zod.number().nullable(),
+      pacing: zod.enum([
+        "no_target",
+        "on_track",
+        "at_risk",
+        "off_track",
+        "completed",
+      ]),
+      progressPct: zod.number().nullable(),
+      expectedPct: zod.number().nullable(),
+      monthsRemaining: zod.number().nullable(),
+      projectedCompletionDate: zod.string().nullable(),
+    }),
+  );
 export const ListGoalsResponse = zod.array(ListGoalsResponseItem);
 
 /**
@@ -1161,25 +1192,112 @@ export const AdvisorGetClientGoalsParams = zod.object({
   id: zod.coerce.string(),
 });
 
-export const AdvisorGetClientGoalsResponseItem = zod.object({
-  id: zod.string(),
-  userId: zod.string(),
-  title: zod.string(),
-  goalType: zod.string(),
-  targetAmount: zod.string().nullish(),
-  currentAmount: zod.string(),
-  monthlyContribution: zod.string(),
-  targetDate: zod.string().nullish(),
-  currency: zod.string(),
-  priority: zod.string(),
-  status: zod.string(),
-  notes: zod.string().nullish(),
-  isAdvisorManaged: zod.boolean(),
-  createdAt: zod.string(),
-  updatedAt: zod.string(),
-});
+export const AdvisorGetClientGoalsResponseItem = zod
+  .object({
+    id: zod.string(),
+    userId: zod.string(),
+    title: zod.string(),
+    goalType: zod.string(),
+    targetAmount: zod.string().nullish(),
+    currentAmount: zod.string(),
+    monthlyContribution: zod.string(),
+    targetDate: zod.string().nullish(),
+    currency: zod.string(),
+    priority: zod.string(),
+    status: zod.string(),
+    notes: zod.string().nullish(),
+    isAdvisorManaged: zod.boolean(),
+    createdAt: zod.string(),
+    updatedAt: zod.string(),
+  })
+  .and(
+    zod.object({
+      funding: zod.object({
+        currentAmount: zod.number(),
+        currency: zod.enum(["USD"]),
+        source: zod.enum(["links", "manual"]),
+        breakdown: zod.array(
+          zod.object({
+            sourceType: zod.string(),
+            sourceId: zod.string(),
+            allocationPct: zod.number(),
+            sourceValueUsd: zod.number(),
+            contributionUsd: zod.number(),
+          }),
+        ),
+      }),
+      targetAmountUsd: zod.number().nullable(),
+      pacing: zod.enum([
+        "no_target",
+        "on_track",
+        "at_risk",
+        "off_track",
+        "completed",
+      ]),
+      progressPct: zod.number().nullable(),
+      expectedPct: zod.number().nullable(),
+      monthsRemaining: zod.number().nullable(),
+      projectedCompletionDate: zod.string().nullable(),
+    }),
+  );
 export const AdvisorGetClientGoalsResponse = zod.array(
   AdvisorGetClientGoalsResponseItem,
+);
+
+export const AdvisorGetLeadGoalsParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const AdvisorGetLeadGoalsResponseItem = zod
+  .object({
+    id: zod.string(),
+    userId: zod.string(),
+    title: zod.string(),
+    goalType: zod.string(),
+    targetAmount: zod.string().nullish(),
+    currentAmount: zod.string(),
+    monthlyContribution: zod.string(),
+    targetDate: zod.string().nullish(),
+    currency: zod.string(),
+    priority: zod.string(),
+    status: zod.string(),
+    notes: zod.string().nullish(),
+    isAdvisorManaged: zod.boolean(),
+    createdAt: zod.string(),
+    updatedAt: zod.string(),
+  })
+  .and(
+    zod.object({
+      funding: zod.object({
+        currentAmount: zod.number(),
+        currency: zod.enum(["USD"]),
+        source: zod.enum(["links", "manual"]),
+        breakdown: zod.array(
+          zod.object({
+            sourceType: zod.string(),
+            sourceId: zod.string(),
+            allocationPct: zod.number(),
+            sourceValueUsd: zod.number(),
+            contributionUsd: zod.number(),
+          }),
+        ),
+      }),
+      targetAmountUsd: zod.number().nullable(),
+      pacing: zod.enum([
+        "no_target",
+        "on_track",
+        "at_risk",
+        "off_track",
+        "completed",
+      ]),
+      progressPct: zod.number().nullable(),
+      expectedPct: zod.number().nullable(),
+      monthsRemaining: zod.number().nullable(),
+      projectedCompletionDate: zod.string().nullable(),
+    }),
+  );
+export const AdvisorGetLeadGoalsResponse = zod.array(
+  AdvisorGetLeadGoalsResponseItem,
 );
 
 export const AdvisorGetClientPlanParams = zod.object({

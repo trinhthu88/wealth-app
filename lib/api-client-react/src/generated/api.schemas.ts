@@ -186,6 +186,62 @@ export interface FinancialGoal {
   updatedAt: string;
 }
 
+export type GoalSummaryFundingCurrency =
+  (typeof GoalSummaryFundingCurrency)[keyof typeof GoalSummaryFundingCurrency];
+
+export const GoalSummaryFundingCurrency = {
+  USD: "USD",
+} as const;
+
+export type GoalSummaryFundingSource =
+  (typeof GoalSummaryFundingSource)[keyof typeof GoalSummaryFundingSource];
+
+export const GoalSummaryFundingSource = {
+  links: "links",
+  manual: "manual",
+} as const;
+
+export type GoalSummaryFundingBreakdownItem = {
+  sourceType: string;
+  sourceId: string;
+  allocationPct: number;
+  sourceValueUsd: number;
+  contributionUsd: number;
+};
+
+export type GoalSummaryFunding = {
+  currentAmount: number;
+  currency: GoalSummaryFundingCurrency;
+  source: GoalSummaryFundingSource;
+  breakdown: GoalSummaryFundingBreakdownItem[];
+};
+
+export type GoalSummaryPacing =
+  (typeof GoalSummaryPacing)[keyof typeof GoalSummaryPacing];
+
+export const GoalSummaryPacing = {
+  no_target: "no_target",
+  on_track: "on_track",
+  at_risk: "at_risk",
+  off_track: "off_track",
+  completed: "completed",
+} as const;
+
+export type GoalSummary = FinancialGoal & {
+  funding: GoalSummaryFunding;
+  /** @nullable */
+  targetAmountUsd: number | null;
+  pacing: GoalSummaryPacing;
+  /** @nullable */
+  progressPct: number | null;
+  /** @nullable */
+  expectedPct: number | null;
+  /** @nullable */
+  monthsRemaining: number | null;
+  /** @nullable */
+  projectedCompletionDate: string | null;
+};
+
 export interface CreateGoalBody {
   title: string;
   goalType: string;

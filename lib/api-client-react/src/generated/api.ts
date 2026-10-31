@@ -39,6 +39,7 @@ import type {
   Error,
   FinancialGoal,
   FinancialPlan,
+  GoalSummary,
   HealthScore,
   HealthStatus,
   KycDocument,
@@ -810,8 +811,8 @@ export const getListGoalsUrl = () => {
 
 export const listGoals = async (
   options?: RequestInit,
-): Promise<FinancialGoal[]> => {
-  return customFetch<FinancialGoal[]>(getListGoalsUrl(), {
+): Promise<GoalSummary[]> => {
+  return customFetch<GoalSummary[]>(getListGoalsUrl(), {
     ...options,
     method: "GET",
   });
@@ -5160,8 +5161,8 @@ export const getAdvisorGetClientGoalsUrl = (id: string) => {
 export const advisorGetClientGoals = async (
   id: string,
   options?: RequestInit,
-): Promise<FinancialGoal[]> => {
-  return customFetch<FinancialGoal[]>(getAdvisorGetClientGoalsUrl(id), {
+): Promise<GoalSummary[]> => {
+  return customFetch<GoalSummary[]>(getAdvisorGetClientGoalsUrl(id), {
     ...options,
     method: "GET",
   });
@@ -5226,6 +5227,86 @@ export function useAdvisorGetClientGoals<
   },
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getAdvisorGetClientGoalsQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const getAdvisorGetLeadGoalsUrl = (id: string) => {
+  return `/api/advisor/leads/${id}/goals`;
+};
+
+export const advisorGetLeadGoals = async (
+  id: string,
+  options?: RequestInit,
+): Promise<GoalSummary[]> => {
+  return customFetch<GoalSummary[]>(getAdvisorGetLeadGoalsUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getAdvisorGetLeadGoalsQueryKey = (id: string) => {
+  return [`/api/advisor/leads/${id}/goals`] as const;
+};
+
+export const getAdvisorGetLeadGoalsQueryOptions = <
+  TData = Awaited<ReturnType<typeof advisorGetLeadGoals>>,
+  TError = ErrorType<unknown>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof advisorGetLeadGoals>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getAdvisorGetLeadGoalsQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof advisorGetLeadGoals>>
+  > = ({ signal }) => advisorGetLeadGoals(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof advisorGetLeadGoals>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type AdvisorGetLeadGoalsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof advisorGetLeadGoals>>
+>;
+export type AdvisorGetLeadGoalsQueryError = ErrorType<unknown>;
+
+export function useAdvisorGetLeadGoals<
+  TData = Awaited<ReturnType<typeof advisorGetLeadGoals>>,
+  TError = ErrorType<unknown>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof advisorGetLeadGoals>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getAdvisorGetLeadGoalsQueryOptions(id, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

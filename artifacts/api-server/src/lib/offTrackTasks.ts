@@ -1,7 +1,6 @@
 import { and, eq, ne } from "drizzle-orm";
 import { db, financialGoalsTable, clientProfilesTable, advisorTasksTable } from "@workspace/db";
-import { computeGoalProgress, type GoalStatus } from "@workspace/goal-math";
-import { computeCurrentBreakdown } from "./goalProgressSnapshot";
+import { computeGoalFundingSummary, type GoalPacing } from "./goalProgressSnapshot";
 
 // Only Sol's off-track nudge sets this — lets ensureOffTrackTask dedupe against
 // an already-open task for the same goal instead of creating one on every view.
@@ -9,7 +8,7 @@ export const OFF_TRACK_AUTO_REASON = "goal_off_track";
 
 export interface EnsureOffTrackTaskResult {
   created: boolean;
-  status: GoalStatus;
+  status: GoalPacing;
 }
 
 /**
@@ -29,13 +28,7 @@ export async function ensureOffTrackTask(userId: string, goalId: string): Promis
     .where(and(eq(financialGoalsTable.id, goalId), eq(financialGoalsTable.userId, userId)));
   if (!goal) return { created: false, status: "no_target" };
 
-  const { computedCurrentAmount } = await computeCurrentBreakdown(userId, goalId);
-  const progress = computeGoalProgress({
-    currentAmount: computedCurrentAmount,
-    targetAmount: goal.targetAmount ? parseFloat(goal.targetAmount) : null,
-    targetDate: goal.targetDate,
-    createdAt: goal.createdAt.toISOString(),
-  });
+  const progress = await computeGoalFundingSummary(userId, goal);
 
   const [existingOpenTask] = await db.select({ id: advisorTasksTable.id }).from(advisorTasksTable)
     .where(and(
@@ -44,11 +37,11 @@ export async function ensureOffTrackTask(userId: string, goalId: string): Promis
       ne(advisorTasksTable.status, "done"),
     ));
 
-  if (progress.status !== "off_track") {
+  if (progress.pacing !== "off_track") {
     if (existingOpenTask) {
       await db.update(advisorTasksTable).set({ status: "done" }).where(eq(advisorTasksTable.id, existingOpenTask.id));
     }
-    return { created: false, status: progress.status };
+    return { created: false, status: progress.pacing };
   }
 
   if (existingOpenTask) return { created: false, status: "off_track" };

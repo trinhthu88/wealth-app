@@ -9,6 +9,15 @@ import {
   priceCacheTable,
   profilesTable,
 } from "@workspace/db";
+import { convertToUsd, getCurrencyRatesFor, type CurrencyRates } from "./currencyRates";
+
+export {
+  convertToUsd,
+  getCurrencyRates,
+  getCurrencyRatesFor,
+  FALLBACK_CURRENCY_RATES,
+} from "./currencyRates";
+export type { CurrencyRates } from "./currencyRates";
 
 export const TICKER_BASED_TYPES = new Set(["stock_etf", "etf", "mutual_fund", "commodity", "bond"]);
 
@@ -23,21 +32,33 @@ type HoldingValueInput = Pick<
   | "currentBalance"
   | "currentBalancePension"
   | "currentValueOther"
+  | "currency"
 >;
 
 /** The shared current-value rule for self-managed holdings and goal funding. */
-export function valueOfHolding(holding: HoldingValueInput, priceBySymbol: Map<string, number>): number {
+export function valueOfHolding(
+  holding: HoldingValueInput,
+  priceBySymbol: Map<string, number>,
+  rates: CurrencyRates,
+): number {
   const type = holding.holdingType;
   if (TICKER_BASED_TYPES.has(type) || type === "crypto") {
     const symbol = (type === "crypto" ? holding.coinSymbol : holding.ticker)?.toUpperCase() ?? "";
     const units = Number.parseFloat(holding.unitsHeld ?? "0") || 0;
     const averageCost = Number.parseFloat(holding.averageCostPrice ?? "0") || 0;
-    return units * (priceBySymbol.get(symbol) ?? averageCost);
+    const marketPriceUsd = priceBySymbol.get(symbol);
+    return units * (marketPriceUsd ?? convertToUsd(averageCost, holding.currency, rates));
   }
-  if (type === "property") return Number.parseFloat(holding.currentEstimatedValue ?? "0") || 0;
-  if (type === "cash") return Number.parseFloat(holding.currentBalance ?? "0") || 0;
-  if (type === "pension") return Number.parseFloat(holding.currentBalancePension ?? "0") || 0;
-  return Number.parseFloat(holding.currentValueOther ?? "0") || 0;
+  if (type === "property") {
+    return convertToUsd(Number.parseFloat(holding.currentEstimatedValue ?? "0") || 0, holding.currency, rates);
+  }
+  if (type === "cash") {
+    return convertToUsd(Number.parseFloat(holding.currentBalance ?? "0") || 0, holding.currency, rates);
+  }
+  if (type === "pension") {
+    return convertToUsd(Number.parseFloat(holding.currentBalancePension ?? "0") || 0, holding.currency, rates);
+  }
+  return convertToUsd(Number.parseFloat(holding.currentValueOther ?? "0") || 0, holding.currency, rates);
 }
 
 export type NetWorthItemSource = "holding" | "advised_plan" | "asset" | "liability" | "mortgage";
@@ -86,6 +107,12 @@ export async function computeNetWorth(
     db.select().from(assetsTable).where(eq(assetsTable.userId, userId)),
     db.select().from(liabilitiesTable).where(eq(liabilitiesTable.userId, userId)),
   ]);
+  const rates = await getCurrencyRatesFor([
+    ...holdings.map((holding) => holding.currency),
+    ...plans.map((plan) => plan.currency),
+    ...assets.map((asset) => asset.currencyOriginal),
+    ...liabilities.map((liability) => liability.currencyOriginal),
+  ]);
 
   const symbols = holdings
     .filter((holding) => TICKER_BASED_TYPES.has(holding.holdingType) || holding.holdingType === "crypto")
@@ -106,7 +133,7 @@ export async function computeNetWorth(
     id: holding.id,
     label: holding.label,
     category: holding.holdingType,
-    value: valueOfHolding(holding, priceBySymbol),
+    value: valueOfHolding(holding, priceBySymbol, rates),
     currency: "USD",
   }));
   const planItems: NetWorthItem[] = plans.map((plan) => ({
@@ -114,7 +141,11 @@ export async function computeNetWorth(
     id: plan.id,
     label: plan.nickname ?? plan.productName,
     category: "investment",
-    value: Number.parseFloat(plan.latestAccountValue ?? "0") || 0,
+    value: convertToUsd(
+      Number.parseFloat(plan.latestAccountValue ?? "0") || 0,
+      plan.currency,
+      rates,
+    ),
     currency: "USD",
   }));
   const assetItems: NetWorthItem[] = assets.map((asset) => ({
@@ -122,7 +153,11 @@ export async function computeNetWorth(
     id: asset.id,
     label: asset.name,
     category: asset.category,
-    value: Number.parseFloat(asset.valueUsd ?? "0") || 0,
+    value: convertToUsd(
+      Number.parseFloat(asset.valueOriginal ?? asset.valueUsd ?? "0") || 0,
+      asset.currencyOriginal,
+      rates,
+    ),
     currency: "USD",
   }));
   const liabilityItems: NetWorthItem[] = liabilities.map((liability) => ({
@@ -130,11 +165,19 @@ export async function computeNetWorth(
     id: liability.id,
     label: liability.name,
     category: liability.category,
-    value: Number.parseFloat(liability.balanceUsd ?? "0") || 0,
+    value: convertToUsd(
+      Number.parseFloat(liability.balanceOriginal ?? liability.balanceUsd ?? "0") || 0,
+      liability.currencyOriginal,
+      rates,
+    ),
     currency: "USD",
   }));
   const mortgageItems: NetWorthItem[] = holdings.flatMap((holding) => {
-    const mortgage = Number.parseFloat(holding.outstandingMortgage ?? "0") || 0;
+    const mortgage = convertToUsd(
+      Number.parseFloat(holding.outstandingMortgage ?? "0") || 0,
+      holding.currency,
+      rates,
+    );
     if (!holding.isActive || holding.holdingType !== "property" || mortgage <= 0) return [];
     return [{
       source: "mortgage" as const,

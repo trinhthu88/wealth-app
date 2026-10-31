@@ -3,9 +3,18 @@ import { useUser } from "@clerk/react";
 import { apiFetch } from "@/lib/api";
 import { track } from "@/lib/analytics";
 import { toast } from "sonner";
-import { computeGoalProgress, type GoalStatus } from "./useGoalProgress";
 import { useAdvisedPlans } from "./useAdvisedPlans";
 import { useClientHoldings } from "./useClientHoldings";
+
+export type GoalPacing = "no_target" | "on_track" | "at_risk" | "off_track" | "completed";
+
+export interface GoalFundingBreakdown {
+  sourceType: string;
+  sourceId: string;
+  allocationPct: number;
+  sourceValueUsd: number;
+  contributionUsd: number;
+}
 
 export interface RawGoal {
   id: string;
@@ -23,6 +32,18 @@ export interface RawGoal {
   isAdvisorManaged: boolean;
   createdAt: string;
   updatedAt: string;
+  funding: {
+    currentAmount: number;
+    currency: "USD";
+    source: "links" | "manual";
+    breakdown: GoalFundingBreakdown[];
+  };
+  targetAmountUsd: number | null;
+  pacing: GoalPacing;
+  progressPct: number | null;
+  expectedPct: number | null;
+  monthsRemaining: number | null;
+  projectedCompletionDate: string | null;
 }
 
 export interface GoalHoldingLink {
@@ -40,7 +61,7 @@ export interface EnrichedGoal extends RawGoal {
   targetAmountNum: number | null;
   links: GoalHoldingLink[];
   progressPct: number | null;
-  trackStatus: GoalStatus;
+  trackStatus: GoalPacing;
   expectedPct: number | null;
   monthsRemaining: number | null;
   projectedCompletionDate: string | null;
@@ -91,47 +112,14 @@ export function useGoals() {
   const allLinks = linksQuery.data ?? [];
 
   // Build a plan/holding lookup map
-  const planMap = new Map(plans.map(p => [p.id, p]));
-  const holdingMap = new Map(holdings.map(h => [h.id, h]));
-
   const enrichGoal = (g: RawGoal): EnrichedGoal => {
     const links = allLinks.filter(l => l.goalId === g.id);
-    const targetAmountNum = g.targetAmount ? parseFloat(g.targetAmount) : null;
-
-    // Compute current amount from links if any
-    let computedCurrentAmount: number;
-    if (links.length > 0) {
-      computedCurrentAmount = links.reduce((sum, link) => {
-        const pct = parseFloat(link.allocationPct) / 100;
-        if (link.sourceType === "advised_plan") {
-          const plan = planMap.get(link.sourceId);
-          return sum + (parseFloat(plan?.latestAccountValue ?? "0") || 0) * pct;
-        } else {
-          const holding = holdingMap.get(link.sourceId);
-          return sum + (holding?.currentValue ?? 0) * pct;
-        }
-      }, 0);
-    } else {
-      computedCurrentAmount = parseFloat(g.currentAmount) || 0;
-    }
-
-    const progress = computeGoalProgress({
-      currentAmount: computedCurrentAmount,
-      targetAmount: targetAmountNum,
-      targetDate: g.targetDate,
-      createdAt: g.createdAt,
-    });
-
     return {
       ...g,
-      computedCurrentAmount,
-      targetAmountNum,
+      computedCurrentAmount: g.funding.currentAmount,
+      targetAmountNum: g.targetAmountUsd,
       links,
-      progressPct: progress.progressPct,
-      trackStatus: progress.status,
-      expectedPct: progress.expectedPct,
-      monthsRemaining: progress.monthsRemaining,
-      projectedCompletionDate: progress.projectedCompletionDate,
+      trackStatus: g.pacing,
     };
   };
 
@@ -190,6 +178,7 @@ export function useGoals() {
         title: string; goalType: string; targetAmount?: number | null;
         targetDate?: string | null; priority?: string; notes?: string | null;
         currentAmount?: number | null;
+        currency?: string;
       };
     }) => apiFetch(`/goals/${id}`, {
       method: "PUT",
@@ -200,7 +189,8 @@ export function useGoals() {
         targetDate: data.targetDate ?? null,
         priority: data.priority ?? "medium",
         notes: data.notes ?? null,
-        currentAmount: data.currentAmount != null ? String(data.currentAmount) : "0",
+        ...(data.currentAmount != null ? { currentAmount: String(data.currentAmount) } : {}),
+        ...(data.currency ? { currency: data.currency } : {}),
       }),
     }),
     onSuccess: () => { invalidate(); toast.success("Goal updated"); },

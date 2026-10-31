@@ -18,6 +18,7 @@ interface Props {
     title: string; goalType: string; targetAmount?: number | null;
     targetDate?: string | null; priority: string; notes?: string | null;
     currentAmount?: number | null;
+    currency?: string;
   }) => Promise<void>;
   onDelete: (id: string) => void;
 }
@@ -61,6 +62,7 @@ export default function EditGoalSheet({ goal, isOpen, onClose, onSave, onDelete 
         goalType: goal.goalType,
         targetAmount: numAmount > 0 ? numAmount : null,
         targetDate: targetDate ? targetDate + "-01" : null,
+        currency,
         priority,
         notes: notes.trim() || null,
         currentAmount: !hasLinks && numCurrent > 0 ? numCurrent : null,

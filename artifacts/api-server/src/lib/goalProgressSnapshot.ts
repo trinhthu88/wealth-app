@@ -3,6 +3,8 @@ import {
   db, goalProgressSnapshotsTable, goalHoldingLinksTable,
   advisedPlansTable, clientHoldingsTable, financialGoalsTable, priceCacheTable,
 } from "@workspace/db";
+import { computeGoalProgress } from "@workspace/goal-math";
+import { convertToUsd, getCurrencyRatesFor, type CurrencyRates } from "@workspace/net-worth";
 import { TICKER_BASED_TYPES, valueOfHolding } from "./netWorthService";
 
 export { valueOfHolding as resolveHoldingValueUsd };
@@ -15,13 +17,18 @@ export interface LinkBreakdownEntry {
   contributionUsd: number;
 }
 
+export type GoalPacing = "no_target" | "on_track" | "at_risk" | "off_track" | "completed";
+
 /**
- * Rebuilds a goal's current funding picture the same way the frontend's
- * `useGoals` does (see the tier note in `@workspace/goal-math`): sum of each
- * linked holding's value at its allocation %, falling back to the goal's own
- * manually-entered `currentAmount` when nothing is linked.
+ * Rebuilds a goal's current funding picture in USD: linked source values are
+ * valued by the shared net-worth helper, otherwise the manual amount is
+ * converted from the goal's currency.
  */
-export async function computeCurrentBreakdown(userId: string, goalId: string): Promise<{
+export async function computeCurrentBreakdown(
+  userId: string,
+  goalId: string,
+  rates?: CurrencyRates,
+): Promise<{
   computedCurrentAmount: number;
   linkBreakdown: LinkBreakdownEntry[];
 }> {
@@ -29,9 +36,17 @@ export async function computeCurrentBreakdown(userId: string, goalId: string): P
     .where(and(eq(goalHoldingLinksTable.goalId, goalId), eq(goalHoldingLinksTable.userId, userId)));
 
   if (links.length === 0) {
-    const [goal] = await db.select({ currentAmount: financialGoalsTable.currentAmount })
+    const [goal] = await db.select({
+      currentAmount: financialGoalsTable.currentAmount,
+      currency: financialGoalsTable.currency,
+    })
       .from(financialGoalsTable).where(eq(financialGoalsTable.id, goalId));
-    return { computedCurrentAmount: parseFloat(goal?.currentAmount ?? "0") || 0, linkBreakdown: [] };
+    const currencyRates = rates ?? await getCurrencyRatesFor([goal?.currency]);
+    const currentAmount = parseFloat(goal?.currentAmount ?? "0") || 0;
+    return {
+      computedCurrentAmount: convertToUsd(currentAmount, goal?.currency, currencyRates),
+      linkBreakdown: [],
+    };
   }
 
   const planIds = links.filter(l => l.sourceType === "advised_plan").map(l => l.sourceId);
@@ -39,14 +54,25 @@ export async function computeCurrentBreakdown(userId: string, goalId: string): P
 
   const [plans, holdings] = await Promise.all([
     planIds.length > 0
-      ? db.select({ id: advisedPlansTable.id, value: advisedPlansTable.latestAccountValue })
+      ? db.select({
+          id: advisedPlansTable.id,
+          value: advisedPlansTable.latestAccountValue,
+          currency: advisedPlansTable.currency,
+        })
           .from(advisedPlansTable).where(eq(advisedPlansTable.userId, userId))
       : Promise.resolve([]),
     holdingIds.length > 0
       ? db.select().from(clientHoldingsTable).where(eq(clientHoldingsTable.userId, userId))
       : Promise.resolve([] as (typeof clientHoldingsTable.$inferSelect)[]),
   ]);
-  const planValueById = new Map(plans.map(p => [p.id, parseFloat(p.value ?? "0") || 0]));
+  const currencyRates = rates ?? await getCurrencyRatesFor([
+    ...plans.map((plan) => plan.currency),
+    ...holdings.map((holding) => holding.currency),
+  ]);
+  const planValueById = new Map(plans.map(p => [
+    p.id,
+    convertToUsd(parseFloat(p.value ?? "0") || 0, p.currency, currencyRates),
+  ]));
 
   const symbols = holdings
     .filter(h => TICKER_BASED_TYPES.has(h.holdingType) || h.holdingType === "crypto")
@@ -58,7 +84,7 @@ export async function computeCurrentBreakdown(userId: string, goalId: string): P
     : [];
   const priceBySymbol = new Map(priceRows.map(p => [p.symbol.toUpperCase(), parseFloat(p.priceUsd) || 0]));
 
-  const holdingValueById = new Map(holdings.map(h => [h.id, valueOfHolding(h, priceBySymbol)]));
+  const holdingValueById = new Map(holdings.map(h => [h.id, valueOfHolding(h, priceBySymbol, currencyRates)]));
 
   const linkBreakdown: LinkBreakdownEntry[] = links.map(l => {
     const allocationPct = parseFloat(l.allocationPct) || 0;
@@ -76,6 +102,40 @@ export async function computeCurrentBreakdown(userId: string, goalId: string): P
 
   const computedCurrentAmount = linkBreakdown.reduce((sum, l) => sum + l.contributionUsd, 0);
   return { computedCurrentAmount, linkBreakdown };
+}
+
+export async function computeGoalFundingSummary(
+  userId: string,
+  goal: typeof financialGoalsTable.$inferSelect,
+) {
+  const { computedCurrentAmount, linkBreakdown } = await computeCurrentBreakdown(userId, goal.id);
+  const rawTarget = goal.targetAmount == null ? null : parseFloat(goal.targetAmount);
+  const targetRates = await getCurrencyRatesFor([goal.currency]);
+  const targetAmountUsd = rawTarget != null && Number.isFinite(rawTarget)
+    ? convertToUsd(rawTarget, goal.currency, targetRates)
+    : null;
+  const progress = computeGoalProgress({
+    currentAmount: computedCurrentAmount,
+    targetAmount: targetAmountUsd,
+    targetDate: goal.targetDate,
+    createdAt: goal.createdAt.toISOString(),
+  });
+
+  return {
+    ...goal,
+    funding: {
+      currentAmount: computedCurrentAmount,
+      currency: "USD" as const,
+      source: linkBreakdown.length > 0 ? "links" as const : "manual" as const,
+      breakdown: linkBreakdown,
+    },
+    targetAmountUsd,
+    pacing: (goal.status === "completed" ? "completed" : progress.status) as GoalPacing,
+    progressPct: progress.progressPct,
+    expectedPct: progress.expectedPct,
+    monthsRemaining: progress.monthsRemaining,
+    projectedCompletionDate: progress.projectedCompletionDate,
+  };
 }
 
 /**

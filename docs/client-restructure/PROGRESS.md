@@ -1,7 +1,7 @@
 # Restructure progress
 
 ## Current phase
-P3 — Goal funding and goal status — in progress
+P3 — Goal funding and goal status — complete; typecheck and API suite passed
 
 ## Baseline (Phase 0)
 - typecheck: passed (`pnpm run typecheck`; all libraries and leaf workspaces completed).
@@ -170,7 +170,7 @@ Observed before schema change:
 - PostgreSQL reports an existing validated UNIQUE constraint named `advised_plan_statements_advised_plan_id_period_start_period_end` (`contype = 'u'`), backed by a valid unique btree index of the same name on the expected columns.
 - Drizzle's expected literal name is 70 characters, while PostgreSQL's `max_identifier_length` is 63; truncating the expected name yields exactly the existing constraint name. It is already a UNIQUE constraint, not a standalone index, so renaming/attaching would be a no-op and could not produce a distinct 70-character database name.
 Done:
-- Made the Drizzle declaration explicit with the PostgreSQL-stored 63-character name, equivalent to PostgreSQL's truncation of the auto-generated 70-character name.
+- Confirmed the repository's Drizzle declaration uses the PostgreSQL-stored 63-character name, equivalent to PostgreSQL's truncation of the auto-generated 70-character name; the dev database already matches it. No database change was needed.
 - The first normal schema push showed the exact advised-plan prompt: `You're about to add advised_plan_statements_advised_plan_id_period_start_period_end_unique unique constraint to the table, which contains 6 items. If this statement fails, you will receive an error from the database. Do you want to truncate advised_plan_statements table?` Choices: `No, add the constraint without truncating the table` / `Yes, truncate the table`. No truncation was selected; the table stayed at 6 rows.
 - After naming alignment, the second normal schema push no longer warned on `advised_plan_statements`, but stopped at the separate `client_holding_transactions` prompt recorded under Blocked. No schema push completed.
 - Requeried `advised_plan_statements`: 6 rows before/after, 0 duplicate groups/excess rows, and the same validated UNIQUE constraint/index remain present.
@@ -178,6 +178,9 @@ Audit counts / backfills:
 - `advised_plan_statements`: 6 rows; 0 duplicate groups / 0 excess rows for `(advised_plan_id, period_start, period_end)`.
 Tests: `pnpm run typecheck` passed; `pnpm --filter @workspace/api-server test` passed (18 files, 143 tests).
 Commit: `9004f7b` — `[restructure P2.5] align Postgres unique constraint name`.
+Additional progress/plan commit: `0401111` — `[restructure P2.5] record push blocker and Phase 3 plan`.
+Files changed in P2.5:
+- `docs/client-restructure/PROGRESS.md` (the Drizzle declaration was already present in the starting repository state).
 Decisions made by agent:
 - The 70-character generated identifier cannot be stored verbatim; explicitly declaring its 63-character PostgreSQL-stored form aligns Drizzle with the existing constraint without touching data.
 - Do not accept the unrelated schema-push prompt for `client_holding_transactions`; the user directed continuing with Phases 3–4 if the push still warns.
@@ -193,6 +196,34 @@ Plan:
 - Run full typecheck and API suite, note the intended increase for stock/ETF/crypto/bond clients because the old browser page omitted those holdings, record changed files, then commit with `[restructure P3]`.
 Decisions made by agent:
 - Use the existing public USD-base rate feed (`open.er-api.com/v6/latest/USD`) with the app's one-hour cache and fallback rates; keep tests deterministic with fixed rates.
+Done:
+- Added server-computed funding, USD breakdowns, target normalization, and derived pacing to current-user and advisor goal lists. The browser now consumes these values instead of summing linked holdings or recomputing pacing.
+- Guarded auto-update and pathway upsert against linked goals and investment-client goals. Goal PUT now updates only fields present, preserving omitted current amounts and monthly contributions.
+- Updated the free health-score goal component to use derived pacing without writing pacing into lifecycle status.
+- Added cached server-side FX conversion using the app's existing USD-base feed and fallback values. Net-worth items, property mortgages, advised plans, manual assets/liabilities, linked/manual goal funding, Sol portfolio totals, and blended portfolio rates now convert to USD.
+- Updated OpenAPI and regenerated client/Zod contracts.
+- Note: clients with stocks, ETFs, crypto, or bonds will see higher net worth than the old browser page showed because that page omitted those holdings. This is intended.
+Audit counts / backfills:
+- No schema changes or database backfills in Phase 3.
+Tests: `pnpm run typecheck` passed; `pnpm --filter @workspace/api-server test` passed (20 files, 148 tests).
+Files changed in P3:
+- `artifacts/api-server/src/lib/blendedRate.ts`
+- `artifacts/api-server/src/lib/goalProgressSnapshot.ts`
+- `artifacts/api-server/src/lib/offTrackTasks.ts`
+- `artifacts/api-server/src/routes/__tests__/goalsFunding.test.ts`
+- `artifacts/api-server/src/routes/__tests__/healthscore.test.ts`
+- `artifacts/api-server/src/routes/__tests__/netWorthCurrency.test.ts`
+- `artifacts/api-server/src/routes/goals.ts`
+- `artifacts/api-server/src/routes/healthscore.ts`
+- `artifacts/api-server/src/routes/sol.ts`
+- `artifacts/wealthapp/src/components/client/goals/EditGoalSheet.tsx`
+- `artifacts/wealthapp/src/hooks/useGoals.ts`
+- `lib/api-client-react/src/generated/api.schemas.ts`
+- `lib/api-client-react/src/generated/api.ts`
+- `lib/api-spec/openapi.yaml`
+- `lib/api-zod/src/generated/api.ts`
+- `lib/net-worth/src/currencyRates.ts`
+- `lib/net-worth/src/index.ts`
 
 ## Next agent: start here
 - Begin Phase 3 from `docs/client-restructure/MASTER_PROMPT.md`: first record the Phase 3 plan in this file, then work only on goal funding and goal status. Do not repeat Phases 0–2. Before any schema change, back up affected tables; reject and record any schema push warning about data loss, truncation, rename, or drop. Do not publish or deploy.

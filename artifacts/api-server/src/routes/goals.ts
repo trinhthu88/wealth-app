@@ -3,7 +3,7 @@ import { eq, and } from "drizzle-orm";
 import { db, financialGoalsTable, profilesTable, goalHoldingLinksTable, goalLifecycleSchema } from "@workspace/db";
 import { requireAuth, requireRole, requireAdvisorOwnsClient, requireAdvisorOwnsLead } from "../middlewares/requireAuth";
 import { getRemainingPct } from "../lib/goalAllocation";
-import { getProgressMovement } from "../lib/goalProgressSnapshot";
+import { computeGoalFundingSummary, getProgressMovement } from "../lib/goalProgressSnapshot";
 import { ensureOffTrackTask } from "../lib/offTrackTasks";
 
 const router: IRouter = Router();
@@ -11,8 +11,9 @@ const router: IRouter = Router();
 // Shared by the client's own route, the advisor-owns-client route, and the
 // advisor-owns-lead route below — goals exist on a userId regardless of the
 // account's current role, so all three read the exact same rows.
-function getGoalsForUser(userId: string) {
-  return db.select().from(financialGoalsTable).where(eq(financialGoalsTable.userId, userId));
+async function getGoalsForUser(userId: string) {
+  const goals = await db.select().from(financialGoalsTable).where(eq(financialGoalsTable.userId, userId));
+  return Promise.all(goals.map(goal => computeGoalFundingSummary(userId, goal)));
 }
 
 router.get("/goals", requireAuth, async (req, res): Promise<void> => {
@@ -57,12 +58,33 @@ router.put("/goals/:id", requireAuth, async (req, res): Promise<void> => {
   const { title, goalType, targetAmount, currentAmount, monthlyContribution, targetDate, currency, priority, status, notes } = req.body;
   const parsedStatus = status === undefined ? undefined : goalLifecycleSchema.safeParse(status);
   if (parsedStatus && !parsedStatus.success) { res.status(400).json({ error: "Invalid goal lifecycle status" }); return; }
-  const [updated] = await db.update(financialGoalsTable).set({
-    title, goalType, targetAmount: targetAmount?.toString() ?? null,
-    currentAmount: currentAmount?.toString() ?? "0",
-    monthlyContribution: monthlyContribution?.toString() ?? "0",
-    targetDate: targetDate ?? null, currency, priority, status: parsedStatus?.success ? parsedStatus.data : undefined, notes, updatedAt: new Date(),
-  }).where(and(eq(financialGoalsTable.id, rawId), eq(financialGoalsTable.userId, userId))).returning();
+  const hasField = (field: string) => Object.prototype.hasOwnProperty.call(req.body, field);
+  const updates: Partial<typeof financialGoalsTable.$inferInsert> = { updatedAt: new Date() };
+  if (hasField("title")) updates.title = title;
+  if (hasField("goalType")) updates.goalType = goalType;
+  if (hasField("targetAmount")) updates.targetAmount = targetAmount == null ? null : String(targetAmount);
+  if (hasField("currentAmount")) updates.currentAmount = String(currentAmount ?? 0);
+  if (hasField("monthlyContribution")) updates.monthlyContribution = String(monthlyContribution ?? 0);
+  if (hasField("targetDate")) updates.targetDate = targetDate ?? null;
+  if (hasField("currency")) updates.currency = currency ?? "USD";
+  if (hasField("priority")) updates.priority = priority;
+  if (hasField("status") && parsedStatus?.success) updates.status = parsedStatus.data;
+  if (hasField("notes")) updates.notes = notes ?? null;
+
+  if (hasField("currentAmount")) {
+    const [linked] = await db.select({ id: goalHoldingLinksTable.id }).from(goalHoldingLinksTable)
+      .where(and(
+        eq(goalHoldingLinksTable.goalId, rawId),
+        eq(goalHoldingLinksTable.userId, userId),
+      )).limit(1);
+    if (linked) {
+      res.status(409).json({ error: "Linked goal funding is calculated from its investments." });
+      return;
+    }
+  }
+
+  const [updated] = await db.update(financialGoalsTable).set(updates)
+    .where(and(eq(financialGoalsTable.id, rawId), eq(financialGoalsTable.userId, userId))).returning();
   if (!updated) { res.status(404).json({ error: "Not found" }); return; }
   res.json(updated);
 });
@@ -82,6 +104,25 @@ router.post("/goals/auto-update", requireAuth, async (req, res): Promise<void> =
     res.status(400).json({ error: "goalId and newCurrentAmount required" });
     return;
   }
+  const [[profile], [goal]] = await Promise.all([
+    db.select({ role: profilesTable.role }).from(profilesTable).where(eq(profilesTable.id, userId)),
+    db.select({ id: financialGoalsTable.id }).from(financialGoalsTable)
+      .where(and(eq(financialGoalsTable.id, goalId), eq(financialGoalsTable.userId, userId))),
+  ]);
+  if (!goal) { res.status(404).json({ error: "Not found" }); return; }
+  if (profile?.role === "investment_client") {
+    res.status(409).json({ error: "Investment-client goal funding is server-managed." });
+    return;
+  }
+  const [linked] = await db.select({ id: goalHoldingLinksTable.id }).from(goalHoldingLinksTable)
+    .where(and(
+      eq(goalHoldingLinksTable.goalId, goalId),
+      eq(goalHoldingLinksTable.userId, userId),
+    )).limit(1);
+  if (linked) {
+    res.status(409).json({ error: "Linked goal funding is calculated from its investments." });
+    return;
+  }
   const [updated] = await db.update(financialGoalsTable).set({
     currentAmount: String(newCurrentAmount),
     updatedAt: new Date(),
@@ -97,8 +138,21 @@ router.post("/goals/upsert-from-pathway", requireAuth, async (req, res): Promise
   const { title, goalType, targetAmount, targetDate, currency } = req.body;
   if (!title || !goalType) { res.status(400).json({ error: "title and goalType required" }); return; }
 
-  const existing = await db.select().from(financialGoalsTable)
-    .where(eq(financialGoalsTable.userId, userId));
+  const [[profile], existing, linkedGoals] = await Promise.all([
+    db.select({ role: profilesTable.role }).from(profilesTable).where(eq(profilesTable.id, userId)),
+    db.select().from(financialGoalsTable).where(eq(financialGoalsTable.userId, userId)),
+    db.select({ goalId: goalHoldingLinksTable.goalId }).from(goalHoldingLinksTable)
+      .where(eq(goalHoldingLinksTable.userId, userId)),
+  ]);
+  if (profile?.role === "investment_client") {
+    res.status(409).json({ error: "Investment-client goals cannot be overwritten by pathway setup." });
+    return;
+  }
+  const linkedGoalIds = new Set(linkedGoals.map(link => link.goalId));
+  if (existing.some(goal => linkedGoalIds.has(goal.id))) {
+    res.status(409).json({ error: "Linked goal funding cannot be overwritten by pathway setup." });
+    return;
+  }
 
   if (existing.length > 0) {
     // Delete duplicates beyond the first

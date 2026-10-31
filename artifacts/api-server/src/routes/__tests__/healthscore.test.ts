@@ -86,8 +86,9 @@ describe("POST /health-score", () => {
   const RUN_ID = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const noGoalsUser = `test-hs-no-goals-${RUN_ID}`;
   const noBudgetUser = `test-hs-no-budget-${RUN_ID}`;
+  const noTargetUser = `test-hs-no-target-${RUN_ID}`;
   const maxedUser = `test-hs-maxed-${RUN_ID}`;
-  const allUsers = [noGoalsUser, noBudgetUser, maxedUser];
+  const allUsers = [noGoalsUser, noBudgetUser, noTargetUser, maxedUser];
 
   beforeAll(async () => {
     await db.insert(profilesTable).values(
@@ -99,6 +100,10 @@ describe("POST /health-score", () => {
     // noBudgetUser: has a goal, but no budget_entries row at all (income should resolve to 0).
     await db.insert(financialGoalsTable).values({
       userId: noBudgetUser, title: "Emergency fund", goalType: "emergency", targetAmount: "10000", currentAmount: "0", status: "active",
+    });
+
+    await db.insert(financialGoalsTable).values({
+      userId: noTargetUser, title: "Active without target", goalType: "emergency", currentAmount: "0", status: "active",
     });
 
     // maxedUser: everything maxed out — savings rate, goal already met, huge net worth, high growth.
@@ -138,6 +143,15 @@ describe("POST /health-score", () => {
       .expect(201);
     expect(res.body.goalsScore).toBe(0);
     expect(Number.isFinite(res.body.overallScore)).toBe(true);
+  });
+
+  it("uses derived pacing instead of lifecycle active for a goal without a target", async () => {
+    const res = await request(app)
+      .post("/api/health-score")
+      .set(asUser(noTargetUser))
+      .expect(201);
+    expect(res.body.goalsScore).toBe(0);
+    expect(res.body.insights.goalsOnTrack).toBe(0);
   });
 
   it("does not produce NaN/Infinity in effectiveSavingsRate when there's no budget entry (income = 0)", async () => {
