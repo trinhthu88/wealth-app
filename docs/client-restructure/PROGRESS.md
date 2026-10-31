@@ -119,6 +119,7 @@ Done:
 Audit counts / backfills:
 - Not applicable in Phase 2.
 Tests: `pnpm run typecheck` passed; `pnpm --filter @workspace/api-server test` passed (18 files, 143 tests).
+Commit: `b754f93` — `[restructure P2] centralize net worth calculation`.
 Replit schedule instructions (documented only; not configured or deployed):
 - In Replit's Publishing tool, create a Scheduled Deployment, choose a daily cron schedule and timezone, and set the run command to `pnpm --filter @workspace/scripts run nightly-snapshots`. Set a build command if the Publishing tool requires one. Scheduled Deployments do not serve web traffic. Do not create or publish it as part of this restructure.
 Files changed:
