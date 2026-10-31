@@ -1,7 +1,7 @@
 # Restructure progress
 
 ## Current phase
-P2.5 — Align advised-plan statement uniqueness — complete; normal schema push blocked by unrelated truncation warning
+P3 — Goal funding and goal status — in progress
 
 ## Baseline (Phase 0)
 - typecheck: passed (`pnpm run typecheck`; all libraries and leaf workspaces completed).
@@ -177,9 +177,22 @@ Done:
 Audit counts / backfills:
 - `advised_plan_statements`: 6 rows; 0 duplicate groups / 0 excess rows for `(advised_plan_id, period_start, period_end)`.
 Tests: `pnpm run typecheck` passed; `pnpm --filter @workspace/api-server test` passed (18 files, 143 tests).
+Commit: `9004f7b` — `[restructure P2.5] align Postgres unique constraint name`.
 Decisions made by agent:
 - The 70-character generated identifier cannot be stored verbatim; explicitly declaring its 63-character PostgreSQL-stored form aligns Drizzle with the existing constraint without touching data.
 - Do not accept the unrelated schema-push prompt for `client_holding_transactions`; the user directed continuing with Phases 3–4 if the push still warns.
+
+### P3 — Goal funding and goal status
+Plan:
+- Enrich current-user, advisor-client, and advisor-lead goal responses server-side with `funding: { currentAmount, source, breakdown[] }` and derived `pacing` (`no_target`, `on_track`, `at_risk`, `off_track`, or `completed`). Linked goals use shared allocation and holding-value logic; unlinked goals use the manual `current_amount`.
+- Remove link-value summing and pacing calculations from the browser goal hook; consume server-computed values while retaining link reads for editing.
+- Ensure auto-update and pathway upsert cannot overwrite funding for linked goals or investment clients; make goal PUT updates partial so omitted `currentAmount` and `monthlyContribution` remain unchanged.
+- Derive the free-tier health-score goal component from pacing rather than treating lifecycle `active` as pacing; keep pacing derived, never persisted.
+- Convert non-USD holdings, plans, assets, liabilities, mortgages, and manual goal funding to USD inside the shared server calculation using the existing USD-base exchange-rate source and its fallback rates.
+- Add deterministic API tests for linked/manual funding, partial updates, protected update paths, and a VND property plus EUR liability conversion; update API contracts/generated types as needed.
+- Run full typecheck and API suite, note the intended increase for stock/ETF/crypto/bond clients because the old browser page omitted those holdings, record changed files, then commit with `[restructure P3]`.
+Decisions made by agent:
+- Use the existing public USD-base rate feed (`open.er-api.com/v6/latest/USD`) with the app's one-hour cache and fallback rates; keep tests deterministic with fixed rates.
 
 ## Next agent: start here
 - Begin Phase 3 from `docs/client-restructure/MASTER_PROMPT.md`: first record the Phase 3 plan in this file, then work only on goal funding and goal status. Do not repeat Phases 0–2. Before any schema change, back up affected tables; reject and record any schema push warning about data loss, truncation, rename, or drop. Do not publish or deploy.
