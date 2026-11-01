@@ -1047,6 +1047,94 @@ paths:
               schema:
                 $ref: "#/components/schemas/NetWorthSummary"
 
+  /client/profile/basics:
+    put:
+      operationId: saveClientProfileBasics
+      tags: [client]
+      summary: Save investment-client profile basics
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientProfileBasicsInput"
+      responses:
+        "200":
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+        "400":
+          description: Invalid profile data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /client/onboarding/complete:
+    post:
+      operationId: completeClientOnboarding
+      tags: [client]
+      summary: Save first focus and complete client onboarding
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientOnboardingCompleteInput"
+      responses:
+        "200":
+          description: Updated client profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientOnboardingCompleteResponse"
+        "400":
+          description: Invalid first focus
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /client/setup-checklist:
+    get:
+      operationId: getClientSetupChecklist
+      tags: [client]
+      summary: Get the data-derived client setup checklist
+      responses:
+        "200":
+          description: Checklist, setup summary, and wealth-score progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientSetupChecklist"
+
+  /client/setup-checklist/preferences:
+    put:
+      operationId: updateClientSetupChecklistPreferences
+      tags: [client]
+      summary: Update checklist preferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientSetupChecklistPreferencesInput"
+      responses:
+        "200":
+          description: Updated preferences
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientSetupChecklistPreferences"
+        "400":
+          description: Invalid preferences
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
   /client/networth/snapshot:
     post:
       operationId: clientRejectNetWorthSnapshot
@@ -1315,6 +1403,116 @@ components:
         error:
           type: string
       required: [error]
+
+    ClientProfileBasicsInput:
+      type: object
+      properties:
+        fullName:
+          type: string
+          minLength: 2
+        dateOfBirth:
+          type: string
+          pattern: "^\\d{4}-(0[1-9]|1[0-2])$"
+        countryCode:
+          type: string
+          minLength: 2
+        isExpat:
+          type: boolean
+        preferredCurrency:
+          type: string
+      required: [fullName, dateOfBirth, countryCode, isExpat, preferredCurrency]
+
+    ClientOnboardingCompleteInput:
+      type: object
+      properties:
+        firstFocus:
+          type: string
+          enum: [know_my_money, start_investing, save_for_big, organise_existing, plan_retirement]
+      required: [firstFocus]
+
+    ClientOnboardingCompleteResponse:
+      type: object
+      properties:
+        firstFocus:
+          type: string
+          enum: [know_my_money, start_investing, save_for_big, organise_existing, plan_retirement]
+        onboardingStage:
+          type: string
+          enum: [not_started, profile, complete]
+      required: [firstFocus, onboardingStage]
+
+    ClientSetupChecklistPreferencesInput:
+      type: object
+      properties:
+        startingFromZero:
+          type: boolean
+        checklistHidden:
+          type: boolean
+
+    ClientSetupChecklistPreferences:
+      type: object
+      properties:
+        startingFromZero:
+          type: boolean
+        checklistHidden:
+          type: boolean
+
+    ClientSetupChecklistItem:
+      type: object
+      properties:
+        id:
+          type: string
+          enum: [budget, goal, wealth, goal_link, risk, advisor_hello]
+        title:
+          type: string
+        description:
+          type: string
+        done:
+          type: boolean
+        href:
+          type: ["string", "null"]
+        action:
+          type: ["string", "null"]
+          enum: [risk_check, null]
+      required: [id, title, description, done, href, action]
+
+    ClientSetupChecklist:
+      type: object
+      properties:
+        firstFocus:
+          type: ["string", "null"]
+          enum: [know_my_money, start_investing, save_for_big, organise_existing, plan_retirement, null]
+        startingFromZero:
+          type: boolean
+        checklistHidden:
+          type: boolean
+        advisorName:
+          type: ["string", "null"]
+        clientName:
+          type: ["string", "null"]
+        setupSummary:
+          type: object
+          properties:
+            visiblePlans:
+              type: integer
+            activeGoals:
+              type: integer
+            budgetMonths:
+              type: integer
+          required: [visiblePlans, activeGoals, budgetMonths]
+        wealthScoreUnlock:
+          type: object
+          properties:
+            monthsWithBudget:
+              type: integer
+            required:
+              type: integer
+          required: [monthsWithBudget, required]
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ClientSetupChecklistItem"
+      required: [firstFocus, startingFromZero, checklistHidden, advisorName, clientName, setupSummary, wealthScoreUnlock, items]
 
     NetWorthItem:
       type: object

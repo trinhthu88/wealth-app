@@ -1,7 +1,7 @@
 # Restructure progress
 
 ## Current phase
-P5 — Profile fields and onboarding state — done
+P6 — New onboarding + setup checklist — done
 
 ## Baseline (Phase 0)
 - typecheck: passed (`pnpm run typecheck`; all libraries and leaf workspaces completed).
@@ -357,7 +357,41 @@ Decisions made by agent:
 Test data to clean up (not deleted; skipped by all P5 backfills):
 - `onboardtest_*@example.com` free users created 2026-08-31 19:22–19:31 UTC: `user_3Ih5s4Bej9SHhEgqsmZ5HvdkSZi`, `user_3Ih64lmoG01ZUconwxylnux9ZIs`, `user_3Ih6YN8g7lN71SNigCGumwJASgR`, `user_3Ih6idWcukAGqPxn8bfP2TK3T1P`, `user_3Ih6vUHS3xhaNzJagpQ5jnVRC67`. Four have `profiles.risk_profile = Conservative`; none has a client_profiles row.
 - Source: no code in this repo (API tests, scripts, frontend, git history) creates `onboardtest_` users. They have real Clerk IDs and timestamps minutes apart, which matches a browser-driven sign-up run from outside the repo (for example an agent's e2e check), not the API suite (which mocks Clerk and leaves `profiles` unchanged). There was no in-repo test to fix. Whoever runs that e2e flow should delete its users afterwards, or use the Clerk test-mode `+clerk_test` addresses.
+### P6 — New onboarding + setup checklist
+Plan:
+- Before schema changes, export `client_profiles` to a dated ignored SQL backup and record/verify its row count. Add only `starting_from_zero` and `checklist_hidden` boolean preferences with safe defaults using the normal schema push; if it warns about truncation, data loss, renames, or drops, answer no, quote it under Blocked, and stop that schema step.
+- Add the authenticated `GET /client/setup-checklist` and preference update API, plus OpenAPI contracts/codegen. Derive all six done states from current-month budget, active goals, holdings/assets/liabilities or starting-from-zero, goal links, client risk profile, and a client-authored advisor message. Return current advisor and setup counts for onboarding Welcome, plus budget-month wealth-score progress.
+- Order checklist items by `first_focus`: default/`save_for_big` and `know_my_money` use the master order; `organise_existing` starts with wealth; choose and record sensible orders for `start_investing` and `plan_retirement`.
+- Replace investment-client onboarding with Welcome, About you, and first-focus screens. About you writes profile basics and stage `profile`; the final choice writes `first_focus`, advances to `complete`, and routes Home. Keep localStorage only for an unsaved About you draft; remove the free-pathway bridge and obsolete income/track/holdings/summary/goal/expense screens after the replacement works.
+- Add the Home checklist at the top with persisted hide/starting-from-zero preferences, wealth-score progress, and links to the existing Budget, Goals, Portfolio/Net Worth, goal-link sheet, and Messages surfaces. Add a five-question self-assessed risk sheet that saves only conservative/balanced/growth with source `self`; do not change free-tier onboarding or create duplicate forms.
+- Add API tests for each checklist completion source, preference behavior, first-focus ordering, month+year DOB storage, and forward-only onboarding stage. Run full typecheck and API suite, record exact results/files and manual preview-check screens, then commit with `[restructure P6]`.
+
+Done:
+- Backed up `client_profiles` to ignored `backups/2026-11-01-client_profiles-p6.sql`; row count was 6 before and after. Added only `starting_from_zero` and `checklist_hidden`, both NOT NULL DEFAULT false. Normal schema push applied the additions and printed no truncation, data-loss, rename, or drop prompt.
+- Added authenticated checklist and preference endpoints with OpenAPI/Zod contracts. All six done states are computed from existing budget, goal, wealth, goal-link, risk, and message data; only starting-from-zero and hidden are stored as preferences.
+- Added the three-screen investment-client onboarding, Home checklist, five-question self-assessed risk sheet, and existing goal-link deep link. Removed the old investment-client onboarding form screens and free-tier pathway bridge. The free-tier onboarding files were not changed.
+- Checklist order decisions: know-my-money and save-for-big use the master default; organise-existing starts with wealth; start-investing starts wealth, risk, goal; plan-retirement starts goal, wealth, risk. The rest of each order preserves the relative sequence of the remaining setup items.
+- Only the investment-client experience changed. No publish or deployment was performed.
+
+Tests and build:
+- `pnpm run typecheck` — passed.
+- `pnpm --filter @workspace/api-server test` — passed, 23 test files and 169 tests.
+- `PORT=5000 BASE_PATH=/ pnpm --filter @workspace/wealthapp run build` — passed. Vite reported existing sourcemap-location warnings in shared UI components and a large-chunk warning; build completed successfully.
+
+Manual product-owner checks (the preview browser cannot sign in, so signed-in screens were not visually verified):
+1. `/client/onboarding`, Welcome: verify client/advisor names and visible-plan, goal, and budget-month counts; confirm there are no inputs.
+2. `/client/onboarding`, About you: verify name prefill, month/year DOB selects, country, expat option, currency, required validation, save, and return-to-draft behavior.
+3. `/client/onboarding`, first focus: verify the five choices, save, and redirect to `/client/dashboard`.
+4. `/client/dashboard`: verify checklist order and each item’s done state; test Hide/Show again, starting-from-zero, and the “n of 3” wealth-score progress.
+5. `/client/dashboard`, risk check: answer all five questions, save each possible risk tier, and confirm the risk item completes.
+6. Follow checklist links to `/client/budget`, `/client/goals`, `/client/portfolio`, `/client/messages`; verify the goal-link item opens the existing link sheet at `/client/goals?openLink=<goalId>`.
+
+Files changed in P6:
+- API: `artifacts/api-server/src/routes/clientPortal.ts`; `artifacts/api-server/src/routes/__tests__/profileFieldsP5.test.ts`; `artifacts/api-server/src/routes/__tests__/setupChecklistP6.test.ts`.
+- Database and contracts: `lib/db/src/schema/clients.ts`; `lib/api-spec/openapi.yaml`; generated `lib/api-client-react/src/generated/api.ts`, `lib/api-client-react/src/generated/api.schemas.ts`, and `lib/api-zod/src/generated/api.ts`.
+- Frontend: `artifacts/wealthapp/src/pages/client/ClientOnboarding.tsx`, `ClientDashboard.tsx`, `ClientGoals.tsx`; `artifacts/wealthapp/src/hooks/useProfile.ts`; `artifacts/wealthapp/src/components/client/ClientSetupChecklistCard.tsx`, `ClientRiskCheckSheet.tsx`, `goals/GoalHoldingLinks.tsx`, `onboarding/OnboardingNav.tsx`, and `onboarding/OnboardingShell.tsx`.
+- Removed obsolete client onboarding files: `artifacts/wealthapp/src/components/client/onboarding/HoldingMiniForm.tsx` and the nine screens under `artifacts/wealthapp/src/components/client/onboarding/phases/`.
+- Progress record: `docs/client-restructure/PROGRESS.md`.
+
 ## Next agent: start here
-- Phase 5 is complete, including the approved risk normalisation.
-- The `[restructure P4.5]` and `[restructure P5]` commits are local; the product owner pushes to GitHub.
-- Phase 6 (new onboarding + setup checklist) has not started and needs a new instruction.
+- Phase 6 is complete. Start Phase 7 — Quick budget + advisor budget summary: read its master-prompt section and Section 3, record the plan here before editing, and audit `budget_entries`/`client_budget_months` before any backfill. Keep `budget_entries`; Phase 7 must not drop it.

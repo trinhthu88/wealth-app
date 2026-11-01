@@ -128,10 +128,14 @@ function PlanTab() {
   );
 }
 
-function GoalCardInline({ goal, plans, holdings, allLinks, allGoals, solSuggestion, onDismissSuggestion, setEditTarget, markComplete, deleteGoal, addHoldingLink, removeHoldingLink }: any) {
+function GoalCardInline({ goal, plans, holdings, allLinks, allGoals, solSuggestion, onDismissSuggestion, setEditTarget, markComplete, deleteGoal, addHoldingLink, removeHoldingLink, openLinksOnMount }: any) {
   const [showLinks, setShowLinks] = useState(false);
   const [confirmComplete, setConfirmComplete] = useState(false);
   const [autoLinkTarget, setAutoLinkTarget] = useState<{ sourceType: string; sourceId: string } | null>(null);
+
+  useEffect(() => {
+    if (openLinksOnMount) setShowLinks(true);
+  }, [openLinksOnMount]);
 
   const isActive = goal.status !== "completed" && goal.status !== "cancelled";
   const { data: progressMovement } = useSolProgressMovement(goal.id, isActive);
@@ -225,6 +229,7 @@ function GoalCardInline({ goal, plans, holdings, allLinks, allGoals, solSuggesti
       <div className="flex items-center flex-wrap gap-x-4 gap-y-2 mt-4 pt-4 border-t border-hairline">
         <button
           onClick={(e) => { e.stopPropagation(); setShowLinks(v => !v); }}
+          data-testid={`button-goal-links-${goal.id}`}
           className="flex items-center gap-1.5 text-[13.5px] font-medium text-ink-60 hover:text-green transition-colors cursor-pointer"
         >
           <LinkIcon className="h-4 w-4" />
@@ -316,6 +321,7 @@ export default function ClientGoals() {
   const [editTarget, setEditTarget] = useState<EnrichedGoal | null>(null);
   const [completedOpen, setCompletedOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("goals");
+  const requestedLinkGoalId = new URLSearchParams(window.location.search).get("openLink");
 
   // Handle ?newGoal=true URL param
   useEffect(() => {
@@ -449,6 +455,7 @@ export default function ClientGoals() {
                 markComplete={(id: string) => void markComplete(id)}
                 addHoldingLink={addHoldingLink}
                 removeHoldingLink={removeHoldingLink}
+                openLinksOnMount={requestedLinkGoalId === goal.id}
               />
             ))}
 

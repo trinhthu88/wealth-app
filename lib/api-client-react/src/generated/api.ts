@@ -23,7 +23,13 @@ import type {
   Asset,
   BlogPost,
   BudgetEntry,
+  ClientOnboardingCompleteInput,
+  ClientOnboardingCompleteResponse,
   ClientProfile,
+  ClientProfileBasicsInput,
+  ClientSetupChecklist,
+  ClientSetupChecklistPreferences,
+  ClientSetupChecklistPreferencesInput,
   Conversation,
   CreateAdvisorTaskBody,
   CreateAssetBody,
@@ -4733,6 +4739,352 @@ export function useClientGetDashboardNetWorth<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Save investment-client profile basics
+ */
+export const getSaveClientProfileBasicsUrl = () => {
+  return `/api/client/profile/basics`;
+};
+
+export const saveClientProfileBasics = async (
+  clientProfileBasicsInput: ClientProfileBasicsInput,
+  options?: RequestInit,
+): Promise<Profile> => {
+  return customFetch<Profile>(getSaveClientProfileBasicsUrl(), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(clientProfileBasicsInput),
+  });
+};
+
+export const getSaveClientProfileBasicsMutationOptions = <
+  TError = ErrorType<Error>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof saveClientProfileBasics>>,
+    TError,
+    { data: BodyType<ClientProfileBasicsInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof saveClientProfileBasics>>,
+  TError,
+  { data: BodyType<ClientProfileBasicsInput> },
+  TContext
+> => {
+  const mutationKey = ["saveClientProfileBasics"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof saveClientProfileBasics>>,
+    { data: BodyType<ClientProfileBasicsInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return saveClientProfileBasics(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SaveClientProfileBasicsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof saveClientProfileBasics>>
+>;
+export type SaveClientProfileBasicsMutationBody =
+  BodyType<ClientProfileBasicsInput>;
+export type SaveClientProfileBasicsMutationError = ErrorType<Error>;
+
+/**
+ * @summary Save investment-client profile basics
+ */
+export const useSaveClientProfileBasics = <
+  TError = ErrorType<Error>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof saveClientProfileBasics>>,
+    TError,
+    { data: BodyType<ClientProfileBasicsInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof saveClientProfileBasics>>,
+  TError,
+  { data: BodyType<ClientProfileBasicsInput> },
+  TContext
+> => {
+  return useMutation(getSaveClientProfileBasicsMutationOptions(options));
+};
+
+/**
+ * @summary Save first focus and complete client onboarding
+ */
+export const getCompleteClientOnboardingUrl = () => {
+  return `/api/client/onboarding/complete`;
+};
+
+export const completeClientOnboarding = async (
+  clientOnboardingCompleteInput: ClientOnboardingCompleteInput,
+  options?: RequestInit,
+): Promise<ClientOnboardingCompleteResponse> => {
+  return customFetch<ClientOnboardingCompleteResponse>(
+    getCompleteClientOnboardingUrl(),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(clientOnboardingCompleteInput),
+    },
+  );
+};
+
+export const getCompleteClientOnboardingMutationOptions = <
+  TError = ErrorType<Error>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof completeClientOnboarding>>,
+    TError,
+    { data: BodyType<ClientOnboardingCompleteInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof completeClientOnboarding>>,
+  TError,
+  { data: BodyType<ClientOnboardingCompleteInput> },
+  TContext
+> => {
+  const mutationKey = ["completeClientOnboarding"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof completeClientOnboarding>>,
+    { data: BodyType<ClientOnboardingCompleteInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return completeClientOnboarding(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CompleteClientOnboardingMutationResult = NonNullable<
+  Awaited<ReturnType<typeof completeClientOnboarding>>
+>;
+export type CompleteClientOnboardingMutationBody =
+  BodyType<ClientOnboardingCompleteInput>;
+export type CompleteClientOnboardingMutationError = ErrorType<Error>;
+
+/**
+ * @summary Save first focus and complete client onboarding
+ */
+export const useCompleteClientOnboarding = <
+  TError = ErrorType<Error>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof completeClientOnboarding>>,
+    TError,
+    { data: BodyType<ClientOnboardingCompleteInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof completeClientOnboarding>>,
+  TError,
+  { data: BodyType<ClientOnboardingCompleteInput> },
+  TContext
+> => {
+  return useMutation(getCompleteClientOnboardingMutationOptions(options));
+};
+
+/**
+ * @summary Get the data-derived client setup checklist
+ */
+export const getGetClientSetupChecklistUrl = () => {
+  return `/api/client/setup-checklist`;
+};
+
+export const getClientSetupChecklist = async (
+  options?: RequestInit,
+): Promise<ClientSetupChecklist> => {
+  return customFetch<ClientSetupChecklist>(getGetClientSetupChecklistUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetClientSetupChecklistQueryKey = () => {
+  return [`/api/client/setup-checklist`] as const;
+};
+
+export const getGetClientSetupChecklistQueryOptions = <
+  TData = Awaited<ReturnType<typeof getClientSetupChecklist>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getClientSetupChecklist>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetClientSetupChecklistQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getClientSetupChecklist>>
+  > = ({ signal }) => getClientSetupChecklist({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getClientSetupChecklist>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetClientSetupChecklistQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getClientSetupChecklist>>
+>;
+export type GetClientSetupChecklistQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get the data-derived client setup checklist
+ */
+
+export function useGetClientSetupChecklist<
+  TData = Awaited<ReturnType<typeof getClientSetupChecklist>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getClientSetupChecklist>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetClientSetupChecklistQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Update checklist preferences
+ */
+export const getUpdateClientSetupChecklistPreferencesUrl = () => {
+  return `/api/client/setup-checklist/preferences`;
+};
+
+export const updateClientSetupChecklistPreferences = async (
+  clientSetupChecklistPreferencesInput: ClientSetupChecklistPreferencesInput,
+  options?: RequestInit,
+): Promise<ClientSetupChecklistPreferences> => {
+  return customFetch<ClientSetupChecklistPreferences>(
+    getUpdateClientSetupChecklistPreferencesUrl(),
+    {
+      ...options,
+      method: "PUT",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(clientSetupChecklistPreferencesInput),
+    },
+  );
+};
+
+export const getUpdateClientSetupChecklistPreferencesMutationOptions = <
+  TError = ErrorType<Error>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateClientSetupChecklistPreferences>>,
+    TError,
+    { data: BodyType<ClientSetupChecklistPreferencesInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateClientSetupChecklistPreferences>>,
+  TError,
+  { data: BodyType<ClientSetupChecklistPreferencesInput> },
+  TContext
+> => {
+  const mutationKey = ["updateClientSetupChecklistPreferences"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateClientSetupChecklistPreferences>>,
+    { data: BodyType<ClientSetupChecklistPreferencesInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updateClientSetupChecklistPreferences(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateClientSetupChecklistPreferencesMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateClientSetupChecklistPreferences>>
+>;
+export type UpdateClientSetupChecklistPreferencesMutationBody =
+  BodyType<ClientSetupChecklistPreferencesInput>;
+export type UpdateClientSetupChecklistPreferencesMutationError =
+  ErrorType<Error>;
+
+/**
+ * @summary Update checklist preferences
+ */
+export const useUpdateClientSetupChecklistPreferences = <
+  TError = ErrorType<Error>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateClientSetupChecklistPreferences>>,
+    TError,
+    { data: BodyType<ClientSetupChecklistPreferencesInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateClientSetupChecklistPreferences>>,
+  TError,
+  { data: BodyType<ClientSetupChecklistPreferencesInput> },
+  TContext
+> => {
+  return useMutation(
+    getUpdateClientSetupChecklistPreferencesMutationOptions(options),
+  );
+};
 
 /**
  * @deprecated

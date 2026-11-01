@@ -1,10 +1,16 @@
 import { Router, type IRouter } from "express";
-import { eq, desc, and, ne, sql } from "drizzle-orm";
+import { eq, desc, and, ne, sql, count, or } from "drizzle-orm";
+import {
+  CompleteClientOnboardingBody,
+  GetClientSetupChecklistResponse,
+  UpdateClientSetupChecklistPreferencesBody,
+  UpdateClientSetupChecklistPreferencesResponse,
+} from "@workspace/api-zod";
 import {
   db, profilesTable, clientProfilesTable,
   advisedPlansTable, advisedPlanStatementsTable, advisedPlanHoldingsTable,
   clientHoldingsTable, clientHoldingTransactionsTable, clientBudgetMonthsTable, advisedPlanTransactionsTable,
-  scenarioRunsTable, financialGoalsTable, assetsTable, liabilitiesTable,
+  scenarioRunsTable, financialGoalsTable, goalHoldingLinksTable, assetsTable, liabilitiesTable,
   financialPlansTable, planMilestonesTable, milestoneCommentsTable,
   conversationsTable, messagesTable, advisedStrategyReturnsTable,
   advisedPlanStatusSchema,
@@ -117,16 +123,205 @@ router.post("/client/onboarding/complete", requireAuth, async (req, res): Promis
   const userId = (req as any).userId;
   const body = req.body ?? {};
   const preferredCurrency = body.preferredCurrency ?? body.preferredDisplayCurrency;
+  const parsedFirstFocus = CompleteClientOnboardingBody.safeParse(body);
+  if (!parsedFirstFocus.success) {
+    res.status(400).json({ error: "Choose what you want to sort out first" });
+    return;
+  }
 
   if (preferredCurrency) {
     await db.update(profilesTable)
       .set({ preferredCurrency, updatedAt: new Date() })
       .where(eq(profilesTable.id, userId));
   }
-  await advanceOnboardingStage(userId, "complete");
+  await db.transaction(async (tx) => {
+    const [existing] = await tx.select({ onboardingStage: clientProfilesTable.onboardingStage })
+      .from(clientProfilesTable).where(eq(clientProfilesTable.userId, userId));
+    if (existing) {
+      await tx.update(clientProfilesTable)
+        .set({ firstFocus: parsedFirstFocus.data.firstFocus, onboardingStage: "complete", updatedAt: new Date() })
+        .where(eq(clientProfilesTable.userId, userId));
+    } else {
+      await tx.insert(clientProfilesTable).values({
+        userId,
+        firstFocus: parsedFirstFocus.data.firstFocus,
+        onboardingStage: "complete",
+      }).onConflictDoNothing();
+    }
+  });
 
-  const [cp] = await db.select().from(clientProfilesTable).where(eq(clientProfilesTable.userId, userId));
+  const [cp] = await db.select({
+    firstFocus: clientProfilesTable.firstFocus,
+    onboardingStage: clientProfilesTable.onboardingStage,
+  }).from(clientProfilesTable).where(eq(clientProfilesTable.userId, userId));
   res.json(cp);
+});
+
+const DEFAULT_SETUP_ORDER = ["budget", "goal", "wealth", "goal_link", "risk", "advisor_hello"] as const;
+const SETUP_ORDER_BY_FOCUS = {
+  know_my_money: DEFAULT_SETUP_ORDER,
+  start_investing: ["wealth", "risk", "goal", "goal_link", "budget", "advisor_hello"],
+  save_for_big: DEFAULT_SETUP_ORDER,
+  organise_existing: ["wealth", "goal", "goal_link", "budget", "risk", "advisor_hello"],
+  plan_retirement: ["goal", "wealth", "risk", "goal_link", "budget", "advisor_hello"],
+} as const;
+
+router.get("/client/setup-checklist", requireAuth, requireRole("investment_client"), async (req, res): Promise<void> => {
+  const userId = (req as any).userId as string;
+  const [clientProfile] = await db.select({
+    advisorId: clientProfilesTable.advisorId,
+    firstFocus: clientProfilesTable.firstFocus,
+    riskProfile: clientProfilesTable.riskProfile,
+    startingFromZero: clientProfilesTable.startingFromZero,
+    checklistHidden: clientProfilesTable.checklistHidden,
+  }).from(clientProfilesTable).where(eq(clientProfilesTable.userId, userId));
+
+  const currentMonth = `${new Date().toISOString().slice(0, 7)}-01`;
+  const [
+    [advisor],
+    [profile],
+    [visiblePlanCount],
+    [activeGoalCount],
+    [currentBudget],
+    [budgetMonthCount],
+    [holdingCount],
+    [assetCount],
+    [liabilityCount],
+    [goalLink],
+    [firstActiveGoal],
+    [clientMessage],
+  ] = await Promise.all([
+    clientProfile?.advisorId
+      ? db.select({ fullName: profilesTable.fullName }).from(profilesTable)
+          .where(eq(profilesTable.id, clientProfile.advisorId))
+      : Promise.resolve([]),
+    db.select({ fullName: profilesTable.fullName }).from(profilesTable)
+      .where(eq(profilesTable.id, userId)),
+    db.select({ value: count() }).from(advisedPlansTable).where(and(
+      eq(advisedPlansTable.userId, userId),
+      eq(advisedPlansTable.isVisibleToClient, true),
+    )),
+    db.select({ value: count() }).from(financialGoalsTable).where(and(
+      eq(financialGoalsTable.userId, userId),
+      eq(financialGoalsTable.status, "active"),
+    )),
+    db.select({ id: clientBudgetMonthsTable.id }).from(clientBudgetMonthsTable).where(and(
+      eq(clientBudgetMonthsTable.userId, userId),
+      eq(clientBudgetMonthsTable.month, currentMonth),
+    )).limit(1),
+    db.select({ value: count() }).from(clientBudgetMonthsTable)
+      .where(eq(clientBudgetMonthsTable.userId, userId)),
+    db.select({ value: count() }).from(clientHoldingsTable)
+      .where(eq(clientHoldingsTable.userId, userId)),
+    db.select({ value: count() }).from(assetsTable)
+      .where(eq(assetsTable.userId, userId)),
+    db.select({ value: count() }).from(liabilitiesTable)
+      .where(eq(liabilitiesTable.userId, userId)),
+    db.select({ goalId: goalHoldingLinksTable.goalId }).from(goalHoldingLinksTable)
+      .where(eq(goalHoldingLinksTable.userId, userId)).limit(1),
+    db.select({ id: financialGoalsTable.id }).from(financialGoalsTable).where(and(
+      eq(financialGoalsTable.userId, userId),
+      eq(financialGoalsTable.status, "active"),
+    )).orderBy(desc(financialGoalsTable.createdAt)).limit(1),
+    db.select({ id: messagesTable.id }).from(messagesTable)
+      .innerJoin(conversationsTable, eq(messagesTable.conversationId, conversationsTable.id))
+      .where(and(
+        eq(conversationsTable.clientId, userId),
+        or(
+          eq(messagesTable.senderId, userId),
+          eq(messagesTable.senderRole, "investment_client"),
+        ),
+      )).limit(1),
+  ]);
+
+  const visiblePlans = Number(visiblePlanCount?.value ?? 0);
+  const activeGoals = Number(activeGoalCount?.value ?? 0);
+  const monthsWithBudget = Number(budgetMonthCount?.value ?? 0);
+  const hasWealthData = Number(holdingCount?.value ?? 0) > 0
+    || Number(assetCount?.value ?? 0) > 0
+    || Number(liabilityCount?.value ?? 0) > 0;
+  const focus = clientProfile?.firstFocus ?? null;
+  const order = SETUP_ORDER_BY_FOCUS[focus as keyof typeof SETUP_ORDER_BY_FOCUS] ?? DEFAULT_SETUP_ORDER;
+  const goalLinkPath = firstActiveGoal
+    ? `/client/goals?openLink=${encodeURIComponent(firstActiveGoal.id)}`
+    : "/client/goals";
+  const itemData = {
+    budget: {
+      title: "Set up this month’s budget",
+      description: "Add this month’s income and spending.",
+      done: !!currentBudget,
+      href: "/client/budget",
+      action: null,
+    },
+    goal: {
+      title: "Create an active goal",
+      description: "Choose something you want your money to help you do.",
+      done: activeGoals > 0,
+      href: "/client/goals",
+      action: null,
+    },
+    wealth: {
+      title: "Add your wealth",
+      description: "Add a holding, asset, or liability—or tell us you’re starting from zero.",
+      done: hasWealthData || !!clientProfile?.startingFromZero,
+      href: "/client/portfolio",
+      action: null,
+    },
+    goal_link: {
+      title: "Link wealth to a goal",
+      description: "Connect a holding or advised plan to one of your goals.",
+      done: !!goalLink,
+      href: goalLinkPath,
+      action: null,
+    },
+    risk: {
+      title: "Set your risk profile",
+      description: "Answer five questions about how you feel about investment risk.",
+      done: !!clientProfile?.riskProfile,
+      href: null,
+      action: "risk_check",
+    },
+    advisor_hello: {
+      title: "Message your advisor",
+      description: "Send your advisor a first message.",
+      done: !!clientMessage,
+      href: "/client/messages",
+      action: null,
+    },
+  } as const;
+
+  const response = {
+    firstFocus: focus,
+    startingFromZero: clientProfile?.startingFromZero ?? false,
+    checklistHidden: clientProfile?.checklistHidden ?? false,
+    advisorName: advisor?.fullName ?? null,
+    clientName: profile?.fullName ?? null,
+    setupSummary: { visiblePlans, activeGoals, budgetMonths: monthsWithBudget },
+    wealthScoreUnlock: { monthsWithBudget: Math.min(monthsWithBudget, 3), required: 3 },
+    items: order.map((id) => ({ id, ...itemData[id] })),
+  };
+  res.json(GetClientSetupChecklistResponse.parse(response));
+});
+
+router.put("/client/setup-checklist/preferences", requireAuth, requireRole("investment_client"), async (req, res): Promise<void> => {
+  const parsed = UpdateClientSetupChecklistPreferencesBody.safeParse(req.body ?? {});
+  const body = parsed.success ? parsed.data : null;
+  const hasStartingFromZero = body && Object.prototype.hasOwnProperty.call(body, "startingFromZero");
+  const hasChecklistHidden = body && Object.prototype.hasOwnProperty.call(body, "checklistHidden");
+  if (!parsed.success || (!hasStartingFromZero && !hasChecklistHidden)) {
+    res.status(400).json({ error: "Provide a boolean startingFromZero or checklistHidden preference" });
+    return;
+  }
+  const values = {
+    ...(hasStartingFromZero ? { startingFromZero: body.startingFromZero } : {}),
+    ...(hasChecklistHidden ? { checklistHidden: body.checklistHidden } : {}),
+  };
+  await db.insert(clientProfilesTable).values({ userId: (req as any).userId, ...values })
+    .onConflictDoUpdate({
+      target: clientProfilesTable.userId,
+      set: { ...values, updatedAt: new Date() },
+    });
+  res.json(UpdateClientSetupChecklistPreferencesResponse.parse(values));
 });
 
 // ── Advised plans ─────────────────────────────────────────────────────────

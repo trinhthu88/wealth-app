@@ -6,6 +6,8 @@ import Sol from "@/components/Sol";
 import SolNarration from "@/components/client/SolNarration";
 import CurrencyField from "@/components/shared/CurrencyField";
 import WealthScoreCard from "@/components/client/dashboard/WealthScoreCard";
+import ClientSetupChecklistCard from "@/components/client/ClientSetupChecklistCard";
+import ClientRiskCheckSheet from "@/components/client/ClientRiskCheckSheet";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useProfile } from "@/hooks/useProfile";
 import { usePlan } from "@/hooks/usePlan";
@@ -32,6 +34,7 @@ export default function ClientDashboard() {
   const netWorthSummary = useNetWorthSummary();
   const { trendData, hasHistory } = useNetWorthTrend();
   const [showScenarioAlert, setShowScenarioAlert] = useState(true);
+  const [showRiskCheck, setShowRiskCheck] = useState(false);
 
   const topPlan = data.plans.find(p => p.status === "inforce" && p.isVisibleToClient) ?? null;
   const recentStatementPlan = data.plans.find(
@@ -44,11 +47,15 @@ export default function ClientDashboard() {
   if (data.isLoading) {
     return (
       <ClientAppShell>
-        <div className="animate-pulse space-y-3">
-          <div className="h-12 bg-surface rounded-2xl" />
-          <div className="h-40 bg-surface rounded-[26px]" />
-          <div className="h-28 bg-forest/10 rounded-[26px]" />
+        <div className="space-y-3">
+          <ClientSetupChecklistCard onRiskCheck={() => setShowRiskCheck(true)} />
+          <div className="animate-pulse space-y-3">
+            <div className="h-12 bg-surface rounded-2xl" />
+            <div className="h-40 bg-surface rounded-[26px]" />
+            <div className="h-28 bg-forest/10 rounded-[26px]" />
+          </div>
         </div>
+        <ClientRiskCheckSheet isOpen={showRiskCheck} onClose={() => setShowRiskCheck(false)} />
       </ClientAppShell>
     );
   }
@@ -61,6 +68,7 @@ export default function ClientDashboard() {
     return (
       <ClientAppShell>
         <div className="space-y-[14px]">
+          <ClientSetupChecklistCard onRiskCheck={() => setShowRiskCheck(true)} />
           <div className="flex items-start gap-[14px] mb-[22px]">
             <Sol size="md" animate="breathe" />
             <div className="pt-1.5">
@@ -101,6 +109,7 @@ export default function ClientDashboard() {
             </div>
           </div>
         </div>
+        <ClientRiskCheckSheet isOpen={showRiskCheck} onClose={() => setShowRiskCheck(false)} />
       </ClientAppShell>
     );
   }
@@ -126,6 +135,7 @@ export default function ClientDashboard() {
   return (
     <ClientAppShell>
       <div className="space-y-[12px] pb-8">
+        <ClientSetupChecklistCard onRiskCheck={() => setShowRiskCheck(true)} />
         <SolNarration line={solLine} detail={solDetail} advisorFirstName={advisorFirstName} />
 
         {recentStatementPlan && !dismissedCelebration && (
@@ -322,6 +332,7 @@ export default function ClientDashboard() {
           </Link>
         )}
       </div>
+      <ClientRiskCheckSheet isOpen={showRiskCheck} onClose={() => setShowRiskCheck(false)} />
     </ClientAppShell>
   );
 }

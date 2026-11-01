@@ -43,6 +43,9 @@ export const clientProfilesTable = pgTable("client_profiles", {
   onboardingStage: text("onboarding_stage").notNull().default("not_started"),
   // Answer to "What do you want to sort out first?"; orders the setup checklist.
   firstFocus: text("first_focus"),
+  // Client preferences for the Home setup checklist; not financial facts.
+  startingFromZero: boolean("starting_from_zero").notNull().default(false),
+  checklistHidden: boolean("checklist_hidden").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (t) => [

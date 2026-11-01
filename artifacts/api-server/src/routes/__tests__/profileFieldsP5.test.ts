@@ -151,11 +151,13 @@ describe("onboarding stage, date of birth, currency and derived track", () => {
     let [cp] = await db.select().from(clientProfilesTable).where(eq(clientProfilesTable.userId, userId));
     expect(cp.onboardingStage).toBe("profile");
 
-    await request(app).post("/api/client/onboarding/complete").set(asUser(userId)).send({}).expect(200);
+    await request(app).post("/api/client/onboarding/complete").set(asUser(userId))
+      .send({ firstFocus: "know_my_money" }).expect(200);
     await request(app).put("/api/client/profile/basics").set(asUser(userId))
       .send({ fullName: "Onboarding Client", countryCode: "VN", dateOfBirth: "1990-07-23" }).expect(200);
     [cp] = await db.select().from(clientProfilesTable).where(eq(clientProfilesTable.userId, userId));
     expect(cp.onboardingStage).toBe("complete");
+    expect(cp.firstFocus).toBe("know_my_money");
 
     const track = await request(app).get("/api/client/profile/track").set(asUser(userId)).expect(200);
     expect(track.body.onboardingStage).toBe("complete");

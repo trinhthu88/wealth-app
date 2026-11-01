@@ -3,6 +3,7 @@ import { useUser } from "@clerk/react";
 import { useEffect } from "react";
 import { apiFetch } from "@/lib/api";
 import { identifyUser } from "@/lib/analytics";
+import { getGetClientSetupChecklistQueryKey } from "@workspace/api-client-react";
 
 export interface Profile {
   id: string;
@@ -55,7 +56,10 @@ export function useProfile() {
   const update = useMutation({
     mutationFn: (data: Partial<Profile>) =>
       apiFetch<Profile>("/profiles/me", { method: "PUT", body: JSON.stringify(data) }),
-    onSuccess: (p) => qc.setQueryData(["profile"], p),
+    onSuccess: (p) => {
+      qc.setQueryData(["profile"], p);
+      qc.invalidateQueries({ queryKey: getGetClientSetupChecklistQueryKey() });
+    },
   });
 
   return { profile: query.data, isLoading: query.isLoading, upsert, update };

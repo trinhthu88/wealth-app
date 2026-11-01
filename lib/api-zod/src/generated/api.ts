@@ -1186,6 +1186,141 @@ export const ClientGetDashboardNetWorthResponse = zod.object({
 });
 
 /**
+ * @summary Save investment-client profile basics
+ */
+export const saveClientProfileBasicsBodyFullNameMin = 2;
+
+export const saveClientProfileBasicsBodyDateOfBirthRegExp = new RegExp(
+  "^\\d{4}-(0[1-9]|1[0-2])$",
+);
+export const saveClientProfileBasicsBodyCountryCodeMin = 2;
+
+export const SaveClientProfileBasicsBody = zod.object({
+  fullName: zod.string().min(saveClientProfileBasicsBodyFullNameMin),
+  dateOfBirth: zod.string().regex(saveClientProfileBasicsBodyDateOfBirthRegExp),
+  countryCode: zod.string().min(saveClientProfileBasicsBodyCountryCodeMin),
+  isExpat: zod.boolean(),
+  preferredCurrency: zod.string(),
+});
+
+export const SaveClientProfileBasicsResponse = zod.object({
+  id: zod.string(),
+  email: zod.string(),
+  fullName: zod.string().nullish(),
+  role: zod.string(),
+  avatarUrl: zod.string().nullish(),
+  preferredCurrency: zod.string(),
+  countryCode: zod.string().nullish(),
+  isExpat: zod.boolean(),
+  onboardingComplete: zod.boolean(),
+  riskProfile: zod
+    .union([
+      zod.literal("conservative"),
+      zod.literal("balanced"),
+      zod.literal("growth"),
+      zod.literal(null),
+    ])
+    .nullish()
+    .describe("Owned by client_profiles.risk_profile."),
+  riskProfileSource: zod
+    .union([zod.literal("self"), zod.literal("advisor"), zod.literal(null)])
+    .nullish(),
+  dateOfBirth: zod.coerce
+    .date()
+    .nullish()
+    .describe(
+      "First day of the birth month (YYYY-MM-01); month and year only.",
+    ),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+
+/**
+ * @summary Save first focus and complete client onboarding
+ */
+export const CompleteClientOnboardingBody = zod.object({
+  firstFocus: zod.enum([
+    "know_my_money",
+    "start_investing",
+    "save_for_big",
+    "organise_existing",
+    "plan_retirement",
+  ]),
+});
+
+export const CompleteClientOnboardingResponse = zod.object({
+  firstFocus: zod.enum([
+    "know_my_money",
+    "start_investing",
+    "save_for_big",
+    "organise_existing",
+    "plan_retirement",
+  ]),
+  onboardingStage: zod.enum(["not_started", "profile", "complete"]),
+});
+
+/**
+ * @summary Get the data-derived client setup checklist
+ */
+export const GetClientSetupChecklistResponse = zod.object({
+  firstFocus: zod
+    .union([
+      zod.literal("know_my_money"),
+      zod.literal("start_investing"),
+      zod.literal("save_for_big"),
+      zod.literal("organise_existing"),
+      zod.literal("plan_retirement"),
+      zod.literal(null),
+    ])
+    .nullable(),
+  startingFromZero: zod.boolean(),
+  checklistHidden: zod.boolean(),
+  advisorName: zod.string().nullable(),
+  clientName: zod.string().nullable(),
+  setupSummary: zod.object({
+    visiblePlans: zod.number(),
+    activeGoals: zod.number(),
+    budgetMonths: zod.number(),
+  }),
+  wealthScoreUnlock: zod.object({
+    monthsWithBudget: zod.number(),
+    required: zod.number(),
+  }),
+  items: zod.array(
+    zod.object({
+      id: zod.enum([
+        "budget",
+        "goal",
+        "wealth",
+        "goal_link",
+        "risk",
+        "advisor_hello",
+      ]),
+      title: zod.string(),
+      description: zod.string(),
+      done: zod.boolean(),
+      href: zod.string().nullable(),
+      action: zod
+        .union([zod.literal("risk_check"), zod.literal(null)])
+        .nullable(),
+    }),
+  ),
+});
+
+/**
+ * @summary Update checklist preferences
+ */
+export const UpdateClientSetupChecklistPreferencesBody = zod.object({
+  startingFromZero: zod.boolean().optional(),
+  checklistHidden: zod.boolean().optional(),
+});
+
+export const UpdateClientSetupChecklistPreferencesResponse = zod.object({
+  startingFromZero: zod.boolean().optional(),
+  checklistHidden: zod.boolean().optional(),
+});
+
+/**
  * @summary List clients assigned to advisor
  */
 export const AdvisorListClientsResponseItem = zod.object({

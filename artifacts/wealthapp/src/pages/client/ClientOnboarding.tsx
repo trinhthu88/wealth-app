@@ -1,534 +1,262 @@
-// ANIMATION RULES FOR THIS PAGE:
-// ✓ ALLOWED: BottomSheet spring animation (open/close)
-// ✓ ALLOWED: Single item appearing after user action
-// ✓ ALLOWED: Phase3Screen8Complete checkmark scale-in (single entrance, allowed)
-// ✗ BANNED:  Page-load stagger on any screen content
-// ✗ BANNED:  Slide/fade transitions between screens (screens swap immediately)
-// ✗ BANNED:  Loading skeletons on onboarding screens
-
-import { useState, useEffect, useCallback } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useUser } from "@clerk/react";
 import { toast } from "sonner";
-import { apiFetch } from "@/lib/api";
+import {
+  getGetClientSetupChecklistQueryKey,
+  getGetMyProfileQueryKey,
+  useCompleteClientOnboarding,
+  useGetClientSetupChecklist,
+  useSaveClientProfileBasics,
+} from "@workspace/api-client-react";
 import { useProfile } from "@/hooks/useProfile";
-import { useClientTrack } from "@/hooks/useClientTrack";
-import { useAdvisedPlans } from "@/hooks/useAdvisedPlans";
-import { convertCurrency } from "@/lib/currencyUtils";
 import OnboardingShell from "@/components/client/onboarding/OnboardingShell";
 import OnboardingNav from "@/components/client/onboarding/OnboardingNav";
-import Phase1Screen1Basics, { type Screen1Data } from "@/components/client/onboarding/phases/Phase1Screen1Basics";
-import Phase1Screen2Income, { type Screen2Data } from "@/components/client/onboarding/phases/Phase1Screen2Income";
-import Phase2Screen3TrackA from "@/components/client/onboarding/phases/Phase2Screen3TrackA";
-import Phase2Screen3TrackB from "@/components/client/onboarding/phases/Phase2Screen3TrackB";
-import Phase2Screen4Holdings from "@/components/client/onboarding/phases/Phase2Screen4Holdings";
-import Phase2Screen5Summary from "@/components/client/onboarding/phases/Phase2Screen5Summary";
-import Phase3Screen6Goal, { type Screen6Data } from "@/components/client/onboarding/phases/Phase3Screen6Goal";
-import Phase3Screen7Budget, { type ExpenseData } from "@/components/client/onboarding/phases/Phase3Screen7Budget";
-import Phase3Screen8Complete from "@/components/client/onboarding/phases/Phase3Screen8Complete";
-import type { NewHolding } from "@/components/client/onboarding/HoldingMiniForm";
 
-const TOTAL_SCREENS = 8;
-
-interface OnboardingState {
-  currentScreen: number;
-  // Screen 1
-  screen1: Screen1Data;
-  // Screen 2
-  screen2: Screen2Data;
-  // Screen 3 (track B gate)
-  hasExistingInvestments: boolean | null;
-  // Screen 4
-  addedHoldings: NewHolding[];
-  // Screen 6
-  screen6: Screen6Data;
-  // Screen 7
-  expenses: ExpenseData;
-  extraInvestment: number;
-}
-
-const DEFAULT_STATE: OnboardingState = {
-  currentScreen: 1,
-  screen1: { fullName: "", dateOfBirth: "", countryCode: "", isExpat: false, preferredCurrency: "USD" },
-  screen2: { monthlyIncome: 0, incomeCurrency: "USD", incomeType: [], isStableIncome: true },
-  hasExistingInvestments: null,
-  addedHoldings: [],
-  screen6: { goalType: "", goalName: "", goalTargetAmount: "", goalCurrency: "USD", goalTargetDate: "" },
-  expenses: { housing: 0, food: 0, transport: 0, utilities: 0, entertainment: 0, other: 0 },
-  extraInvestment: 0,
+type Focus = "know_my_money" | "start_investing" | "save_for_big" | "organise_existing" | "plan_retirement";
+type BasicsDraft = {
+  fullName: string;
+  birthMonth: string;
+  birthYear: string;
+  countryCode: string;
+  isExpat: boolean;
+  preferredCurrency: string;
 };
 
-function storageKey(userId: string) { return `onboarding_progress_${userId}`; }
+const DRAFT_KEY = "tala_client_basics_draft";
+const MONTHS = [
+  ["01", "January"], ["02", "February"], ["03", "March"], ["04", "April"],
+  ["05", "May"], ["06", "June"], ["07", "July"], ["08", "August"],
+  ["09", "September"], ["10", "October"], ["11", "November"], ["12", "December"],
+];
+const COUNTRIES = [
+  ["SG", "Singapore"], ["MY", "Malaysia"], ["ID", "Indonesia"], ["TH", "Thailand"],
+  ["VN", "Vietnam"], ["PH", "Philippines"], ["BN", "Brunei"], ["KH", "Cambodia"],
+  ["LA", "Laos"], ["MM", "Myanmar"], ["US", "United States"], ["GB", "United Kingdom"],
+  ["AU", "Australia"], ["IN", "India"], ["JP", "Japan"], ["Other", "Other"],
+];
+const CURRENCIES = ["USD", "SGD", "MYR", "IDR", "THB", "VND", "PHP", "EUR", "GBP", "AUD"];
+const FOCI: { value: Focus; title: string; description: string }[] = [
+  { value: "know_my_money", title: "Know where my money goes", description: "Get a clearer picture of what I have and where it goes." },
+  { value: "start_investing", title: "Start investing", description: "Understand my starting point and next steps." },
+  { value: "save_for_big", title: "Save for something big", description: "Make room for a goal that matters to me." },
+  { value: "organise_existing", title: "Organise what I already have", description: "Bring my existing accounts and plans into one view." },
+  { value: "plan_retirement", title: "Plan for retirement", description: "Start mapping out the future I want." },
+];
+
+function initialDraft(profile?: ReturnType<typeof useProfile>["profile"], clerkName?: string | null): BasicsDraft {
+  const dob = profile?.dateOfBirth?.slice(0, 7).split("-") ?? [];
+  return {
+    fullName: profile?.fullName ?? clerkName ?? "",
+    birthMonth: dob[1] ?? "",
+    birthYear: dob[0] ?? "",
+    countryCode: profile?.countryCode ?? "",
+    isExpat: profile?.isExpat ?? false,
+    preferredCurrency: profile?.preferredCurrency ?? "USD",
+  };
+}
+
+function draftStorageKey(id?: string) {
+  return `${DRAFT_KEY}:${id ?? "guest"}`;
+}
 
 export default function ClientOnboarding() {
   const [, navigate] = useLocation();
   const { user } = useUser();
   const { profile } = useProfile();
-  const { isTrackA, isTrackB, hasPendingAdvisorSetup, loading: trackLoading } = useClientTrack();
-  const { plans } = useAdvisedPlans();
+  const queryClient = useQueryClient();
+  const checklist = useGetClientSetupChecklist();
+  const saveBasics = useSaveClientProfileBasics();
+  const complete = useCompleteClientOnboarding();
+  const [screen, setScreen] = useState<1 | 2 | 3>(1);
+  const [draft, setDraft] = useState<BasicsDraft>(() => initialDraft());
+  const [focus, setFocus] = useState<Focus | "">("");
+  const [hydrated, setHydrated] = useState(false);
 
-  const [state, setState] = useState<OnboardingState>(() => {
-    if (!user?.id) return DEFAULT_STATE;
+  useEffect(() => {
+    const key = draftStorageKey(user?.id);
+    let saved: Partial<BasicsDraft> | null = null;
     try {
-      const saved = localStorage.getItem(storageKey(user.id));
-      if (saved) return JSON.parse(saved);
-    } catch {}
-    return DEFAULT_STATE;
-  });
-  const [saving, setSaving] = useState(false);
-  // If this user already has a goal (e.g. created via the free-tier pathway before
-  // upgrading), Screen6 edits it instead of creating a duplicate.
-  const [existingGoal, setExistingGoal] = useState<{ id: string; currentAmount: string | null } | null>(null);
-
-  // ── Bridge from free-tier pathway/goal data, so upgrading users aren't asked
-  // for the same information twice. Only fills fields still at their default —
-  // never overwrites a resumed in-progress onboarding session (localStorage,
-  // restored above) or anything the user has already typed on this pass.
-  const { data: pathwaySteps } = useQuery<Array<{ stepNumber: number; formData: Record<string, unknown> | null }>>({
-    queryKey: ["pathway"],
-    queryFn: () => apiFetch("/pathway"),
-    enabled: !!user?.id,
-  });
-  const { data: priorGoals } = useQuery<Array<{ id: string; title: string; goalType: string; targetAmount: string | null; currentAmount: string | null; targetDate: string | null; currency: string }>>({
-    queryKey: ["goals"],
-    queryFn: () => apiFetch("/goals"),
-    enabled: !!user?.id,
-  });
-
-  useEffect(() => {
-    if (!pathwaySteps) return;
-    const step1 = pathwaySteps.find(s => s.stepNumber === 1)?.formData;
-    const step2 = pathwaySteps.find(s => s.stepNumber === 2)?.formData;
-    const step3 = pathwaySteps.find(s => s.stepNumber === 3)?.formData;
-    setState(s => {
-      const next = { ...s };
-      if (step1) {
-        next.screen1 = {
-          ...next.screen1,
-          isExpat: next.screen1.isExpat === DEFAULT_STATE.screen1.isExpat && typeof step1.isExpat === "boolean" ? step1.isExpat : next.screen1.isExpat,
-          preferredCurrency: next.screen1.preferredCurrency === DEFAULT_STATE.screen1.preferredCurrency && typeof step1.currency === "string" ? (step1.currency as any) : next.screen1.preferredCurrency,
-        };
-      }
-      if (step2 && next.screen2.monthlyIncome === DEFAULT_STATE.screen2.monthlyIncome && typeof step2.income === "number") {
-        next.screen2 = { ...next.screen2, monthlyIncome: step2.income };
-      }
-      if (step3) {
-        const expenseKeys = ["housing", "food", "transport", "utilities", "entertainment", "other"] as const;
-        const stillDefault = expenseKeys.every(k => next.expenses[k] === DEFAULT_STATE.expenses[k]);
-        if (stillDefault) {
-          next.expenses = { ...next.expenses };
-          for (const k of expenseKeys) {
-            if (typeof step3[k] === "number") next.expenses[k] = step3[k] as number;
-          }
-        }
-      }
-      return next;
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathwaySteps]);
-
-  useEffect(() => {
-    const goal = priorGoals?.[0];
-    if (!goal) return;
-    setExistingGoal({ id: goal.id, currentAmount: goal.currentAmount });
-    setState(s => {
-      if (s.screen6.goalType !== DEFAULT_STATE.screen6.goalType) return s; // already filled — don't clobber
-      return {
-        ...s,
-        screen6: {
-          goalType: goal.goalType,
-          goalName: goal.title,
-          goalTargetAmount: goal.targetAmount ?? "",
-          goalCurrency: goal.currency ?? "USD",
-          goalTargetDate: goal.targetDate ? goal.targetDate.slice(0, 7) : "",
-        },
-      };
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [priorGoals]);
-
-  // Restore toast
-  useEffect(() => {
-    if (!user?.id) return;
-    const saved = localStorage.getItem(storageKey(user.id));
-    if (saved) {
-      const parsed = JSON.parse(saved) as OnboardingState;
-      if (parsed.currentScreen > 1) {
-        toast.info("Resuming where you left off…");
-      }
+      const raw = localStorage.getItem(key);
+      if (raw) saved = JSON.parse(raw);
+    } catch {
+      localStorage.removeItem(key);
     }
-    // Sync preferred currency from profile
-    if (profile?.preferredCurrency) {
-      setState(s => ({
-        ...s,
-        screen1: { ...s.screen1, preferredCurrency: profile.preferredCurrency as any ?? "USD" },
-        screen2: { ...s.screen2, incomeCurrency: profile.preferredCurrency as any ?? "USD" },
-        screen6: { ...s.screen6, goalCurrency: profile.preferredCurrency ?? "USD" },
-      }));
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
+    setDraft({ ...initialDraft(profile, user?.fullName), ...(saved ?? {}) });
+    setHydrated(true);
+  }, [user?.id, user?.fullName, profile?.id, profile?.fullName]);
 
-  // Pre-fill name from Clerk
   useEffect(() => {
-    if (profile?.fullName && !state.screen1.fullName) {
-      setState(s => ({ ...s, screen1: { ...s.screen1, fullName: profile.fullName ?? "" } }));
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile?.fullName]);
+    if (!hydrated || screen !== 2) return;
+    localStorage.setItem(draftStorageKey(user?.id), JSON.stringify(draft));
+  }, [draft, hydrated, screen, user?.id]);
 
-  // Auto-save on state change
-  useEffect(() => {
-    if (!user?.id) return;
-    localStorage.setItem(storageKey(user.id), JSON.stringify(state));
-  }, [state, user?.id]);
-
-  const goTo = useCallback((screen: number) => {
-    setState(s => ({ ...s, currentScreen: screen }));
+  const years = useMemo(() => {
+    const current = new Date().getFullYear();
+    return Array.from({ length: 100 }, (_, i) => String(current - i));
   }, []);
+  const latestBirthMonth = String(new Date().getMonth() + 1).padStart(2, "0");
+  const availableBirthMonths = draft.birthYear === String(new Date().getFullYear())
+    ? MONTHS.filter(([month]) => month <= latestBirthMonth)
+    : MONTHS;
+  const loading = saveBasics.isPending || complete.isPending;
+  const basicsValid = draft.fullName.trim().length >= 2 && !!draft.birthMonth && !!draft.birthYear && !!draft.countryCode;
 
-  // ── Navigation logic ─────────────────────────────────────────────────────
-
-  function getNextScreen(from: number): number {
-    if (from === 3) {
-      // Track A always goes to screen 4; Track B depends on gate answer
-      if (isTrackA) return 4;
-      if (state.hasExistingInvestments === false) return 5;
-      return 4;
-    }
-    return from + 1;
-  }
-
-  function getPrevScreen(from: number): number {
-    if (from === 5 && isTrackB && state.hasExistingInvestments === false) return 3;
-    return from - 1;
-  }
-
-  // ── Per-screen save calls ────────────────────────────────────────────────
-
-  async function saveScreen1() {
-    setSaving(true);
+  async function continueStep() {
     try {
-      await apiFetch("/client/profile/basics", {
-        method: "PUT",
-        body: JSON.stringify({
-          fullName: state.screen1.fullName,
-          countryCode: state.screen1.countryCode,
-          isExpat: state.screen1.isExpat,
-          preferredCurrency: state.screen1.preferredCurrency,
-          // Month + year only; the server stores the 1st of the month.
-          dateOfBirth: state.screen1.dateOfBirth ? state.screen1.dateOfBirth.slice(0, 7) : undefined,
-        }),
-      });
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function saveScreen2() {
-    setSaving(true);
-    try {
-      // Convert income to USD for storage
-      const incomeInUsd = state.screen2.incomeCurrency !== "USD"
-        ? convertCurrency(state.screen2.monthlyIncome, state.screen2.incomeCurrency, "USD")
-        : state.screen2.monthlyIncome;
-
-      const currentMonth = new Date().toISOString().slice(0, 7) + "-01";
-      await apiFetch("/client/budget", {
-        method: "POST",
-        body: JSON.stringify({
-          month: currentMonth,
-          currency: state.screen2.incomeCurrency,
-          primaryIncome: incomeInUsd,
-          totalIncome: incomeInUsd,
-          totalExpenses: 0, totalInvestments: 0, netSurplus: incomeInUsd, savingsRatePct: 100,
-        }),
-      });
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function saveScreen4Holdings() {
-    setSaving(true);
-    try {
-      // Holdings are saved individually when added via HoldingMiniForm — just advance
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function saveScreen6Goal() {
-    const { goalType, goalName, goalTargetAmount, goalCurrency, goalTargetDate } = state.screen6;
-    if (!goalType) return;
-    setSaving(true);
-    try {
-      const targetDate = goalTargetDate ? goalTargetDate + "-01" : null;
-      // If a goal already exists (e.g. created via the free-tier pathway before
-      // upgrading), edit it in place instead of creating a duplicate row — and
-      // carry its currentAmount through, since PUT /goals/:id defaults that field
-      // to 0 when omitted and would otherwise silently wipe existing progress.
-      if (existingGoal) {
-        await apiFetch(`/goals/${existingGoal.id}`, {
-          method: "PUT",
-          body: JSON.stringify({
-            title: goalName || goalType,
-            goalType,
-            targetAmount: goalTargetAmount ? parseFloat(goalTargetAmount) : null,
-            currentAmount: existingGoal.currentAmount ? parseFloat(existingGoal.currentAmount) : 0,
-            targetDate,
-            currency: goalCurrency,
-            status: "active",
-            priority: "high",
-          }),
-        });
-      } else {
-        await apiFetch("/goals", {
-          method: "POST",
-          body: JSON.stringify({
-            title: goalName || goalType,
-            goalType,
-            targetAmount: goalTargetAmount ? parseFloat(goalTargetAmount) : null,
-            targetDate,
-            currency: goalCurrency,
-            status: "active",
-            priority: "high",
-          }),
-        });
-      }
-    } catch (e: any) {
-      // Ignore duplicate error — goal may already exist if user resumed
-      if (!e?.message?.includes("limit")) throw e;
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function saveScreen7Budget() {
-    setSaving(true);
-    try {
-      const incomeInUsd = state.screen2.incomeCurrency !== "USD"
-        ? convertCurrency(state.screen2.monthlyIncome, state.screen2.incomeCurrency, "USD")
-        : state.screen2.monthlyIncome;
-      const advisedMonthly = isTrackA
-        ? plans.reduce((s, p) => s + (parseFloat(p.annualPremium) || 0) / 12, 0)
-        : 0;
-      const totalInvestments = advisedMonthly + state.extraInvestment;
-      const totalExpenses = Object.values(state.expenses).reduce((s, v) => s + v, 0);
-      const netSurplus = incomeInUsd - totalExpenses - totalInvestments;
-      const savingsRatePct = incomeInUsd > 0 ? (netSurplus / incomeInUsd) * 100 : 0;
-
-      const currentMonth = new Date().toISOString().slice(0, 7) + "-01";
-      await apiFetch("/client/budget", {
-        method: "POST",
-        body: JSON.stringify({
-          month: currentMonth,
-          currency: state.screen2.incomeCurrency,
-          primaryIncome: incomeInUsd,
-          housing: state.expenses.housing,
-          foodDining: state.expenses.food,
-          transport: state.expenses.transport,
-          utilities: state.expenses.utilities,
-          entertainment: state.expenses.entertainment,
-          otherExpenses: state.expenses.other,
-          totalIncome: incomeInUsd,
-          totalExpenses,
-          totalInvestments,
-          netSurplus,
-          savingsRatePct,
-        }),
-      });
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function handleComplete() {
-    setSaving(true);
-    try {
-      await apiFetch("/client/onboarding/complete", {
-        method: "POST",
-        body: JSON.stringify({ preferredCurrency: state.screen1.preferredCurrency }),
-      });
-      if (user?.id) localStorage.removeItem(storageKey(user.id));
-      navigate("/client/dashboard");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  // ── Continue handler ─────────────────────────────────────────────────────
-
-  async function handleContinue() {
-    const screen = state.currentScreen;
-    try {
-      if (screen === 1) await saveScreen1();
-      if (screen === 2) await saveScreen2();
-      if (screen === 7) await saveScreen7Budget();
-
-      if (screen === 6) {
-        await saveScreen6Goal();
-      }
-
-      if (screen === TOTAL_SCREENS) {
-        await handleComplete();
+      if (screen === 1) {
+        setDraft(current => ({ ...current, ...(!current.fullName ? { fullName: profile?.fullName ?? "" } : {}) }));
+        setScreen(2);
         return;
       }
-
-      goTo(getNextScreen(screen));
-    } catch (e: any) {
-      toast.error(e?.message ?? "Something went wrong. Please try again.");
+      if (screen === 2) {
+        await saveBasics.mutateAsync({
+          data: {
+            fullName: draft.fullName.trim(),
+            dateOfBirth: `${draft.birthYear}-${draft.birthMonth}`,
+            countryCode: draft.countryCode,
+            isExpat: draft.isExpat,
+            preferredCurrency: draft.preferredCurrency,
+          },
+        });
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["profile"] }),
+          queryClient.invalidateQueries({ queryKey: getGetMyProfileQueryKey() }),
+          queryClient.invalidateQueries({ queryKey: getGetClientSetupChecklistQueryKey() }),
+        ]);
+        localStorage.removeItem(draftStorageKey(user?.id));
+        setScreen(3);
+        return;
+      }
+      if (!focus) return;
+      await complete.mutateAsync({ data: { firstFocus: focus } });
+      localStorage.removeItem(draftStorageKey(user?.id));
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["profile"] }),
+        queryClient.invalidateQueries({ queryKey: getGetMyProfileQueryKey() }),
+        queryClient.invalidateQueries({ queryKey: getGetClientSetupChecklistQueryKey() }),
+      ]);
+      navigate("/client/dashboard");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "We couldn't save that just yet. Please try again.");
     }
   }
 
-  async function addHolding(holding: NewHolding) {
-    const saved = await apiFetch<{ id: string }>("/client/holdings", {
-      method: "POST",
-      body: JSON.stringify(holding),
-    });
-    setState(s => ({ ...s, addedHoldings: [...s.addedHoldings, { ...holding, _id: (saved as any).id }] }));
-  }
-
-  function removeHolding(index: number) {
-    setState(s => ({ ...s, addedHoldings: s.addedHoldings.filter((_, i) => i !== index) }));
-  }
-
-  // ── canContinue per screen ────────────────────────────────────────────────
-
-  function canContinue(): boolean {
-    const { screen1, screen2 } = state;
-    switch (state.currentScreen) {
-      case 1: return screen1.fullName.trim().length >= 2 && !!screen1.dateOfBirth && !!screen1.countryCode;
-      case 2: return screen2.monthlyIncome > 0 && screen2.incomeType.length > 0;
-      case 3: return isTrackA ? true : state.hasExistingInvestments !== null;
-      case 4: return true;
-      case 5: return true;
-      case 6: return !!state.screen6.goalType;
-      case 7: return true;
-      case 8: return true;
-      default: return true;
-    }
-  }
-
-  // ── Calculate summary values for Screen 8 ────────────────────────────────
-
-  const advisedValue = plans.reduce((s, p) => s + (parseFloat(p.latestAccountValue) || 0), 0);
-  const selfValue = state.addedHoldings.reduce((s, h) => {
-    if (h.holdingType === "property") return s + (h.currentEstimatedValue ?? h.purchasePrice ?? 0);
-    if (h.holdingType === "cash") return s + (h.currentBalance ?? 0);
-    if (h.holdingType === "pension") return s + (h.currentBalancePension ?? 0);
-    if (h.holdingType === "other") return s + (h.currentValueOther ?? 0);
-    return s + (h.unitsHeld ?? 0) * (h.averageCostPrice ?? 0);
-  }, 0);
-  const totalPortfolio = advisedValue + selfValue;
-
-  const incomeInUsd = state.screen2.incomeCurrency !== "USD"
-    ? convertCurrency(state.screen2.monthlyIncome, state.screen2.incomeCurrency, "USD")
-    : state.screen2.monthlyIncome;
-  const totalExpenses = Object.values(state.expenses).reduce((s, v) => s + v, 0);
-  const advisedMonthly = isTrackA ? plans.reduce((s, p) => s + (parseFloat(p.annualPremium) || 0) / 12, 0) : 0;
-  const totalInvestments = advisedMonthly + state.extraInvestment;
-  const netSurplus = incomeInUsd - totalExpenses - totalInvestments;
-  const savingsRatePct = incomeInUsd > 0 ? (netSurplus / incomeInUsd) * 100 : 0;
-
-  // ── Render ────────────────────────────────────────────────────────────────
-
-  const screen = state.currentScreen;
-
-  const nav = (
-    <OnboardingNav
-      showBack={screen > 1}
-      onBack={() => goTo(getPrevScreen(screen))}
-      onContinue={handleContinue}
-      canContinue={canContinue()}
-      isLoading={saving}
-      showSkip={screen === 4}
-      onSkip={() => goTo(getNextScreen(screen))}
-      continueLabel={screen === TOTAL_SCREENS ? "Go to my dashboard" : "Continue"}
-    />
-  );
+  const canContinue = screen === 1 ? true : screen === 2 ? basicsValid : !!focus;
+  const advisor = checklist.data?.advisorName;
+  const clientName = checklist.data?.clientName ?? profile?.fullName ?? user?.fullName;
 
   return (
-    <OnboardingShell currentScreen={screen} totalScreens={TOTAL_SCREENS} nav={nav}>
+    <OnboardingShell currentScreen={screen} totalScreens={3} nav={
+      <OnboardingNav
+        showBack={screen > 1}
+        onBack={() => setScreen(screen === 3 ? 2 : 1)}
+        onContinue={continueStep}
+        canContinue={canContinue}
+        isLoading={loading}
+        continueLabel={screen === 3 ? "Continue to my dashboard" : "Continue"}
+        continueTestId="button-onboarding-continue"
+      />
+    }>
       {screen === 1 && (
-        <Phase1Screen1Basics
-          data={state.screen1}
-          onChange={updates => setState(s => ({ ...s, screen1: { ...s.screen1, ...updates } }))}
-        />
+        <section className="space-y-6" data-testid="screen-onboarding-welcome">
+          <div className="inline-flex items-center gap-2 rounded-full bg-green/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-green">TALA · your wealth companion</div>
+          <div>
+            <p className="text-sm font-medium text-ink-40">A clearer next step starts here.</p>
+            <h1 className="mt-2 font-display text-[34px] leading-tight font-semibold tracking-[-0.03em] text-forest">
+              Welcome{clientName ? `, ${clientName.split(" ")[0]}` : ""}.
+            </h1>
+            <p className="mt-3 max-w-md text-[15px] leading-relaxed text-ink-60">
+              Your advisor has brought your starting picture together. We’ll help you get oriented, then move at your pace.
+            </p>
+          </div>
+          <div className="rounded-[24px] border border-hairline bg-surface p-5 shadow-[0_2px_14px_rgba(20,52,42,.05)]">
+            <p className="text-xs font-semibold uppercase tracking-[0.1em] text-ink-40">Guided by your advisor</p>
+            <p className="mt-1 font-display text-xl font-semibold text-forest" data-testid="text-onboarding-advisor">
+              {checklist.isLoading ? "Loading your advisor…" : advisor || "Your advisor"}
+            </p>
+            {checklist.isError && <div className="mt-2 flex items-center justify-between gap-3 text-sm text-clay-ink"><p role="status">Your setup summary is temporarily unavailable.</p><button type="button" onClick={() => void checklist.refetch()} data-testid="button-retry-onboarding-summary" className="shrink-0 font-semibold text-green underline underline-offset-2">Try again</button></div>}
+            <div className="mt-5 grid grid-cols-3 gap-3 border-t border-hairline pt-4">
+              {[
+                ["Advised plans", checklist.data?.setupSummary.visiblePlans],
+                ["Goals", checklist.data?.setupSummary.activeGoals],
+                ["Budget months", checklist.data?.setupSummary.budgetMonths],
+              ].map(([label, value]) => (
+                <div key={label} data-testid={`summary-${String(label).toLowerCase().replaceAll(" ", "-")}`}>
+                  <div className="font-display text-2xl font-semibold text-forest tabular-nums">{checklist.isLoading || checklist.isError ? "—" : value ?? 0}</div>
+                  <div className="mt-1 text-xs leading-tight text-ink-40">{label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <p className="text-xs text-ink-40">Your advisor’s view is a starting point. You can add or update details any time.</p>
+        </section>
       )}
-
       {screen === 2 && (
-        <Phase1Screen2Income
-          data={state.screen2}
-          preferredCurrency={state.screen1.preferredCurrency}
-          onChange={updates => setState(s => ({ ...s, screen2: { ...s.screen2, ...updates } }))}
-        />
+        <section className="space-y-5" data-testid="screen-onboarding-basics">
+          <div>
+            <p className="text-sm font-medium text-green">About you</p>
+            <h1 className="mt-1 font-display text-[30px] leading-tight font-semibold tracking-[-0.03em] text-forest">Let’s make this yours.</h1>
+            <p className="mt-2 text-sm leading-relaxed text-ink-60">These details help personalise your experience. Your birth date is month and year only.</p>
+          </div>
+          <div className="space-y-4">
+            <label className="block text-sm font-semibold text-forest">
+              Full name
+              <input data-testid="input-client-full-name" autoComplete="name" value={draft.fullName} onChange={e => setDraft({ ...draft, fullName: e.target.value })} className="mt-1.5 min-h-12 w-full rounded-xl border border-hairline bg-surface px-4 text-[15px] font-normal text-forest outline-none focus:border-green focus:ring-2 focus:ring-green/15" />
+            </label>
+            <fieldset>
+              <legend className="text-sm font-semibold text-forest">Date of birth</legend>
+              <div className="mt-1.5 grid grid-cols-2 gap-3">
+                <label className="sr-only" htmlFor="birth-month">Birth month</label>
+                <select id="birth-month" data-testid="select-birth-month" value={draft.birthMonth} onChange={e => setDraft({ ...draft, birthMonth: e.target.value })} className="min-h-12 rounded-xl border border-hairline bg-surface px-3 text-sm text-forest outline-none focus:border-green focus:ring-2 focus:ring-green/15">
+                  <option value="">Month</option>{availableBirthMonths.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                </select>
+                <label className="sr-only" htmlFor="birth-year">Birth year</label>
+                <select id="birth-year" data-testid="select-birth-year" value={draft.birthYear} onChange={e => setDraft({ ...draft, birthYear: e.target.value })} className="min-h-12 rounded-xl border border-hairline bg-surface px-3 text-sm text-forest outline-none focus:border-green focus:ring-2 focus:ring-green/15">
+                  <option value="">Year</option>{years.map(year => <option key={year} value={year}>{year}</option>)}
+                </select>
+              </div>
+            </fieldset>
+            <label className="block text-sm font-semibold text-forest">
+              Country of residence
+              <select data-testid="select-country-residence" value={draft.countryCode} onChange={e => setDraft({ ...draft, countryCode: e.target.value })} className="mt-1.5 min-h-12 w-full rounded-xl border border-hairline bg-surface px-4 text-sm font-normal text-forest outline-none focus:border-green focus:ring-2 focus:ring-green/15">
+                <option value="">Choose a country</option>{COUNTRIES.map(([code, name]) => <option key={code} value={code}>{name}</option>)}
+              </select>
+            </label>
+            <label className="flex min-h-12 cursor-pointer items-center justify-between rounded-xl border border-hairline bg-surface px-4 text-sm font-medium text-forest">
+              I’m an expat
+              <input data-testid="toggle-expat" type="checkbox" checked={draft.isExpat} onChange={e => setDraft({ ...draft, isExpat: e.target.checked })} className="h-5 w-5 accent-[var(--green)]" />
+            </label>
+            <label className="block text-sm font-semibold text-forest">
+              Preferred currency
+              <select data-testid="select-preferred-currency" value={draft.preferredCurrency} onChange={e => setDraft({ ...draft, preferredCurrency: e.target.value })} className="mt-1.5 min-h-12 w-full rounded-xl border border-hairline bg-surface px-4 text-sm font-normal text-forest outline-none focus:border-green focus:ring-2 focus:ring-green/15">
+                {CURRENCIES.map(currency => <option key={currency} value={currency}>{currency}</option>)}
+              </select>
+            </label>
+          </div>
+        </section>
       )}
-
-      {screen === 3 && !trackLoading && (
-        isTrackA ? (
-          <Phase2Screen3TrackA plans={plans} hasPendingAdvisorSetup={hasPendingAdvisorSetup} />
-        ) : (
-          <Phase2Screen3TrackB
-            hasExistingInvestments={state.hasExistingInvestments}
-            onChange={v => setState(s => ({ ...s, hasExistingInvestments: v }))}
-          />
-        )
-      )}
-
-      {screen === 4 && (
-        <Phase2Screen4Holdings
-          isTrackA={isTrackA}
-          addedHoldings={state.addedHoldings}
-          preferredCurrency={state.screen1.preferredCurrency}
-          onAdd={addHolding}
-          onRemove={removeHolding}
-        />
-      )}
-
-      {screen === 5 && (
-        <Phase2Screen5Summary
-          isTrackA={isTrackA}
-          advisedPlans={plans}
-          addedHoldings={state.addedHoldings}
-          preferredCurrency={state.screen1.preferredCurrency}
-        />
-      )}
-
-      {screen === 6 && (
-        <Phase3Screen6Goal
-          data={state.screen6}
-          preferredCurrency={state.screen1.preferredCurrency}
-          onChange={updates => setState(s => ({ ...s, screen6: { ...s.screen6, ...updates } }))}
-        />
-      )}
-
-      {screen === 7 && (
-        <Phase3Screen7Budget
-          monthlyIncome={state.screen2.monthlyIncome}
-          incomeCurrency={state.screen2.incomeCurrency}
-          isTrackA={isTrackA}
-          advisedPlans={plans}
-          expenses={state.expenses}
-          extraInvestment={state.extraInvestment}
-          preferredCurrency={state.screen1.preferredCurrency}
-          onExpenseChange={(key, value) => setState(s => ({ ...s, expenses: { ...s.expenses, [key]: value } }))}
-          onExtraInvestmentChange={v => setState(s => ({ ...s, extraInvestment: v }))}
-        />
-      )}
-
-      {screen === 8 && (
-        <Phase3Screen8Complete
-          isTrackA={isTrackA}
-          advisedPlans={plans}
-          totalPortfolioValue={totalPortfolio}
-          goalName={state.screen6.goalName}
-          savingsRate={savingsRatePct}
-          preferredCurrency={state.screen1.preferredCurrency}
-          onComplete={handleContinue}
-          isLoading={saving}
-        />
+      {screen === 3 && (
+        <section className="space-y-5" data-testid="screen-onboarding-first-focus">
+          <div>
+            <p className="text-sm font-medium text-green">Your first step</p>
+            <h1 className="mt-1 font-display text-[30px] leading-tight font-semibold tracking-[-0.03em] text-forest">What do you want to sort out first?</h1>
+            <p className="mt-2 text-sm leading-relaxed text-ink-60">There’s no wrong answer. This simply helps your advisor focus the conversation.</p>
+          </div>
+          <div className="space-y-2.5" role="radiogroup" aria-label="Choose your first focus">
+            {FOCI.map(option => (
+              <button key={option.value} type="button" role="radio" aria-checked={focus === option.value} data-testid={`option-first-focus-${option.value}`} onClick={() => setFocus(option.value)} className={`w-full rounded-2xl border p-4 text-left transition-colors ${focus === option.value ? "border-green bg-green/5 ring-2 ring-green/15" : "border-hairline bg-surface hover:border-green/50"}`}>
+                <span className="flex items-start gap-3">
+                  <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${focus === option.value ? "border-green bg-green" : "border-hairline"}`}>
+                    {focus === option.value && <span className="h-2 w-2 rounded-full bg-paper" />}
+                  </span>
+                  <span><span className="block text-sm font-semibold text-forest">{option.title}</span><span className="mt-1 block text-xs leading-relaxed text-ink-40">{option.description}</span></span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
       )}
     </OnboardingShell>
   );

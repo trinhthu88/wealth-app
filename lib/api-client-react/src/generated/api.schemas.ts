@@ -13,6 +13,141 @@ export interface Error {
   error: string;
 }
 
+export interface ClientProfileBasicsInput {
+  /** @minLength 2 */
+  fullName: string;
+  /** @pattern ^\d{4}-(0[1-9]|1[0-2])$ */
+  dateOfBirth: string;
+  /** @minLength 2 */
+  countryCode: string;
+  isExpat: boolean;
+  preferredCurrency: string;
+}
+
+export type ClientOnboardingCompleteInputFirstFocus =
+  (typeof ClientOnboardingCompleteInputFirstFocus)[keyof typeof ClientOnboardingCompleteInputFirstFocus];
+
+export const ClientOnboardingCompleteInputFirstFocus = {
+  know_my_money: "know_my_money",
+  start_investing: "start_investing",
+  save_for_big: "save_for_big",
+  organise_existing: "organise_existing",
+  plan_retirement: "plan_retirement",
+} as const;
+
+export interface ClientOnboardingCompleteInput {
+  firstFocus: ClientOnboardingCompleteInputFirstFocus;
+}
+
+export type ClientOnboardingCompleteResponseFirstFocus =
+  (typeof ClientOnboardingCompleteResponseFirstFocus)[keyof typeof ClientOnboardingCompleteResponseFirstFocus];
+
+export const ClientOnboardingCompleteResponseFirstFocus = {
+  know_my_money: "know_my_money",
+  start_investing: "start_investing",
+  save_for_big: "save_for_big",
+  organise_existing: "organise_existing",
+  plan_retirement: "plan_retirement",
+} as const;
+
+export type ClientOnboardingCompleteResponseOnboardingStage =
+  (typeof ClientOnboardingCompleteResponseOnboardingStage)[keyof typeof ClientOnboardingCompleteResponseOnboardingStage];
+
+export const ClientOnboardingCompleteResponseOnboardingStage = {
+  not_started: "not_started",
+  profile: "profile",
+  complete: "complete",
+} as const;
+
+export interface ClientOnboardingCompleteResponse {
+  firstFocus: ClientOnboardingCompleteResponseFirstFocus;
+  onboardingStage: ClientOnboardingCompleteResponseOnboardingStage;
+}
+
+export interface ClientSetupChecklistPreferencesInput {
+  startingFromZero?: boolean;
+  checklistHidden?: boolean;
+}
+
+export interface ClientSetupChecklistPreferences {
+  startingFromZero?: boolean;
+  checklistHidden?: boolean;
+}
+
+export type ClientSetupChecklistItemId =
+  (typeof ClientSetupChecklistItemId)[keyof typeof ClientSetupChecklistItemId];
+
+export const ClientSetupChecklistItemId = {
+  budget: "budget",
+  goal: "goal",
+  wealth: "wealth",
+  goal_link: "goal_link",
+  risk: "risk",
+  advisor_hello: "advisor_hello",
+} as const;
+
+/**
+ * @nullable
+ */
+export type ClientSetupChecklistItemAction =
+  | (typeof ClientSetupChecklistItemAction)[keyof typeof ClientSetupChecklistItemAction]
+  | null;
+
+export const ClientSetupChecklistItemAction = {
+  risk_check: "risk_check",
+} as const;
+
+export interface ClientSetupChecklistItem {
+  id: ClientSetupChecklistItemId;
+  title: string;
+  description: string;
+  done: boolean;
+  /** @nullable */
+  href: string | null;
+  /** @nullable */
+  action: ClientSetupChecklistItemAction;
+}
+
+/**
+ * @nullable
+ */
+export type ClientSetupChecklistFirstFocus =
+  | (typeof ClientSetupChecklistFirstFocus)[keyof typeof ClientSetupChecklistFirstFocus]
+  | null;
+
+export const ClientSetupChecklistFirstFocus = {
+  know_my_money: "know_my_money",
+  start_investing: "start_investing",
+  save_for_big: "save_for_big",
+  organise_existing: "organise_existing",
+  plan_retirement: "plan_retirement",
+} as const;
+
+export type ClientSetupChecklistSetupSummary = {
+  visiblePlans: number;
+  activeGoals: number;
+  budgetMonths: number;
+};
+
+export type ClientSetupChecklistWealthScoreUnlock = {
+  monthsWithBudget: number;
+  required: number;
+};
+
+export interface ClientSetupChecklist {
+  /** @nullable */
+  firstFocus: ClientSetupChecklistFirstFocus;
+  startingFromZero: boolean;
+  checklistHidden: boolean;
+  /** @nullable */
+  advisorName: string | null;
+  /** @nullable */
+  clientName: string | null;
+  setupSummary: ClientSetupChecklistSetupSummary;
+  wealthScoreUnlock: ClientSetupChecklistWealthScoreUnlock;
+  items: ClientSetupChecklistItem[];
+}
+
 export type NetWorthItemSource =
   (typeof NetWorthItemSource)[keyof typeof NetWorthItemSource];
 
