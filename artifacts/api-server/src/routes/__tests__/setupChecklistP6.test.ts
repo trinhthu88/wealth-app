@@ -76,6 +76,13 @@ beforeAll(async () => {
 afterEach(async () => {
   await clearFixtureData();
   await resetClientProfile();
+  await db.update(profilesTable).set({
+    fullName: "P6 Test Client",
+    countryCode: null,
+    isExpat: false,
+    preferredCurrency: "USD",
+    dateOfBirth: null,
+  }).where(eq(profilesTable.id, clientId));
 });
 
 afterAll(async () => {
@@ -200,6 +207,71 @@ describe("GET /client/setup-checklist", () => {
       .send({ startingFromZero: "yes" }).expect(400);
   });
 
+  it("does not count an inactive deleted holding as wealth", async () => {
+    await db.insert(clientHoldingsTable).values({
+      userId: clientId,
+      holdingType: "cash",
+      label: "Deleted cash holding",
+      isActive: false,
+    });
+
+    const result = await request(app).get("/api/client/setup-checklist").set(asUser(clientId)).expect(200);
+    expect(result.body.items.find((item: any) => item.id === "wealth").done).toBe(false);
+  });
+
+  it("does not count a link attached only to a cancelled goal", async () => {
+    const [goal] = await db.insert(financialGoalsTable).values({
+      userId: clientId,
+      title: "Cancelled goal",
+      goalType: "safety_net",
+    }).returning();
+    const [holding] = await db.insert(clientHoldingsTable).values({
+      userId: clientId,
+      holdingType: "cash",
+      label: "Current savings",
+    }).returning();
+    await db.update(financialGoalsTable).set({ status: "cancelled" })
+      .where(eq(financialGoalsTable.id, goal.id));
+    await db.insert(goalHoldingLinksTable).values({
+      userId: clientId,
+      goalId: goal.id,
+      sourceType: "self_holding",
+      sourceId: holding.id,
+    });
+
+    const result = await request(app).get("/api/client/setup-checklist").set(asUser(clientId)).expect(200);
+    expect(result.body.items.find((item: any) => item.id === "goal_link").done).toBe(false);
+  });
+
+  it("uses Vietnam local month when UTC is still in the previous month and no client zone is known", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-31T17:00:00.000Z")); // 2026-11-01 00:00 in Ho Chi Minh City
+    try {
+      await db.insert(clientBudgetMonthsTable).values({ userId: clientId, month: "2026-11-01" });
+
+      const result = await request(app).get("/api/client/setup-checklist").set(asUser(clientId)).expect(200);
+      expect(result.body.items.find((item: any) => item.id === "budget").done).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("uses the client's reported timezone instead of the Vietnam fallback", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-11-01T02:00:00.000Z")); // 2026-10-31 in Los Angeles
+    try {
+      await db.insert(clientBudgetMonthsTable).values({ userId: clientId, month: "2026-10-01" });
+
+      const result = await request(app).get("/api/client/setup-checklist")
+        .set(asUser(clientId))
+        .set("x-client-time-zone", "America/Los_Angeles")
+        .expect(200);
+      expect(result.body.items.find((item: any) => item.id === "budget").done).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("orders items by first focus, with sensible orders for investing and retirement", async () => {
     const cases = [
       ["know_my_money", ["budget", "goal", "wealth", "goal_link", "risk", "advisor_hello"]],
@@ -240,6 +312,13 @@ describe("investment-client onboarding writes", () => {
     expect(profile.preferredCurrency).toBe("VND");
     expect(clientProfile.onboardingStage).toBe("profile");
 
+    await request(app).put("/api/client/profile/basics").set(asUser(clientId)).send({
+      dateOfBirth: "1989-05",
+    }).expect(200);
+    [profile] = await db.select().from(profilesTable).where(eq(profilesTable.id, clientId));
+    expect(profile.fullName).toBe("P6 Updated Client");
+    expect(profile.countryCode).toBe("VN");
+
     await request(app).post("/api/client/onboarding/complete").set(asUser(clientId))
       .send({ firstFocus: "plan_retirement" }).expect(200);
     [clientProfile] = await db.select().from(clientProfilesTable)
@@ -255,5 +334,23 @@ describe("investment-client onboarding writes", () => {
 
     await request(app).post("/api/client/onboarding/complete").set(asUser(clientId))
       .send({ firstFocus: "invented_focus" }).expect(400);
+  });
+
+  it("refuses About you without a valid DOB and refuses completion before About you", async () => {
+    const incomplete = await request(app).post("/api/client/onboarding/complete").set(asUser(clientId))
+      .send({ firstFocus: "plan_retirement" }).expect(400);
+    expect(incomplete.body.error).toMatch(/save about you/i);
+
+    const missingDob = await request(app).put("/api/client/profile/basics").set(asUser(clientId))
+      .send({ fullName: "No DOB" }).expect(400);
+    expect(missingDob.body.error).toMatch(/date of birth.*required/i);
+
+    const invalidDob = await request(app).put("/api/client/profile/basics").set(asUser(clientId))
+      .send({ dateOfBirth: "2026-13" }).expect(400);
+    expect(invalidDob.body.error).toMatch(/valid month and year/i);
+
+    const [clientProfile] = await db.select().from(clientProfilesTable)
+      .where(eq(clientProfilesTable.userId, clientId));
+    expect(clientProfile.onboardingStage).toBe("not_started");
   });
 });

@@ -95,17 +95,26 @@ router.put("/client/profile/basics", requireAuth, async (req, res): Promise<void
   const body = req.body ?? {};
   const { fullName, countryCode, isExpat } = body;
   const preferredCurrency = body.preferredCurrency ?? body.preferredDisplayCurrency;
+  const [existingProfile] = await db.select({ role: profilesTable.role }).from(profilesTable)
+    .where(eq(profilesTable.id, userId));
+  if (!existingProfile) { res.status(404).json({ error: "Profile not found" }); return; }
 
   const hasDob = body.dateOfBirth !== undefined && body.dateOfBirth !== null && body.dateOfBirth !== "";
   const dateOfBirth = hasDob ? parseDateOfBirth(body.dateOfBirth) : null;
+  if (existingProfile.role === "investment_client" && !hasDob) {
+    res.status(400).json({ error: "Date of birth month and year are required" });
+    return;
+  }
   if (hasDob && !dateOfBirth) {
-    res.status(400).json({ error: "Invalid date of birth" });
+    res.status(400).json({ error: "Enter a valid month and year for date of birth" });
     return;
   }
 
   const [profile] = await db.update(profilesTable)
     .set({
-      fullName: fullName ?? null, countryCode: countryCode ?? null, isExpat: isExpat ?? false,
+      ...(Object.prototype.hasOwnProperty.call(body, "fullName") ? { fullName: fullName ?? null } : {}),
+      ...(Object.prototype.hasOwnProperty.call(body, "countryCode") ? { countryCode: countryCode ?? null } : {}),
+      ...(Object.prototype.hasOwnProperty.call(body, "isExpat") ? { isExpat: isExpat ?? false } : {}),
       ...(preferredCurrency ? { preferredCurrency } : {}),
       ...(hasDob ? { dateOfBirth } : {}),
       updatedAt: new Date(),
@@ -129,26 +138,26 @@ router.post("/client/onboarding/complete", requireAuth, async (req, res): Promis
     return;
   }
 
-  if (preferredCurrency) {
-    await db.update(profilesTable)
-      .set({ preferredCurrency, updatedAt: new Date() })
-      .where(eq(profilesTable.id, userId));
-  }
-  await db.transaction(async (tx) => {
+  const completed = await db.transaction(async (tx) => {
     const [existing] = await tx.select({ onboardingStage: clientProfilesTable.onboardingStage })
       .from(clientProfilesTable).where(eq(clientProfilesTable.userId, userId));
-    if (existing) {
-      await tx.update(clientProfilesTable)
-        .set({ firstFocus: parsedFirstFocus.data.firstFocus, onboardingStage: "complete", updatedAt: new Date() })
-        .where(eq(clientProfilesTable.userId, userId));
-    } else {
-      await tx.insert(clientProfilesTable).values({
-        userId,
-        firstFocus: parsedFirstFocus.data.firstFocus,
-        onboardingStage: "complete",
-      }).onConflictDoNothing();
+    if (!existing || (existing.onboardingStage !== "profile" && existing.onboardingStage !== "complete")) {
+      return false;
     }
+    if (preferredCurrency) {
+      await tx.update(profilesTable)
+        .set({ preferredCurrency, updatedAt: new Date() })
+        .where(eq(profilesTable.id, userId));
+    }
+    await tx.update(clientProfilesTable)
+      .set({ firstFocus: parsedFirstFocus.data.firstFocus, onboardingStage: "complete", updatedAt: new Date() })
+      .where(eq(clientProfilesTable.userId, userId));
+    return true;
   });
+  if (!completed) {
+    res.status(400).json({ error: "Save About you, including your date of birth, before completing onboarding" });
+    return;
+  }
 
   const [cp] = await db.select({
     firstFocus: clientProfilesTable.firstFocus,
@@ -158,6 +167,29 @@ router.post("/client/onboarding/complete", requireAuth, async (req, res): Promis
 });
 
 const DEFAULT_SETUP_ORDER = ["budget", "goal", "wealth", "goal_link", "risk", "advisor_hello"] as const;
+const DEFAULT_CLIENT_TIME_ZONE = "Asia/Ho_Chi_Minh";
+
+function currentMonthForTimeZone(now: Date, requestedTimeZone?: string): string {
+  let timeZone = DEFAULT_CLIENT_TIME_ZONE;
+  if (requestedTimeZone) {
+    try {
+      new Intl.DateTimeFormat("en-US", { timeZone: requestedTimeZone }).format(now);
+      timeZone = requestedTimeZone;
+    } catch {
+      // Ignore invalid client-provided zones and use the app's Vietnam default.
+    }
+  }
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+  }).formatToParts(now);
+  const year = parts.find((part) => part.type === "year")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  if (!year || !month) throw new Error(`Could not determine current month in ${timeZone}`);
+  return `${year}-${month}-01`;
+}
+
 const SETUP_ORDER_BY_FOCUS = {
   know_my_money: DEFAULT_SETUP_ORDER,
   start_investing: ["wealth", "risk", "goal", "goal_link", "budget", "advisor_hello"],
@@ -176,7 +208,7 @@ router.get("/client/setup-checklist", requireAuth, requireRole("investment_clien
     checklistHidden: clientProfilesTable.checklistHidden,
   }).from(clientProfilesTable).where(eq(clientProfilesTable.userId, userId));
 
-  const currentMonth = `${new Date().toISOString().slice(0, 7)}-01`;
+  const currentMonth = currentMonthForTimeZone(new Date(), req.get("x-client-time-zone"));
   const [
     [advisor],
     [profile],
@@ -211,14 +243,21 @@ router.get("/client/setup-checklist", requireAuth, requireRole("investment_clien
     )).limit(1),
     db.select({ value: count() }).from(clientBudgetMonthsTable)
       .where(eq(clientBudgetMonthsTable.userId, userId)),
-    db.select({ value: count() }).from(clientHoldingsTable)
-      .where(eq(clientHoldingsTable.userId, userId)),
+    db.select({ value: count() }).from(clientHoldingsTable).where(and(
+      eq(clientHoldingsTable.userId, userId),
+      eq(clientHoldingsTable.isActive, true),
+    )),
     db.select({ value: count() }).from(assetsTable)
       .where(eq(assetsTable.userId, userId)),
     db.select({ value: count() }).from(liabilitiesTable)
       .where(eq(liabilitiesTable.userId, userId)),
     db.select({ goalId: goalHoldingLinksTable.goalId }).from(goalHoldingLinksTable)
-      .where(eq(goalHoldingLinksTable.userId, userId)).limit(1),
+      .innerJoin(financialGoalsTable, eq(goalHoldingLinksTable.goalId, financialGoalsTable.id))
+      .where(and(
+        eq(goalHoldingLinksTable.userId, userId),
+        eq(financialGoalsTable.userId, userId),
+        eq(financialGoalsTable.status, "active"),
+      )).limit(1),
     db.select({ id: financialGoalsTable.id }).from(financialGoalsTable).where(and(
       eq(financialGoalsTable.userId, userId),
       eq(financialGoalsTable.status, "active"),

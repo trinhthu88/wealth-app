@@ -1,7 +1,7 @@
 # Restructure progress
 
 ## Current phase
-P6 — New onboarding + setup checklist — done
+P6 review fixes — done
 
 ## Baseline (Phase 0)
 - typecheck: passed (`pnpm run typecheck`; all libraries and leaf workspaces completed).
@@ -392,6 +392,42 @@ Files changed in P6:
 - Frontend: `artifacts/wealthapp/src/pages/client/ClientOnboarding.tsx`, `ClientDashboard.tsx`, `ClientGoals.tsx`; `artifacts/wealthapp/src/hooks/useProfile.ts`; `artifacts/wealthapp/src/components/client/ClientSetupChecklistCard.tsx`, `ClientRiskCheckSheet.tsx`, `goals/GoalHoldingLinks.tsx`, `onboarding/OnboardingNav.tsx`, and `onboarding/OnboardingShell.tsx`.
 - Removed obsolete client onboarding files: `artifacts/wealthapp/src/components/client/onboarding/HoldingMiniForm.tsx` and the nine screens under `artifacts/wealthapp/src/components/client/onboarding/phases/`.
 - Progress record: `docs/client-restructure/PROGRESS.md`.
+
+### P6 review fixes
+Plan:
+- Fix checklist freshness after risk saves and move risk banding into a small tested scoring function with the requested 3/4/7/8 boundaries.
+- Require valid month/year DOB when investment clients save About you; reject onboarding completion before stage `profile`; preserve omitted full name and country fields.
+- Count active holdings only, count goal links only for active goals, and calculate the budget month in `Asia/Ho_Chi_Minh` as the fallback client timezone.
+- Add API coverage for the onboarding guards, deleted holdings, Vietnam month boundary, and cancelled-goal links. No schema change is planned.
+- Run the full typecheck and API suite, record results and changed files, commit as `[restructure P6] review fixes`, and push to GitHub `main`.
+- Manually list the signed-in onboarding and Home checklist screens for the product owner to recheck.
+Decisions made by agent:
+- Read the browser's IANA timezone from `x-client-time-zone` for the checklist request; fall back to `Asia/Ho_Chi_Minh` when the timezone is missing or invalid.
+Done:
+- After a successful risk-profile save, invalidate and refetch the setup checklist; extracted scoring into `riskProfileFromScore` with bands 0–3 conservative, 4–7 balanced, and 8–10 growth.
+- About you now rejects missing or invalid DOB for investment clients; onboarding completion requires stage `profile` or `complete`. Partial About-you requests preserve omitted name, country, and expat fields.
+- The wealth item counts active holdings only; the goal-link item counts links only for active goals.
+- The checklist uses the browser's IANA timezone when supplied and falls back to Vietnam time when missing or invalid. No schema change was needed.
+- No publish or deployment was performed.
+Tests:
+- `pnpm run typecheck` — passed.
+- `pnpm --filter @workspace/api-server test` — passed, 23 test files and 174 tests.
+- `pnpm --filter @workspace/wealthapp test` — passed, 7 test files and 70 tests, including risk-band edge cases.
+Manual product-owner checks (signed-in screens require a client account; preview browser cannot sign in):
+1. `/client/onboarding`, About you: confirm DOB is required, a valid month/year saves, and a partial save does not clear the existing full name or country.
+2. `/client/onboarding`, first focus: confirm direct completion is refused until About you has been saved.
+3. `/client/dashboard`, risk check: save answers and confirm “Set your risk profile” ticks immediately without reloading; sample totals 3, 4, 7, and 8 to verify the tier boundaries.
+4. `/client/dashboard`, budget checklist item: verify the current month follows the browser's local timezone around month change; when unavailable, it follows `Asia/Ho_Chi_Minh`.
+5. `/client/dashboard`, wealth item: verify an inactive/deleted holding alone does not complete it.
+6. `/client/dashboard`, goal-link item: verify a link on a completed or cancelled goal does not complete it; an active goal link does.
+Files changed:
+- `artifacts/api-server/src/routes/clientPortal.ts`
+- `artifacts/api-server/src/routes/__tests__/setupChecklistP6.test.ts`
+- `artifacts/wealthapp/src/components/client/ClientRiskCheckSheet.tsx`
+- `artifacts/wealthapp/src/lib/riskScore.ts`
+- `artifacts/wealthapp/src/lib/__tests__/riskScore.test.ts`
+- `lib/api-client-react/src/custom-fetch.ts`
+- `docs/client-restructure/PROGRESS.md`
 
 ## Next agent: start here
 - Phase 6 is complete. Start Phase 7 — Quick budget + advisor budget summary: read its master-prompt section and Section 3, record the plan here before editing, and audit `budget_entries`/`client_budget_months` before any backfill. Keep `budget_entries`; Phase 7 must not drop it.

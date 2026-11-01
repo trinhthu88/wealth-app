@@ -2,8 +2,9 @@ import { useState } from "react";
 import { Check, X } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { getGetMyProfileQueryKey } from "@workspace/api-client-react";
+import { getGetClientSetupChecklistQueryKey, getGetMyProfileQueryKey } from "@workspace/api-client-react";
 import { useProfile } from "@/hooks/useProfile";
+import { riskProfileFromScore } from "@/lib/riskScore";
 
 const QUESTIONS = [
   {
@@ -41,13 +42,14 @@ export default function ClientRiskCheckSheet({ isOpen, onClose }: Props) {
   async function submit() {
     if (answers.some(answer => answer < 0)) return;
     const score = answers.reduce((total, answer) => total + answer, 0);
-    const value = score <= 4 ? "conservative" : score <= 9 ? "balanced" : "growth";
+    const value = riskProfileFromScore(score);
     setSaving(true);
     try {
       await update.mutateAsync({ riskProfile: value });
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["profile"] }),
         queryClient.invalidateQueries({ queryKey: getGetMyProfileQueryKey() }),
+        queryClient.invalidateQueries({ queryKey: getGetClientSetupChecklistQueryKey() }),
       ]);
       setAnswers(Array(QUESTIONS.length).fill(-1));
       onClose();

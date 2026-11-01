@@ -337,6 +337,16 @@ export async function customFetch<T = unknown>(
 
   const headers = mergeHeaders(isRequest(input) ? input.headers : undefined, headersInit);
 
+  const requestUrl = resolveUrl(input);
+  if (
+    requestUrl.includes("/client/setup-checklist") &&
+    !headers.has("x-client-time-zone") &&
+    typeof Intl !== "undefined"
+  ) {
+    const clientTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (clientTimeZone) headers.set("x-client-time-zone", clientTimeZone);
+  }
+
   if (
     typeof init.body === "string" &&
     !headers.has("content-type") &&
