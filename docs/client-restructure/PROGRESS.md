@@ -492,6 +492,7 @@ Plan:
 - Add routing coverage for legacy URL destinations/tabs and assert the mobile bar has exactly five items. Run full typecheck, API tests, WealthApp tests, and the production web build.
 - No schema change is planned. Do not publish or deploy. Record the signed-in desktop and phone-width screens for manual review; commit with `[restructure P8]` and push to GitHub `main`.
 Done:
+- Commit `db02683` — `[restructure P8] implement five-place navigation and floating Sol`.
 - Replaced the investment-client desktop and mobile navigation with the five required places and linkable section tabs. Free-tier routes continue using the separate free shell and navigation unchanged.
 - Added canonical routes and replace-style redirects for legacy client pages, including holding, advised-plan, fund, and package detail routes. Query strings and goal-link deep links are retained; internal links and checklist destinations now use canonical URLs.
 - Reused the existing net-worth page and forms for Overview and Property & debts, and removed the duplicate Goals/My plan tabs in favor of the shared Goals section tabs.
