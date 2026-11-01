@@ -1,7 +1,7 @@
 # Restructure progress
 
 ## Current phase
-P4 — One advisor pointer — complete; typecheck and API suite passed
+P5 — Profile fields and onboarding state — in progress (P4.5 clean schema push done)
 
 ## Baseline (Phase 0)
 - typecheck: passed (`pnpm run typecheck`; all libraries and leaf workspaces completed).
@@ -98,7 +98,7 @@ Files changed:
 
 ## Blocked / questions for the product owner
 - P1 CHECK constraints for `onboarding_stage` and `first_focus` are deferred until P5 introduces their columns; their shared enums are defined in P1.
-- P2.5 schema push is blocked by a `client_holding_transactions` warning. Exact prompt: `You're about to add client_holding_transactions_holding_id_source_month_source_unique unique constraint to the table, which contains 1 items. If this statement fails, you will receive an error from the database. Do you want to truncate client_holding_transactions table?` Choices: `No, add the constraint without truncating the table` / `Yes, truncate the table`. The safe No choice remained highlighted; the command timed out before proceeding. No truncate option was accepted and no schema/data change was observed. A read-only recheck found 1 row, 0 duplicate groups/excess rows for `(holding_id, source_month, source)`, and an existing validated UNIQUE constraint `client_holding_transactions_holding_id_source_month_source_uniq` on that key. Do not accept this prompt or rerun push as part of Phases 3–4.
+- RESOLVED in P4.5 (see below): P2.5 schema push was blocked by a `client_holding_transactions` warning. Exact prompt: `You're about to add client_holding_transactions_holding_id_source_month_source_unique unique constraint to the table, which contains 1 items. If this statement fails, you will receive an error from the database. Do you want to truncate client_holding_transactions table?` Choices: `No, add the constraint without truncating the table` / `Yes, truncate the table`. The safe No choice remained highlighted; the command timed out before proceeding. No truncate option was accepted and no schema/data change was observed. A read-only recheck found 1 row, 0 duplicate groups/excess rows for `(holding_id, source_month, source)`, and an existing validated UNIQUE constraint `client_holding_transactions_holding_id_source_month_source_uniq` on that key. Do not accept this prompt or rerun push as part of Phases 3–4.
 
 ### P2 — Net worth service
 Plan:
@@ -271,5 +271,24 @@ Files changed in P4:
 - `lib/db/src/schema/clients.ts`
 - `lib/db/src/schema/messages.ts`
 
+### P4.5 — Clean schema push (no data change)
+Plan:
+- Name the `client_holding_transactions` unique constraint to match the database; verify `advisor_assignments` (created with raw SQL in P4) matches its schema; run the normal push and resolve any remaining drift with no-data-change schema declarations only (approved by the product owner before applying).
+Observed:
+- `advisor_assignments` matches its schema exactly: columns, types, nullability, defaults, `advisor_assignments_client_user_id_idx`, `advisor_assignments_advisor_id_idx`, partial unique `advisor_assignments_one_open_per_client_uidx (client_user_id) WHERE ended_at IS NULL`; no foreign keys on either side.
+- Naming the constraint alone did not clear the prompt. drizzle-kit compares unique constraints as `name;columns` in order, and reads columns from `information_schema.constraint_column_usage`, which returns table-column order (`holding_id, source, source_month`); the schema declared `holdingId, sourceMonth, source`. The prompt shown (not answered; stdin closed) was the same truncate question recorded in P2.5.
+- A read-only diff (drizzle-kit `pushSchema` API, `apply()` never called) revealed a second hidden mismatch: two `statement_id` FKs whose generated names exceed 63 characters, so PostgreSQL stored them truncated and Drizzle wanted to drop/re-add them.
+- `pg_constraint` before applying: `advised_plan_holdings_statement_id_advised_plan_statements_id_f` and `advised_plan_transactions_statement_id_advised_plan_statements_` (63 chars each), both `FOREIGN KEY (statement_id) REFERENCES advised_plan_statements(id) ON DELETE CASCADE`, `confupdtype = a` (no action).
+Done:
+- `lib/db/src/schema/clientHoldings.ts`: unique constraint named `client_holding_transactions_holding_id_source_month_source_uniq`, columns declared as `(holdingId, source, sourceMonth)`. The live constraint (index order `holding_id, source_month, source`) is untouched; uniqueness and `ON CONFLICT` inference depend on the column set, not order.
+- `lib/db/src/schema/advisedPlans.ts`: both `statement_id` FKs declared with explicit `foreignKey({ name: <stored 63-char name> }).onDelete("cascade")`.
+- Backups (ignored): `backups/2026-11-01-{client_holding_transactions,advisor_assignments,advised_plan_holdings,advised_plan_transactions,advised_plan_statements}-p4.5.sql`.
+- Normal push output: `[✓] Pulling schema from database...` / `[i] No changes detected` — no prompts, no statements, exit 0.
+Audit counts / backfills:
+- Row counts before/after: client_holding_transactions 1/1, advisor_assignments 4/4, advised_plan_holdings 6/6, advised_plan_statements 6/6. No data changed.
+Tests: `pnpm run typecheck` passed; `pnpm --filter @workspace/api-server test` passed (21 files, 151 tests).
+Decisions made by agent:
+- None beyond the approved fixes. Later phases can use the normal `pnpm --filter @workspace/db run push`.
+
 ## Next agent: start here
-- Start Phase 5 from `docs/client-restructure/MASTER_PROMPT.md`: inspect the profile, client-profile, and onboarding code; write the Phase 5 plan here before edits; back up affected tables before schema changes; begin with `profiles.preferred_currency` ownership and the documented backfill. Do not accept schema-push warnings about data loss, truncation, renames, or drops; do not drop tables/columns or publish/deploy.
+- P4.5 is complete; the normal schema push is clean. Continue Phase 5 per its plan above (show audit counts and exact rows to the product owner before each backfill).

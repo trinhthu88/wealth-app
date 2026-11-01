@@ -1,5 +1,5 @@
 import {
-  pgTable, text, numeric, timestamp, uuid, date, boolean, integer, unique, check,
+  pgTable, text, numeric, timestamp, uuid, date, boolean, integer, unique, check, foreignKey,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
@@ -82,7 +82,7 @@ export const advisedPlanStatementsTable = pgTable("advised_plan_statements", {
 
 export const advisedPlanHoldingsTable = pgTable("advised_plan_holdings", {
   id: uuid("id").primaryKey().defaultRandom(),
-  statementId: uuid("statement_id").notNull().references(() => advisedPlanStatementsTable.id, { onDelete: "cascade" }),
+  statementId: uuid("statement_id").notNull(),
   advisedPlanId: uuid("advised_plan_id").notNull().references(() => advisedPlansTable.id, { onDelete: "cascade" }),
   userId: text("user_id").notNull().references(() => profilesTable.id, { onDelete: "cascade" }),
 
@@ -98,11 +98,18 @@ export const advisedPlanHoldingsTable = pgTable("advised_plan_holdings", {
   futureAllocationPct: numeric("future_allocation_pct").notNull().default("0"),
 
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (t) => [
+  // Named to match the 63-character name PostgreSQL stored for the generated FK.
+  foreignKey({
+    name: "advised_plan_holdings_statement_id_advised_plan_statements_id_f",
+    columns: [t.statementId],
+    foreignColumns: [advisedPlanStatementsTable.id],
+  }).onDelete("cascade"),
+]);
 
 export const advisedPlanTransactionsTable = pgTable("advised_plan_transactions", {
   id: uuid("id").primaryKey().defaultRandom(),
-  statementId: uuid("statement_id").notNull().references(() => advisedPlanStatementsTable.id, { onDelete: "cascade" }),
+  statementId: uuid("statement_id").notNull(),
   advisedPlanId: uuid("advised_plan_id").notNull().references(() => advisedPlansTable.id, { onDelete: "cascade" }),
   userId: text("user_id").notNull().references(() => profilesTable.id, { onDelete: "cascade" }),
 
@@ -115,7 +122,14 @@ export const advisedPlanTransactionsTable = pgTable("advised_plan_transactions",
   unitsThisTransaction: numeric("units_this_transaction"),
 
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (t) => [
+  // Named to match the 63-character name PostgreSQL stored for the generated FK.
+  foreignKey({
+    name: "advised_plan_transactions_statement_id_advised_plan_statements_",
+    columns: [t.statementId],
+    foreignColumns: [advisedPlanStatementsTable.id],
+  }).onDelete("cascade"),
+]);
 
 export const insertAdvisedPlanSchema = createInsertSchema(advisedPlansTable).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertAdvisedPlanStatementSchema = createInsertSchema(advisedPlanStatementsTable).omit({ id: true, createdAt: true });

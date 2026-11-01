@@ -89,7 +89,12 @@ export const clientHoldingTransactionsTable = pgTable("client_holding_transactio
   balanceAfter: numeric("balance_after"),
 
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-}, (t) => [unique().on(t.holdingId, t.sourceMonth, t.source)]);
+}, (t) => [
+  // Named to match the constraint already stored in PostgreSQL.
+  unique("client_holding_transactions_holding_id_source_month_source_uniq").on(
+    t.holdingId, t.source, t.sourceMonth,
+  ),
+]);
 
 export const priceCacheTable = pgTable("price_cache", {
   id: uuid("id").primaryKey().defaultRandom(),
