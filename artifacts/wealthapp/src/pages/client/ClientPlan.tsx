@@ -71,7 +71,7 @@ export default function ClientPlan() {
         months: monthsUntil(cp.goalTargetDate),
       });
       await saveScenario(result, `Coast point: +$${coastPoint.extraMonthly}/mo`);
-      navigate("/client/scenarios");
+      navigate("/client/goals/what-if");
     } catch {
       toast.error("Couldn't model that scenario. Try again from Scenarios.");
     } finally {
@@ -102,7 +102,7 @@ export default function ClientPlan() {
             Your pathway is built from your goals — add one to see it here.
           </p>
           <Link
-            href="/client/goals"
+            href="/client/goals/goals"
             className="inline-flex items-center justify-center h-11 px-6 rounded-full bg-sun text-sun-ink text-[14px] font-semibold hover:bg-sun/90 transition-colors"
           >
             Add a goal

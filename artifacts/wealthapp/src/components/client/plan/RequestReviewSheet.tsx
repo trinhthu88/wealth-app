@@ -61,7 +61,7 @@ export default function RequestReviewSheet({
       });
       toast.success(`Review request sent to ${advisorName ?? "your advisor"}`);
       onClose();
-      setTimeout(() => navigate("/client/messages"), 1500);
+      setTimeout(() => navigate("/client/advisor/messages"), 1500);
     } catch {
       toast.error("Failed to send message. Please try again.");
     } finally {

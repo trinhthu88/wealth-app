@@ -25,7 +25,7 @@ export default function QuickActionsSection({ isTrackA, advisorName }: Props) {
             <div className="text-[13px] font-semibold text-[#042C53] truncate">{name}</div>
             <div className="text-[11px] text-[#6B6459] truncate">Your advisor · replies within a day</div>
           </div>
-          <Link href="/client/messages">
+          <Link href="/client/advisor/messages">
             <button className="min-h-[44px] px-4 rounded-full border border-[#1D9E75] bg-white text-[#1D9E75] font-sans text-[13px] font-semibold cursor-pointer hover:bg-[#E6F5EE] transition-colors">
               Message
             </button>

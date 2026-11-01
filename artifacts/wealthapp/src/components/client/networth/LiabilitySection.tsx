@@ -90,7 +90,7 @@ export default function LiabilitySection({
             <p className="text-[11px] text-ink-30 mt-1">Counted automatically as an expense in your budget.</p>
           </div>
           <Link
-            href="/client/budget"
+            href="/client/money"
             className="text-xs text-green font-medium hover:text-forest shrink-0"
           >
             See budget →

@@ -52,7 +52,7 @@ export default function ScenarioAlertSection({ alert }: Props) {
       <div className="text-xs text-[#A9C0D6] leading-[1.5] mb-4">
         {describeScenario(alert)}
       </div>
-      <Link href={`/client/scenarios?highlight=${alert.id}`} onClick={handleView}>
+      <Link href={`/client/goals/what-if?highlight=${alert.id}`} onClick={handleView}>
         <button className="w-full min-h-[44px] border-none rounded-[14px] bg-[#1D9E75] text-white font-sans text-sm font-semibold cursor-pointer hover:bg-[#17805F] transition-colors">
           View scenario
         </button>

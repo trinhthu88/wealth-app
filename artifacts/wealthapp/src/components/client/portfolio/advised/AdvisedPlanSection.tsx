@@ -14,7 +14,7 @@ export default function AdvisedPlanSection({ plans }: Props) {
         <AdvisedPlanCardFull
           key={plan.id}
           plan={plan}
-          onOpen={() => navigate(`/client/portfolio/${plan.id}`)}
+          onOpen={() => navigate(`/client/wealth/investments/${plan.id}`)}
         />
       ))}
     </div>

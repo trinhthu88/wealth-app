@@ -123,7 +123,7 @@ export default function PackagesPage() {
               const isActive = pkg.status === "active";
 
               return (
-                <Link key={pkg.id} href={`/client/packages/${pkg.id}`}>
+                <Link key={pkg.id} href={`/client/wealth/investments/packages/${pkg.id}`}>
                   <a className="block bg-white border border-[#E2E8F0] rounded-xl p-5 hover:shadow-sm transition-shadow">
                     <div className="flex items-start justify-between mb-3">
                       <div>

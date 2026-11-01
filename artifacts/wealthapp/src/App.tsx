@@ -9,10 +9,12 @@ import { queryClient } from "@/lib/queryClient";
 import { useProfile } from "@/hooks/useProfile";
 import { useOnboardingStage } from "@/hooks/useClientTrack";
 import { resolveRoleRedirectPath } from "@/lib/roleRedirect";
+import { resolveLegacyClientLocation } from "@/lib/clientNavigation";
 import { setTokenGetter } from "@/lib/api";
 import { trackPageView, resetUser } from "@/lib/analytics";
 import { useEffect, useRef, lazy, Suspense } from "react";
 import Sol from "@/components/Sol";
+import FloatingSolChat from "@/components/client/FloatingSolChat";
 
 const LandingPage = lazy(() => import("@/pages/landing"));
 const BlogListPage = lazy(() => import("@/pages/blog/list"));
@@ -213,6 +215,19 @@ function SignUpPage() {
   );
 }
 
+function LegacyClientRedirect() {
+  const [location, navigate] = useLocation();
+  const target = resolveLegacyClientLocation(
+    `${location.split(/[?#]/, 1)[0]}${window.location.search}${window.location.hash}`,
+  );
+
+  useEffect(() => {
+    if (target) navigate(target, { replace: true });
+  }, [navigate, target]);
+
+  return target ? null : <NotFound />;
+}
+
 function AppRoutes() {
   return (
     <Suspense fallback={<PageLoader />}>
@@ -243,23 +258,39 @@ function AppRoutes() {
 
       <Route path="/client/onboarding" component={() => <ProtectedRoute component={ClientOnboarding} role={["investment_client", "super_admin"]} />} />
       <Route path="/client/dashboard" component={() => <ProtectedRoute component={ClientDashboard} role={["investment_client", "super_admin"]} />} />
-      <Route path="/client/portfolio" component={() => <ProtectedRoute component={ClientPortfolio} role={["investment_client", "super_admin"]} />} />
-      <Route path="/client/portfolio/holding/:holdingId" component={() => <ProtectedRoute component={HoldingDetail} role={["investment_client", "super_admin"]} />} />
-      <Route path="/client/portfolio/:planId/funds/:fundCode" component={() => <ProtectedRoute component={FundDetail} role={["investment_client", "super_admin"]} />} />
-      <Route path="/client/portfolio/:planId" component={() => <ProtectedRoute component={AdvisedPlanDetail} role={["investment_client", "super_admin"]} />} />
-      <Route path="/client/packages/:id" component={() => <ProtectedRoute component={ClientPackageDetail} role={["investment_client", "super_admin"]} />} />
-      {/* Packages and Transactions folded into Investment accounts (Phase 5/6) — old links redirect there. */}
-      <Route path="/client/packages" component={() => <Redirect to="/client/portfolio" />} />
-      <Route path="/client/transactions" component={() => <Redirect to="/client/portfolio" />} />
-      <Route path="/client/scenarios" component={() => <ProtectedRoute component={ClientScenarios} role={["investment_client", "super_admin"]} />} />
+      <Route path="/client/money" component={() => <ProtectedRoute component={ClientBudget} role={["investment_client", "super_admin"]} />} />
+      <Route path="/client/wealth" component={() => <Redirect to="/client/wealth/overview" />} />
+      <Route path="/client/wealth/overview" component={() => <ProtectedRoute component={ClientNetWorth} role={["investment_client", "super_admin"]} />} />
+      <Route path="/client/wealth/property-debts" component={() => <ProtectedRoute component={ClientNetWorth} role={["investment_client", "super_admin"]} />} />
+      <Route path="/client/wealth/investments" component={() => <ProtectedRoute component={ClientPortfolio} role={["investment_client", "super_admin"]} />} />
+      <Route path="/client/wealth/investments/holding/:holdingId" component={() => <ProtectedRoute component={HoldingDetail} role={["investment_client", "super_admin"]} />} />
+      <Route path="/client/wealth/investments/:planId/funds/:fundCode" component={() => <ProtectedRoute component={FundDetail} role={["investment_client", "super_admin"]} />} />
+      <Route path="/client/wealth/investments/packages/:id" component={() => <ProtectedRoute component={ClientPackageDetail} role={["investment_client", "super_admin"]} />} />
+      <Route path="/client/wealth/investments/:planId" component={() => <ProtectedRoute component={AdvisedPlanDetail} role={["investment_client", "super_admin"]} />} />
+      <Route path="/client/goals/goals" component={() => <ProtectedRoute component={ClientGoals} role={["investment_client", "super_admin"]} />} />
+      <Route path="/client/goals/my-plan" component={() => <ProtectedRoute component={ClientPlan} role={["investment_client", "super_admin"]} />} />
+      <Route path="/client/goals/what-if" component={() => <ProtectedRoute component={ClientScenarios} role={["investment_client", "super_admin"]} />} />
+      <Route path="/client/advisor/messages" component={() => <ProtectedRoute component={ClientMessages} role={["investment_client", "super_admin"]} />} />
+      <Route path="/client/advisor/documents" component={() => <ProtectedRoute component={ClientDocuments} role={["investment_client", "super_admin"]} />} />
+
+      {/* Legacy client links redirect to their new place and retain query strings. */}
+      <Route path="/client/portfolio/holding/:holdingId" component={LegacyClientRedirect} />
+      <Route path="/client/portfolio/:planId/funds/:fundCode" component={LegacyClientRedirect} />
+      <Route path="/client/portfolio/:planId" component={LegacyClientRedirect} />
+      <Route path="/client/portfolio" component={LegacyClientRedirect} />
+      <Route path="/client/packages/:id" component={LegacyClientRedirect} />
+      <Route path="/client/packages" component={LegacyClientRedirect} />
+      <Route path="/client/transactions" component={LegacyClientRedirect} />
+      <Route path="/client/networth" component={LegacyClientRedirect} />
+      <Route path="/client/plan" component={LegacyClientRedirect} />
+      <Route path="/client/pathway" component={LegacyClientRedirect} />
+      <Route path="/client/goals" component={LegacyClientRedirect} />
+      <Route path="/client/scenarios" component={LegacyClientRedirect} />
       {/* Wealth Score is now a home-screen card + bottom sheet only (no standalone page). */}
       <Route path="/client/health-score" component={() => <Redirect to="/client/dashboard" />} />
-      <Route path="/client/plan" component={() => <ProtectedRoute component={ClientPlan} role={["investment_client", "super_admin"]} />} />
-      <Route path="/client/goals" component={() => <ProtectedRoute component={ClientGoals} role={["investment_client", "super_admin"]} />} />
-      <Route path="/client/networth" component={() => <ProtectedRoute component={ClientNetWorth} role={["investment_client", "super_admin"]} />} />
-      <Route path="/client/documents" component={() => <ProtectedRoute component={ClientDocuments} role={["investment_client", "super_admin"]} />} />
-      <Route path="/client/budget" component={() => <ProtectedRoute component={ClientBudget} role={["investment_client", "super_admin"]} />} />
-      <Route path="/client/messages" component={() => <ProtectedRoute component={ClientMessages} role={["investment_client", "super_admin"]} />} />
+      <Route path="/client/documents" component={LegacyClientRedirect} />
+      <Route path="/client/budget" component={LegacyClientRedirect} />
+      <Route path="/client/messages" component={LegacyClientRedirect} />
 
       <Route path="/advisor/dashboard" component={() => <ProtectedRoute component={AdvisorDashboard} role={["advisor", "super_admin"]} />} />
       <Route path="/advisor/clients" component={() => <ProtectedRoute component={AdvisorClients} role={["advisor", "super_admin"]} />} />
@@ -280,6 +311,21 @@ function AppRoutes() {
       <Route component={NotFound} />
     </Switch>
     </Suspense>
+  );
+}
+
+function ClientRouteLayer() {
+  const [location] = useLocation();
+  const { profile } = useProfile();
+  const isClientPage = location.startsWith("/client/");
+
+  return (
+    <>
+      <AppRoutes />
+      {profile?.role === "investment_client" && isClientPage && (
+        <FloatingSolChat isOnboarding={location.split(/[?#]/, 1)[0] === "/client/onboarding"} />
+      )}
+    </>
   );
 }
 
@@ -306,7 +352,7 @@ function ClerkProviderWithRoutes() {
         <ClerkQueryClientCacheInvalidator />
         <ProfileSync />
         <TooltipProvider>
-          <AppRoutes />
+          <ClientRouteLayer />
           <Toaster position="top-right" richColors />
         </TooltipProvider>
       </QueryClientProvider>

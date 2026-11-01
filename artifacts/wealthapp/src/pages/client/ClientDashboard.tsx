@@ -88,19 +88,19 @@ export default function ClientDashboard() {
               {data.advisorName ? `${data.advisorName} is setting up your investment plan.` : "Your advisor is setting up your investment plan."} This usually takes less than 24 hours.
             </p>
             <div className="space-y-3 max-w-[320px] mx-auto">
-              <Link href="/client/portfolio">
+              <Link href="/client/wealth/investments">
                 <div className="bg-paper border border-[#E6E1D8] rounded-[18px] p-[16px] flex items-center gap-3 cursor-pointer hover:border-green transition-colors">
                   <div className="w-8 h-8 rounded-full bg-[#F3F0EA] flex items-center justify-center text-forest"><TrendingUp className="h-4 w-4" /></div>
                   <span className="text-[14px] font-semibold text-forest">Add other investments</span>
                 </div>
               </Link>
-              <Link href="/client/goals">
+              <Link href="/client/goals/goals">
                 <div className="bg-paper border border-[#E6E1D8] rounded-[18px] p-[16px] flex items-center gap-3 cursor-pointer hover:border-green transition-colors">
                   <div className="w-8 h-8 rounded-full bg-[#F3F0EA] flex items-center justify-center text-forest"><Target className="h-4 w-4" /></div>
                   <span className="text-[14px] font-semibold text-forest">Set a financial goal</span>
                 </div>
               </Link>
-              <Link href="/client/messages">
+              <Link href="/client/advisor/messages">
                 <div className="bg-paper border border-[#E6E1D8] rounded-[18px] p-[16px] flex items-center gap-3 cursor-pointer hover:border-green transition-colors">
                   <div className="w-8 h-8 rounded-full bg-[#F3F0EA] flex items-center justify-center text-forest"><MessageSquare className="h-4 w-4" /></div>
                   <span className="text-[14px] font-semibold text-forest">Message your advisor</span>
@@ -185,7 +185,7 @@ export default function ClientDashboard() {
 
         {/* Net worth card */}
         <Link
-          href="/client/networth"
+          href="/client/wealth/overview"
           className="bg-surface rounded-[26px] p-[22px_24px_16px] shadow-[0_2px_14px_rgba(20,52,42,.06)] block transition-colors hover:ring-1 hover:ring-green"
         >
           <div className="flex justify-between items-baseline">
@@ -238,7 +238,7 @@ export default function ClientDashboard() {
         {/* Advised plan card */}
         {topPlan && (
           <Link
-            href={`/client/portfolio/${topPlan.id}`}
+            href={`/client/wealth/investments/${topPlan.id}`}
             className="block bg-forest rounded-[26px] p-[20px_22px] cursor-pointer"
           >
             <div className="flex justify-between items-center mb-1.5">
@@ -261,7 +261,7 @@ export default function ClientDashboard() {
         {(topGoal || nextMilestone) && (
           <div className="grid grid-cols-2 gap-3">
             {topGoal ? (
-              <Link href="/client/goals" className="bg-surface rounded-[22px] p-[18px] shadow-[0_2px_14px_rgba(20,52,42,.06)] cursor-pointer block">
+              <Link href="/client/goals/goals" className="bg-surface rounded-[22px] p-[18px] shadow-[0_2px_14px_rgba(20,52,42,.06)] cursor-pointer block">
                 <div className="text-[12.5px] font-semibold text-ink-40 truncate">{topGoal.title}</div>
                 {goalPct != null ? (
                   <>
@@ -277,13 +277,13 @@ export default function ClientDashboard() {
                 )}
               </Link>
             ) : (
-              <Link href="/client/goals" className="bg-surface rounded-[22px] p-[18px] shadow-[0_2px_14px_rgba(20,52,42,.06)] cursor-pointer flex flex-col items-center justify-center text-center">
+              <Link href="/client/goals/goals" className="bg-surface rounded-[22px] p-[18px] shadow-[0_2px_14px_rgba(20,52,42,.06)] cursor-pointer flex flex-col items-center justify-center text-center">
                 <Target className="h-6 w-6 text-green mb-2" />
                 <div className="text-[14px] font-semibold text-forest">Set a goal</div>
               </Link>
             )}
 
-            <Link href="/client/plan" className="bg-sun-tint rounded-[22px] p-[18px] cursor-pointer block">
+            <Link href="/client/goals/my-plan" className="bg-sun-tint rounded-[22px] p-[18px] cursor-pointer block">
               <div className="text-[12.5px] font-semibold text-[#B07A22]">Next milestone</div>
               <div className="font-display text-[18px] font-semibold text-amber-ink tracking-[-0.01em] leading-[1.2] my-0.5 truncate">
                 {nextMilestone?.title ?? "Create a plan"}
@@ -303,7 +303,7 @@ export default function ClientDashboard() {
               Unlock personalized strategies, goal projections, and a dedicated advisor to accelerate your wealth.
             </div>
             <Link
-              href="/client/messages"
+              href="/client/advisor/messages"
               onClick={() => track("upgrade_cta_clicked", { location: "client_dashboard_track_b_cta" })}
               className="bg-amber-ink text-paper rounded-full py-2.5 px-5 text-[14px] font-semibold inline-block hover:opacity-90 transition-opacity"
             >
@@ -314,7 +314,7 @@ export default function ClientDashboard() {
 
         {/* Advisor card */}
         {data.isTrackA && data.advisorName && (
-          <Link href="/client/messages">
+          <Link href="/client/advisor/messages">
             <div className="bg-surface rounded-[26px] p-[18px_20px] shadow-[0_2px_14px_rgba(20,52,42,.06)] cursor-pointer">
               <div className="flex justify-between items-center mb-3">
                 <span className="font-display text-[16.5px] font-semibold text-forest">Your advisor</span>

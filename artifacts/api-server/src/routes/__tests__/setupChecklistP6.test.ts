@@ -126,7 +126,7 @@ describe("GET /client/setup-checklist", () => {
     result = await request(app).get("/api/client/setup-checklist").set(asUser(clientId)).expect(200);
     expect(result.body.items.filter((item: any) => item.done).map((item: any) => item.id)).toEqual(["budget", "goal"]);
     expect(result.body.items.find((item: any) => item.id === "goal_link").href)
-      .toBe(`/client/goals?openLink=${goal.id}`);
+      .toBe(`/client/goals/goals?openLink=${goal.id}`);
 
     const [holding] = await db.insert(clientHoldingsTable).values({
       userId: clientId,

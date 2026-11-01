@@ -51,7 +51,7 @@ export default function ConversionCTASection({ totalPortfolioValue, overallCagr,
       <div className="flex-1 min-w-0">
         <p className="text-sm text-[#042C53] leading-snug">
           {body}{" "}
-          <Link href="/client/messages">
+          <Link href="/client/advisor/messages">
             <span className="text-[#1D9E75] font-semibold hover:text-[#0F6E56] cursor-pointer">{cta}</span>
           </Link>
         </p>

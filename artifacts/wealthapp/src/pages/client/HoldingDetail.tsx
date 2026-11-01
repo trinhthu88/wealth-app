@@ -73,7 +73,7 @@ export default function HoldingDetail() {
       <ClientAppShell>
         <div className="text-center py-16">
           <p className="text-[15px] text-ink-40 mb-4">This holding could not be found.</p>
-          <Link href="/client/portfolio" className="text-[14px] font-semibold text-green">Back to Portfolio</Link>
+          <Link href="/client/wealth/investments" className="text-[14px] font-semibold text-green">Back to Investments</Link>
         </div>
       </ClientAppShell>
     );
@@ -92,7 +92,7 @@ export default function HoldingDetail() {
       <div className="space-y-4 pb-8">
         <div>
           <Link
-            href="/client/portfolio"
+            href="/client/wealth/investments"
             className="inline-flex items-center gap-1 text-[13.5px] font-semibold text-ink-40 hover:text-forest mb-3"
           >
             <ChevronLeft className="h-4 w-4" aria-hidden="true" />

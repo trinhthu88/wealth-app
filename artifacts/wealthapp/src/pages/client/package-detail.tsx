@@ -109,7 +109,7 @@ export default function PackageDetailPage() {
     <ClientAppShell>
       <div className="max-w-[860px] mx-auto">
       <div className="mb-4">
-        <Link href="/client/portfolio" className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-[#042C53] transition-colors">
+        <Link href="/client/wealth/investments" className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-[#042C53] transition-colors">
           <ArrowLeft className="h-4 w-4" /> Investment accounts
         </Link>
       </div>

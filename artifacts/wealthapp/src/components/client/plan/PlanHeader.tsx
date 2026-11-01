@@ -30,7 +30,7 @@ export default function PlanHeader({ advisorName }: Props) {
             <p className="text-xs text-slate-400">Financial Advisor</p>
           </div>
           <Link
-            href="/client/messages"
+            href="/client/advisor/messages"
             className="flex items-center gap-1.5 text-sm text-[#1D9E75] font-medium hover:text-[#0F6E56] ml-2 whitespace-nowrap"
           >
             <MessageSquare className="h-3.5 w-3.5" />

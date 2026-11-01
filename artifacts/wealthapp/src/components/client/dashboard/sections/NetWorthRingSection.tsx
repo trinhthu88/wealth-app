@@ -61,7 +61,7 @@ export default function NetWorthRingSection({ netWorth }: Props) {
         <div className="flex flex-col items-center py-4 space-y-2">
           <Ring pct={0} netWorth={0} displayCurrency="USD" />
           <p className="text-sm text-[#64748B] text-center">Track your assets and liabilities.</p>
-          <Link href="/client/networth">
+          <Link href="/client/wealth/overview">
             <span className="text-sm font-medium text-[#1D9E75] hover:text-[#0F6E56]">Set up net worth →</span>
           </Link>
         </div>
@@ -83,7 +83,7 @@ export default function NetWorthRingSection({ netWorth }: Props) {
             </div>
           </div>
           <div className="w-full flex justify-end">
-            <Link href="/client/networth">
+            <Link href="/client/wealth/overview">
               <span className="text-sm font-medium text-[#1D9E75] hover:text-[#0F6E56]">View net worth →</span>
             </Link>
           </div>

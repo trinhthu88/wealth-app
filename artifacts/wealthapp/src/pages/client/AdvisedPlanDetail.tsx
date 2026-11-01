@@ -84,7 +84,7 @@ export default function AdvisedPlanDetail() {
       <ClientAppShell>
         <div className="text-center py-16">
           <p className="text-[15px] text-ink-40 mb-4">This plan could not be found.</p>
-          <Link href="/client/portfolio" className="text-[14px] font-semibold text-green">Back to Portfolio</Link>
+          <Link href="/client/wealth/investments" className="text-[14px] font-semibold text-green">Back to Investments</Link>
         </div>
       </ClientAppShell>
     );
@@ -119,7 +119,7 @@ export default function AdvisedPlanDetail() {
       <div className="space-y-4 pb-8">
         <div>
           <Link
-            href="/client/portfolio"
+            href="/client/wealth/investments"
             className="inline-flex items-center gap-1 text-[13.5px] font-semibold text-ink-40 hover:text-forest mb-3"
           >
             <ChevronLeft className="h-4 w-4" aria-hidden="true" />
@@ -181,7 +181,7 @@ export default function AdvisedPlanDetail() {
                   <button
                     key={h.id}
                     type="button"
-                    onClick={() => navigate(`/client/portfolio/${plan.id}/funds/${h.fundCode}`)}
+                    onClick={() => navigate(`/client/wealth/investments/${plan.id}/funds/${h.fundCode}`)}
                     className="w-full flex items-center gap-3 py-[11px] border-t border-hairline first:border-t-0 text-left hover:bg-hairline/20 transition-colors"
                   >
                     <span className="w-[10px] h-[34px] rounded-[4px] shrink-0" style={{ background: FUND_COLORS[i % FUND_COLORS.length] }} />
@@ -260,7 +260,7 @@ export default function AdvisedPlanDetail() {
             <div className="text-[12.5px] text-ink-40 mt-0.5">All quarters, in detail</div>
           </button>
           <Link
-            href={`/client/scenarios?planId=${plan.id}`}
+            href={`/client/goals/what-if?planId=${plan.id}`}
             className="bg-sun-tint rounded-[20px] p-[16px] block"
           >
             <div className="text-[14px] font-semibold text-amber-ink">Run a what-if</div>

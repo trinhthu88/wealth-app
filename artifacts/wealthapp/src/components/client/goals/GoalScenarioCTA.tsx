@@ -41,7 +41,7 @@ export default function GoalScenarioCTA({ goalId, goalTitle, status }: Props) {
           <>
             This goal needs attention. Run a scenario to see how adjusting your investment could get you back on track.{" "}
             <Link
-              href={`/client/scenarios?goalId=${goalId}&type=retire_earlier`}
+              href={`/client/goals/what-if?goalId=${goalId}&type=retire_earlier`}
               onClick={markInterest}
               className="font-semibold text-[#1D9E75] hover:underline"
             >
@@ -52,7 +52,7 @@ export default function GoalScenarioCTA({ goalId, goalTitle, status }: Props) {
           <>
             An advised investment plan could help accelerate "{goalTitle}".{" "}
             <Link
-              href="/client/messages"
+              href="/client/advisor/messages"
               onClick={() => { markInterest(); track("upgrade_cta_clicked", { location: "goal_scenario_cta" }); }}
               className="font-semibold text-[#1D9E75] hover:underline"
             >

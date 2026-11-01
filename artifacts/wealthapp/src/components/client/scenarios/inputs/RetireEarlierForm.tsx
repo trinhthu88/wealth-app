@@ -80,7 +80,7 @@ export default function RetireEarlierForm({ currentValue, currentMonthly, source
       {goals.length === 0 ? (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-700">
           No goals set yet.{" "}
-          <Link href="/client/goals">
+          <Link href="/client/goals/goals">
             <span className="font-semibold underline">Set a goal first →</span>
           </Link>
         </div>

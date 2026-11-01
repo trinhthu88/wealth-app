@@ -78,7 +78,7 @@ export default function TrackBConversionCTA({ context, relevantValue, relevantGo
       <div className="flex-1 min-w-0">
         <p className="text-[13px] text-slate-700 leading-snug">
           {body}{" "}
-          <Link href="/client/messages" className="text-[#1D9E75] font-medium hover:underline">
+          <Link href="/client/advisor/messages" className="text-[#1D9E75] font-medium hover:underline">
             {cta}
           </Link>
         </p>

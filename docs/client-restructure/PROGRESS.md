@@ -1,7 +1,7 @@
 # Restructure progress
 
 ## Current phase
-P7 — Quick budget + advisor budget summary (implemented; one data reconciliation blocker recorded)
+P8 — Navigation 9 → 5 and Sol everywhere — done
 
 ## Baseline (Phase 0)
 - typecheck: passed (`pnpm run typecheck`; all libraries and leaf workspaces completed).
@@ -100,7 +100,7 @@ Files changed:
 - P1 CHECK constraints for `onboarding_stage` and `first_focus` are deferred until P5 introduces their columns; their shared enums are defined in P1.
 - RESOLVED in P4.5 (see below): P2.5 schema push was blocked by a `client_holding_transactions` warning. Exact prompt: `You're about to add client_holding_transactions_holding_id_source_month_source_unique unique constraint to the table, which contains 1 items. If this statement fails, you will receive an error from the database. Do you want to truncate client_holding_transactions table?` Choices: `No, add the constraint without truncating the table` / `Yes, truncate the table`. The safe No choice remained highlighted; the command timed out before proceeding. No truncate option was accepted and no schema/data change was observed. A read-only recheck found 1 row, 0 duplicate groups/excess rows for `(holding_id, source_month, source)`, and an existing validated UNIQUE constraint `client_holding_transactions_holding_id_source_month_source_uniq` on that key. Do not accept this prompt or rerun push as part of Phases 3–4.
 - RESOLVED (P5): risk normalisation of the deprecated `profiles.risk_profile` ran after product-owner approval; see P5 audit counts.
-- P7: The migration correctly skipped one existing free-user/shared-month collision rather than overwriting the shared row. Read-only comparison found the existing shared values differ from the legacy row, and this is the latest legacy month for that user. The free budget page and health score now read the shared values, so that user's figures may differ from before migration. No reconciliation was made. Product owner should decide whether the existing shared values remain authoritative or whether the legacy row should temporarily be shown for this one key; do not overwrite the shared row.
+- RESOLVED (P7, product-owner decision): For the one conflicting free-user month, the existing shared budget month remains the source of truth. Leave the legacy row untouched as deprecated history. No data change was made.
 
 ### P2 — Net worth service
 Plan:
@@ -448,7 +448,7 @@ Done:
 - Added the default-off advisor sharing toggle, owner-checked/super-admin-accessible 12-month summary endpoint (aggregate fields only), and read-only advisor client-detail card.
 - No publish or deployment was performed.
 Decisions made by agent:
-- Keep pre-existing shared rows authoritative and never overwrite a conflicting month, per the migration rule. Because one skipped month differs from the legacy source and is the latest month for one free user, recorded it above as an unresolved customer-visible discrepancy rather than silently reconciling it.
+- Keep pre-existing shared rows authoritative and never overwrite a conflicting month, per the migration rule. The product owner confirmed the shared month is authoritative; leave the one conflicting legacy row untouched as deprecated history. No data change was made, and the blocker is resolved.
 - Keep free-tier monthly route responses in their existing shape while storing them in the shared table; restrict those monthly routes to `free_user` so they cannot overwrite investment-client detail.
 Tests:
 - OpenAPI code generation and library typecheck — passed.
@@ -460,7 +460,7 @@ Manual product-owner checks (the preview capture shows the sign-in page; the sig
 2. Investment client `/client/budget`: switch to a new month, adjust the copied previous-month draft, verify nothing persists until “Save budget,” then check quick and detailed edits are one month.
 3. Client `/client/messages`: toggle “Share my monthly budget summary with my advisor”; confirm default off and saved state after reload.
 4. Advisor `/advisor/clients/:id` Profile tab: check the not-shared message, then enable consent and confirm the card shows only monthly totals.
-5. Free-tier `/budget`: verify existing budget figures, create/update a month, and edit a transaction; separately review the one skipped collision noted above.
+5. Free-tier `/budget`: verify existing budget figures, create/update a month, and edit a transaction. The accepted shared-month source-of-truth decision requires no data reconciliation.
 Files changed:
 - `artifacts/api-server/src/routes/__tests__/budgetP7.test.ts`
 - `artifacts/api-server/src/routes/__tests__/healthscore.test.ts`
@@ -483,5 +483,77 @@ Files changed:
 - `scripts/src/migrate-free-budget-entries.ts`
 - `docs/client-restructure/PROGRESS.md`
 
+### P8 — Navigation 9 → 5 and Sol everywhere
+Plan:
+- Replace only the investment-client `ClientAppShell` navigation with Home, Money, Wealth, Goals, and Advisor on desktop and mobile; confirm free users remain on their separate shell with current access unchanged.
+- Add linkable Wealth, Goals, and Advisor tabs using URL paths; reuse the existing pages and forms for Overview, Investments, Property & debts, Goals, My plan, What-if, Messages, and Documents.
+- Add canonical routes and redirects for every old client page and detail URL while preserving IDs, query parameters, the goal-link setup-checklist deep link, and browser history. Update checklist destinations and internal client links.
+- Add a floating Sol chat control to every investment-client shell page, reusing the existing Sol chat/conversation API without changing its behavior or persona; position it above the mobile bar and safe areas.
+- Add routing coverage for legacy URL destinations/tabs and assert the mobile bar has exactly five items. Run full typecheck, API tests, WealthApp tests, and the production web build.
+- No schema change is planned. Do not publish or deploy. Record the signed-in desktop and phone-width screens for manual review; commit with `[restructure P8]` and push to GitHub `main`.
+Done:
+- Replaced the investment-client desktop and mobile navigation with the five required places and linkable section tabs. Free-tier routes continue using the separate free shell and navigation unchanged.
+- Added canonical routes and replace-style redirects for legacy client pages, including holding, advised-plan, fund, and package detail routes. Query strings and goal-link deep links are retained; internal links and checklist destinations now use canonical URLs.
+- Reused the existing net-worth page and forms for Overview and Property & debts, and removed the duplicate Goals/My plan tabs in favor of the shared Goals section tabs.
+- Added a floating Sol chat control for signed-in investment clients on every `/client/*` page, backed by the existing conversation and chat endpoints. No Sol API behavior or persona, database schema, or database data changed.
+- No schema push, publish, or deployment was performed.
+Audit counts / backfills:
+- Not applicable. Phase 8 made no schema or database changes.
+Tests:
+- `pnpm run typecheck` — passed across libraries and all four scoped workspace projects.
+- `pnpm --filter @workspace/api-server test` — passed, 24 files and 179 tests.
+- `pnpm --filter @workspace/wealthapp test` — passed, 8 files and 88 tests, including legacy URL/tab routing and five-item navigation coverage.
+- `PORT=24415 BASE_PATH=/ pnpm --filter @workspace/wealthapp run build` — passed. Vite reported existing sourcemap-location warnings and a large-chunk warning; no build errors.
+- Restarted the WealthApp and API Server workflows; both started successfully. The preview capture loaded the sign-in page, so the signed-in client UI was not verified by the capture browser.
+Decisions made by agent:
+- Free users do not share the investment-client shell: `/free/*` continues through its separate `AppShell` and `BottomNav`; investment routes remain role-protected.
+- The mobile Sol control is positioned above the five-item bar and safe area; on onboarding it sits at the top-right so it does not cover the bottom primary action.
+Manual product-owner checks (signed-in screens were not visually verified because the preview capture browser cannot sign in):
+1. Desktop and phone: `/client/dashboard` — confirm the Home place and setup checklist render, the bottom bar has exactly Home, Money, Wealth, Goals, Advisor, and Sol does not cover the bar or page actions.
+2. Desktop and phone: `/client/money` and legacy `/client/budget` — confirm both land on Budget and Money is selected.
+3. Desktop and phone: `/client/wealth/overview`, `/client/wealth/investments`, and `/client/wealth/property-debts` — check each selected tab and its existing content/forms; open a holding and advised-plan detail from Investments and use their back links.
+4. Desktop and phone: `/client/goals/goals`, `/client/goals/my-plan`, and `/client/goals/what-if` — verify tab selection; open the checklist goal-link item and confirm its link sheet opens the intended goal.
+5. Desktop and phone: `/client/advisor/messages` and `/client/advisor/documents` — verify the budget-sharing toggle, request-a-review action, and Documents tab.
+6. Phone: open Sol on Home, Money, Wealth, Goals, Advisor, and onboarding; confirm the chat sheet opens, can send a message, and respects safe areas.
+Files changed:
+- `artifacts/api-server/src/routes/__tests__/setupChecklistP6.test.ts`
+- `artifacts/api-server/src/routes/clientPortal.ts`
+- `artifacts/wealthapp/src/App.tsx`
+- `artifacts/wealthapp/src/components/client/AppShell.tsx`
+- `artifacts/wealthapp/src/components/client/FloatingSolChat.tsx`
+- `artifacts/wealthapp/src/components/client/SolNarration.tsx`
+- `artifacts/wealthapp/src/components/client/TrackBConversionCTA.tsx`
+- `artifacts/wealthapp/src/components/client/budget/SurplusCTA.tsx`
+- `artifacts/wealthapp/src/components/client/dashboard/DashboardPendingState.tsx`
+- `artifacts/wealthapp/src/components/client/dashboard/sections/BudgetSnapshotSection.tsx`
+- `artifacts/wealthapp/src/components/client/dashboard/sections/ConversionCTASection.tsx`
+- `artifacts/wealthapp/src/components/client/dashboard/sections/GoalsProgressSection.tsx`
+- `artifacts/wealthapp/src/components/client/dashboard/sections/NetWorthRingSection.tsx`
+- `artifacts/wealthapp/src/components/client/dashboard/sections/PortfolioSnapshotSection.tsx`
+- `artifacts/wealthapp/src/components/client/dashboard/sections/QuickActionsSection.tsx`
+- `artifacts/wealthapp/src/components/client/dashboard/sections/ScenarioAlertSection.tsx`
+- `artifacts/wealthapp/src/components/client/goals/GoalScenarioCTA.tsx`
+- `artifacts/wealthapp/src/components/client/networth/LiabilitySection.tsx`
+- `artifacts/wealthapp/src/components/client/networth/NetWorthItemRow.tsx`
+- `artifacts/wealthapp/src/components/client/plan/MilestoneCard.tsx`
+- `artifacts/wealthapp/src/components/client/plan/PlanHeader.tsx`
+- `artifacts/wealthapp/src/components/client/plan/RequestReviewSheet.tsx`
+- `artifacts/wealthapp/src/components/client/portfolio/advised/AdvisedPlanSection.tsx`
+- `artifacts/wealthapp/src/components/client/scenarios/BringUnderManagementCompare.tsx`
+- `artifacts/wealthapp/src/components/client/scenarios/inputs/RetireEarlierForm.tsx`
+- `artifacts/wealthapp/src/lib/clientNavigation.ts`
+- `artifacts/wealthapp/src/lib/__tests__/clientNavigation.test.ts`
+- `artifacts/wealthapp/src/pages/client/AdvisedPlanDetail.tsx`
+- `artifacts/wealthapp/src/pages/client/ClientDashboard.tsx`
+- `artifacts/wealthapp/src/pages/client/ClientGoals.tsx`
+- `artifacts/wealthapp/src/pages/client/ClientNetWorth.tsx`
+- `artifacts/wealthapp/src/pages/client/ClientPlan.tsx`
+- `artifacts/wealthapp/src/pages/client/FundDetail.tsx`
+- `artifacts/wealthapp/src/pages/client/HoldingDetail.tsx`
+- `artifacts/wealthapp/src/pages/client/messages.tsx`
+- `artifacts/wealthapp/src/pages/client/package-detail.tsx`
+- `artifacts/wealthapp/src/pages/client/packages.tsx`
+- `docs/client-restructure/PROGRESS.md`
+
 ## Next agent: start here
-- First get the product owner's decision on the one skipped free-user/shared-month value mismatch above; do not overwrite either row without an explicit safe plan. Then read Phase 8 and Section 3, write a Phase 8 plan here before editing, and begin the navigation 9→5 and Sol-everywhere work. Do not drop `budget_entries`.
+- Phase 8 is complete. Wait for a new user instruction before starting Phase 9 or Phase 10.

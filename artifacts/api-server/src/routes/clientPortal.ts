@@ -282,28 +282,28 @@ router.get("/client/setup-checklist", requireAuth, requireRole("investment_clien
   const focus = clientProfile?.firstFocus ?? null;
   const order = SETUP_ORDER_BY_FOCUS[focus as keyof typeof SETUP_ORDER_BY_FOCUS] ?? DEFAULT_SETUP_ORDER;
   const goalLinkPath = firstActiveGoal
-    ? `/client/goals?openLink=${encodeURIComponent(firstActiveGoal.id)}`
-    : "/client/goals";
+    ? `/client/goals/goals?openLink=${encodeURIComponent(firstActiveGoal.id)}`
+    : "/client/goals/goals";
   const itemData = {
     budget: {
       title: "Set up this month’s budget",
       description: "Add this month’s income and spending.",
       done: !!currentBudget,
-      href: "/client/budget",
+      href: "/client/money",
       action: null,
     },
     goal: {
       title: "Create an active goal",
       description: "Choose something you want your money to help you do.",
       done: activeGoals > 0,
-      href: "/client/goals",
+      href: "/client/goals/goals",
       action: null,
     },
     wealth: {
       title: "Add your wealth",
       description: "Add a holding, asset, or liability—or tell us you’re starting from zero.",
       done: hasWealthData || !!clientProfile?.startingFromZero,
-      href: "/client/portfolio",
+      href: "/client/wealth/investments",
       action: null,
     },
     goal_link: {
@@ -324,7 +324,7 @@ router.get("/client/setup-checklist", requireAuth, requireRole("investment_clien
       title: "Message your advisor",
       description: "Send your advisor a first message.",
       done: !!clientMessage,
-      href: "/client/messages",
+      href: "/client/advisor/messages",
       action: null,
     },
   } as const;

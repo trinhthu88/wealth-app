@@ -75,7 +75,7 @@ export function SyncedAssetRow({ item }: SyncedAssetRowProps) {
           <CurrencyField amountUsd={item.valueUsd} compact />
         </span>
         <Link
-          href="/client/portfolio"
+          href="/client/wealth/investments"
           className="text-[11px] text-green font-medium flex items-center gap-0.5 hover:text-forest"
         >
           Portfolio <ExternalLink className="h-3 w-3" />
@@ -164,7 +164,7 @@ export function SyncedLiabilityRow({ item }: SyncedLiabilityRowProps) {
           <CurrencyField amountUsd={item.balanceUsd} compact />
         </span>
         <Link
-          href="/client/portfolio"
+          href="/client/wealth/investments"
           className="text-[11px] text-green font-medium flex items-center gap-0.5 hover:text-forest"
         >
           Portfolio <ExternalLink className="h-3 w-3" />

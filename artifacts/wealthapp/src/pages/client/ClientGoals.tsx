@@ -15,118 +15,10 @@ import { useSolProgressMovement } from "@/hooks/useSolProgressMovement";
 import { useEnsureOffTrackTask } from "@/hooks/useEnsureOffTrackTask";
 import { useClientTrack } from "@/hooks/useClientTrack";
 import { useCreateLeadFromInterest } from "@/hooks/useCreateLeadFromInterest";
-import PlanHeader from "@/components/client/plan/PlanHeader";
-import ReviewCountdown from "@/components/client/plan/ReviewCountdown";
-import PlanProgressRing from "@/components/client/plan/PlanProgressRing";
-import PlanTimeline from "@/components/client/plan/PlanTimeline";
-import RequestReviewSheet from "@/components/client/plan/RequestReviewSheet";
 import CurrencyField from "@/components/shared/CurrencyField";
 import GoalCard from "@/components/shared/GoalCard";
 import { useGoals, type EnrichedGoal } from "@/hooks/useGoals";
 import { usePlan } from "@/hooks/usePlan";
-import { cn } from "@/lib/utils";
-
-const GOALS_TABS = [
-  { id: "goals", label: "Goals" },
-  { id: "plan", label: "Your plan" },
-] as const;
-
-function GoalsTabs({ activeTab, onTabChange }: { activeTab: string; onTabChange: (tab: string) => void }) {
-  return (
-    <div className="flex gap-1 bg-surface border border-hairline rounded-full p-1 w-fit mb-[20px]" role="tablist" aria-label="Goals and plan">
-      {GOALS_TABS.map(tab => (
-        <button
-          key={tab.id}
-          type="button"
-          role="tab"
-          aria-selected={activeTab === tab.id}
-          onClick={() => onTabChange(tab.id)}
-          className={cn(
-            "px-5 py-2 rounded-full text-[14px] font-semibold transition-all cursor-pointer",
-            activeTab === tab.id
-              ? "bg-forest text-paper shadow-sm"
-              : "text-ink-60 hover:text-forest"
-          )}
-        >
-          {tab.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function PlanTab() {
-  const {
-    milestones,
-    completedCount, inProgressCount, upcomingCount, totalCount, completionPct,
-    nextMilestone, daysUntilReview, isReviewOverdue,
-    advisorName, advisorId, nextReviewDate,
-    loading,
-  } = usePlan();
-
-  const [showReviewSheet, setShowReviewSheet] = useState(false);
-
-  if (loading) {
-    return (
-      <div className="space-y-[14px]">
-        <div className="h-24 bg-surface animate-pulse rounded-[28px]" />
-        <div className="h-40 bg-surface animate-pulse rounded-[28px]" />
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-[14px]">
-      <div className="bg-surface rounded-[28px] p-[20px] shadow-[0_2px_14px_rgba(20,52,42,.06)]">
-        <PlanHeader advisorName={advisorName} />
-      </div>
-
-      <div className="bg-surface rounded-[28px] p-[20px] shadow-[0_2px_14px_rgba(20,52,42,.06)]">
-        <ReviewCountdown
-          nextReviewDate={nextReviewDate}
-          daysUntilReview={daysUntilReview}
-          isReviewOverdue={isReviewOverdue}
-          onRequestReview={() => setShowReviewSheet(true)}
-        />
-      </div>
-
-      {totalCount > 0 && (
-        <div className="bg-surface rounded-[28px] p-[20px] shadow-[0_2px_14px_rgba(20,52,42,.06)]">
-          <PlanProgressRing
-            completedCount={completedCount}
-            inProgressCount={inProgressCount}
-            upcomingCount={upcomingCount}
-            totalCount={totalCount}
-            completionPct={completionPct}
-          />
-        </div>
-      )}
-
-      {milestones.length > 0 ? (
-        <div className="bg-surface rounded-[28px] p-[20px] shadow-[0_2px_14px_rgba(20,52,42,.06)]">
-          <h2 className="text-[16px] font-semibold text-forest mb-4">Milestones</h2>
-          <PlanTimeline
-            milestones={milestones}
-            nextMilestoneId={nextMilestone?.id ?? null}
-          />
-        </div>
-      ) : (
-        <div className="bg-surface shadow-[0_2px_14px_rgba(20,52,42,.06)] rounded-[28px] py-10 text-center">
-          <p className="text-[14px] text-ink-40">No milestones have been added to your plan yet.</p>
-        </div>
-      )}
-
-      <RequestReviewSheet
-        isOpen={showReviewSheet}
-        onClose={() => setShowReviewSheet(false)}
-        advisorId={advisorId}
-        advisorName={advisorName}
-        completionPct={completionPct}
-        nextMilestoneTitle={nextMilestone?.title ?? null}
-      />
-    </div>
-  );
-}
 
 function GoalCardInline({ goal, plans, holdings, allLinks, allGoals, solSuggestion, onDismissSuggestion, setEditTarget, markComplete, deleteGoal, addHoldingLink, removeHoldingLink, openLinksOnMount }: any) {
   const [showLinks, setShowLinks] = useState(false);
@@ -237,7 +129,7 @@ function GoalCardInline({ goal, plans, holdings, allLinks, allGoals, solSuggesti
         </button>
         <span className="text-hairline hidden sm:inline">|</span>
         <Link
-          href={`/client/scenarios?goalId=${goal.id}&type=retire_earlier`}
+          href={`/client/goals/what-if?goalId=${goal.id}&type=retire_earlier`}
           onClick={(e) => e.stopPropagation()}
           className="flex items-center gap-1.5 text-[13.5px] font-medium text-ink-60 hover:text-green transition-colors cursor-pointer"
         >
@@ -275,7 +167,7 @@ function GoalCardInline({ goal, plans, holdings, allLinks, allGoals, solSuggesti
           }}
           onAccept={() => {
             createLead.mutate("goal_scenario_cta"); // same CTA slot GoalScenarioCTA owns for at_risk
-            setLocation(isTrackA ? `/client/scenarios?goalId=${goal.id}&type=retire_earlier` : "/client/messages");
+            setLocation(isTrackA ? `/client/goals/what-if?goalId=${goal.id}&type=retire_earlier` : "/client/advisor/messages");
           }}
           onDismiss={() => { localStorage.setItem(`sol_offtrack_dismissed_${goal.id}`, "1"); setOffTrackDismissed(true); }}
         />
@@ -320,7 +212,6 @@ export default function ClientGoals() {
   const [showAdd, setShowAdd] = useState(false);
   const [editTarget, setEditTarget] = useState<EnrichedGoal | null>(null);
   const [completedOpen, setCompletedOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<string>("goals");
   const requestedLinkGoalId = new URLSearchParams(window.location.search).get("openLink");
 
   // Handle ?newGoal=true URL param
@@ -382,23 +273,16 @@ export default function ClientGoals() {
         {/* Page header */}
         <div className="flex items-center justify-between mb-[4px]">
           <h1 className="font-display text-[30px] font-semibold text-forest tracking-[-0.02em]">Goals</h1>
-          {activeTab === "goals" && (
-             <button 
-               onClick={() => setShowAdd(true)}
-               className="w-[36px] h-[36px] rounded-full bg-forest text-paper flex items-center justify-center text-[20px] leading-none cursor-pointer hover:bg-forest-700 transition-colors"
-               aria-label="Add goal"
-             >
-               +
-             </button>
-          )}
+          <button
+            onClick={() => setShowAdd(true)}
+            className="w-[36px] h-[36px] rounded-full bg-forest text-paper flex items-center justify-center text-[20px] leading-none cursor-pointer hover:bg-forest-700 transition-colors"
+            aria-label="Add goal"
+          >
+            +
+          </button>
         </div>
 
-        <GoalsTabs activeTab={activeTab} onTabChange={setActiveTab} />
-
-        {activeTab === "plan" ? (
-          <PlanTab />
-        ) : (
-          <>
+        <>
             {targetGoal && targetGoal.progressPct != null && (
               <SolNarration
                 line={`${targetGoal.title} sits at ${Math.round(targetGoal.progressPct)}% of $${Math.round(targetGoal.targetAmountNum ?? 0).toLocaleString()}${targetGoal.monthsRemaining ? `, with ${targetGoal.monthsRemaining} months to cover the rest` : ""}.`}
@@ -512,8 +396,7 @@ export default function ClientGoals() {
                 )}
               </div>
             )}
-          </>
-        )}
+        </>
       </div>
 
       <AddGoalSheet

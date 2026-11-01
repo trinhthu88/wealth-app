@@ -8,6 +8,7 @@
 // ✗ BANNED:  Double bottom nav — AppShell is the ONLY nav
 
 import { useState } from "react";
+import { useLocation } from "wouter";
 import ClientAppShell from "@/components/client/AppShell";
 import SolNarration from "@/components/client/SolNarration";
 import NetWorthHeader from "@/components/client/networth/NetWorthHeader";
@@ -26,6 +27,8 @@ import { usePlan } from "@/hooks/usePlan";
 const CASH_CATEGORIES = new Set(["cash", "savings"]);
 
 export default function ClientNetWorth() {
+  const [location] = useLocation();
+  const isPropertyDebts = location.split(/[?#]/, 1)[0] === "/client/wealth/property-debts";
   const {
     syncedAssets, syncedLiabilities, manualAssets, manualLiabilities,
     totalAssets, totalLiabilities, netWorth, assetCount, liabilityCount, loading,
@@ -50,58 +53,66 @@ export default function ClientNetWorth() {
     .reduce((s, a) => s + a.valueUsd, 0);
   const cashPct = totalAssets > 0 ? Math.round((cashValue / totalAssets) * 100) : 0;
   const placeCount = assetCount + liabilityCount;
+  const manualAssetTotal = manualAssets.reduce((sum, asset) => sum + asset.valueUsd, 0);
+  const manualLiabilityTotal = manualLiabilities.reduce((sum, liability) => sum + liability.balanceUsd, 0);
 
   return (
     <ClientAppShell>
       <div className="max-w-[900px] mx-auto space-y-5">
-        {!loading && totalAssets > 0 && (
-          <SolNarration
-            line={`$${Math.round(totalAssets).toLocaleString()} across ${placeCount} place${placeCount !== 1 ? "s" : ""}. Cash is ${cashPct}% of it.`}
-            detail="A cash buffer is usually sized in months of expenses — three to six is typical. Money beyond that has an opportunity cost, and what to do with it is worth raising at your next review."
-            advisorFirstName={advisorName?.split(" ")[0] ?? null}
-          />
+        {isPropertyDebts ? (
+          <>
+            <div>
+              <h1 className="font-display text-2xl font-semibold text-forest">Property &amp; debts</h1>
+              <p className="mt-1 text-sm text-ink-40">Track assets and liabilities you have added manually.</p>
+            </div>
+            <AssetSection
+              syncedAssets={[]}
+              manualAssets={manualAssets}
+              totalAssets={manualAssetTotal}
+              onAddClick={() => setShowAddAsset(true)}
+              onEditAsset={setEditAsset}
+              onDeleteAsset={deleteAsset}
+            />
+            <LiabilitySection
+              syncedLiabilities={[]}
+              manualLiabilities={manualLiabilities}
+              totalLiabilities={manualLiabilityTotal}
+              onAddClick={() => setShowAddLiability(true)}
+              onEditLiability={setEditLiability}
+              onDeleteLiability={deleteLiability}
+            />
+          </>
+        ) : (
+          <>
+            {!loading && totalAssets > 0 && (
+              <SolNarration
+                line={`$${Math.round(totalAssets).toLocaleString()} across ${placeCount} place${placeCount !== 1 ? "s" : ""}. Cash is ${cashPct}% of it.`}
+                detail="A cash buffer is usually sized in months of expenses — three to six is typical. Money beyond that has an opportunity cost, and what to do with it is worth raising at your next review."
+                advisorFirstName={advisorName?.split(" ")[0] ?? null}
+              />
+            )}
+
+            <NetWorthHeader
+              totalAssets={totalAssets}
+              totalLiabilities={totalLiabilities}
+              netWorth={netWorth}
+              assetCount={assetCount}
+              liabilityCount={liabilityCount}
+              trendDelta={trendLoading ? null : trendDelta}
+              loading={loading}
+            />
+
+            <NetWorthTrendChart trendData={trendData} hasHistory={hasHistory} />
+
+            <NetWorthSummaryBar
+              syncedAssets={syncedAssets}
+              manualAssets={manualAssets}
+              totalAssets={totalAssets}
+              totalLiabilities={totalLiabilities}
+              liabilityByCategory={liabilityByCategory}
+            />
+          </>
         )}
-
-        <NetWorthHeader
-          totalAssets={totalAssets}
-          totalLiabilities={totalLiabilities}
-          netWorth={netWorth}
-          assetCount={assetCount}
-          liabilityCount={liabilityCount}
-          trendDelta={trendLoading ? null : trendDelta}
-          loading={loading}
-        />
-
-        <NetWorthTrendChart
-          trendData={trendData}
-          hasHistory={hasHistory}
-        />
-
-        <NetWorthSummaryBar
-          syncedAssets={syncedAssets}
-          manualAssets={manualAssets}
-          totalAssets={totalAssets}
-          totalLiabilities={totalLiabilities}
-          liabilityByCategory={liabilityByCategory}
-        />
-
-        <AssetSection
-          syncedAssets={syncedAssets}
-          manualAssets={manualAssets}
-          totalAssets={totalAssets}
-          onAddClick={() => setShowAddAsset(true)}
-          onEditAsset={setEditAsset}
-          onDeleteAsset={deleteAsset}
-        />
-
-        <LiabilitySection
-          syncedLiabilities={syncedLiabilities}
-          manualLiabilities={manualLiabilities}
-          totalLiabilities={totalLiabilities}
-          onAddClick={() => setShowAddLiability(true)}
-          onEditLiability={setEditLiability}
-          onDeleteLiability={deleteLiability}
-        />
       </div>
 
       <AddAssetSheet

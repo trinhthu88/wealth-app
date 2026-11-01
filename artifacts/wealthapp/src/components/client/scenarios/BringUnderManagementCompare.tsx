@@ -91,7 +91,7 @@ export default function BringUnderManagementCompare({ holdings }: { holdings: Cl
       ) : selected && benchmark && projection ? (
         <div className="space-y-[14px]">
           <div>
-            <Link href="/client/portfolio">
+            <Link href="/client/wealth/investments">
               <span className="text-[13px] font-semibold text-green cursor-pointer hover:underline mb-1 inline-block">
                 ← Accounts
               </span>
@@ -160,7 +160,7 @@ export default function BringUnderManagementCompare({ holdings }: { holdings: Cl
             </div>
           </div>
 
-          <Link href={`/client/messages?about=${encodeURIComponent(`bringing my ${selected.label} under management`)}`}>
+          <Link href={`/client/advisor/messages?about=${encodeURIComponent(`bringing my ${selected.label} under management`)}`}>
             <button className="w-full min-h-[48px] border-none rounded-[16px] bg-green text-white font-sans text-[14.5px] font-semibold cursor-pointer hover:bg-forest-700 transition-colors">
               Ask advisor about this
             </button>

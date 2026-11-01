@@ -45,9 +45,9 @@ export default function DashboardPendingState({ advisorName }: Props) {
         <div className="border-t border-slate-100 pt-4 space-y-3">
           <p className="text-xs font-semibold text-[#64748B] uppercase tracking-wide">While you wait, you can:</p>
           {[
-            { icon: TrendingUp, label: "Add your other investments", href: "/client/portfolio" },
-            { icon: Target,     label: "Set a financial goal",       href: "/client/goals" },
-            { icon: MessageSquare, label: "Message your advisor",   href: "/client/messages" },
+            { icon: TrendingUp, label: "Add your other investments", href: "/client/wealth/investments" },
+            { icon: Target,     label: "Set a financial goal",       href: "/client/goals/goals" },
+            { icon: MessageSquare, label: "Message your advisor",   href: "/client/advisor/messages" },
           ].map(({ icon: Icon, label, href }) => (
             <Link key={href} href={href}>
               <div className="flex items-center gap-2 text-sm font-medium text-[#1D9E75] hover:text-[#0F6E56] cursor-pointer">

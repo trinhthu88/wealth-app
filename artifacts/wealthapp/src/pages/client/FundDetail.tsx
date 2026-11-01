@@ -38,7 +38,7 @@ export default function FundDetail() {
       <ClientAppShell>
         <div className="text-center py-16">
           <p className="text-[15px] text-ink-40 mb-4">This fund could not be found.</p>
-          <Link href={planId ? `/client/portfolio/${planId}` : "/client/portfolio"} className="text-[14px] font-semibold text-green">Back to plan</Link>
+          <Link href={planId ? `/client/wealth/investments/${planId}` : "/client/wealth/investments"} className="text-[14px] font-semibold text-green">Back to plan</Link>
         </div>
       </ClientAppShell>
     );
@@ -59,7 +59,7 @@ export default function FundDetail() {
       <div className="space-y-4 pb-8">
         <div>
           <Link
-            href={`/client/portfolio/${plan.id}`}
+            href={`/client/wealth/investments/${plan.id}`}
             className="inline-flex items-center gap-1 text-[13.5px] font-semibold text-ink-40 hover:text-forest mb-3"
           >
             <ChevronLeft className="h-4 w-4" aria-hidden="true" />
@@ -114,7 +114,7 @@ export default function FundDetail() {
           </div>
           <button
             type="button"
-            onClick={() => navigate("/client/messages")}
+            onClick={() => navigate("/client/advisor/messages")}
             className="mt-4 w-full text-center bg-forest text-paper rounded-[16px] py-[13px] text-[14.5px] font-semibold hover:bg-forest-700 transition-colors"
           >
             Message {advisorFirstName ?? "your advisor"} about allocation

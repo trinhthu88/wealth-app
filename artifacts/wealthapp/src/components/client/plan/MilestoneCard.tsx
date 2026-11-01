@@ -98,7 +98,7 @@ export default function MilestoneCard({ step, isNext }: Props) {
       {/* Linked goal */}
       {step.linkedGoal && (
         <Link
-          href="/client/goals"
+          href="/client/goals/goals"
           className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#1D9E75]/10 text-[#1D9E75] text-xs font-medium hover:bg-[#1D9E75]/20 transition-colors"
         >
           <Target className="h-3.5 w-3.5" /> {step.linkedGoal.title}

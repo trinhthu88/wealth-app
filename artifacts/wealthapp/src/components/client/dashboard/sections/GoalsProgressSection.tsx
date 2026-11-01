@@ -36,7 +36,7 @@ function PrimaryGoalCard({ goal }: { goal: DashboardGoal }) {
   const offset = circumference - (pct / 100) * circumference;
 
   return (
-    <Link href="/client/goals">
+    <Link href="/client/goals/goals">
       <div className="bg-white border border-[#E6E1D8] rounded-[24px] p-5 sm:p-6 shadow-[0_4px_14px_rgba(4,44,83,.06)] cursor-pointer hover:border-[#1D9E75] transition-colors">
         <div className="flex items-center justify-between mb-1">
           <div className="font-mono text-[10px] tracking-[0.14em] uppercase text-[#6B6459]">Your biggest goal</div>
@@ -89,7 +89,7 @@ function SmallGoalCard({ goal, color = "#1D9E75" }: { goal: DashboardGoal, color
   const offset = circumference - (pct / 100) * circumference;
 
   return (
-    <Link href="/client/goals">
+    <Link href="/client/goals/goals">
       <div className="flex-1 bg-white border border-[#E6E1D8] rounded-[20px] p-4 cursor-pointer hover:border-[#1D9E75] transition-colors">
         <div className="flex items-center gap-2.5 mb-2.5">
           <svg width="34" height="34" viewBox="0 0 34 34" className="-rotate-90 shrink-0">
@@ -118,7 +118,7 @@ export default function GoalsProgressSection({ goals, totalGoals }: Props) {
     return (
       <div className="bg-white border border-[#E6E1D8] rounded-xl p-6 text-center">
         <p className="text-sm text-[#6B6459] mb-2">No goals set yet.</p>
-        <Link href="/client/goals">
+        <Link href="/client/goals/goals">
           <span className="text-sm font-semibold text-[#1D9E75] hover:text-[#0F6E56]">Set your first goal →</span>
         </Link>
       </div>

@@ -45,7 +45,7 @@ export default function SolNarration({ line, detail, advisorFirstName, tone = "l
               {advisorFirstName && (
                 <button
                   type="button"
-                  onClick={(e) => { e.stopPropagation(); navigate("/client/messages"); }}
+                  onClick={(e) => { e.stopPropagation(); navigate("/client/advisor/messages"); }}
                   className={cn(
                     "text-[13px] font-semibold rounded-full px-[13px] py-[7px] transition-colors",
                     dark ? "bg-sun text-sun-ink hover:bg-sun/90" : "text-forest bg-sun-tint hover:bg-sun-tint/70"

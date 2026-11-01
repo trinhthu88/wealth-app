@@ -9,6 +9,7 @@ import { MessageSquare, Send } from "lucide-react";
 import Sol from "@/components/Sol";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import RequestReviewSheet from "@/components/client/plan/RequestReviewSheet";
 
 interface Conversation { id: string; clientId: string; advisorId: string; lastMessageAt: string | null; }
 interface Message { id: string; senderId: string; senderRole: string | null; content: string; sentAt: string; createdAt?: string; }
@@ -26,8 +27,9 @@ function formatDateSeparator(dateStr: string): string {
 
 export default function ClientMessages() {
   const { profile } = useProfile();
-  const { advisorName } = usePlan();
+  const { advisorName, advisorId, completionPct, nextMilestone } = usePlan();
   const [activeConvId, setActiveConvId] = useState<string | null>(null);
+  const [showReviewSheet, setShowReviewSheet] = useState(false);
   const [msg, setMsg] = useState("");
   const [isTyping, setIsTyping] = useState(false); // local typing feedback
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -92,7 +94,7 @@ export default function ClientMessages() {
         const len = textareaRef.current?.value.length ?? 0;
         textareaRef.current?.setSelectionRange(len, len);
       }, 100);
-      window.history.replaceState({}, "", "/client/messages");
+      window.history.replaceState({}, "", "/client/advisor/messages");
     }
   }, []);
 
@@ -114,7 +116,16 @@ export default function ClientMessages() {
   return (
     <ClientAppShell>
       <div className="h-full flex flex-col max-w-[860px] mx-auto">
-        <h1 className="font-display text-[26px] font-semibold text-forest tracking-[-0.02em] mb-4 shrink-0">Messages</h1>
+        <div className="mb-4 flex shrink-0 items-center justify-between gap-3">
+          <h1 className="font-display text-[26px] font-semibold text-forest tracking-[-0.02em]">Messages</h1>
+          <button
+            type="button"
+            onClick={() => setShowReviewSheet(true)}
+            className="rounded-full bg-forest px-4 py-2 text-[12px] font-semibold text-paper hover:bg-forest-700 sm:text-[13px]"
+          >
+            Request a review
+          </button>
+        </div>
 
         <div className="bg-surface border border-hairline rounded-[20px] px-4 py-4 mb-4 shadow-[0_2px_14px_rgba(20,52,42,.04)]">
           <label className="flex items-center justify-between gap-4 cursor-pointer">
@@ -250,6 +261,14 @@ export default function ClientMessages() {
           </div>
         )}
       </div>
+      <RequestReviewSheet
+        isOpen={showReviewSheet}
+        onClose={() => setShowReviewSheet(false)}
+        advisorId={advisorId}
+        advisorName={advisorName}
+        completionPct={completionPct}
+        nextMilestoneTitle={nextMilestone?.title ?? null}
+      />
     </ClientAppShell>
   );
 }

@@ -39,7 +39,7 @@ export default function SurplusCTA({ surplus, monthKey }: Props) {
             <>
               You have {fmtCompact(surplus)} surplus this month. Want me to run a scenario to see what investing it could do?{" "}
               <Link
-                href={`/client/scenarios?type=increase_monthly&surplus=${Math.round(surplus)}`}
+                href={`/client/goals/what-if?type=increase_monthly&surplus=${Math.round(surplus)}`}
                 className="font-semibold underline decoration-amber-ink/30 hover:decoration-amber-ink"
               >
                 Model my surplus
@@ -49,13 +49,13 @@ export default function SurplusCTA({ surplus, monthKey }: Props) {
             <>
               Investing your {fmtCompact(surplus)} surplus could grow to <span className="font-semibold">{fmtCompact(tenYearValue)}</span> over 10 years.{" "}
               <Link
-                href={`/client/scenarios?type=increase_monthly&surplus=${Math.round(surplus)}`}
+                href={`/client/goals/what-if?type=increase_monthly&surplus=${Math.round(surplus)}`}
                 className="font-semibold underline decoration-amber-ink/30 hover:decoration-amber-ink"
               >
                 Run the numbers
               </Link>
               {" "}or{" "}
-              <Link href="/client/messages" className="font-semibold underline decoration-amber-ink/30 hover:decoration-amber-ink">
+              <Link href="/client/advisor/messages" className="font-semibold underline decoration-amber-ink/30 hover:decoration-amber-ink">
                 talk to an advisor
               </Link>.
             </>

@@ -40,7 +40,7 @@ export default function BudgetSnapshotSection({ budget, isTrackA, planNickname }
       {isEmpty ? (
         <div className="py-4 text-center space-y-2">
           <p className="text-sm text-[#64748B]">No budget set for this month.</p>
-          <Link href="/client/budget">
+          <Link href="/client/money">
             <span className="text-sm font-medium text-[#1D9E75] hover:text-[#0F6E56]">Set up budget →</span>
           </Link>
         </div>
@@ -91,7 +91,7 @@ export default function BudgetSnapshotSection({ budget, isTrackA, planNickname }
           </div>
 
           <div className="flex justify-end">
-            <Link href="/client/budget">
+            <Link href="/client/money">
               <span className="text-sm font-medium text-[#1D9E75] hover:text-[#0F6E56]">View full budget →</span>
             </Link>
           </div>
