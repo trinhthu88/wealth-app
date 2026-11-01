@@ -1,7 +1,7 @@
 # Restructure progress
 
 ## Current phase
-P7 — Quick budget + advisor budget summary
+P7 — Quick budget + advisor budget summary (implemented; one data reconciliation blocker recorded)
 
 ## Baseline (Phase 0)
 - typecheck: passed (`pnpm run typecheck`; all libraries and leaf workspaces completed).
@@ -100,6 +100,7 @@ Files changed:
 - P1 CHECK constraints for `onboarding_stage` and `first_focus` are deferred until P5 introduces their columns; their shared enums are defined in P1.
 - RESOLVED in P4.5 (see below): P2.5 schema push was blocked by a `client_holding_transactions` warning. Exact prompt: `You're about to add client_holding_transactions_holding_id_source_month_source_unique unique constraint to the table, which contains 1 items. If this statement fails, you will receive an error from the database. Do you want to truncate client_holding_transactions table?` Choices: `No, add the constraint without truncating the table` / `Yes, truncate the table`. The safe No choice remained highlighted; the command timed out before proceeding. No truncate option was accepted and no schema/data change was observed. A read-only recheck found 1 row, 0 duplicate groups/excess rows for `(holding_id, source_month, source)`, and an existing validated UNIQUE constraint `client_holding_transactions_holding_id_source_month_source_uniq` on that key. Do not accept this prompt or rerun push as part of Phases 3–4.
 - RESOLVED (P5): risk normalisation of the deprecated `profiles.risk_profile` ran after product-owner approval; see P5 audit counts.
+- P7: The migration correctly skipped one existing free-user/shared-month collision rather than overwriting the shared row. Read-only comparison found the existing shared values differ from the legacy row, and this is the latest legacy month for that user. The free budget page and health score now read the shared values, so that user's figures may differ from before migration. No reconciliation was made. Product owner should decide whether the existing shared values remain authoritative or whether the legacy row should temporarily be shown for this one key; do not overwrite the shared row.
 
 ### P2 — Net worth service
 Plan:
@@ -439,6 +440,48 @@ Plan:
 - Add the client consent toggle on Messages/Advisor and an advisor-owned, super-admin-accessible last-12-month summary endpoint that returns only income, spending, surplus, and savings rate when consent is on; show a read-only advisor client-detail card and a clear not-shared state.
 - Update OpenAPI and generated contracts; add API/UI tests for consent and authorization, no line items, migration dry-run/copy/conflicts/idempotence, unchanged free budget/health-score values, and quick/detail saves to one shared month.
 - Run `pnpm run typecheck`, the API suite, and WealthApp tests; record results, audit/backup counts, decisions, and changed files. Commit with `[restructure P7]`, push to GitHub `main`, and do not publish or deploy.
+Done:
+- Created ignored data-only backups before schema/data changes: `backups/2026-11-01-budget_entries-p7.sql` (12 rows), `backups/2026-11-01-client_budget_months-p7.sql` (14 rows), and `backups/2026-11-01-client_profiles-p7.sql` (6 rows). The schema push applied only the additive `share_budget_with_advisor` column; it showed no truncate/drop/rename warning, and `client_profiles` remained at 6 rows. `budget_transactions` had no FK dependency on `budget_entries`; its 38 rows remain.
+- Migration dry run: 9 free-tier source rows across 5 user/month keys; 4 duplicate groups with 4 excess rows (all duplicate values identical); 0 ambiguous groups; 1 existing shared-month conflict; 4 month keys eligible to copy. Apply inserted 4 shared rows, skipped the existing conflict without overwrite, and retained the duplicate source rows. Post-migration counts: 12 legacy rows (9 free-tier), 18 shared budget months (6 free-tier), and 38 budget transactions. A second run is covered by the idempotence test.
+- The free monthly budget routes now adapt their legacy request/response fields to the shared table and are limited to free users; transaction CRUD remains on `budget_transactions`, including the update route used by the existing page. Health score and Sol read the shared months.
+- Investment client Budget now defaults to take-home plus housing, food, transport, utilities, entertainment, and other; “Add detail” reveals all lines. Prior detail auto-expands and remains included in totals. A new month is an unsaved previous-month draft until explicit save.
+- Added the default-off advisor sharing toggle, owner-checked/super-admin-accessible 12-month summary endpoint (aggregate fields only), and read-only advisor client-detail card.
+- No publish or deployment was performed.
+Decisions made by agent:
+- Keep pre-existing shared rows authoritative and never overwrite a conflicting month, per the migration rule. Because one skipped month differs from the legacy source and is the latest month for one free user, recorded it above as an unresolved customer-visible discrepancy rather than silently reconciling it.
+- Keep free-tier monthly route responses in their existing shape while storing them in the shared table; restrict those monthly routes to `free_user` so they cannot overwrite investment-client detail.
+Tests:
+- OpenAPI code generation and library typecheck — passed.
+- `pnpm run typecheck` — passed.
+- `pnpm --filter @workspace/api-server test` — passed, 24 test files and 179 tests.
+- `pnpm --filter @workspace/wealthapp test` — passed, 7 test files and 70 tests.
+Manual product-owner checks (the preview capture shows the sign-in page; the signed-in screens were not verified by the capture browser):
+1. Investment client `/client/budget`: quick view has the six requested categories in order; “Add detail” reveals all lines and existing details stay visible/included.
+2. Investment client `/client/budget`: switch to a new month, adjust the copied previous-month draft, verify nothing persists until “Save budget,” then check quick and detailed edits are one month.
+3. Client `/client/messages`: toggle “Share my monthly budget summary with my advisor”; confirm default off and saved state after reload.
+4. Advisor `/advisor/clients/:id` Profile tab: check the not-shared message, then enable consent and confirm the card shows only monthly totals.
+5. Free-tier `/budget`: verify existing budget figures, create/update a month, and edit a transaction; separately review the one skipped collision noted above.
+Files changed:
+- `artifacts/api-server/src/routes/__tests__/budgetP7.test.ts`
+- `artifacts/api-server/src/routes/__tests__/healthscore.test.ts`
+- `artifacts/api-server/src/routes/budget.ts`
+- `artifacts/api-server/src/routes/clients.ts`
+- `artifacts/api-server/src/routes/healthscore.ts`
+- `artifacts/api-server/src/routes/investments.ts`
+- `artifacts/api-server/src/routes/sol.ts`
+- `artifacts/wealthapp/src/hooks/useClientBudget.ts`
+- `artifacts/wealthapp/src/pages/advisor/client-detail.tsx`
+- `artifacts/wealthapp/src/pages/client/ClientBudget.tsx`
+- `artifacts/wealthapp/src/pages/client/messages.tsx`
+- `lib/api-client-react/src/generated/api.schemas.ts`
+- `lib/api-client-react/src/generated/api.ts`
+- `lib/api-spec/openapi.yaml`
+- `lib/api-zod/src/generated/api.ts`
+- `lib/db/src/schema/budget.ts`
+- `lib/db/src/schema/clients.ts`
+- `scripts/package.json`
+- `scripts/src/migrate-free-budget-entries.ts`
+- `docs/client-restructure/PROGRESS.md`
 
 ## Next agent: start here
-- Phase 6 is complete. Start Phase 7 — Quick budget + advisor budget summary: read its master-prompt section and Section 3, record the plan here before editing, and audit `budget_entries`/`client_budget_months` before any backfill. Keep `budget_entries`; Phase 7 must not drop it.
+- First get the product owner's decision on the one skipped free-user/shared-month value mismatch above; do not overwrite either row without an explicit safe plan. Then read Phase 8 and Section 3, write a Phase 8 plan here before editing, and begin the navigation 9→5 and Sol-everywhere work. Do not drop `budget_entries`.

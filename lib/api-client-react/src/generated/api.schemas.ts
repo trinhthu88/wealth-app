@@ -354,6 +354,29 @@ export interface CreateBudgetEntryBody {
   notes?: string;
 }
 
+export interface BudgetTransaction {
+  id: string;
+  userId: string;
+  periodMonth: string;
+  description: string;
+  amount: string;
+  type: string;
+  category: string;
+  transactionDate: string;
+  isRecurring: boolean;
+  createdAt: string;
+}
+
+export interface BudgetTransactionInput {
+  periodMonth: string;
+  description: string;
+  amount: string;
+  type?: string;
+  category?: string;
+  transactionDate: string;
+  isRecurring?: boolean;
+}
+
 export interface FinancialGoal {
   id: string;
   userId: string;
@@ -557,7 +580,7 @@ export interface ClientProfile {
   kycStatus: string;
   /** @nullable */
   riskProfile?: string | null;
-  shareBudgetWithAdvisor?: boolean;
+  shareBudgetWithAdvisor: boolean;
   onboardingStep: number;
   /** @nullable */
   relationshipStartDate?: string | null;
@@ -839,3 +862,7 @@ export interface AdminUpdateUserBody {
   advisorId?: string;
   preferredCurrency?: string;
 }
+
+export type ListBudgetTransactionsParams = {
+  month?: string;
+};

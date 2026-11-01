@@ -271,6 +271,79 @@ export const UpdateBudgetEntryResponse = zod.object({
 });
 
 /**
+ * @summary List the current user's budget transactions
+ */
+export const ListBudgetTransactionsQueryParams = zod.object({
+  month: zod.coerce.string().optional(),
+});
+
+export const ListBudgetTransactionsResponseItem = zod.object({
+  id: zod.string(),
+  userId: zod.string(),
+  periodMonth: zod.string(),
+  description: zod.string(),
+  amount: zod.string(),
+  type: zod.string(),
+  category: zod.string(),
+  transactionDate: zod.coerce.date(),
+  isRecurring: zod.boolean(),
+  createdAt: zod.coerce.date(),
+});
+export const ListBudgetTransactionsResponse = zod.array(
+  ListBudgetTransactionsResponseItem,
+);
+
+/**
+ * @summary Create a budget transaction
+ */
+export const CreateBudgetTransactionBody = zod.object({
+  periodMonth: zod.string(),
+  description: zod.string(),
+  amount: zod.string(),
+  type: zod.string().optional(),
+  category: zod.string().optional(),
+  transactionDate: zod.coerce.date(),
+  isRecurring: zod.boolean().optional(),
+});
+
+/**
+ * @summary Update a budget transaction
+ */
+export const UpdateBudgetTransactionParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const UpdateBudgetTransactionBody = zod.object({
+  periodMonth: zod.string(),
+  description: zod.string(),
+  amount: zod.string(),
+  type: zod.string().optional(),
+  category: zod.string().optional(),
+  transactionDate: zod.coerce.date(),
+  isRecurring: zod.boolean().optional(),
+});
+
+export const UpdateBudgetTransactionResponse = zod.object({
+  id: zod.string(),
+  userId: zod.string(),
+  periodMonth: zod.string(),
+  description: zod.string(),
+  amount: zod.string(),
+  type: zod.string(),
+  category: zod.string(),
+  transactionDate: zod.coerce.date(),
+  isRecurring: zod.boolean(),
+  createdAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Delete a budget transaction
+ */
+export const DeleteBudgetTransactionParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+/**
  * @summary List goals for current user
  */
 export const ListGoalsResponseItem = zod
@@ -615,7 +688,7 @@ export const GetClientProfileResponse = zod.object({
   advisorId: zod.string().nullish(),
   kycStatus: zod.string(),
   riskProfile: zod.string().nullish(),
-  shareBudgetWithAdvisor: zod.boolean().optional(),
+  shareBudgetWithAdvisor: zod.boolean(),
   onboardingStep: zod.number(),
   relationshipStartDate: zod.string().nullish(),
   annualReviewDate: zod.string().nullish(),
@@ -633,7 +706,7 @@ export const GetMyClientProfileResponse = zod.object({
   advisorId: zod.string().nullish(),
   kycStatus: zod.string(),
   riskProfile: zod.string().nullish(),
-  shareBudgetWithAdvisor: zod.boolean().optional(),
+  shareBudgetWithAdvisor: zod.boolean(),
   onboardingStep: zod.number(),
   relationshipStartDate: zod.string().nullish(),
   annualReviewDate: zod.string().nullish(),
@@ -655,7 +728,7 @@ export const UpdateMyClientProfilePreferencesResponse = zod.object({
   advisorId: zod.string().nullish(),
   kycStatus: zod.string(),
   riskProfile: zod.string().nullish(),
-  shareBudgetWithAdvisor: zod.boolean().optional(),
+  shareBudgetWithAdvisor: zod.boolean(),
   onboardingStep: zod.number(),
   relationshipStartDate: zod.string().nullish(),
   annualReviewDate: zod.string().nullish(),
