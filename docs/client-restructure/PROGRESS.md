@@ -1,7 +1,7 @@
 # Restructure progress
 
 ## Current phase
-P5 — Profile fields and onboarding state — done, except one pending data step (normalising the deprecated `profiles.risk_profile`; see Blocked)
+P5 — Profile fields and onboarding state — done
 
 ## Baseline (Phase 0)
 - typecheck: passed (`pnpm run typecheck`; all libraries and leaf workspaces completed).
@@ -99,7 +99,7 @@ Files changed:
 ## Blocked / questions for the product owner
 - P1 CHECK constraints for `onboarding_stage` and `first_focus` are deferred until P5 introduces their columns; their shared enums are defined in P1.
 - RESOLVED in P4.5 (see below): P2.5 schema push was blocked by a `client_holding_transactions` warning. Exact prompt: `You're about to add client_holding_transactions_holding_id_source_month_source_unique unique constraint to the table, which contains 1 items. If this statement fails, you will receive an error from the database. Do you want to truncate client_holding_transactions table?` Choices: `No, add the constraint without truncating the table` / `Yes, truncate the table`. The safe No choice remained highlighted; the command timed out before proceeding. No truncate option was accepted and no schema/data change was observed. A read-only recheck found 1 row, 0 duplicate groups/excess rows for `(holding_id, source_month, source)`, and an existing validated UNIQUE constraint `client_holding_transactions_holding_id_source_month_source_uniq` on that key. Do not accept this prompt or rerun push as part of Phases 3–4.
-- P5 pending data step: `pnpm --filter @workspace/scripts run p5-normalize-risk-profile` (deprecated `profiles.risk_profile`; owner `client_profiles` is already clean). Its dry run changes 3 rows: contact@erickson.vn `Aggressive → growth`, sofia.chen `moderate → balanced`, trang.tt `Conservative → conservative` (onboardtest_* skipped). Not run: the agent's permission check required an explicit OK for these rows.
+- RESOLVED (P5): risk normalisation of the deprecated `profiles.risk_profile` ran after product-owner approval; see P5 audit counts.
 
 ### P2 — Net worth service
 Plan:
@@ -330,6 +330,7 @@ Audit counts / backfills:
 - Backfill 1 currency (`p5-backfill-currency`): 0 candidates and 0 conflicts. Not run (no-op).
 - Backfill 3 onboarding stage (`p5-backfill-onboarding-stage`), run after approval: 4 rows `not_started → complete` (contact@erickson.vn, elena.novak, james.whitfield, trang.tt; all had `onboarding_track_complete = true`). Rerun: 0.
 - Backfill 2 risk (`p5-backfill-risk-profile`), run after approval and after the promotion test passed: 0 updates; created 2 rows, marcus.reyes `conservative` and sofia.chen `balanced` (from `moderate`), both source `self`. Rerun: 0. The 4 existing client risk values keep `risk_profile_source = NULL` (unknown origin).
+- Risk normalisation (`p5-normalize-risk-profile`), run after approval: backup `backups/2026-11-01-profiles-p5-risk-normalize.sql`; updated 3 deprecated `profiles.risk_profile` rows (contact@erickson.vn `Aggressive → growth`, sofia.chen `moderate → balanced`, trang.tt `Conservative → conservative`) and 0 client_profiles rows. Rerun: 0. The only remaining non-vocabulary values are the 4 skipped `onboardtest_*` rows (`Conservative`).
 - Risk CHECK audit: 0 violations among 6 client_profiles rows.
 - After: profiles 15, client_profiles 6.
 - Every backfill script supports `--dry-run` and a repeatable `--user=<id>` scope (tests use it so they touch only fixtures); each excludes `onboardtest_*@example.com`.
@@ -353,6 +354,6 @@ Test data to clean up (not deleted; skipped by all P5 backfills):
 - `onboardtest_*@example.com` free users created 2026-08-31 19:22–19:31 UTC: `user_3Ih5s4Bej9SHhEgqsmZ5HvdkSZi`, `user_3Ih64lmoG01ZUconwxylnux9ZIs`, `user_3Ih6YN8g7lN71SNigCGumwJASgR`, `user_3Ih6idWcukAGqPxn8bfP2TK3T1P`, `user_3Ih6vUHS3xhaNzJagpQ5jnVRC67`. Four have `profiles.risk_profile = Conservative`; none has a client_profiles row.
 - Source: no code in this repo (API tests, scripts, frontend, git history) creates `onboardtest_` users. They have real Clerk IDs and timestamps minutes apart, which matches a browser-driven sign-up run from outside the repo (for example an agent's e2e check), not the API suite (which mocks Clerk and leaves `profiles` unchanged). There was no in-repo test to fix. Whoever runs that e2e flow should delete its users afterwards, or use the Clerk test-mode `+clerk_test` addresses.
 ## Next agent: start here
-- Phase 5 is complete apart from the pending risk normalisation listed under Blocked; run it only after the product owner OKs those 3 rows.
-- Commits `[restructure P4.5]` and `[restructure P5]` are local; the product owner pushes to GitHub.
+- Phase 5 is complete, including the approved risk normalisation.
+- The `[restructure P4.5]` and `[restructure P5]` commits are local; the product owner pushes to GitHub.
 - Phase 6 (new onboarding + setup checklist) has not started and needs a new instruction.
