@@ -323,6 +323,10 @@ Done:
   - `GET /advisor/clients` filters `role = investment_client` in both the advisor and super_admin branches (the admin branch already did). `/admin/clients` and the nightly snapshot job already filtered on role.
   - `requireAdvisorOwnsClient`/`requireAdvisorOwnsPackage` match on `advisor_id` (null for free users) and were left as-is. Off-track tasks and Sol's advisor name read only `advisor_id`, so behaviour is unchanged for free users. The frontend redirect is role-based.
 - Behaviour change to note: `contact@erickson.vn` is a `free_user` with a client_profiles row that has `advisor_id` set and no lead. They no longer appear in that advisor's list, and plan/conversation ownership no longer resolves to that advisor.
+- Follow-up (approved by the product owner): cleared that stale pointer with `scripts/src/p5-unassign-advisor.ts` (`--user`, `--dry-run`; it refuses unless the user is a `free_user` with no lead). It makes the same two writes as `PUT /admin/users/:id` with `advisorId: null`, which needs a Clerk super_admin session and so cannot run from the shell.
+  - Backups: `backups/2026-11-01-{client_profiles,advisor_assignments}-p5-unassign.sql`; both confirmed to contain the user's rows.
+  - In one transaction: `client_profiles` `00e8f4c3-e74c-4c66-8910-062ee00108eb` `advisor_id` `user_3DrRdwtutIsin4539iRe8N8h53s` (trang.tt@hsp.consulting) → null; `advisor_assignments` `189b736a-3063-4b4a-b6f6-148ab5a76e3d` `ended_at` → 2026-11-01 12:45:44 UTC (row kept as history). Rerun: nothing to change.
+  - Verified against the list filters: the user is in no advisor's `GET /advisor/clients` (both advisors and the super_admin), not in `/admin/clients`, and has no lead pointing at an advisor. The client_profiles row (risk `balanced`, stage `complete`) is otherwise unchanged.
 - Seed: free users' risk goes to client_profiles (source `self`); `moderate` → `balanced`; client rows get `onboardingStage: "complete"`; no `clientTrack`/`preferredDisplayCurrency`/`profiles.riskProfile` writes for clients.
 - OpenAPI `Profile`/`UpdateProfileBody`: risk enum, `riskProfileSource`, `dateOfBirth`; codegen run.
 Audit counts / backfills:
