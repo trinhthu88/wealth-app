@@ -557,6 +557,7 @@ export interface ClientProfile {
   kycStatus: string;
   /** @nullable */
   riskProfile?: string | null;
+  shareBudgetWithAdvisor?: boolean;
   onboardingStep: number;
   /** @nullable */
   relationshipStartDate?: string | null;
@@ -566,6 +567,23 @@ export interface ClientProfile {
   internalNotes?: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface UpdateClientBudgetSharingBody {
+  shareBudgetWithAdvisor: boolean;
+}
+
+export interface AdvisorBudgetSummaryMonth {
+  month: string;
+  income: string;
+  spending: string;
+  surplus: string;
+  savingsRatePct: string;
+}
+
+export interface AdvisorBudgetSummary {
+  shared: boolean;
+  months: AdvisorBudgetSummaryMonth[];
 }
 
 export interface KycDocument {

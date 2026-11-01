@@ -12,6 +12,7 @@ import { toast } from "sonner";
 
 interface Conversation { id: string; clientId: string; advisorId: string; lastMessageAt: string | null; }
 interface Message { id: string; senderId: string; senderRole: string | null; content: string; sentAt: string; createdAt?: string; }
+interface ClientProfilePreferences { shareBudgetWithAdvisor: boolean; }
 
 function formatDateSeparator(dateStr: string): string {
   const d = new Date(dateStr);
@@ -32,6 +33,23 @@ export default function ClientMessages() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const { data: clientPreferences } = useQuery<ClientProfilePreferences>({
+    queryKey: ["client-profile-me"],
+    queryFn: () => apiFetch<ClientProfilePreferences>("/client-profile/me"),
+  });
+
+  const updateBudgetSharing = useMutation({
+    mutationFn: (shareBudgetWithAdvisor: boolean) => apiFetch<ClientProfilePreferences>("/client-profile/me", {
+      method: "PUT",
+      body: JSON.stringify({ shareBudgetWithAdvisor }),
+    }),
+    onSuccess: (preferences) => {
+      queryClient.setQueryData(["client-profile-me"], preferences);
+      toast.success(preferences.shareBudgetWithAdvisor ? "Budget summary sharing enabled" : "Budget summary sharing disabled");
+    },
+    onError: () => toast.error("Could not update budget sharing"),
+  });
 
   const { data: convs = [] } = useQuery<Conversation[]>({
     queryKey: ["conversations"],
@@ -97,6 +115,22 @@ export default function ClientMessages() {
     <ClientAppShell>
       <div className="h-full flex flex-col max-w-[860px] mx-auto">
         <h1 className="font-display text-[26px] font-semibold text-forest tracking-[-0.02em] mb-4 shrink-0">Messages</h1>
+
+        <div className="bg-surface border border-hairline rounded-[20px] px-4 py-4 mb-4 shadow-[0_2px_14px_rgba(20,52,42,.04)]">
+          <label className="flex items-center justify-between gap-4 cursor-pointer">
+            <span className="text-[14px] font-semibold text-forest">Share my monthly budget summary with my advisor</span>
+            <input
+              type="checkbox"
+              checked={clientPreferences?.shareBudgetWithAdvisor ?? false}
+              disabled={!clientPreferences || updateBudgetSharing.isPending}
+              onChange={event => updateBudgetSharing.mutate(event.target.checked)}
+              className="h-5 w-5 accent-green"
+            />
+          </label>
+          <p className="text-[12px] text-ink-40 mt-2">
+            When enabled, your advisor can see monthly income, spending, surplus, and savings rate only. Budget line items stay private.
+          </p>
+        </div>
 
         {convs.length === 0 ? (
           <div className="bg-surface border border-hairline rounded-[24px] p-12 text-center flex flex-col items-center gap-4 shadow-[0_2px_14px_rgba(20,52,42,.06)]">

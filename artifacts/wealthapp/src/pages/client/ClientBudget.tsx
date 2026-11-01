@@ -30,6 +30,8 @@ const EMPTY_FORM: BudgetFormState = {
 const EXPENSE_KEYS = new Set(EXPENSE_CATEGORIES.map(c => c.key));
 const INCOME_LABELS: Record<string, string> = Object.fromEntries(INCOME_CATEGORIES.map(c => [c.key, c.label]));
 const EXPENSE_LABELS: Record<string, string> = Object.fromEntries(EXPENSE_CATEGORIES.map(c => [c.key, c.label]));
+const QUICK_EXPENSE_ORDER = ["housing", "foodDining", "transport", "utilities", "entertainment", "otherExpenses"] as const;
+const DETAIL_FIELD_KEYS = ["secondaryIncome", "rentalIncome", "otherIncome", "insurance", "shopping", "health", "education"] as const;
 
 function rowToForm(data: Record<string, string | null | undefined> | null): BudgetFormState {
   if (!data) return { ...EMPTY_FORM };
@@ -42,6 +44,10 @@ function rowToForm(data: Record<string, string | null | undefined> | null): Budg
     health: s(data.health), education: s(data.education), otherExpenses: s(data.otherExpenses),
     otherInvestments: "",
   };
+}
+
+function hasDetailedBudgetValues(data: Record<string, unknown> | null): boolean {
+  return !!data && DETAIL_FIELD_KEYS.some(key => (parseFloat(String(data[key] ?? "0")) || 0) !== 0);
 }
 
 function monthTitle(dateStr: string) {
@@ -62,31 +68,36 @@ export default function ClientBudget() {
   const { manualLiabilities } = useNetWorthItems();
   const { advisorName } = usePlan();
   const hasSyncedContributions = useRef(false);
-  const skipNextHoldingSaveRef = useRef(true);
-  const holdingContribSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const editVersionRef = useRef(0);
 
-  const currentMonthStr = new Date().toISOString().slice(0, 7) + "-01";
+  const currentDate = new Date();
+  const currentMonthStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, "0")}-01`;
   const [selectedMonth, setSelectedMonth] = useState<string>(currentMonthStr);
 
-  const { currentMonth: monthData, months, loading, saveMonth, syncInvestmentContributions } = useClientBudget(selectedMonth);
+  const { currentMonth: monthData, months, loading, saving, saveMonth, syncInvestmentContributions } = useClientBudget(selectedMonth);
+  const previousMonthData = months
+    .filter(month => month.month.slice(0, 7) < selectedMonth.slice(0, 7))
+    .at(-1) ?? null;
+  const formSource = monthData ?? previousMonthData;
 
   const [form, setForm] = useState<BudgetFormState>({ ...EMPTY_FORM });
   const [isReadOnly, setIsReadOnly] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [holdingContributions, setHoldingContributions] = useState<HoldingContributionEntry[]>([]);
   const [activeField, setActiveField] = useState<ActiveField>(null);
 
   useEffect(() => {
     if (!loading) {
-      setForm(rowToForm(monthData as any));
+      setForm(rowToForm(formSource as any));
+      setShowDetails(hasDetailedBudgetValues(formSource as any));
+      setHasUnsavedChanges(!monthData && !!previousMonthData);
       const selfHolding = ((monthData?.investmentContributions ?? []) as InvestmentContribution[])
         .filter(c => c.source_type === "self_holding")
         .map(c => ({ holdingId: c.source_id, amount: String(c.amount) }));
       setHoldingContributions(selfHolding);
-      // The next holdingContributions-change effect run is this same load,
-      // not a user edit — skip it so we don't immediately re-save on mount.
-      skipNextHoldingSaveRef.current = true;
     }
-  }, [monthData?.id, loading]);
+  }, [formSource?.id, formSource?.updatedAt, monthData?.id, loading, selectedMonth]);
 
   useEffect(() => {
     const isPast = selectedMonth !== currentMonthStr;
@@ -94,13 +105,22 @@ export default function ClientBudget() {
   }, [selectedMonth, currentMonthStr, monthData?.id]);
 
   useEffect(() => {
+    if (loading || !monthData || selectedMonth !== currentMonthStr) return;
     if (hasSyncedContributions.current) return;
     hasSyncedContributions.current = true;
     syncInvestmentContributions().catch(() => {});
-  }, [syncInvestmentContributions]);
+  }, [loading, monthData?.id, selectedMonth, currentMonthStr, syncInvestmentContributions]);
 
   function handleChange(field: keyof BudgetFormState, value: string) {
+    editVersionRef.current += 1;
+    setHasUnsavedChanges(true);
     setForm(f => ({ ...f, [field]: value }));
+  }
+
+  function handleHoldingContributionsChange(entries: HoldingContributionEntry[]) {
+    editVersionRef.current += 1;
+    setHasUnsavedChanges(true);
+    setHoldingContributions(entries);
   }
 
   const advisedPlanContributions = ((monthData?.investmentContributions ?? []) as InvestmentContribution[])
@@ -125,6 +145,7 @@ export default function ClientBudget() {
   const expensesOverThreshold = incomeTotal > 0 && expenseTotal > incomeTotal * 0.7;
 
   async function persist() {
+    const editVersionAtSave = editVersionRef.current;
     const all: InvestmentContribution[] = [
       ...advisedPlanContributions,
       ...holdingContributions
@@ -154,6 +175,7 @@ export default function ClientBudget() {
         debtPayments: String(debtPaymentsTotal),
         investmentContributions: all,
       } as any);
+      if (editVersionRef.current === editVersionAtSave) setHasUnsavedChanges(false);
     } catch {
       // mutation's onError already shows a toast
     }
@@ -165,24 +187,7 @@ export default function ClientBudget() {
 
   async function handleKeypadDone() {
     setActiveField(null);
-    if (!isReadOnly) await persist();
   }
-
-  // Holding-contribution rows aren't driven through the keypad's own Done
-  // button, so debounce-save whenever one changes instead.
-  useEffect(() => {
-    if (skipNextHoldingSaveRef.current) {
-      skipNextHoldingSaveRef.current = false;
-      return;
-    }
-    if (isReadOnly) return;
-    if (holdingContribSaveTimer.current) clearTimeout(holdingContribSaveTimer.current);
-    holdingContribSaveTimer.current = setTimeout(() => { persist(); }, 900);
-    return () => {
-      if (holdingContribSaveTimer.current) clearTimeout(holdingContribSaveTimer.current);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [holdingContributions, isReadOnly]);
 
   function handleMonthChange(month: string) {
     setSelectedMonth(month);
@@ -216,6 +221,12 @@ export default function ClientBudget() {
     .map(cat => ({ label: cat.label, value: n(form[cat.key]) }))
     .sort((a, b) => b.value - a.value)[0];
   const advisorFirstName = advisorName?.split(" ")[0] ?? null;
+  const visibleIncomeCategories = showDetails
+    ? INCOME_CATEGORIES
+    : INCOME_CATEGORIES.filter(cat => cat.key === "primaryIncome");
+  const visibleExpenseCategories = showDetails
+    ? EXPENSE_CATEGORIES
+    : QUICK_EXPENSE_ORDER.map(key => EXPENSE_CATEGORIES.find(cat => cat.key === key)!);
 
   return (
     <ClientAppShell>
@@ -289,12 +300,12 @@ export default function ClientBudget() {
             <p className="text-[15px] font-semibold text-forest">Income</p>
             <span className="text-[14px] font-semibold text-forest tabular-nums">${Math.round(incomeTotal).toLocaleString()}</span>
           </div>
-          {INCOME_CATEGORIES.map((cat, i) => (
+          {visibleIncomeCategories.map((cat, i) => (
             <BudgetLineRow
               key={cat.key}
               label={cat.label}
               value={n(form[cat.key])}
-              noBorder={i === INCOME_CATEGORIES.length - 1}
+              noBorder={i === visibleIncomeCategories.length - 1}
               onClick={() => !isReadOnly && setActiveField(cat.key)}
             />
           ))}
@@ -308,7 +319,7 @@ export default function ClientBudget() {
               ${Math.round(expenseTotal).toLocaleString()}
             </span>
           </div>
-          {EXPENSE_CATEGORIES.map(cat => {
+          {visibleExpenseCategories.map(cat => {
             const val = n(form[cat.key]);
             const overThirty = incomeTotal > 0 && val > incomeTotal * 0.3;
             return (
@@ -333,6 +344,15 @@ export default function ClientBudget() {
           )}
         </div>
 
+        <button
+          type="button"
+          aria-expanded={showDetails}
+          onClick={() => setShowDetails(value => !value)}
+          className="w-full bg-paper border border-hairline rounded-full py-3 text-[14px] font-semibold text-green hover:text-forest transition-colors"
+        >
+          {showDetails ? "Hide details" : "Add detail"}
+        </button>
+
         {/* Investments */}
         <div className="bg-surface rounded-[26px] p-[16px_20px] shadow-[0_2px_14px_rgba(20,52,42,.06)] space-y-3">
           <div className="flex items-center justify-between">
@@ -346,7 +366,7 @@ export default function ClientBudget() {
           <HoldingContributionPicker
             holdings={holdings}
             entries={holdingContributions}
-            onChange={setHoldingContributions}
+            onChange={handleHoldingContributionsChange}
             isReadOnly={isReadOnly}
           />
           <BudgetLineRow
@@ -356,6 +376,17 @@ export default function ClientBudget() {
             onClick={() => !isReadOnly && setActiveField("otherInvestments")}
           />
         </div>
+
+        {!isReadOnly && (
+          <button
+            type="button"
+            onClick={() => { void persist(); }}
+            disabled={!hasUnsavedChanges || saving}
+            className="w-full rounded-full bg-green px-5 py-3.5 text-[15px] font-semibold text-paper disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {saving ? "Saving…" : hasUnsavedChanges ? "Save budget" : monthData ? "Budget saved" : "No changes to save"}
+          </button>
+        )}
 
         <div className="bg-surface rounded-[26px] p-[18px_20px] shadow-[0_2px_14px_rgba(20,52,42,.06)]">
           <BudgetHistoryChart months={months} />

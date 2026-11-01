@@ -615,6 +615,47 @@ export const GetClientProfileResponse = zod.object({
   advisorId: zod.string().nullish(),
   kycStatus: zod.string(),
   riskProfile: zod.string().nullish(),
+  shareBudgetWithAdvisor: zod.boolean().optional(),
+  onboardingStep: zod.number(),
+  relationshipStartDate: zod.string().nullish(),
+  annualReviewDate: zod.string().nullish(),
+  internalNotes: zod.string().nullish(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+
+/**
+ * @summary Get the current client's profile preferences
+ */
+export const GetMyClientProfileResponse = zod.object({
+  id: zod.string(),
+  userId: zod.string(),
+  advisorId: zod.string().nullish(),
+  kycStatus: zod.string(),
+  riskProfile: zod.string().nullish(),
+  shareBudgetWithAdvisor: zod.boolean().optional(),
+  onboardingStep: zod.number(),
+  relationshipStartDate: zod.string().nullish(),
+  annualReviewDate: zod.string().nullish(),
+  internalNotes: zod.string().nullish(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
+});
+
+/**
+ * @summary Update current client's budget-sharing preference
+ */
+export const UpdateMyClientProfilePreferencesBody = zod.object({
+  shareBudgetWithAdvisor: zod.boolean(),
+});
+
+export const UpdateMyClientProfilePreferencesResponse = zod.object({
+  id: zod.string(),
+  userId: zod.string(),
+  advisorId: zod.string().nullish(),
+  kycStatus: zod.string(),
+  riskProfile: zod.string().nullish(),
+  shareBudgetWithAdvisor: zod.boolean().optional(),
   onboardingStep: zod.number(),
   relationshipStartDate: zod.string().nullish(),
   annualReviewDate: zod.string().nullish(),
@@ -1372,6 +1413,26 @@ export const AdvisorGetClientNetWorthSummaryResponse = zod.object({
       category: zod.string(),
       value: zod.number(),
       currency: zod.enum(["USD"]),
+    }),
+  ),
+});
+
+/**
+ * @summary Get an assigned client's shared monthly budget totals
+ */
+export const AdvisorGetClientBudgetSummaryParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const AdvisorGetClientBudgetSummaryResponse = zod.object({
+  shared: zod.boolean(),
+  months: zod.array(
+    zod.object({
+      month: zod.coerce.date(),
+      income: zod.string(),
+      spending: zod.string(),
+      surplus: zod.string(),
+      savingsRatePct: zod.string(),
     }),
   ),
 });

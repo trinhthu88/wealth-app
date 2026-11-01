@@ -2,6 +2,8 @@ import { pgTable, text, numeric, timestamp, uuid, date, boolean } from "drizzle-
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
+// Deprecated legacy free-tier budget storage. Reads/writes now use
+// client_budget_months; retain this table as the migration source until Phase 10.
 export const budgetEntriesTable = pgTable("budget_entries", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: text("user_id").notNull(),

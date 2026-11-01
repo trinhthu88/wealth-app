@@ -18,6 +18,7 @@ import type {
 
 import type {
   AdminUpdateUserBody,
+  AdvisorBudgetSummary,
   AdvisorClient,
   AdvisorTask,
   Asset,
@@ -59,6 +60,7 @@ import type {
   PortfolioHolding,
   Profile,
   SendMessageBody,
+  UpdateClientBudgetSharingBody,
   UpdateClientPortfolioBody,
   UpdateFinancialPlanBody,
   UpdateProfileBody,
@@ -2316,6 +2318,170 @@ export function useGetClientProfile<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Get the current client's profile preferences
+ */
+export const getGetMyClientProfileUrl = () => {
+  return `/api/client-profile/me`;
+};
+
+export const getMyClientProfile = async (
+  options?: RequestInit,
+): Promise<ClientProfile> => {
+  return customFetch<ClientProfile>(getGetMyClientProfileUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetMyClientProfileQueryKey = () => {
+  return [`/api/client-profile/me`] as const;
+};
+
+export const getGetMyClientProfileQueryOptions = <
+  TData = Awaited<ReturnType<typeof getMyClientProfile>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getMyClientProfile>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetMyClientProfileQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getMyClientProfile>>
+  > = ({ signal }) => getMyClientProfile({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getMyClientProfile>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetMyClientProfileQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getMyClientProfile>>
+>;
+export type GetMyClientProfileQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get the current client's profile preferences
+ */
+
+export function useGetMyClientProfile<
+  TData = Awaited<ReturnType<typeof getMyClientProfile>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getMyClientProfile>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetMyClientProfileQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Update current client's budget-sharing preference
+ */
+export const getUpdateMyClientProfilePreferencesUrl = () => {
+  return `/api/client-profile/me`;
+};
+
+export const updateMyClientProfilePreferences = async (
+  updateClientBudgetSharingBody: UpdateClientBudgetSharingBody,
+  options?: RequestInit,
+): Promise<ClientProfile> => {
+  return customFetch<ClientProfile>(getUpdateMyClientProfilePreferencesUrl(), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateClientBudgetSharingBody),
+  });
+};
+
+export const getUpdateMyClientProfilePreferencesMutationOptions = <
+  TError = ErrorType<Error>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateMyClientProfilePreferences>>,
+    TError,
+    { data: BodyType<UpdateClientBudgetSharingBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateMyClientProfilePreferences>>,
+  TError,
+  { data: BodyType<UpdateClientBudgetSharingBody> },
+  TContext
+> => {
+  const mutationKey = ["updateMyClientProfilePreferences"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateMyClientProfilePreferences>>,
+    { data: BodyType<UpdateClientBudgetSharingBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updateMyClientProfilePreferences(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateMyClientProfilePreferencesMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateMyClientProfilePreferences>>
+>;
+export type UpdateMyClientProfilePreferencesMutationBody =
+  BodyType<UpdateClientBudgetSharingBody>;
+export type UpdateMyClientProfilePreferencesMutationError = ErrorType<Error>;
+
+/**
+ * @summary Update current client's budget-sharing preference
+ */
+export const useUpdateMyClientProfilePreferences = <
+  TError = ErrorType<Error>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateMyClientProfilePreferences>>,
+    TError,
+    { data: BodyType<UpdateClientBudgetSharingBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateMyClientProfilePreferences>>,
+  TError,
+  { data: BodyType<UpdateClientBudgetSharingBody> },
+  TContext
+> => {
+  return useMutation(
+    getUpdateMyClientProfilePreferencesMutationOptions(options),
+  );
+};
 
 /**
  * @summary List KYC documents
@@ -5328,6 +5494,101 @@ export function useAdvisorGetClientNetWorthSummary<
   },
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getAdvisorGetClientNetWorthSummaryQueryOptions(
+    id,
+    options,
+  );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get an assigned client's shared monthly budget totals
+ */
+export const getAdvisorGetClientBudgetSummaryUrl = (id: string) => {
+  return `/api/advisor/clients/${id}/budget-summary`;
+};
+
+export const advisorGetClientBudgetSummary = async (
+  id: string,
+  options?: RequestInit,
+): Promise<AdvisorBudgetSummary> => {
+  return customFetch<AdvisorBudgetSummary>(
+    getAdvisorGetClientBudgetSummaryUrl(id),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getAdvisorGetClientBudgetSummaryQueryKey = (id: string) => {
+  return [`/api/advisor/clients/${id}/budget-summary`] as const;
+};
+
+export const getAdvisorGetClientBudgetSummaryQueryOptions = <
+  TData = Awaited<ReturnType<typeof advisorGetClientBudgetSummary>>,
+  TError = ErrorType<Error>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof advisorGetClientBudgetSummary>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getAdvisorGetClientBudgetSummaryQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof advisorGetClientBudgetSummary>>
+  > = ({ signal }) =>
+    advisorGetClientBudgetSummary(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof advisorGetClientBudgetSummary>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type AdvisorGetClientBudgetSummaryQueryResult = NonNullable<
+  Awaited<ReturnType<typeof advisorGetClientBudgetSummary>>
+>;
+export type AdvisorGetClientBudgetSummaryQueryError = ErrorType<Error>;
+
+/**
+ * @summary Get an assigned client's shared monthly budget totals
+ */
+
+export function useAdvisorGetClientBudgetSummary<
+  TData = Awaited<ReturnType<typeof advisorGetClientBudgetSummary>>,
+  TError = ErrorType<Error>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof advisorGetClientBudgetSummary>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getAdvisorGetClientBudgetSummaryQueryOptions(
     id,
     options,
   );

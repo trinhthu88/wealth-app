@@ -4,7 +4,7 @@ import { eq, and, desc, inArray } from "drizzle-orm";
 import {
   db, solConversationsTable, solMessagesTable, profilesTable, clientProfilesTable,
   financialGoalsTable, assetsTable, liabilitiesTable, clientBudgetMonthsTable,
-  budgetEntriesTable, clientHoldingsTable, advisedPlansTable, healthScoresTable,
+  clientHoldingsTable, advisedPlansTable, healthScoresTable,
   priceCacheTable,
 } from "@workspace/db";
 import { requireAuth } from "../middlewares/requireAuth";
@@ -76,41 +76,22 @@ async function toolGetGoalProgress(userId: string, input: { goalId?: string }) {
   return { goals };
 }
 
-async function toolGetBudgetSummary(userId: string, role: string, input: { month?: string }) {
-  if (role === "investment_client") {
-    const rows = input.month
-      ? await db.select().from(clientBudgetMonthsTable)
-          .where(and(eq(clientBudgetMonthsTable.userId, userId), eq(clientBudgetMonthsTable.month, `${input.month}-01`)))
-      : await db.select().from(clientBudgetMonthsTable)
-          .where(eq(clientBudgetMonthsTable.userId, userId))
-          .orderBy(desc(clientBudgetMonthsTable.month)).limit(1);
-    const row = rows[0];
-    if (!row) return { available: false };
-    return {
-      available: true,
-      month: row.month,
-      income: Math.round(parseFloat(row.totalIncome) || 0),
-      expenses: Math.round(parseFloat(row.totalExpenses) || 0),
-      savings: Math.round(parseFloat(row.netSurplus) || 0),
-      savingsRatePct: Math.round((parseFloat(row.savingsRatePct) || 0) * 10) / 10,
-    };
-  }
-
+async function toolGetBudgetSummary(userId: string, input: { month?: string }) {
   const rows = input.month
-    ? await db.select().from(budgetEntriesTable)
-        .where(and(eq(budgetEntriesTable.userId, userId), eq(budgetEntriesTable.periodMonth, input.month)))
-    : await db.select().from(budgetEntriesTable)
-        .where(eq(budgetEntriesTable.userId, userId))
-        .orderBy(desc(budgetEntriesTable.periodMonth)).limit(1);
+    ? await db.select().from(clientBudgetMonthsTable)
+        .where(and(eq(clientBudgetMonthsTable.userId, userId), eq(clientBudgetMonthsTable.month, `${input.month}-01`)))
+    : await db.select().from(clientBudgetMonthsTable)
+        .where(eq(clientBudgetMonthsTable.userId, userId))
+        .orderBy(desc(clientBudgetMonthsTable.month)).limit(1);
   const row = rows[0];
   if (!row) return { available: false };
   return {
     available: true,
-    month: row.periodMonth,
-    income: Math.round(parseFloat(row.income ?? "0") || 0),
-    expenses: Math.round((parseFloat(row.needsActual ?? "0") || 0) + (parseFloat(row.wantsActual ?? "0") || 0)),
-    savings: Math.round(parseFloat(row.savingsActual ?? "0") || 0),
-    savingsRatePct: Math.round((parseFloat(row.savingsRatePercent ?? "0") || 0) * 10) / 10,
+    month: row.month,
+    income: Math.round(parseFloat(row.totalIncome ?? "0") || 0),
+    expenses: Math.round(parseFloat(row.totalExpenses ?? "0") || 0),
+    savings: Math.round(parseFloat(row.netSurplus ?? "0") || 0),
+    savingsRatePct: Math.round((parseFloat(row.savingsRatePct ?? "0") || 0) * 10) / 10,
   };
 }
 
@@ -218,7 +199,7 @@ async function executeTool(userId: string, role: string, name: string, input: un
   switch (name) {
     case "get_net_worth_summary": return toolGetNetWorthSummary(userId);
     case "get_goal_progress": return toolGetGoalProgress(userId, args);
-    case "get_budget_summary": return toolGetBudgetSummary(userId, role, args);
+    case "get_budget_summary": return toolGetBudgetSummary(userId, args);
     case "get_health_score": return toolGetHealthScore(userId);
     case "get_portfolio_holdings":
       if (role !== "investment_client") return { error: "Portfolio holdings aren't available on this account tier." };

@@ -1,6 +1,9 @@
 import { Router, type IRouter } from "express";
 import { and, eq, inArray, desc } from "drizzle-orm";
-import { db, clientProfilesTable, profilesTable, advisedPlansTable, normalizeRiskProfile } from "@workspace/db";
+import {
+  db, clientProfilesTable, profilesTable, advisedPlansTable,
+  clientBudgetMonthsTable, normalizeRiskProfile,
+} from "@workspace/db";
 import { requireAuth, requireRole, requireAdvisorOwnsClient } from "../middlewares/requireAuth";
 import { computeNetWorth } from "../lib/netWorthService";
 
@@ -77,6 +80,30 @@ router.put("/advisor/clients/:id/client-profile", ...advisorOwnsClientGuard, asy
     [cp] = await db.insert(clientProfilesTable).values({ ...updates, userId: id }).returning();
   }
   res.json(cp);
+});
+
+router.get("/advisor/clients/:id/budget-summary", ...advisorOwnsClientGuard, async (req, res): Promise<void> => {
+  const clientId = req.params.id as string;
+  const [clientProfile] = await db.select({
+    shareBudgetWithAdvisor: clientProfilesTable.shareBudgetWithAdvisor,
+  }).from(clientProfilesTable).where(eq(clientProfilesTable.userId, clientId));
+  if (!clientProfile?.shareBudgetWithAdvisor) {
+    res.status(403).json({ error: "The client has not shared their budget summary." });
+    return;
+  }
+
+  const months = await db.select({
+    month: clientBudgetMonthsTable.month,
+    income: clientBudgetMonthsTable.totalIncome,
+    spending: clientBudgetMonthsTable.totalExpenses,
+    surplus: clientBudgetMonthsTable.netSurplus,
+    savingsRatePct: clientBudgetMonthsTable.savingsRatePct,
+  }).from(clientBudgetMonthsTable)
+    .where(eq(clientBudgetMonthsTable.userId, clientId))
+    .orderBy(desc(clientBudgetMonthsTable.month))
+    .limit(12);
+
+  res.json({ shared: true, months });
 });
 
 router.get("/advisor/clients", ...advisorGuard, async (req, res): Promise<void> => {

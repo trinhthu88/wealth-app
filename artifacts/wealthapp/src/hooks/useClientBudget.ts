@@ -71,7 +71,8 @@ export function useClientBudget(selectedMonth?: string) {
   const qc = useQueryClient();
   const enabled = isLoaded && !!user;
 
-  const currentMonthStr = new Date().toISOString().slice(0, 7) + "-01";
+  const now = new Date();
+  const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
   const targetMonth = selectedMonth ?? currentMonthStr;
 
   const currentQuery = useQuery<ClientBudgetMonth | null>({
@@ -121,7 +122,7 @@ export function useClientBudget(selectedMonth?: string) {
   return {
     currentMonth,
     months,
-    loading: currentQuery.isLoading,
+    loading: currentQuery.isLoading || historyQuery.isLoading,
     saving: saveMutation.isPending,
     saveMonth: (data: Partial<ClientBudgetMonth>) => saveMutation.mutateAsync(data),
     syncInvestmentContributions: () => syncMutation.mutateAsync(),

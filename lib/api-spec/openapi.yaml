@@ -193,6 +193,88 @@ paths:
               schema:
                 $ref: "#/components/schemas/BudgetEntry"
 
+  /budget/transactions:
+    get:
+      operationId: listBudgetTransactions
+      tags: [budget]
+      summary: List the current user's budget transactions
+      parameters:
+        - name: month
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Budget transactions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BudgetTransaction"
+    post:
+      operationId: createBudgetTransaction
+      tags: [budget]
+      summary: Create a budget transaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BudgetTransactionInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BudgetTransaction"
+
+  /budget/transactions/{id}:
+    put:
+      operationId: updateBudgetTransaction
+      tags: [budget]
+      summary: Update a budget transaction
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BudgetTransactionInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BudgetTransaction"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      operationId: deleteBudgetTransaction
+      tags: [budget]
+      summary: Delete a budget transaction
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
   /goals:
     get:
       operationId: listGoals
@@ -510,6 +592,42 @@ paths:
                 $ref: "#/components/schemas/ClientProfile"
         "404":
           description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /client-profile/me:
+    get:
+      operationId: getMyClientProfile
+      tags: [clients]
+      summary: Get the current client's profile preferences
+      responses:
+        "200":
+          description: Current client profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientProfile"
+    put:
+      operationId: updateMyClientProfilePreferences
+      tags: [clients]
+      summary: Update current client's budget-sharing preference
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateClientBudgetSharingBody"
+      responses:
+        "200":
+          description: Updated client profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientProfile"
+        "400":
+          description: Invalid preference
           content:
             application/json:
               schema:
@@ -1189,6 +1307,31 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
+  /advisor/clients/{id}/budget-summary:
+    get:
+      operationId: advisorGetClientBudgetSummary
+      tags: [clients]
+      summary: Get an assigned client's shared monthly budget totals
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Last 12 months of totals, without budget line items
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdvisorBudgetSummary"
+        "403":
+          description: Client consent is off or caller does not own the client
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
   /advisor/clients/{id}/portfolio:
     get:
       operationId: advisorGetClientPortfolio
@@ -1736,6 +1879,53 @@ components:
           type: string
       required: [periodMonth]
 
+    BudgetTransaction:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        periodMonth:
+          type: string
+        description:
+          type: string
+        amount:
+          type: string
+        type:
+          type: string
+        category:
+          type: string
+        transactionDate:
+          type: string
+          format: date
+        isRecurring:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, userId, periodMonth, description, amount, type, category, transactionDate, isRecurring, createdAt]
+
+    BudgetTransactionInput:
+      type: object
+      properties:
+        periodMonth:
+          type: string
+        description:
+          type: string
+        amount:
+          type: string
+        type:
+          type: string
+        category:
+          type: string
+        transactionDate:
+          type: string
+          format: date
+        isRecurring:
+          type: boolean
+      required: [periodMonth, description, amount, transactionDate]
+
     FinancialGoal:
       type: object
       properties:
@@ -2031,6 +2221,8 @@ components:
           type: string
         riskProfile:
           type: ["string", "null"]
+        shareBudgetWithAdvisor:
+          type: boolean
         onboardingStep:
           type: integer
         relationshipStartDate:
@@ -2043,7 +2235,41 @@ components:
           type: string
         updatedAt:
           type: string
-      required: [id, userId, kycStatus, onboardingStep, createdAt, updatedAt]
+      required: [id, userId, kycStatus, onboardingStep, shareBudgetWithAdvisor, createdAt, updatedAt]
+
+    UpdateClientBudgetSharingBody:
+      type: object
+      properties:
+        shareBudgetWithAdvisor:
+          type: boolean
+      required: [shareBudgetWithAdvisor]
+
+    AdvisorBudgetSummary:
+      type: object
+      properties:
+        shared:
+          type: boolean
+        months:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdvisorBudgetSummaryMonth"
+      required: [shared, months]
+
+    AdvisorBudgetSummaryMonth:
+      type: object
+      properties:
+        month:
+          type: string
+          format: date
+        income:
+          type: string
+        spending:
+          type: string
+        surplus:
+          type: string
+        savingsRatePct:
+          type: string
+      required: [month, income, spending, surplus, savingsRatePct]
 
     KycDocument:
       type: object

@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq, desc, and } from "drizzle-orm";
 import {
-  db, healthScoresTable, budgetEntriesTable, financialGoalsTable,
+  db, healthScoresTable, clientBudgetMonthsTable, financialGoalsTable,
   pathwayProgressTable, assetsTable, liabilitiesTable, profilesTable,
 } from "@workspace/db";
 import { requireAuth } from "../middlewares/requireAuth";
@@ -83,9 +83,9 @@ router.post("/health-score", requireAuth, async (req, res): Promise<void> => {
     liabilities,
     [profile],
   ] = await Promise.all([
-    db.select().from(budgetEntriesTable)
-      .where(eq(budgetEntriesTable.userId, userId))
-      .orderBy(desc(budgetEntriesTable.periodMonth)).limit(1),
+    db.select().from(clientBudgetMonthsTable)
+      .where(eq(clientBudgetMonthsTable.userId, userId))
+      .orderBy(desc(clientBudgetMonthsTable.month)).limit(1),
     db.select().from(financialGoalsTable).where(eq(financialGoalsTable.userId, userId)),
     db.select().from(pathwayProgressTable).where(eq(pathwayProgressTable.userId, userId)),
     db.select().from(assetsTable).where(eq(assetsTable.userId, userId)),
@@ -109,11 +109,14 @@ router.post("/health-score", requireAuth, async (req, res): Promise<void> => {
   const goalSummaries = await Promise.all(goals.map(goal => computeGoalFundingSummary(userId, goal)));
 
   // ── Shared values ──────────────────────────────────────────────────────────
-  // Income: only from latest budget entry — pathway formData is not used as a fallback
-  const income = lastBudget ? parseFloat(lastBudget.income ?? "0") : 0;
-  const expenseKeys = ["housing", "food", "transport", "utilities", "entertainment", "other"] as const;
+  // Free-tier budgets use the same table as investment-client budgets. Their
+  // fields are a subset: one income and the six legacy main spending lines.
+  const income = lastBudget ? parseFloat(lastBudget.primaryIncome ?? "0") : 0;
   const totalExpenses = lastBudget
-    ? expenseKeys.reduce((s, k) => s + parseFloat((lastBudget as any)[k] ?? "0"), 0)
+    ? [
+        lastBudget.housing, lastBudget.foodDining, lastBudget.transport,
+        lastBudget.utilities, lastBudget.entertainment, lastBudget.otherExpenses,
+      ].reduce((sum, value) => sum + (parseFloat(value ?? "0") || 0), 0)
     : 0;
   const monthlyCashSaved = Math.max(0, income - totalExpenses);
 

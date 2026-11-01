@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq, and, desc } from "drizzle-orm";
-import { db, budgetEntriesTable, budgetTransactionsTable } from "@workspace/db";
-import { requireAuth } from "../middlewares/requireAuth";
+import { db, budgetTransactionsTable, clientBudgetMonthsTable } from "@workspace/db";
+import { requireAuth, requireRole } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
 
@@ -16,45 +16,177 @@ function calcBudgetFields(income: string | undefined, housing: string | undefine
   return { savings, savingsRate, needs, wants };
 }
 
+function normalizeMonth(value: unknown): string | null {
+  const match = /^(\d{4})-(\d{2})(?:-\d{2})?$/.exec(String(value ?? ""));
+  if (!match) return null;
+  const month = Number(match[2]);
+  if (month < 1 || month > 12) return null;
+  return `${match[1]}-${match[2]}-01`;
+}
+
+type SharedBudgetMonth = typeof clientBudgetMonthsTable.$inferSelect;
+
+function toLegacyEntry(row: SharedBudgetMonth) {
+  const income = row.primaryIncome ?? "0";
+  const housing = row.housing ?? "0";
+  const food = row.foodDining ?? "0";
+  const transport = row.transport ?? "0";
+  const utilities = row.utilities ?? "0";
+  const entertainment = row.entertainment ?? "0";
+  const other = row.otherExpenses ?? "0";
+  const { needs, wants } = calcBudgetFields(
+    income, housing, food, transport, utilities, entertainment, other,
+  );
+  return {
+    id: row.id,
+    userId: row.userId,
+    periodMonth: row.month,
+    currency: row.currency,
+    income,
+    housing,
+    food,
+    transport,
+    utilities,
+    entertainment,
+    other,
+    needsActual: String(needs),
+    wantsActual: String(wants),
+    savingsActual: row.netSurplus,
+    savingsRatePercent: (parseFloat(row.savingsRatePct ?? "0") || 0).toFixed(2),
+    notes: row.notes,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
 // ── Budget entries ───────────────────────────────────────────────────────────
 
-router.get("/budget", requireAuth, async (req, res): Promise<void> => {
+router.get("/budget", requireAuth, requireRole("free_user"), async (req, res): Promise<void> => {
   const userId = (req as any).userId;
-  const entries = await db.select().from(budgetEntriesTable)
-    .where(eq(budgetEntriesTable.userId, userId))
-    .orderBy(budgetEntriesTable.periodMonth);
-  res.json(entries);
+  const entries = await db.select().from(clientBudgetMonthsTable)
+    .where(eq(clientBudgetMonthsTable.userId, userId))
+    .orderBy(clientBudgetMonthsTable.month);
+  res.json(entries.map(toLegacyEntry));
 });
 
-router.post("/budget", requireAuth, async (req, res): Promise<void> => {
+router.post("/budget", requireAuth, requireRole("free_user"), async (req, res): Promise<void> => {
   const userId = (req as any).userId;
   const { periodMonth, currency, income, housing, food, transport, utilities, entertainment, other, notes } = req.body;
-  if (!periodMonth) { res.status(400).json({ error: "periodMonth required" }); return; }
-  const { savings, savingsRate, needs, wants } = calcBudgetFields(income, housing, food, transport, utilities, entertainment, other);
-  const [entry] = await db.insert(budgetEntriesTable).values({
-    userId, periodMonth, currency: currency ?? "USD",
-    income: income?.toString() ?? null, housing: housing?.toString() ?? null, food: food?.toString() ?? null,
-    transport: transport?.toString() ?? null, utilities: utilities?.toString() ?? null,
-    entertainment: entertainment?.toString() ?? null, other: other?.toString() ?? null,
-    needsActual: needs.toString(), wantsActual: wants.toString(),
-    savingsActual: savings.toString(), savingsRatePercent: savingsRate.toFixed(2), notes: notes ?? null,
+  const month = normalizeMonth(periodMonth);
+  if (!month) { res.status(400).json({ error: "periodMonth must be a valid YYYY-MM or YYYY-MM-DD month" }); return; }
+  const { savings, savingsRate } = calcBudgetFields(income, housing, food, transport, utilities, entertainment, other);
+  const incomeValue = income?.toString() ?? "0";
+  const housingValue = housing?.toString() ?? "0";
+  const foodValue = food?.toString() ?? "0";
+  const transportValue = transport?.toString() ?? "0";
+  const utilitiesValue = utilities?.toString() ?? "0";
+  const entertainmentValue = entertainment?.toString() ?? "0";
+  const otherValue = other?.toString() ?? "0";
+  const expenses = [housingValue, foodValue, transportValue, utilitiesValue, entertainmentValue, otherValue]
+    .reduce((sum, value) => sum + (parseFloat(value) || 0), 0);
+  const [entry] = await db.insert(clientBudgetMonthsTable).values({
+    userId,
+    month,
+    currency: currency ?? "USD",
+    primaryIncome: incomeValue,
+    secondaryIncome: "0",
+    rentalIncome: "0",
+    otherIncome: "0",
+    housing: housingValue,
+    utilities: utilitiesValue,
+    transport: transportValue,
+    insurance: "0",
+    foodDining: foodValue,
+    entertainment: entertainmentValue,
+    shopping: "0",
+    health: "0",
+    education: "0",
+    otherExpenses: otherValue,
+    debtPayments: "0",
+    investmentContributions: [],
+    totalIncome: incomeValue,
+    totalExpenses: String(expenses),
+    totalInvestments: "0",
+    netSurplus: String(savings),
+    savingsRatePct: String(savingsRate),
+    notes: notes ?? null,
+  }).onConflictDoUpdate({
+    target: [clientBudgetMonthsTable.userId, clientBudgetMonthsTable.month],
+    set: {
+      currency: currency ?? "USD",
+      primaryIncome: incomeValue,
+      secondaryIncome: "0",
+      rentalIncome: "0",
+      otherIncome: "0",
+      housing: housingValue,
+      utilities: utilitiesValue,
+      transport: transportValue,
+      insurance: "0",
+      foodDining: foodValue,
+      entertainment: entertainmentValue,
+      shopping: "0",
+      health: "0",
+      education: "0",
+      otherExpenses: otherValue,
+      debtPayments: "0",
+      investmentContributions: [],
+      totalIncome: incomeValue,
+      totalExpenses: String(expenses),
+      totalInvestments: "0",
+      netSurplus: String(savings),
+      savingsRatePct: String(savingsRate),
+      notes: notes ?? null,
+      updatedAt: new Date(),
+    },
   }).returning();
-  res.status(201).json(entry);
+  res.status(201).json(toLegacyEntry(entry));
 });
 
-router.put("/budget/:id", requireAuth, async (req, res): Promise<void> => {
+router.put("/budget/:id", requireAuth, requireRole("free_user"), async (req, res): Promise<void> => {
   const userId = (req as any).userId;
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const { periodMonth, currency, income, housing, food, transport, utilities, entertainment, other, notes } = req.body;
-  const { savings, savingsRate, needs, wants } = calcBudgetFields(income, housing, food, transport, utilities, entertainment, other);
-  const [updated] = await db.update(budgetEntriesTable).set({
-    periodMonth, currency, income: income?.toString(), housing: housing?.toString(), food: food?.toString(),
-    transport: transport?.toString(), utilities: utilities?.toString(), entertainment: entertainment?.toString(),
-    other: other?.toString(), needsActual: needs.toString(), wantsActual: wants.toString(),
-    savingsActual: savings.toString(), savingsRatePercent: savingsRate.toFixed(2), notes, updatedAt: new Date(),
-  }).where(and(eq(budgetEntriesTable.id, rawId), eq(budgetEntriesTable.userId, userId))).returning();
+  const month = normalizeMonth(periodMonth);
+  if (!month) { res.status(400).json({ error: "periodMonth must be a valid YYYY-MM or YYYY-MM-DD month" }); return; }
+  const { savings, savingsRate } = calcBudgetFields(income, housing, food, transport, utilities, entertainment, other);
+  const incomeValue = income?.toString() ?? "0";
+  const housingValue = housing?.toString() ?? "0";
+  const foodValue = food?.toString() ?? "0";
+  const transportValue = transport?.toString() ?? "0";
+  const utilitiesValue = utilities?.toString() ?? "0";
+  const entertainmentValue = entertainment?.toString() ?? "0";
+  const otherValue = other?.toString() ?? "0";
+  const expenses = [housingValue, foodValue, transportValue, utilitiesValue, entertainmentValue, otherValue]
+    .reduce((sum, value) => sum + (parseFloat(value) || 0), 0);
+  const [updated] = await db.update(clientBudgetMonthsTable).set({
+    month,
+    currency: currency ?? "USD",
+    primaryIncome: incomeValue,
+    secondaryIncome: "0",
+    rentalIncome: "0",
+    otherIncome: "0",
+    housing: housingValue,
+    utilities: utilitiesValue,
+    transport: transportValue,
+    insurance: "0",
+    foodDining: foodValue,
+    entertainment: entertainmentValue,
+    shopping: "0",
+    health: "0",
+    education: "0",
+    otherExpenses: otherValue,
+    debtPayments: "0",
+    investmentContributions: [],
+    totalIncome: incomeValue,
+    totalExpenses: String(expenses),
+    totalInvestments: "0",
+    netSurplus: String(savings),
+    savingsRatePct: String(savingsRate),
+    notes: notes ?? null,
+    updatedAt: new Date(),
+  }).where(and(eq(clientBudgetMonthsTable.id, rawId), eq(clientBudgetMonthsTable.userId, userId))).returning();
   if (!updated) { res.status(404).json({ error: "Not found" }); return; }
-  res.json(updated);
+  res.json(toLegacyEntry(updated));
 });
 
 // ── Budget transactions ──────────────────────────────────────────────────────
@@ -90,6 +222,30 @@ router.post("/budget/transactions", requireAuth, async (req, res): Promise<void>
     isRecurring: isRecurring ?? false,
   }).returning();
   res.status(201).json(tx);
+});
+
+router.put("/budget/transactions/:id", requireAuth, async (req, res): Promise<void> => {
+  const userId = (req as any).userId;
+  const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const { periodMonth, description, amount, type, category, transactionDate, isRecurring } = req.body;
+  if (!periodMonth || !description || amount == null || !transactionDate) {
+    res.status(400).json({ error: "periodMonth, description, amount, transactionDate required" });
+    return;
+  }
+  const [tx] = await db.update(budgetTransactionsTable).set({
+    periodMonth,
+    description,
+    amount: String(amount),
+    type: type ?? "expense",
+    category: category ?? "other",
+    transactionDate,
+    isRecurring: isRecurring ?? false,
+  }).where(and(
+    eq(budgetTransactionsTable.id, rawId),
+    eq(budgetTransactionsTable.userId, userId),
+  )).returning();
+  if (!tx) { res.status(404).json({ error: "Not found" }); return; }
+  res.json(tx);
 });
 
 router.delete("/budget/transactions/:id", requireAuth, async (req, res): Promise<void> => {

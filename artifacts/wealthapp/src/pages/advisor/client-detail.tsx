@@ -29,6 +29,7 @@ interface ClientProfile {
   prospectOnboardingComplete: boolean;
   fullOnboardingComplete: boolean;
   onboardingStep: number;
+  shareBudgetWithAdvisor: boolean;
 }
 
 interface ClientUser {
@@ -51,6 +52,14 @@ interface Goal {
 interface Task { id: string; title: string; priority: string; status: string; dueDate: string | null; }
 
 interface AdvisedPlanSummary { id: string; status: string; latestAccountValue: string; }
+interface AdvisorBudgetSummaryMonth {
+  month: string;
+  income: string;
+  spending: string;
+  surplus: string;
+  savingsRatePct: string;
+}
+interface AdvisorBudgetSummary { shared: boolean; months: AdvisorBudgetSummaryMonth[]; }
 
 interface Conversation { id: string; clientId: string; advisorId: string; }
 interface Message { id: string; senderId: string; senderRole: string | null; content: string; createdAt: string; }
@@ -75,6 +84,13 @@ export default function AdvisorClientDetail() {
     queryKey: ["advisor-client-cp", id],
     queryFn: () => apiFetch(`/advisor/clients/${id}/client-profile`),
     enabled: !!id,
+  });
+
+  const { data: budgetSummary, isLoading: budgetSummaryLoading, isError: budgetSummaryError } = useQuery<AdvisorBudgetSummary>({
+    queryKey: ["advisor-client-budget-summary", id],
+    queryFn: () => apiFetch<AdvisorBudgetSummary>(`/advisor/clients/${id}/budget-summary`),
+    enabled: !!id && clientProfile?.shareBudgetWithAdvisor === true,
+    retry: false,
   });
 
   const { data: goals = [] } = useQuery<Goal[]>({
@@ -209,6 +225,35 @@ export default function AdvisorClientDetail() {
         <TabsContent value="profile">
           {clientProfile && (
             <div className="space-y-6">
+              <div className="bg-surface border border-hairline rounded-[26px] p-6 shadow-[0_2px_14px_rgba(20,52,42,0.04)]">
+                <h3 className="font-display text-[20px] font-semibold text-forest mb-3">Monthly budget summary</h3>
+                {!clientProfile.shareBudgetWithAdvisor ? (
+                  <p className="text-[14px] text-ink-40">This client hasn’t shared their monthly budget summary.</p>
+                ) : budgetSummaryLoading ? (
+                  <p className="text-[14px] text-ink-40">Loading shared totals…</p>
+                ) : budgetSummaryError ? (
+                  <p className="text-[14px] text-clay-ink">Could not load the shared budget summary.</p>
+                ) : !budgetSummary?.months.length ? (
+                  <p className="text-[14px] text-ink-40">No budget months are available yet.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {budgetSummary.months.map(month => (
+                      <div key={month.month} className="rounded-[16px] bg-paper px-4 py-3">
+                        <div className="font-semibold text-forest text-[14px] mb-2">
+                          {new Date(`${month.month}T00:00:00`).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-[12px]">
+                          <div><div className="text-ink-40">Income</div><div className="font-semibold text-forest">{fmtCurrency(parseFloat(month.income) || 0)}</div></div>
+                          <div><div className="text-ink-40">Spending</div><div className="font-semibold text-forest">{fmtCurrency(parseFloat(month.spending) || 0)}</div></div>
+                          <div><div className="text-ink-40">Surplus</div><div className="font-semibold text-forest">{fmtCurrency(parseFloat(month.surplus) || 0)}</div></div>
+                          <div><div className="text-ink-40">Savings rate</div><div className="font-semibold text-forest">{(parseFloat(month.savingsRatePct) || 0).toFixed(1)}%</div></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div className="bg-surface border border-hairline rounded-[26px] p-6 shadow-[0_2px_14px_rgba(20,52,42,0.04)] space-y-5">
                 <h3 className="font-display text-[20px] font-semibold text-forest">Client Status</h3>
                 <div className="grid grid-cols-2 gap-4">

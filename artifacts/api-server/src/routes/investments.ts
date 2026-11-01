@@ -124,6 +124,7 @@ const SELF_SERVICE_CLIENT_PROFILE_FIELDS = [
   "indicativeAmount",
   "onboardingStep",
   "prospectOnboardingComplete",
+  "shareBudgetWithAdvisor",
 ] as const;
 
 function pickSelfServiceClientProfileFields(body: Record<string, unknown>): Record<string, unknown> {
@@ -152,6 +153,13 @@ router.put("/client-profile/me", requireAuth, async (req, res): Promise<void> =>
   const userId = (req as any).userId;
   const body = req.body ?? {};
   const updates = pickSelfServiceClientProfileFields(body);
+  if (
+    Object.prototype.hasOwnProperty.call(updates, "shareBudgetWithAdvisor")
+    && typeof updates.shareBudgetWithAdvisor !== "boolean"
+  ) {
+    res.status(400).json({ error: "shareBudgetWithAdvisor must be a boolean" });
+    return;
+  }
   if (Object.prototype.hasOwnProperty.call(updates, "riskProfile")) {
     const riskProfile = normalizeRiskProfile(updates.riskProfile);
     if (!riskProfile) { res.status(400).json({ error: "Invalid risk profile" }); return; }

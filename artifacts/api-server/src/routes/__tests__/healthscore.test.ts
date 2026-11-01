@@ -11,7 +11,7 @@ const {
   scoreEffectiveSavingsRate, scoreGoalProjection, scoreNetWorth, scoreWealthGrowthRate,
 } = await import("../healthscore");
 const {
-  db, profilesTable, financialGoalsTable, budgetEntriesTable, assetsTable, liabilitiesTable,
+  db, profilesTable, financialGoalsTable, clientBudgetMonthsTable, assetsTable, liabilitiesTable,
 } = await import("@workspace/db");
 const { eq } = await import("drizzle-orm");
 
@@ -97,7 +97,7 @@ describe("POST /health-score", () => {
       })),
     );
 
-    // noBudgetUser: has a goal, but no budget_entries row at all (income should resolve to 0).
+    // noBudgetUser: has a goal, but no shared budget row at all (income should resolve to 0).
     await db.insert(financialGoalsTable).values({
       userId: noBudgetUser, title: "Emergency fund", goalType: "emergency", targetAmount: "10000", currentAmount: "0", status: "active",
     });
@@ -111,9 +111,11 @@ describe("POST /health-score", () => {
       totalSavings: "500000", totalInvestments: "500000",
       savingsRatePercent: "20", investmentRatePercent: "20",
     }).where(eq(profilesTable.id, maxedUser));
-    await db.insert(budgetEntriesTable).values({
-      userId: maxedUser, periodMonth: "2026-01-01", income: "10000",
-      housing: "1000", food: "500", transport: "200", utilities: "100", entertainment: "100", other: "100",
+    await db.insert(clientBudgetMonthsTable).values({
+      userId: maxedUser, month: "2026-01-01", primaryIncome: "10000",
+      housing: "1000", foodDining: "500", transport: "200", utilities: "100",
+      entertainment: "100", otherExpenses: "100", totalIncome: "10000",
+      totalExpenses: "2000", totalInvestments: "0", netSurplus: "8000", savingsRatePct: "80",
     });
     await db.insert(financialGoalsTable).values({
       userId: maxedUser, title: "Already there", goalType: "wealth",
@@ -129,7 +131,7 @@ describe("POST /health-score", () => {
   afterAll(async () => {
     for (const id of allUsers) {
       await db.delete(financialGoalsTable).where(eq(financialGoalsTable.userId, id));
-      await db.delete(budgetEntriesTable).where(eq(budgetEntriesTable.userId, id));
+      await db.delete(clientBudgetMonthsTable).where(eq(clientBudgetMonthsTable.userId, id));
       await db.delete(assetsTable).where(eq(assetsTable.userId, id));
       await db.delete(liabilitiesTable).where(eq(liabilitiesTable.userId, id));
       await db.delete(profilesTable).where(eq(profilesTable.id, id));

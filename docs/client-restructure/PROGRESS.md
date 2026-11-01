@@ -1,7 +1,7 @@
 # Restructure progress
 
 ## Current phase
-P6 review fixes — done
+P7 — Quick budget + advisor budget summary
 
 ## Baseline (Phase 0)
 - typecheck: passed (`pnpm run typecheck`; all libraries and leaf workspaces completed).
@@ -428,6 +428,17 @@ Files changed:
 - `artifacts/wealthapp/src/lib/__tests__/riskScore.test.ts`
 - `lib/api-client-react/src/custom-fetch.ts`
 - `docs/client-restructure/PROGRESS.md`
+
+### P7 — Quick budget + advisor budget summary
+Plan:
+- Before any schema change or migration write, export `budget_entries`, `client_budget_months`, and `client_profiles` to fresh ignored data-only backups; record and verify each row count. Keep the 38 `budget_transactions` rows and check their foreign-key dependencies before changing budget code.
+- Add `client_profiles.share_budget_with_advisor` as a boolean defaulting false. If the normal schema push asks to truncate, drop, rename, or lose data, answer no and record the exact prompt; use only a safe additive operation if needed.
+- Add an idempotent migration script for free-tier budget rows. Run and record a dry run first, skip/log rows colliding with an existing shared month, never overwrite a shared row, then apply and verify counts. Audit duplicate free-tier source months and log their handling; do not drop `budget_entries`.
+- Keep the free budget route contract while backing monthly reads/writes with `client_budget_months`; move free health-score and Sol budget reads to the same shared month rows. Keep transaction CRUD/carry-forward on `budget_transactions`, and mark `budget_entries` deprecated in the schema.
+- Update the investment-client Budget page to show take-home plus the six main spending lines by default, reveal the full lines with “Add detail,” retain entered detail, copy the previous month into an unsaved draft, and save only on explicit save.
+- Add the client consent toggle on Messages/Advisor and an advisor-owned, super-admin-accessible last-12-month summary endpoint that returns only income, spending, surplus, and savings rate when consent is on; show a read-only advisor client-detail card and a clear not-shared state.
+- Update OpenAPI and generated contracts; add API/UI tests for consent and authorization, no line items, migration dry-run/copy/conflicts/idempotence, unchanged free budget/health-score values, and quick/detail saves to one shared month.
+- Run `pnpm run typecheck`, the API suite, and WealthApp tests; record results, audit/backup counts, decisions, and changed files. Commit with `[restructure P7]`, push to GitHub `main`, and do not publish or deploy.
 
 ## Next agent: start here
 - Phase 6 is complete. Start Phase 7 — Quick budget + advisor budget summary: read its master-prompt section and Section 3, record the plan here before editing, and audit `budget_entries`/`client_budget_months` before any backfill. Keep `budget_entries`; Phase 7 must not drop it.

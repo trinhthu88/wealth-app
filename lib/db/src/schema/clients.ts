@@ -46,6 +46,8 @@ export const clientProfilesTable = pgTable("client_profiles", {
   // Client preferences for the Home setup checklist; not financial facts.
   startingFromZero: boolean("starting_from_zero").notNull().default(false),
   checklistHidden: boolean("checklist_hidden").notNull().default(false),
+  // Explicit client consent for sharing aggregate monthly budget data with the current advisor.
+  shareBudgetWithAdvisor: boolean("share_budget_with_advisor").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (t) => [
