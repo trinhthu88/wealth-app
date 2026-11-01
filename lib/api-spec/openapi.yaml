@@ -1391,7 +1391,16 @@ components:
         onboardingComplete:
           type: boolean
         riskProfile:
+          description: Owned by client_profiles.risk_profile.
           type: ["string", "null"]
+          enum: [conservative, balanced, growth, null]
+        riskProfileSource:
+          type: ["string", "null"]
+          enum: [self, advisor, null]
+        dateOfBirth:
+          description: First day of the birth month (YYYY-MM-01); month and year only.
+          type: ["string", "null"]
+          format: date
         createdAt:
           type: string
         updatedAt:
@@ -1412,7 +1421,12 @@ components:
         onboardingComplete:
           type: boolean
         riskProfile:
+          description: Legacy labels (moderate, aggressive, any case) are mapped; other values return 400.
           type: string
+          enum: [conservative, balanced, growth]
+        dateOfBirth:
+          description: YYYY-MM (or YYYY-MM-DD; the day is discarded). Stored as the 1st of the month.
+          type: ["string", "null"]
         avatarUrl:
           type: string
 

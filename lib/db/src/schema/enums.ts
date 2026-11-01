@@ -27,5 +27,23 @@ export const firstFocusValues = [
 ] as const;
 export const firstFocusSchema = z.enum(firstFocusValues);
 
+export const riskProfileValues = ["conservative", "balanced", "growth"] as const;
+export const riskProfileSchema = z.enum(riskProfileValues);
+export type RiskProfile = (typeof riskProfileValues)[number];
+
+// Legacy labels (free-tier quiz, older advisor/admin selects) mapped onto the
+// one stored vocabulary. Returns null for anything that is not a risk profile.
+const legacyRiskProfileMap: Record<string, RiskProfile> = { moderate: "balanced", aggressive: "growth", "growth-oriented": "growth" };
+export function normalizeRiskProfile(value: unknown): RiskProfile | null {
+  if (typeof value !== "string") return null;
+  const key = value.trim().toLowerCase();
+  const parsed = riskProfileSchema.safeParse(key);
+  if (parsed.success) return parsed.data;
+  return legacyRiskProfileMap[key] ?? null;
+}
+
+export const riskProfileSourceValues = ["self", "advisor"] as const;
+export const riskProfileSourceSchema = z.enum(riskProfileSourceValues);
+
 export const healthScoreTierValues = ["free", "client"] as const;
 export const healthScoreTierSchema = z.enum(healthScoreTierValues);

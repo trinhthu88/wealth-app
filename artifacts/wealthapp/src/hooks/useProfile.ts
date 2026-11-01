@@ -13,7 +13,11 @@ export interface Profile {
   preferredCurrency: string | null;
   countryCode: string | null;
   isExpat: boolean | null;
+  /** Owned by client_profiles; returned on /profiles/me for convenience. */
   riskProfile: string | null;
+  riskProfileSource?: "self" | "advisor" | null;
+  /** First of the month, YYYY-MM-01 (month + year only). */
+  dateOfBirth?: string | null;
   onboardingComplete: boolean | null;
   totalSavings: string | null;
   totalInvestments: string | null;

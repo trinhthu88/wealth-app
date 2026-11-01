@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import request from "supertest";
 
 vi.mock("@clerk/express", () => ({
@@ -7,6 +7,16 @@ vi.mock("@clerk/express", () => ({
 }));
 
 const { default: app } = await import("../../app");
+const { db, profilesTable } = await import("@workspace/db");
+const { eq } = await import("drizzle-orm");
+
+const ADMIN_ID = `enum-test-admin-${Date.now()}`;
+beforeAll(async () => {
+  await db.insert(profilesTable).values({ id: ADMIN_ID, email: `${ADMIN_ID}@test.local`, role: "super_admin" });
+});
+afterAll(async () => {
+  await db.delete(profilesTable).where(eq(profilesTable.id, ADMIN_ID));
+});
 
 describe("shared status enum validation", () => {
   it("rejects legacy goal pacing values at the API boundary", async () => {
@@ -19,11 +29,13 @@ describe("shared status enum validation", () => {
     expect(response.body.error).toBe("Invalid goal lifecycle status");
   });
 
-  it("rejects unknown client lifecycle values before touching the database", async () => {
+  it("rejects unknown client lifecycle values on the admin user route", async () => {
+    // Client status is advisor/admin-only; PUT /client-profile/me ignores it
+    // entirely (covered in profileFieldsP5.test.ts).
     const response = await request(app)
-      .put("/api/client-profile/me")
-      .set({ "x-test-user-id": "enum-test-user" })
-      .send({ status: "prospect" })
+      .post("/api/admin/users")
+      .set({ "x-test-user-id": ADMIN_ID })
+      .send({ email: "enum-status@example.test", password: "x", role: "investment_client", status: "prospect" })
       .expect(400);
 
     expect(response.body.error).toBe("Invalid client status");

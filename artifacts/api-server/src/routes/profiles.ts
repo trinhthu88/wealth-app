@@ -1,7 +1,8 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
-import { db, profilesTable } from "@workspace/db";
+import { db, profilesTable, clientProfilesTable, normalizeRiskProfile } from "@workspace/db";
 import { requireAuth } from "../middlewares/requireAuth";
+import { parseDateOfBirth, setRiskProfile } from "../lib/profileFields";
 
 const router: IRouter = Router();
 
@@ -41,21 +42,43 @@ router.get("/profiles/me", requireAuth, async (req, res): Promise<void> => {
     res.status(404).json({ error: "Profile not found" });
     return;
   }
-  res.json(profile);
+  res.json(await withOwnedRiskProfile(profile));
 });
+
+// client_profiles owns the risk profile; the deprecated profiles copy is never returned.
+async function withOwnedRiskProfile<T extends { id: string }>(profile: T) {
+  const [cp] = await db.select({ riskProfile: clientProfilesTable.riskProfile, riskProfileSource: clientProfilesTable.riskProfileSource })
+    .from(clientProfilesTable).where(eq(clientProfilesTable.userId, profile.id));
+  return { ...profile, riskProfile: cp?.riskProfile ?? null, riskProfileSource: cp?.riskProfileSource ?? null };
+}
 
 router.put("/profiles/me", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
+  const body = req.body ?? {};
   const {
     fullName, preferredCurrency, countryCode, isExpat,
-    onboardingComplete, riskProfile, avatarUrl,
+    onboardingComplete, avatarUrl,
     totalSavings, totalInvestments, savingsRatePercent, investmentRatePercent,
-  } = req.body;
+  } = body;
+
+  const hasRisk = Object.prototype.hasOwnProperty.call(body, "riskProfile");
+  const riskProfile = hasRisk ? normalizeRiskProfile(body.riskProfile) : null;
+  if (hasRisk && !riskProfile) {
+    res.status(400).json({ error: "Invalid risk profile" });
+    return;
+  }
+  const hasDob = Object.prototype.hasOwnProperty.call(body, "dateOfBirth");
+  const dateOfBirth = hasDob && body.dateOfBirth !== null ? parseDateOfBirth(body.dateOfBirth) : null;
+  if (hasDob && body.dateOfBirth !== null && !dateOfBirth) {
+    res.status(400).json({ error: "Invalid date of birth" });
+    return;
+  }
 
   const updates: Record<string, unknown> = {
     fullName, preferredCurrency, countryCode, isExpat,
-    onboardingComplete, riskProfile, avatarUrl, updatedAt: new Date(),
+    onboardingComplete, avatarUrl, updatedAt: new Date(),
   };
+  if (hasDob) updates.dateOfBirth = dateOfBirth;
   if (totalSavings !== undefined) updates.totalSavings = String(totalSavings);
   if (totalInvestments !== undefined) updates.totalInvestments = String(totalInvestments);
   if (savingsRatePercent !== undefined) updates.savingsRatePercent = String(savingsRatePercent);
@@ -69,7 +92,8 @@ router.put("/profiles/me", requireAuth, async (req, res): Promise<void> => {
     res.status(404).json({ error: "Profile not found" });
     return;
   }
-  res.json(updated);
+  if (riskProfile) await setRiskProfile(userId, riskProfile, "self");
+  res.json(await withOwnedRiskProfile(updated));
 });
 
 export default router;

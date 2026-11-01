@@ -63,6 +63,32 @@ export interface NetWorthSummary {
   items: NetWorthItem[];
 }
 
+/**
+ * Owned by client_profiles.risk_profile.
+ * @nullable
+ */
+export type ProfileRiskProfile =
+  | (typeof ProfileRiskProfile)[keyof typeof ProfileRiskProfile]
+  | null;
+
+export const ProfileRiskProfile = {
+  conservative: "conservative",
+  balanced: "balanced",
+  growth: "growth",
+} as const;
+
+/**
+ * @nullable
+ */
+export type ProfileRiskProfileSource =
+  | (typeof ProfileRiskProfileSource)[keyof typeof ProfileRiskProfileSource]
+  | null;
+
+export const ProfileRiskProfileSource = {
+  self: "self",
+  advisor: "advisor",
+} as const;
+
 export interface Profile {
   id: string;
   email: string;
@@ -76,11 +102,33 @@ export interface Profile {
   countryCode?: string | null;
   isExpat: boolean;
   onboardingComplete: boolean;
+  /**
+   * Owned by client_profiles.risk_profile.
+   * @nullable
+   */
+  riskProfile?: ProfileRiskProfile;
   /** @nullable */
-  riskProfile?: string | null;
+  riskProfileSource?: ProfileRiskProfileSource;
+  /**
+   * First day of the birth month (YYYY-MM-01); month and year only.
+   * @nullable
+   */
+  dateOfBirth?: string | null;
   createdAt: string;
   updatedAt: string;
 }
+
+/**
+ * Legacy labels (moderate, aggressive, any case) are mapped; other values return 400.
+ */
+export type UpdateProfileBodyRiskProfile =
+  (typeof UpdateProfileBodyRiskProfile)[keyof typeof UpdateProfileBodyRiskProfile];
+
+export const UpdateProfileBodyRiskProfile = {
+  conservative: "conservative",
+  balanced: "balanced",
+  growth: "growth",
+} as const;
 
 export interface UpdateProfileBody {
   fullName?: string;
@@ -88,7 +136,13 @@ export interface UpdateProfileBody {
   countryCode?: string;
   isExpat?: boolean;
   onboardingComplete?: boolean;
-  riskProfile?: string;
+  /** Legacy labels (moderate, aggressive, any case) are mapped; other values return 400. */
+  riskProfile?: UpdateProfileBodyRiskProfile;
+  /**
+   * YYYY-MM (or YYYY-MM-DD; the day is discarded). Stored as the 1st of the month.
+   * @nullable
+   */
+  dateOfBirth?: string | null;
   avatarUrl?: string;
 }
 

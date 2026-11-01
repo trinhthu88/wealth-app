@@ -69,6 +69,13 @@ const RISK_PROFILES: Record<string, { name: string; desc: string; eq: number; bo
   Growth: { name: "Growth", desc: "You're comfortable with volatility for higher long-term returns.", eq: 80, bond: 15, cash: 5 },
   Aggressive: { name: "Aggressive", desc: "You're fully growth-focused and can ride out big swings.", eq: 95, bond: 5, cash: 0 },
 };
+// Display labels above map onto the one stored risk vocabulary (conservative | balanced | growth).
+const RISK_PROFILE_STORED_VALUE: Record<string, "conservative" | "balanced" | "growth"> = {
+  Conservative: "conservative",
+  Moderate: "balanced",
+  Growth: "growth",
+  Aggressive: "growth",
+};
 
 function getRiskProfile(answers: (number | null)[]) {
   const total = answers.reduce<number>((s, a) => s + (a ?? 0), 0);
@@ -293,7 +300,7 @@ export default function FreeOnboardingPage() {
         await apiFetch("/health-score", { method: "POST" })
           .then((data: any) => track("health_score_calculated", { score: data?.overallScore }))
           .catch(() => {});
-        update.mutate({ riskProfile: rp, onboardingComplete: true } as any);
+        update.mutate({ riskProfile: RISK_PROFILE_STORED_VALUE[rp], onboardingComplete: true } as any);
         confetti({ particleCount: 160, spread: 90, origin: { y: 0.6 } });
         setTimeout(() => confetti({ particleCount: 80, spread: 120, origin: { y: 0.4 }, angle: 60 }), 300);
         setTimeout(() => confetti({ particleCount: 80, spread: 120, origin: { y: 0.4 }, angle: 120 }), 400);

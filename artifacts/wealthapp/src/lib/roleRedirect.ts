@@ -1,4 +1,5 @@
 import type { Profile } from "@/hooks/useProfile";
+import type { OnboardingStage } from "@/hooks/useClientTrack";
 
 /**
  * Single source of truth for where /dashboard sends a signed-in user.
@@ -7,12 +8,12 @@ import type { Profile } from "@/hooks/useProfile";
  */
 export function resolveRoleRedirectPath(
   role: Profile["role"] | undefined,
-  onboardingTrackComplete: boolean,
+  onboardingStage: OnboardingStage,
 ): string {
   if (role === "super_admin") return "/admin/dashboard";
   if (role === "advisor") return "/advisor/dashboard";
   if (role === "investment_client") {
-    return onboardingTrackComplete ? "/client/dashboard" : "/client/onboarding";
+    return onboardingStage === "complete" ? "/client/dashboard" : "/client/onboarding";
   }
   return "/free/dashboard";
 }

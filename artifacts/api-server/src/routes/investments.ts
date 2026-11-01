@@ -12,7 +12,7 @@ import {
   scenariosTable,
   clientProfilesTable,
   profilesTable,
-  clientStatusSchema,
+  normalizeRiskProfile,
 } from "@workspace/db";
 import { requireAuth, requireRole, requireAdvisorOwnsClient, requirePackageReadAccess, requireAdvisorOwnsPackage } from "../middlewares/requireAuth";
 
@@ -115,6 +115,8 @@ router.post("/client-financial-snapshot", requireAuth, async (req, res): Promise
 // Explicit allowlist of client_profiles fields a client may set about themselves
 // through the self-service endpoint. advisorId, kycStatus, id, internal advisor
 // notes, and other advisor/admin-only fields are intentionally excluded.
+// status is advisor/admin-only (client lifecycle), so it is not listed; a
+// client-sent status is ignored.
 const SELF_SERVICE_CLIENT_PROFILE_FIELDS = [
   "riskProfile",
   "riskScore",
@@ -122,7 +124,6 @@ const SELF_SERVICE_CLIENT_PROFILE_FIELDS = [
   "indicativeAmount",
   "onboardingStep",
   "prospectOnboardingComplete",
-  "status",
 ] as const;
 
 function pickSelfServiceClientProfileFields(body: Record<string, unknown>): Record<string, unknown> {
@@ -150,11 +151,13 @@ router.get("/client-profile/me", requireAuth, async (req, res): Promise<void> =>
 router.put("/client-profile/me", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
   const body = req.body ?? {};
-  if (Object.prototype.hasOwnProperty.call(body, "status") && !clientStatusSchema.safeParse(body.status).success) {
-    res.status(400).json({ error: "Invalid client status" });
-    return;
-  }
   const updates = pickSelfServiceClientProfileFields(body);
+  if (Object.prototype.hasOwnProperty.call(updates, "riskProfile")) {
+    const riskProfile = normalizeRiskProfile(updates.riskProfile);
+    if (!riskProfile) { res.status(400).json({ error: "Invalid risk profile" }); return; }
+    updates.riskProfile = riskProfile;
+    updates.riskProfileSource = "self";
+  }
   const existing = await db.select().from(clientProfilesTable).where(eq(clientProfilesTable.userId, userId));
   let cp;
   if (existing.length > 0) {

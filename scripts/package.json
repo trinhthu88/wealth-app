@@ -19,6 +19,10 @@
     "migrate-health-score-tier": "tsx ./src/migrate-health-score-tier.ts",
     "apply-phase1-constraints": "tsx ./src/apply-phase1-constraints.ts",
     "nightly-snapshots": "tsx ./src/nightly-snapshots.ts",
+    "p5-backfill-currency": "tsx ./src/p5-backfill-currency.ts",
+    "p5-normalize-risk-profile": "tsx ./src/p5-normalize-risk-profile.ts",
+    "p5-backfill-risk-profile": "tsx ./src/p5-backfill-risk-profile.ts",
+    "p5-backfill-onboarding-stage": "tsx ./src/p5-backfill-onboarding-stage.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {

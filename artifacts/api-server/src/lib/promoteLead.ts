@@ -1,6 +1,6 @@
 import { and, eq, isNull } from "drizzle-orm";
 import {
-  db, profilesTable, clientProfilesTable, leadsTable, advisedPlansTable, advisorAssignmentsTable,
+  db, profilesTable, clientProfilesTable, leadsTable, advisorAssignmentsTable,
 } from "@workspace/db";
 
 export type PromoteLeadResult =
@@ -14,10 +14,10 @@ export type PromoteLeadResult =
  * stamps leadsTable.convertedUserId as the historical promotion marker —
  * unless it's already set, in which case it's left alone.
  *
- * clientTrack is derived once, at promotion time, from whether the lead has
- * at least one in-force advised plan — it's a snapshot, not something this
- * re-derives on a later, unrelated edit (see the "only on the status
- * transition into client" guard at the call site in leads.ts).
+ * A free user may already have a client_profiles row holding only
+ * preferences (risk profile, onboarding stage); promotion updates that row in
+ * place rather than inserting, so the unique user_id never blocks it. Track is
+ * not written: it is derived from visible advised plans.
  *
  * Runs the role flip, client_profiles upsert, and convertedUserId stamp as a
  * single transaction — a promotion that partially succeeds (role flipped but
@@ -47,17 +47,16 @@ export async function promoteLeadToClient(
       : (await tx.update(profilesTable).set({ role: "investment_client", updatedAt: new Date() })
           .where(eq(profilesTable.id, userId)).returning())[0];
 
-    const inforcePlans = await tx.select({ id: advisedPlansTable.id }).from(advisedPlansTable)
-      .where(and(eq(advisedPlansTable.userId, userId), eq(advisedPlansTable.status, "inforce")));
-    const clientTrack = inforcePlans.length > 0 ? "track_a" : "track_b";
-
     const [existingCp] = await tx.select().from(clientProfilesTable).where(eq(clientProfilesTable.userId, userId));
     const nextCp = existingCp
       ? (await tx.update(clientProfilesTable).set({
-          advisorId, status: "active", clientTrack, updatedAt: new Date(),
+          advisorId, status: "active", updatedAt: new Date(),
         }).where(eq(clientProfilesTable.userId, userId)).returning())[0]
       : (await tx.insert(clientProfilesTable).values({
-          userId, advisorId, status: "active", clientTrack,
+          userId, advisorId, status: "active",
+        }).onConflictDoUpdate({
+          target: clientProfilesTable.userId,
+          set: { advisorId, status: "active", updatedAt: new Date() },
         }).returning())[0];
 
     const openAssignments = await tx.select({

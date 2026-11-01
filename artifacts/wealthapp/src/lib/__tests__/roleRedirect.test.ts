@@ -3,22 +3,23 @@ import { resolveRoleRedirectPath } from "../roleRedirect";
 
 describe("resolveRoleRedirectPath", () => {
   it("sends an investment_client with incomplete onboarding to /client/onboarding", () => {
-    expect(resolveRoleRedirectPath("investment_client", false)).toBe("/client/onboarding");
+    expect(resolveRoleRedirectPath("investment_client", "not_started")).toBe("/client/onboarding");
+    expect(resolveRoleRedirectPath("investment_client", "profile")).toBe("/client/onboarding");
   });
 
   it("sends an investment_client with completed onboarding to /client/dashboard", () => {
-    expect(resolveRoleRedirectPath("investment_client", true)).toBe("/client/dashboard");
+    expect(resolveRoleRedirectPath("investment_client", "complete")).toBe("/client/dashboard");
   });
 
   it("sends a super_admin to /admin/dashboard regardless of onboarding flag", () => {
-    expect(resolveRoleRedirectPath("super_admin", false)).toBe("/admin/dashboard");
+    expect(resolveRoleRedirectPath("super_admin", "not_started")).toBe("/admin/dashboard");
   });
 
   it("sends an advisor to /advisor/dashboard regardless of onboarding flag", () => {
-    expect(resolveRoleRedirectPath("advisor", false)).toBe("/advisor/dashboard");
+    expect(resolveRoleRedirectPath("advisor", "not_started")).toBe("/advisor/dashboard");
   });
 
   it("sends a free_user to /free/dashboard", () => {
-    expect(resolveRoleRedirectPath("free_user", false)).toBe("/free/dashboard");
+    expect(resolveRoleRedirectPath("free_user", "not_started")).toBe("/free/dashboard");
   });
 });

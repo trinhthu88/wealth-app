@@ -15,6 +15,7 @@ import { recordHoldingTransaction, upsertMonthlyHoldingLedgerEntry, getOrCreateD
 import { syncAdvisedPlanContributionsToBudget } from "../lib/advisedPlanBudgetSync";
 import { computeNetWorth } from "../lib/netWorthService";
 import { getCurrentAdvisorIdForClient } from "../lib/currentAdvisor";
+import { parseDateOfBirth } from "../lib/profileFields";
 
 const router: IRouter = Router();
 
@@ -35,73 +36,96 @@ async function getMilestoneCommentContext(milestoneId: string, userId: string) {
 }
 
 // ── Client profile track (used by useClientTrack) ─────────────────────────
+// Track is derived, never stored: "advised" when at least one advised plan is
+// visible to the client, else "self_managed". Onboarding state comes only from
+// client_profiles.onboarding_stage; currency from profiles.preferred_currency.
+async function deriveClientTrack(userId: string): Promise<"advised" | "self_managed"> {
+  const [plan] = await db.select({ id: advisedPlansTable.id }).from(advisedPlansTable)
+    .where(and(eq(advisedPlansTable.userId, userId), eq(advisedPlansTable.isVisibleToClient, true)))
+    .limit(1);
+  return plan ? "advised" : "self_managed";
+}
+
 router.get("/client/profile/track", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
-  const [cp] = await db.select({
-    clientTrack: clientProfilesTable.clientTrack,
-    onboardingTrackComplete: clientProfilesTable.onboardingTrackComplete,
-    preferredDisplayCurrency: clientProfilesTable.preferredDisplayCurrency,
-    advisorId: clientProfilesTable.advisorId,
-  }).from(clientProfilesTable).where(eq(clientProfilesTable.userId, userId));
-
-  res.json(cp ?? { clientTrack: "track_b", onboardingTrackComplete: false, preferredDisplayCurrency: "USD" });
+  const [[cp], [profile], track, [hiddenPlan]] = await Promise.all([
+    db.select({ onboardingStage: clientProfilesTable.onboardingStage, advisorId: clientProfilesTable.advisorId })
+      .from(clientProfilesTable).where(eq(clientProfilesTable.userId, userId)),
+    db.select({ preferredCurrency: profilesTable.preferredCurrency })
+      .from(profilesTable).where(eq(profilesTable.id, userId)),
+    deriveClientTrack(userId),
+    db.select({ id: advisedPlansTable.id }).from(advisedPlansTable)
+      .where(and(eq(advisedPlansTable.userId, userId), eq(advisedPlansTable.isVisibleToClient, false)))
+      .limit(1),
+  ]);
+  res.json({
+    track,
+    // An advisor has set up a plan the client cannot see yet.
+    hasPendingAdvisorSetup: track === "self_managed" && !!hiddenPlan,
+    onboardingStage: cp?.onboardingStage ?? "not_started",
+    preferredCurrency: profile?.preferredCurrency ?? "USD",
+    advisorId: cp?.advisorId ?? null,
+  });
 });
 
+/** Move onboarding forward only; never step a completed client back. */
+async function advanceOnboardingStage(userId: string, stage: "profile" | "complete"): Promise<void> {
+  const [existing] = await db.select({ stage: clientProfilesTable.onboardingStage })
+    .from(clientProfilesTable).where(eq(clientProfilesTable.userId, userId));
+  if (!existing) {
+    await db.insert(clientProfilesTable).values({ userId, onboardingStage: stage }).onConflictDoNothing();
+    return;
+  }
+  if (existing.stage === "complete" || existing.stage === stage) return;
+  await db.update(clientProfilesTable)
+    .set({ onboardingStage: stage, updatedAt: new Date() })
+    .where(eq(clientProfilesTable.userId, userId));
+}
+
 // ── Save profile basics during onboarding ────────────────────────────────
+// Writes profiles only (identity, currency, date of birth) and sets stage `profile`.
 router.put("/client/profile/basics", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
-  const { fullName, countryCode, isExpat, preferredDisplayCurrency } = req.body;
+  const body = req.body ?? {};
+  const { fullName, countryCode, isExpat } = body;
+  const preferredCurrency = body.preferredCurrency ?? body.preferredDisplayCurrency;
 
-  // Update profiles table
-  await db.update(profilesTable)
-    .set({ fullName: fullName ?? null, countryCode: countryCode ?? null, isExpat: isExpat ?? false, updatedAt: new Date() })
-    .where(eq(profilesTable.id, userId));
-
-  // Upsert client_profiles
-  const existing = await db.select({ id: clientProfilesTable.id })
-    .from(clientProfilesTable).where(eq(clientProfilesTable.userId, userId));
-
-  let cp;
-  if (existing.length > 0) {
-    [cp] = await db.update(clientProfilesTable)
-      .set({ preferredDisplayCurrency: preferredDisplayCurrency ?? "USD", updatedAt: new Date() })
-      .where(eq(clientProfilesTable.userId, userId))
-      .returning();
-  } else {
-    [cp] = await db.insert(clientProfilesTable)
-      .values({ userId, preferredDisplayCurrency: preferredDisplayCurrency ?? "USD" })
-      .returning();
+  const hasDob = body.dateOfBirth !== undefined && body.dateOfBirth !== null && body.dateOfBirth !== "";
+  const dateOfBirth = hasDob ? parseDateOfBirth(body.dateOfBirth) : null;
+  if (hasDob && !dateOfBirth) {
+    res.status(400).json({ error: "Invalid date of birth" });
+    return;
   }
-  res.json(cp);
+
+  const [profile] = await db.update(profilesTable)
+    .set({
+      fullName: fullName ?? null, countryCode: countryCode ?? null, isExpat: isExpat ?? false,
+      ...(preferredCurrency ? { preferredCurrency } : {}),
+      ...(hasDob ? { dateOfBirth } : {}),
+      updatedAt: new Date(),
+    })
+    .where(eq(profilesTable.id, userId))
+    .returning();
+  if (!profile) { res.status(404).json({ error: "Profile not found" }); return; }
+
+  await advanceOnboardingStage(userId, "profile");
+  res.json(profile);
 });
 
 // ── Mark onboarding complete ──────────────────────────────────────────────
 router.post("/client/onboarding/complete", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
-  const { preferredDisplayCurrency } = req.body;
+  const body = req.body ?? {};
+  const preferredCurrency = body.preferredCurrency ?? body.preferredDisplayCurrency;
 
-  await db.update(profilesTable)
-    .set({ onboardingComplete: true, updatedAt: new Date() })
-    .where(eq(profilesTable.id, userId));
-
-  const existing = await db.select({ id: clientProfilesTable.id })
-    .from(clientProfilesTable).where(eq(clientProfilesTable.userId, userId));
-
-  let cp;
-  if (existing.length > 0) {
-    [cp] = await db.update(clientProfilesTable)
-      .set({
-        onboardingTrackComplete: true,
-        ...(preferredDisplayCurrency ? { preferredDisplayCurrency } : {}),
-        updatedAt: new Date(),
-      })
-      .where(eq(clientProfilesTable.userId, userId))
-      .returning();
-  } else {
-    [cp] = await db.insert(clientProfilesTable)
-      .values({ userId, onboardingTrackComplete: true, preferredDisplayCurrency: preferredDisplayCurrency ?? "USD" })
-      .returning();
+  if (preferredCurrency) {
+    await db.update(profilesTable)
+      .set({ preferredCurrency, updatedAt: new Date() })
+      .where(eq(profilesTable.id, userId));
   }
+  await advanceOnboardingStage(userId, "complete");
+
+  const [cp] = await db.select().from(clientProfilesTable).where(eq(clientProfilesTable.userId, userId));
   res.json(cp);
 });
 
@@ -170,10 +194,7 @@ router.post("/advisor/clients/:id/advised-plans", requireAuth, requireRole("advi
     isVisibleToClient: isVisibleToClient ?? true,
   }).returning();
 
-  // Auto-set client to track_a
-  await db.update(clientProfilesTable)
-    .set({ clientTrack: "track_a", updatedAt: new Date() })
-    .where(eq(clientProfilesTable.userId, userId));
+  // No track write: the client's track is derived from visible advised plans.
 
   res.status(201).json(plan);
 });
@@ -455,23 +476,32 @@ router.post("/client/holdings", requireAuth, async (req, res): Promise<void> => 
   res.status(201).json(holding);
 });
 
+// Explicit allowlist for client holding edits. id, userId and timestamps are
+// never client-writable.
+const HOLDING_TEXT_FIELDS = [
+  "holdingType", "label", "currency", "purchaseDate", "notes", "isActive",
+  "ticker", "brokerPlatform", "coinSymbol", "exchangeName",
+  "propertyAddress", "country", "bankName", "accountType",
+  "schemeName", "pensionCountry",
+] as const;
+const HOLDING_NUMERIC_FIELDS = [
+  "unitsHeld", "averageCostPrice", "purchasePrice", "currentEstimatedValue",
+  "outstandingMortgage", "monthlyRentalIncome", "currentBalance", "interestRatePct",
+  "currentBalancePension", "monthlyContribution", "employerContribution",
+  "currentValueOther", "totalInvestedOther", "expectedAnnualReturnPct",
+] as const;
+
 router.put("/client/holdings/:id", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
   const id = req.params.id as string;
   const body = req.body;
 
   const updates: Record<string, unknown> = { updatedAt: new Date() };
-  const numericFields = ["unitsHeld", "averageCostPrice", "purchasePrice", "currentEstimatedValue",
-    "outstandingMortgage", "monthlyRentalIncome", "currentBalance", "interestRatePct",
-    "currentBalancePension", "monthlyContribution", "employerContribution",
-    "currentValueOther", "totalInvestedOther", "expectedAnnualReturnPct"];
-
-  for (const [k, v] of Object.entries(body)) {
-    if (numericFields.includes(k)) {
-      updates[k] = v != null ? String(v) : null;
-    } else {
-      updates[k] = v;
-    }
+  for (const k of HOLDING_TEXT_FIELDS) {
+    if (Object.prototype.hasOwnProperty.call(body, k)) updates[k] = body[k];
+  }
+  for (const k of HOLDING_NUMERIC_FIELDS) {
+    if (Object.prototype.hasOwnProperty.call(body, k)) updates[k] = body[k] != null ? String(body[k]) : null;
   }
 
   const [holding] = await db.update(clientHoldingsTable)

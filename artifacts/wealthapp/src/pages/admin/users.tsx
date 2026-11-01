@@ -146,8 +146,8 @@ export default function AdminUsers() {
                     <select className="w-full h-11 border border-hairline bg-paper rounded-[12px] px-4 text-[14px] text-forest focus:outline-none focus:ring-2 focus:ring-green" value={form.riskProfile} onChange={e => setForm(f => ({ ...f, riskProfile: e.target.value }))}>
                       <option value="">— Not set —</option>
                       <option value="conservative">Conservative</option>
-                      <option value="moderate">Moderate</option>
-                      <option value="aggressive">Aggressive</option>
+                      <option value="balanced">Balanced</option>
+                      <option value="growth">Growth</option>
                     </select>
                   </div>
                 </>

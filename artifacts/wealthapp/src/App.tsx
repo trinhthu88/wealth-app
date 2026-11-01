@@ -7,7 +7,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { queryClient } from "@/lib/queryClient";
 import { useProfile } from "@/hooks/useProfile";
-import { useOnboardingTrackComplete } from "@/hooks/useClientTrack";
+import { useOnboardingStage } from "@/hooks/useClientTrack";
 import { resolveRoleRedirectPath } from "@/lib/roleRedirect";
 import { setTokenGetter } from "@/lib/api";
 import { trackPageView, resetUser } from "@/lib/analytics";
@@ -190,11 +190,11 @@ function ProtectedRoute({ component: C, role }: { component: React.ComponentType
 function RoleRedirect() {
   const { profile, isLoading } = useProfile();
   const isInvestmentClient = profile?.role === "investment_client";
-  const { onboardingTrackComplete, isLoading: trackLoading } = useOnboardingTrackComplete(isInvestmentClient);
+  const { onboardingStage, isLoading: trackLoading } = useOnboardingStage(isInvestmentClient);
 
   if (isLoading || trackLoading) return <PageLoader />;
   if (!profile) return <Redirect to="/sign-in" />;
-  return <Redirect to={resolveRoleRedirectPath(profile.role, onboardingTrackComplete)} />;
+  return <Redirect to={resolveRoleRedirectPath(profile.role, onboardingStage)} />;
 }
 
 function SignInPage() {

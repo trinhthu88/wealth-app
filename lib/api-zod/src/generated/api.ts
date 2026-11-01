@@ -27,7 +27,24 @@ export const GetMyProfileResponse = zod.object({
   countryCode: zod.string().nullish(),
   isExpat: zod.boolean(),
   onboardingComplete: zod.boolean(),
-  riskProfile: zod.string().nullish(),
+  riskProfile: zod
+    .union([
+      zod.literal("conservative"),
+      zod.literal("balanced"),
+      zod.literal("growth"),
+      zod.literal(null),
+    ])
+    .nullish()
+    .describe("Owned by client_profiles.risk_profile."),
+  riskProfileSource: zod
+    .union([zod.literal("self"), zod.literal("advisor"), zod.literal(null)])
+    .nullish(),
+  dateOfBirth: zod.coerce
+    .date()
+    .nullish()
+    .describe(
+      "First day of the birth month (YYYY-MM-01); month and year only.",
+    ),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -41,7 +58,18 @@ export const UpdateMyProfileBody = zod.object({
   countryCode: zod.string().optional(),
   isExpat: zod.boolean().optional(),
   onboardingComplete: zod.boolean().optional(),
-  riskProfile: zod.string().optional(),
+  riskProfile: zod
+    .enum(["conservative", "balanced", "growth"])
+    .optional()
+    .describe(
+      "Legacy labels (moderate, aggressive, any case) are mapped; other values return 400.",
+    ),
+  dateOfBirth: zod
+    .string()
+    .nullish()
+    .describe(
+      "YYYY-MM (or YYYY-MM-DD; the day is discarded). Stored as the 1st of the month.",
+    ),
   avatarUrl: zod.string().optional(),
 });
 
@@ -55,7 +83,24 @@ export const UpdateMyProfileResponse = zod.object({
   countryCode: zod.string().nullish(),
   isExpat: zod.boolean(),
   onboardingComplete: zod.boolean(),
-  riskProfile: zod.string().nullish(),
+  riskProfile: zod
+    .union([
+      zod.literal("conservative"),
+      zod.literal("balanced"),
+      zod.literal("growth"),
+      zod.literal(null),
+    ])
+    .nullish()
+    .describe("Owned by client_profiles.risk_profile."),
+  riskProfileSource: zod
+    .union([zod.literal("self"), zod.literal("advisor"), zod.literal(null)])
+    .nullish(),
+  dateOfBirth: zod.coerce
+    .date()
+    .nullish()
+    .describe(
+      "First day of the birth month (YYYY-MM-01); month and year only.",
+    ),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -78,7 +123,24 @@ export const UpsertMyProfileResponse = zod.object({
   countryCode: zod.string().nullish(),
   isExpat: zod.boolean(),
   onboardingComplete: zod.boolean(),
-  riskProfile: zod.string().nullish(),
+  riskProfile: zod
+    .union([
+      zod.literal("conservative"),
+      zod.literal("balanced"),
+      zod.literal("growth"),
+      zod.literal(null),
+    ])
+    .nullish()
+    .describe("Owned by client_profiles.risk_profile."),
+  riskProfileSource: zod
+    .union([zod.literal("self"), zod.literal("advisor"), zod.literal(null)])
+    .nullish(),
+  dateOfBirth: zod.coerce
+    .date()
+    .nullish()
+    .describe(
+      "First day of the birth month (YYYY-MM-01); month and year only.",
+    ),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -957,7 +1019,24 @@ export const AdminListUsersResponseItem = zod.object({
   countryCode: zod.string().nullish(),
   isExpat: zod.boolean(),
   onboardingComplete: zod.boolean(),
-  riskProfile: zod.string().nullish(),
+  riskProfile: zod
+    .union([
+      zod.literal("conservative"),
+      zod.literal("balanced"),
+      zod.literal("growth"),
+      zod.literal(null),
+    ])
+    .nullish()
+    .describe("Owned by client_profiles.risk_profile."),
+  riskProfileSource: zod
+    .union([zod.literal("self"), zod.literal("advisor"), zod.literal(null)])
+    .nullish(),
+  dateOfBirth: zod.coerce
+    .date()
+    .nullish()
+    .describe(
+      "First day of the birth month (YYYY-MM-01); month and year only.",
+    ),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -977,7 +1056,24 @@ export const AdminGetUserResponse = zod.object({
   countryCode: zod.string().nullish(),
   isExpat: zod.boolean(),
   onboardingComplete: zod.boolean(),
-  riskProfile: zod.string().nullish(),
+  riskProfile: zod
+    .union([
+      zod.literal("conservative"),
+      zod.literal("balanced"),
+      zod.literal("growth"),
+      zod.literal(null),
+    ])
+    .nullish()
+    .describe("Owned by client_profiles.risk_profile."),
+  riskProfileSource: zod
+    .union([zod.literal("self"), zod.literal("advisor"), zod.literal(null)])
+    .nullish(),
+  dateOfBirth: zod.coerce
+    .date()
+    .nullish()
+    .describe(
+      "First day of the birth month (YYYY-MM-01); month and year only.",
+    ),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -1003,7 +1099,24 @@ export const AdminUpdateUserResponse = zod.object({
   countryCode: zod.string().nullish(),
   isExpat: zod.boolean(),
   onboardingComplete: zod.boolean(),
-  riskProfile: zod.string().nullish(),
+  riskProfile: zod
+    .union([
+      zod.literal("conservative"),
+      zod.literal("balanced"),
+      zod.literal("growth"),
+      zod.literal(null),
+    ])
+    .nullish()
+    .describe("Owned by client_profiles.risk_profile."),
+  riskProfileSource: zod
+    .union([zod.literal("self"), zod.literal("advisor"), zod.literal(null)])
+    .nullish(),
+  dateOfBirth: zod.coerce
+    .date()
+    .nullish()
+    .describe(
+      "First day of the birth month (YYYY-MM-01); month and year only.",
+    ),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });

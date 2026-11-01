@@ -17,12 +17,16 @@ export const clientProfilesTable = pgTable("client_profiles", {
   // client_profiles owns the advisor relationship and client lifecycle status.
   status: text("status").notNull().default("active"),
   kycStatus: text("kyc_status").notNull().default("not_started"),
+  // Owner of the risk profile; risk_profile_source records who set it (self | advisor).
   riskProfile: text("risk_profile"),
+  riskProfileSource: text("risk_profile_source"),
   riskScore: integer("risk_score"),
   investmentStyle: text("investment_style"),
   indicativeAmount: numeric("indicative_amount"),
   preCallNotes: text("pre_call_notes"),
   preferredContactTime: text("preferred_contact_time"),
+  // Deprecated onboarding flags (onboarding_step, *_onboarding_complete, onboarding_track_complete):
+  // kept for compatibility; onboarding_stage is the owner and the only field routing reads.
   onboardingStep: integer("onboarding_step").notNull().default(1),
   prospectOnboardingComplete: boolean("prospect_onboarding_complete").notNull().default(false),
   fullOnboardingComplete: boolean("full_onboarding_complete").notNull().default(false),
@@ -30,14 +34,23 @@ export const clientProfilesTable = pgTable("client_profiles", {
   annualReviewDate: date("annual_review_date"),
   internalNotes: text("internal_notes"),
   advisorInternalNotes: text("advisor_internal_notes"),
-  // Track A = has an advised investment plan; Track B = self-managed only
+  // Deprecated: track is derived from visible advised plans (GET /client/profile/track); not written.
   clientTrack: text("client_track").notNull().default("track_b"),
+  // Deprecated: profiles.preferred_currency is the owner; not read or written.
   preferredDisplayCurrency: text("preferred_display_currency").notNull().default("USD"),
   onboardingTrackComplete: boolean("onboarding_track_complete").notNull().default(false),
+  // Owner of onboarding state.
+  onboardingStage: text("onboarding_stage").notNull().default("not_started"),
+  // Answer to "What do you want to sort out first?"; orders the setup checklist.
+  firstFocus: text("first_focus"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (t) => [
   check("client_profiles_status_check", sql`${t.status} IN ('active', 'paused', 'churned')`),
+  check("client_profiles_onboarding_stage_check", sql`${t.onboardingStage} IN ('not_started', 'profile', 'complete')`),
+  check("client_profiles_first_focus_check", sql`${t.firstFocus} IN ('know_my_money', 'start_investing', 'save_for_big', 'organise_existing', 'plan_retirement')`),
+  check("client_profiles_risk_profile_check", sql`${t.riskProfile} IN ('conservative', 'balanced', 'growth')`),
+  check("client_profiles_risk_profile_source_check", sql`${t.riskProfileSource} IN ('self', 'advisor')`),
 ]);
 
 // client_profiles.advisor_id is the current advisor pointer; this table is the

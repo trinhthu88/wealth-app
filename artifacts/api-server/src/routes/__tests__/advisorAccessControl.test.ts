@@ -93,7 +93,9 @@ describe("advisor client-profile access control", () => {
       .set(asUser(advisorA))
       .send({ riskProfile: "aggressive" })
       .expect(200);
-    expect(res.body.riskProfile).toBe("aggressive");
+    // Legacy label maps onto the stored vocabulary; an advisor write records its source.
+    expect(res.body.riskProfile).toBe("growth");
+    expect(res.body.riskProfileSource).toBe("advisor");
   });
 
   it("allows super_admin regardless of assignment", async () => {

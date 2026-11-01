@@ -1,7 +1,7 @@
 # Restructure progress
 
 ## Current phase
-P5 — Profile fields and onboarding state — in progress (P4.5 clean schema push done)
+P5 — Profile fields and onboarding state — done, except one pending data step (normalising the deprecated `profiles.risk_profile`; see Blocked)
 
 ## Baseline (Phase 0)
 - typecheck: passed (`pnpm run typecheck`; all libraries and leaf workspaces completed).
@@ -99,6 +99,7 @@ Files changed:
 ## Blocked / questions for the product owner
 - P1 CHECK constraints for `onboarding_stage` and `first_focus` are deferred until P5 introduces their columns; their shared enums are defined in P1.
 - RESOLVED in P4.5 (see below): P2.5 schema push was blocked by a `client_holding_transactions` warning. Exact prompt: `You're about to add client_holding_transactions_holding_id_source_month_source_unique unique constraint to the table, which contains 1 items. If this statement fails, you will receive an error from the database. Do you want to truncate client_holding_transactions table?` Choices: `No, add the constraint without truncating the table` / `Yes, truncate the table`. The safe No choice remained highlighted; the command timed out before proceeding. No truncate option was accepted and no schema/data change was observed. A read-only recheck found 1 row, 0 duplicate groups/excess rows for `(holding_id, source_month, source)`, and an existing validated UNIQUE constraint `client_holding_transactions_holding_id_source_month_source_uniq` on that key. Do not accept this prompt or rerun push as part of Phases 3–4.
+- P5 pending data step: `pnpm --filter @workspace/scripts run p5-normalize-risk-profile` (deprecated `profiles.risk_profile`; owner `client_profiles` is already clean). Its dry run changes 3 rows: contact@erickson.vn `Aggressive → growth`, sofia.chen `moderate → balanced`, trang.tt `Conservative → conservative` (onboardtest_* skipped). Not run: the agent's permission check required an explicit OK for these rows.
 
 ### P2 — Net worth service
 Plan:
@@ -290,5 +291,68 @@ Tests: `pnpm run typecheck` passed; `pnpm --filter @workspace/api-server test` p
 Decisions made by agent:
 - None beyond the approved fixes. Later phases can use the normal `pnpm --filter @workspace/db run push`.
 
+### P5 — Profile fields and onboarding state
+Plan:
+- Back up `profiles` and `client_profiles`, then add with the normal schema push (additive, nullable or defaulted): `profiles.date_of_birth date` (owner: profiles; 1st of chosen month), `client_profiles.risk_profile_source` (`self`|`advisor`, nullable), `client_profiles.onboarding_stage` (NOT NULL default `not_started`), `client_profiles.first_focus` (nullable), each with a CHECK from the shared enums (deferred from P1). No drops/renames.
+- Backfills (idempotent `scripts/src/` scripts with `--dry-run`; audit counts and exact rows shown to the product owner and approved before each real run):
+  1. Currency: copy `client_profiles.preferred_display_currency` → `profiles.preferred_currency` where profiles is the default `USD` and they differ.
+  2. Risk: copy `profiles.risk_profile` → `client_profiles.risk_profile` with source `self` where client_profiles has none (creating the row if missing).
+  3. Onboarding stage: `onboarding_track_complete` → `complete`; basics saved → `profile`; else `not_started`.
+- Code: currency reads/writes go to `profiles.preferred_currency`; risk reads/writes (free tier, `PUT /profiles/me`, self-service, advisor) go to `client_profiles` with source; onboarding routes write and routing reads only `onboarding_stage`; `GET /client/profile/track` derives track from visible advised plans and stops writing `client_track`; `PUT /client/profile/basics` stores `dateOfBirth`; coast point reads DOB from profiles where it needs age; remove `status` from client-writable allowlists; `PUT /client/holdings/:id` uses an explicit field allowlist.
+- Super-admin branch of `GET /advisor/clients` filters to `investment_client` so free users' new client_profiles rows do not appear as clients.
+- Tests: each backfill rule, derived track, a client cannot change own status or a holding's owner, DOB round-trip, risk source.
+Audit counts (read-only, before any change):
+- profiles 15 (11 without a client_profiles row); client_profiles 4; 0 orphan client_profiles.
+- Currency: all 15 profiles `USD`; all 4 client_profiles `USD` → 0 rows to change.
+- Risk: all 4 client_profiles already have a risk value → 0 updates; 6 free users have `profiles.risk_profile` and no client_profiles row (4 are `onboardtest_*@example.com` test leftovers).
+- Onboarding: all 4 client_profiles have `onboarding_track_complete = true`.
+- Track: 2 client_profiles have visible advised plans (stored `track_a`), 2 have none (stored `track_b`) → derived track matches stored for all 4.
+
+Done:
+- Schema (normal push, additive only; second push `No changes detected`): `profiles.date_of_birth`, `client_profiles.risk_profile_source`, `client_profiles.onboarding_stage` (NOT NULL default `not_started`), `client_profiles.first_focus`; CHECKs `client_profiles_onboarding_stage_check`, `client_profiles_first_focus_check`, `client_profiles_risk_profile_source_check`, and (after backfill 2 and a 0-violation audit) `client_profiles_risk_profile_check` (`conservative`, `balanced`, `growth`). Owner/deprecation comments added in `profiles.ts` and `clients.ts`.
+- Shared enums: `riskProfileValues` / `riskProfileSchema`, `normalizeRiskProfile()` (lowercase; `moderate` → `balanced`, `aggressive`/`growth-oriented` → `growth`; anything else → null/400), `riskProfileSourceValues`.
+- Risk: every writer stores the vocabulary in `client_profiles` with a source. `PUT /profiles/me` and `PUT /client-profile/me` write `self`; the advisor `PUT /advisor/clients/:id/client-profile`, admin create user and lead convert write `advisor`. Invalid values return 400. `GET`/`PUT /profiles/me` return the owned value; `profiles.risk_profile` is no longer written. The free-tier quiz keeps its 4 display labels but saves the mapped value. The advisor and admin selects offer only the 3 values.
+- Currency: `PUT /client/profile/basics` and `POST /client/onboarding/complete` write `profiles.preferred_currency` (they accept `preferredCurrency`, or the legacy `preferredDisplayCurrency` key). `GET /client/profile/track` returns `preferredCurrency` from profiles. `preferred_display_currency` is no longer read or written by the API (it is also removed from the advisor allowlist).
+- Onboarding: basics sets stage `profile`, complete sets `complete`, and neither ever steps back. Routing (`RoleRedirect` → `resolveRoleRedirectPath`) reads only `onboardingStage`. The routes no longer write `onboarding_track_complete`.
+- Date of birth: basics accepts `YYYY-MM` (or a full date, day discarded) and stores `YYYY-MM-01`; invalid or future dates return 400. `PUT /profiles/me` accepts it too. Client onboarding sends month + year. Coast point currently takes no age input, so there is no DOB consumer yet; `GET /profiles/me` returns it.
+- Track: `GET /client/profile/track` derives `track: advised | self_managed` from visible advised plans, plus `hasPendingAdvisorSetup` (hidden plans exist, none visible). Nothing writes `client_track` any more (advised-plan create, lead promotion, advisor allowlist). `useClientTrack` reads the derived value.
+- Allowlists: `status` removed from `PUT /client-profile/me` (ignored, not 400). `PUT /client/holdings/:id` uses an explicit text/numeric field allowlist; `id`/`userId` are never writable.
+- "Row exists ⇒ client" audit (requested before backfill 2):
+  - Lead promotion already updated an existing row; its insert branch now also upserts on `user_id`. It keeps preference fields on the row.
+  - `getCurrentAdvisorIdForClient`, `requireAdvisorOwnsClientOrLead` and `getClientUserIdsForAdvisor` treated any row as the advisor pointer. A free-user lead with a risk-only row would resolve to "no advisor", and their advisor would get 403 on the lead's plans. All three now honour the row only when `role = investment_client`, otherwise they fall back to the lead.
+  - `GET /advisor/clients` filters `role = investment_client` in both the advisor and super_admin branches (the admin branch already did). `/admin/clients` and the nightly snapshot job already filtered on role.
+  - `requireAdvisorOwnsClient`/`requireAdvisorOwnsPackage` match on `advisor_id` (null for free users) and were left as-is. Off-track tasks and Sol's advisor name read only `advisor_id`, so behaviour is unchanged for free users. The frontend redirect is role-based.
+- Behaviour change to note: `contact@erickson.vn` is a `free_user` with a client_profiles row that has `advisor_id` set and no lead. They no longer appear in that advisor's list, and plan/conversation ownership no longer resolves to that advisor.
+- Seed: free users' risk goes to client_profiles (source `self`); `moderate` → `balanced`; client rows get `onboardingStage: "complete"`; no `clientTrack`/`preferredDisplayCurrency`/`profiles.riskProfile` writes for clients.
+- OpenAPI `Profile`/`UpdateProfileBody`: risk enum, `riskProfileSource`, `dateOfBirth`; codegen run.
+Audit counts / backfills:
+- Before: profiles 15, client_profiles 4. Backups: `backups/2026-11-01-{profiles,client_profiles}-p5.sql`, `backups/2026-11-01-client_profiles-p5-risk-check.sql`.
+- Backfill 1 currency (`p5-backfill-currency`): 0 candidates and 0 conflicts. Not run (no-op).
+- Backfill 3 onboarding stage (`p5-backfill-onboarding-stage`), run after approval: 4 rows `not_started → complete` (contact@erickson.vn, elena.novak, james.whitfield, trang.tt; all had `onboarding_track_complete = true`). Rerun: 0.
+- Backfill 2 risk (`p5-backfill-risk-profile`), run after approval and after the promotion test passed: 0 updates; created 2 rows, marcus.reyes `conservative` and sofia.chen `balanced` (from `moderate`), both source `self`. Rerun: 0. The 4 existing client risk values keep `risk_profile_source = NULL` (unknown origin).
+- Risk CHECK audit: 0 violations among 6 client_profiles rows.
+- After: profiles 15, client_profiles 6.
+- Every backfill script supports `--dry-run` and a repeatable `--user=<id>` scope (tests use it so they touch only fixtures); each excludes `onboardtest_*@example.com`.
+Tests: `pnpm run typecheck` passed; `pnpm --filter @workspace/api-server test` passed (22 files, 164 tests). wealthapp `roleRedirect.test.ts` passed (5).
+- New `profileFieldsP5.test.ts` (13 tests):
+  - A free user with a risk-only row is promoted successfully and appears in the advisor's list only after promotion.
+  - The lead's advisor keeps access before promotion; a free user pointing at the advisor stays out of the list.
+  - Risk via `PUT /profiles/me` (mapped, source self, deprecated column untouched; 400 on an invalid value).
+  - Self-service status is ignored; the holding owner cannot change.
+  - DOB stored as the 1st of the month; invalid/future DOB returns 400; currency on profiles; stage never steps back.
+  - Derived track (hidden → pending, visible → advised) with no `client_track` write.
+  - One test per backfill rule (currency, normalisation, risk, onboarding stage).
+- Updated tests: `leadPromotion` (derived track instead of the stored column), `advisorAccessControl` (`aggressive` → `growth`, source advisor), `statusEnums` (invalid client status now checked on the admin route with a real super_admin fixture; the self-service route ignores status).
+- During development two failing runs of the old track test left fixtures behind (2 lead users, their 2 plans and assignment rows, 2 test advisors, an orphan `enum-test-user` client_profiles row). They were deleted by exact ID; counts returned to the baseline before the backfills ran.
+Decisions made by agent:
+- "Basics saved" in the onboarding backfill means `profiles.country_code IS NOT NULL`: the basics step is the only writer, while `full_name` also comes from sign-up. No current row needed it.
+- The free-tier `profiles.onboarding_complete` flag still drives free-tier routing. Free users have no onboarding stage, and the free-tier redesign is out of scope.
+- The free pathway step 6 still stores its display label in `pathway_steps.form_data`, a remaining copy of risk, for a later phase.
+- The client onboarding date input is still a day picker; the client sends only `YYYY-MM`. Phase 6 replaces the screen with a month + year control.
+Test data to clean up (not deleted; skipped by all P5 backfills):
+- `onboardtest_*@example.com` free users created 2026-08-31 19:22–19:31 UTC: `user_3Ih5s4Bej9SHhEgqsmZ5HvdkSZi`, `user_3Ih64lmoG01ZUconwxylnux9ZIs`, `user_3Ih6YN8g7lN71SNigCGumwJASgR`, `user_3Ih6idWcukAGqPxn8bfP2TK3T1P`, `user_3Ih6vUHS3xhaNzJagpQ5jnVRC67`. Four have `profiles.risk_profile = Conservative`; none has a client_profiles row.
+- Source: no code in this repo (API tests, scripts, frontend, git history) creates `onboardtest_` users. They have real Clerk IDs and timestamps minutes apart, which matches a browser-driven sign-up run from outside the repo (for example an agent's e2e check), not the API suite (which mocks Clerk and leaves `profiles` unchanged). There was no in-repo test to fix. Whoever runs that e2e flow should delete its users afterwards, or use the Clerk test-mode `+clerk_test` addresses.
 ## Next agent: start here
-- P4.5 is complete; the normal schema push is clean. Continue Phase 5 per its plan above (show audit counts and exact rows to the product owner before each backfill).
+- Phase 5 is complete apart from the pending risk normalisation listed under Blocked; run it only after the product owner OKs those 3 rows.
+- Commits `[restructure P4.5]` and `[restructure P5]` are local; the product owner pushes to GitHub.
+- Phase 6 (new onboarding + setup checklist) has not started and needs a new instruction.

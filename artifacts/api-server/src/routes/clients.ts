@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { eq, inArray, desc } from "drizzle-orm";
-import { db, clientProfilesTable, profilesTable, advisedPlansTable } from "@workspace/db";
+import { and, eq, inArray, desc } from "drizzle-orm";
+import { db, clientProfilesTable, profilesTable, advisedPlansTable, normalizeRiskProfile } from "@workspace/db";
 import { requireAuth, requireRole, requireAdvisorOwnsClient } from "../middlewares/requireAuth";
 import { computeNetWorth } from "../lib/netWorthService";
 
@@ -25,9 +25,8 @@ const CLIENT_PROFILE_UPDATABLE_FIELDS = [
   "annualReviewDate",
   "internalNotes",
   "advisorInternalNotes",
-  "clientTrack",
-  "preferredDisplayCurrency",
-  "onboardingTrackComplete",
+  // clientTrack (derived), preferredDisplayCurrency (profiles owns currency) and
+  // onboardingTrackComplete (onboarding_stage owns state) are deprecated: not writable.
 ] as const;
 
 function pickUpdatableClientProfileFields(body: Record<string, unknown>): Record<string, unknown> {
@@ -64,6 +63,12 @@ router.get("/advisor/clients/:id/client-profile", ...advisorOwnsClientGuard, asy
 router.put("/advisor/clients/:id/client-profile", ...advisorOwnsClientGuard, async (req, res): Promise<void> => {
   const id = req.params.id as string;
   const updates = pickUpdatableClientProfileFields(req.body ?? {});
+  if (Object.prototype.hasOwnProperty.call(updates, "riskProfile")) {
+    const riskProfile = normalizeRiskProfile(updates.riskProfile);
+    if (!riskProfile) { res.status(400).json({ error: "Invalid risk profile" }); return; }
+    updates.riskProfile = riskProfile;
+    updates.riskProfileSource = "advisor";
+  }
   const existing = await db.select().from(clientProfilesTable).where(eq(clientProfilesTable.userId, id));
   let cp;
   if (existing.length > 0) {
@@ -96,10 +101,13 @@ router.get("/advisor/clients", ...advisorGuard, async (req, res): Promise<void> 
     advisorId: clientProfilesTable.advisorId,
   }).from(profilesTable)
     .innerJoin(clientProfilesTable, eq(clientProfilesTable.userId, profilesTable.id));
+  // A client_profiles row alone does not make a client (free users may hold
+  // preferences there); every client list filters on role.
+  const isClient = eq(profilesTable.role, "investment_client");
 
   const clients = isAdmin
-    ? await query.where(eq(profilesTable.role, "investment_client")).orderBy(desc(profilesTable.createdAt))
-    : await query.where(eq(clientProfilesTable.advisorId, callerId)).orderBy(desc(profilesTable.createdAt));
+    ? await query.where(isClient).orderBy(desc(profilesTable.createdAt))
+    : await query.where(and(isClient, eq(clientProfilesTable.advisorId, callerId))).orderBy(desc(profilesTable.createdAt));
 
   // Enrich with portfolio value
   const clientIds = clients.map(c => c.id);

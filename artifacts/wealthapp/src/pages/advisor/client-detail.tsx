@@ -227,10 +227,8 @@ export default function AdvisorClientDetail() {
                       onChange={(e) => updateCPMut.mutate({ riskProfile: e.target.value || null })}>
                       <option value="">Unknown</option>
                       <option value="conservative">Conservative</option>
-                      <option value="moderate">Moderate</option>
                       <option value="balanced">Balanced</option>
                       <option value="growth">Growth</option>
-                      <option value="aggressive">Aggressive</option>
                     </select>
                   </div>
                   <div>

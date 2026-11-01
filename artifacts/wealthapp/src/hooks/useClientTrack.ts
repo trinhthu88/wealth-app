@@ -1,14 +1,19 @@
 import { useQuery } from "@tanstack/react-query";
 import { useUser } from "@clerk/react";
 import { apiFetch } from "@/lib/api";
-import { useAdvisedPlans } from "./useAdvisedPlans";
+
+export type OnboardingStage = "not_started" | "profile" | "complete";
 
 interface ClientProfileTrack {
-  clientTrack: string;
-  onboardingTrackComplete: boolean;
+  /** Derived on the server from advised plans visible to the client. */
+  track: "advised" | "self_managed";
+  hasPendingAdvisorSetup: boolean;
+  onboardingStage: OnboardingStage;
+  preferredCurrency: string;
+  advisorId: string | null;
 }
 
-/** Shared query for /client/profile/track — the single source of truth for onboarding-track state. */
+/** Shared query for /client/profile/track — the single source of truth for track and onboarding stage. */
 function useClientProfileTrackQuery(enabled = true) {
   const { user, isLoaded } = useUser();
 
@@ -21,34 +26,27 @@ function useClientProfileTrackQuery(enabled = true) {
 
 export function useClientTrack() {
   const profileQuery = useClientProfileTrackQuery();
-  const { plans, loading: plansLoading } = useAdvisedPlans();
-
-  const track = profileQuery.data?.clientTrack ?? "track_b";
-  const onboardingComplete = profileQuery.data?.onboardingTrackComplete ?? false;
-  const hasPlans = plans.length > 0;
-
-  const isTrackA = track === "track_a" && hasPlans;
-  const isTrackB = track === "track_b" || !hasPlans;
-  const hasPendingAdvisorSetup = track === "track_a" && !hasPlans;
+  const isTrackA = profileQuery.data?.track === "advised";
 
   return {
     isTrackA,
-    isTrackB,
-    hasPendingAdvisorSetup,
-    onboardingTrackComplete: onboardingComplete,
-    loading: profileQuery.isLoading || plansLoading,
+    isTrackB: !isTrackA,
+    hasPendingAdvisorSetup: profileQuery.data?.hasPendingAdvisorSetup ?? false,
+    onboardingStage: profileQuery.data?.onboardingStage ?? "not_started",
+    onboardingTrackComplete: profileQuery.data?.onboardingStage === "complete",
+    loading: profileQuery.isLoading,
   };
 }
 
 /**
- * Lightweight variant of useClientTrack for callers that only need onboarding-completion
- * status (e.g. the post-sign-in redirect) and shouldn't pay for the advised-plans fetch.
+ * Lightweight variant of useClientTrack for callers that only need the
+ * onboarding stage (e.g. the post-sign-in redirect).
  */
-export function useOnboardingTrackComplete(enabled = true) {
+export function useOnboardingStage(enabled = true) {
   const profileQuery = useClientProfileTrackQuery(enabled);
 
   return {
-    onboardingTrackComplete: profileQuery.data?.onboardingTrackComplete ?? false,
+    onboardingStage: profileQuery.data?.onboardingStage ?? "not_started",
     isLoading: enabled && profileQuery.isLoading,
   };
 }

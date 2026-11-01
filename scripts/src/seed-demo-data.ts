@@ -121,9 +121,12 @@ async function seedFreeUser(
 ) {
   await upsertProfile({
     id, email, fullName, role: "free_user",
-    riskProfile: opts.riskProfile,
     totalSavings: opts.totalSavings,
   });
+  // client_profiles owns the risk profile, for free users too.
+  await db.insert(clientProfilesTable).values({
+    userId: id, riskProfile: opts.riskProfile, riskProfileSource: "self",
+  }).onConflictDoNothing();
 
   for (const g of opts.goals) await db.insert(financialGoalsTable).values({ ...g, userId: id });
   for (const b of opts.budgets) await db.insert(budgetEntriesTable).values({ ...b, userId: id });
@@ -151,7 +154,7 @@ async function run() {
   console.log(`→ sofia.chen@demo.wealthapp.io [free_user]`);
   const sofiaId = await createClerkUser("sofia.chen@demo.wealthapp.io", "Sofia Chen");
   await seedFreeUser(sofiaId, "sofia.chen@demo.wealthapp.io", "Sofia Chen", {
-    riskProfile: "moderate",
+    riskProfile: "balanced",
     totalSavings: "18500",
     goals: [
       { title: "Emergency Fund", goalType: "emergency_fund", targetAmount: "20000", currentAmount: "14200", monthlyContribution: "500", targetDate: "2026-12-01", priority: "high", status: "active" },
@@ -223,14 +226,14 @@ async function run() {
 
   console.log(`→ elena.novak@demo.wealthapp.io [investment_client, Track A — advised]`);
   const elenaId = await createClerkUser("elena.novak@demo.wealthapp.io", "Elena Novak");
-  await upsertProfile({ id: elenaId, email: "elena.novak@demo.wealthapp.io", fullName: "Elena Novak", role: "investment_client", riskProfile: "growth", totalInvestments: "185000", investmentRatePercent: "8.5" });
+  await upsertProfile({ id: elenaId, email: "elena.novak@demo.wealthapp.io", fullName: "Elena Novak", role: "investment_client", totalInvestments: "185000", investmentRatePercent: "8.5" });
 
   await db.insert(clientProfilesTable).values({
     userId: elenaId, advisorId: advisor.id, status: "active", kycStatus: "verified",
     riskProfile: "growth", riskScore: 74, investmentStyle: "growth", indicativeAmount: "250000",
     onboardingStep: 6, prospectOnboardingComplete: true, fullOnboardingComplete: true,
     relationshipStartDate: "2024-02-15", annualReviewDate: "2027-02-15",
-    clientTrack: "track_a", preferredDisplayCurrency: "USD", onboardingTrackComplete: true,
+    onboardingTrackComplete: true, onboardingStage: "complete",
   }).onConflictDoNothing();
 
   const [elenaPlan] = await db.insert(advisedPlansTable).values({
@@ -293,14 +296,14 @@ async function run() {
 
   console.log(`→ james.whitfield@demo.wealthapp.io [investment_client, Track B — self-managed]`);
   const jamesId = await createClerkUser("james.whitfield@demo.wealthapp.io", "James Whitfield");
-  await upsertProfile({ id: jamesId, email: "james.whitfield@demo.wealthapp.io", fullName: "James Whitfield", role: "investment_client", riskProfile: "balanced", totalInvestments: "142000", investmentRatePercent: "7.2" });
+  await upsertProfile({ id: jamesId, email: "james.whitfield@demo.wealthapp.io", fullName: "James Whitfield", role: "investment_client", totalInvestments: "142000", investmentRatePercent: "7.2" });
 
   await db.insert(clientProfilesTable).values({
     userId: jamesId, advisorId: advisor.id, status: "active", kycStatus: "verified",
     riskProfile: "balanced", riskScore: 58, investmentStyle: "balanced", indicativeAmount: "150000",
     onboardingStep: 6, prospectOnboardingComplete: true, fullOnboardingComplete: true,
     relationshipStartDate: "2023-11-01", annualReviewDate: "2026-11-01",
-    clientTrack: "track_b", preferredDisplayCurrency: "USD", onboardingTrackComplete: true,
+    onboardingTrackComplete: true, onboardingStage: "complete",
   }).onConflictDoNothing();
 
   await db.insert(clientHoldingsTable).values([

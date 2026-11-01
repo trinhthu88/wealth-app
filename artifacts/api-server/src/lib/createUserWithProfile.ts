@@ -1,4 +1,4 @@
-import { db, profilesTable, clientProfilesTable, advisorAssignmentsTable } from "@workspace/db";
+import { db, profilesTable, clientProfilesTable, advisorAssignmentsTable, normalizeRiskProfile } from "@workspace/db";
 
 export interface CreateUserInput {
   email: string;
@@ -72,7 +72,9 @@ export async function createUserWithProfile(input: CreateUserInput): Promise<Cre
       await tx.insert(clientProfilesTable).values({
         userId: clerkUser.id,
         advisorId: assignedAdvisorId,
-        riskProfile: riskProfile || null,
+        // Set by staff (admin create / advisor lead conversion), so source is advisor.
+        riskProfile: normalizeRiskProfile(riskProfile),
+        riskProfileSource: normalizeRiskProfile(riskProfile) ? "advisor" : null,
         status: status || "active",
       });
       if (assignedAdvisorId) {

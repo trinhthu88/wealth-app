@@ -216,7 +216,9 @@ export default function ClientOnboarding() {
           fullName: state.screen1.fullName,
           countryCode: state.screen1.countryCode,
           isExpat: state.screen1.isExpat,
-          preferredDisplayCurrency: state.screen1.preferredCurrency,
+          preferredCurrency: state.screen1.preferredCurrency,
+          // Month + year only; the server stores the 1st of the month.
+          dateOfBirth: state.screen1.dateOfBirth ? state.screen1.dateOfBirth.slice(0, 7) : undefined,
         }),
       });
     } finally {
@@ -347,7 +349,7 @@ export default function ClientOnboarding() {
     try {
       await apiFetch("/client/onboarding/complete", {
         method: "POST",
-        body: JSON.stringify({ preferredDisplayCurrency: state.screen1.preferredCurrency }),
+        body: JSON.stringify({ preferredCurrency: state.screen1.preferredCurrency }),
       });
       if (user?.id) localStorage.removeItem(storageKey(user.id));
       navigate("/client/dashboard");

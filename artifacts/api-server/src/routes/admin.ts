@@ -3,7 +3,7 @@ import { and, eq, inArray, desc, isNull } from "drizzle-orm";
 import {
   db, profilesTable, clientProfilesTable, assetClassBenchmarksTable,
   advisedStrategyReturnsTable, advisedPlansTable, advisorAssignmentsTable,
-  roleSchema, clientStatusSchema,
+  roleSchema, clientStatusSchema, normalizeRiskProfile,
 } from "@workspace/db";
 import { requireAuth, requireRole } from "../middlewares/requireAuth";
 import { createUserWithProfile } from "../lib/createUserWithProfile";
@@ -32,6 +32,7 @@ router.post("/admin/users", ...adminGuard, async (req, res): Promise<void> => {
   const parsedStatus = status === undefined ? undefined : clientStatusSchema.safeParse(status);
   if (parsedRole && !parsedRole.success) { res.status(400).json({ error: "Invalid role" }); return; }
   if (parsedStatus && !parsedStatus.success) { res.status(400).json({ error: "Invalid client status" }); return; }
+  if (riskProfile != null && riskProfile !== "" && !normalizeRiskProfile(riskProfile)) { res.status(400).json({ error: "Invalid risk profile" }); return; }
   const normalizedRole = parsedRole?.success ? parsedRole.data : undefined;
   const normalizedStatus = parsedStatus?.success ? parsedStatus.data : undefined;
   const result = await createUserWithProfile({

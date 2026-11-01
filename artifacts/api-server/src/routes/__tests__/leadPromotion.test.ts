@@ -65,7 +65,7 @@ describe("lead promotion (PUT /leads/:id → status: client)", () => {
     await cleanupUser(userId);
   });
 
-  it("promotes track_b (no in-force plan): flips role, creates client_profiles active/track_b, stamps convertedUserId", async () => {
+  it("promotes a lead with no advised plan: flips role, creates client_profiles active, stamps convertedUserId; track derives as self_managed", async () => {
     const userId = `lead-user-trackb-${RUN_ID}`;
     await db.insert(profilesTable).values({ id: userId, email: `${userId}@test.local`, fullName: "Track B Lead", role: "free_user" });
     const [lead] = await db.insert(leadsTable).values({
@@ -81,13 +81,15 @@ describe("lead promotion (PUT /leads/:id → status: client)", () => {
 
     const [cp] = await db.select().from(clientProfilesTable).where(eq(clientProfilesTable.userId, userId));
     expect(cp.status).toBe("active");
-    expect(cp.clientTrack).toBe("track_b");
     expect(cp.advisorId).toBe(advisorId);
+
+    const track = await request(app).get("/api/client/profile/track").set(asUser(userId)).expect(200);
+    expect(track.body.track).toBe("self_managed");
 
     await cleanupUser(userId);
   });
 
-  it("promotes track_a when the lead has an in-force advised plan", async () => {
+  it("derives track advised after promotion when the lead has a visible advised plan", async () => {
     const userId = `lead-user-tracka-${RUN_ID}`;
     await db.insert(profilesTable).values({ id: userId, email: `${userId}@test.local`, fullName: "Track A Lead", role: "free_user" });
     const [lead] = await db.insert(leadsTable).values({
@@ -100,8 +102,8 @@ describe("lead promotion (PUT /leads/:id → status: client)", () => {
     const res = await request(app).put(`/api/leads/${lead.id}`).set(asUser(advisorId)).send({ status: "client" }).expect(200);
     expect(res.body.status).toBe("client");
 
-    const [cp] = await db.select().from(clientProfilesTable).where(eq(clientProfilesTable.userId, userId));
-    expect(cp.clientTrack).toBe("track_a");
+    const track = await request(app).get("/api/client/profile/track").set(asUser(userId)).expect(200);
+    expect(track.body.track).toBe("advised");
 
     await cleanupUser(userId);
   });

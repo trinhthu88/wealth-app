@@ -98,12 +98,12 @@ export function requireAdvisorOwnsClientOrLead(paramName: string = "id") {
       res.status(400).json({ error: `Missing ${paramName} param` });
       return;
     }
-    const { db, clientProfilesTable, leadsTable } = await import("@workspace/db");
+    const { db, leadsTable } = await import("@workspace/db");
     const { eq } = await import("drizzle-orm");
-    const [cp] = await db
-      .select({ advisorId: clientProfilesTable.advisorId })
-      .from(clientProfilesTable)
-      .where(eq(clientProfilesTable.userId, targetUserId));
+    const { getClientAdvisorPointer } = await import("../lib/currentAdvisor");
+    // Only an investment client's row is an advisor pointer; a free user's
+    // preferences-only client_profiles row falls through to the lead.
+    const cp = await getClientAdvisorPointer(targetUserId);
     if (cp) {
       if (cp.advisorId === userId) {
         next();

@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { and, asc, eq, ne } from "drizzle-orm";
-import { db, leadsTable, profilesTable, leadStatusSchema } from "@workspace/db";
+import { db, leadsTable, profilesTable, leadStatusSchema, normalizeRiskProfile } from "@workspace/db";
 import { requireAuth, requireRole, requireAdvisorOwnsLeadById } from "../middlewares/requireAuth";
 import { createUserWithProfile } from "../lib/createUserWithProfile";
 import { promoteLeadToClient } from "../lib/promoteLead";
@@ -151,6 +151,7 @@ router.post("/leads/:id/convert", ...leadGuard, async (req, res): Promise<void> 
   const userId = (req as any).userId;
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const { password, riskProfile } = req.body;
+  if (riskProfile != null && riskProfile !== "" && !normalizeRiskProfile(riskProfile)) { res.status(400).json({ error: "Invalid risk profile" }); return; }
 
   const [lead] = await db.select().from(leadsTable).where(eq(leadsTable.id, rawId));
   if (!lead) { res.status(404).json({ error: "Not found" }); return; }
