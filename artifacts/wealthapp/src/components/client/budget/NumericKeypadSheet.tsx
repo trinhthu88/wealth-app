@@ -42,8 +42,8 @@ export default function NumericKeypadSheet({ isOpen, onClose, title, hint, value
   return (
     <BottomSheet isOpen={isOpen} onClose={onClose} title={title}>
       <div className="space-y-5">
-        <div className="text-center py-2">
-          <div className="font-display text-[28px] font-bold text-forest tabular-nums leading-none">
+        <div className="border-b-2 border-forest pb-2 pt-1">
+          <div className="font-display tabular-nums text-[44px] leading-none tracking-[-0.04em] text-forest">
             ${fmtLive(value)}
           </div>
         </div>
@@ -55,8 +55,8 @@ export default function NumericKeypadSheet({ isOpen, onClose, title, hint, value
               type="button"
               onClick={() => press(key)}
               className={cn(
-                "min-h-14 rounded-2xl text-[20px] font-semibold flex items-center justify-center transition-colors",
-                "bg-paper text-forest hover:bg-hairline/60 active:bg-hairline"
+                "min-h-14 rounded-[14px] text-[20px] font-semibold flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/30",
+                "bg-surface text-forest hover:bg-hairline active:bg-hairline-2"
               )}
               aria-label={key === "back" ? "Backspace" : key}
             >
@@ -65,12 +65,12 @@ export default function NumericKeypadSheet({ isOpen, onClose, title, hint, value
           ))}
         </div>
 
-        <p className="text-[12.5px] text-ink-40 text-center">{hint}</p>
+        <p className="text-[13px] text-ink-40 text-center">{hint}</p>
 
         <button
           type="button"
           onClick={onDone}
-          className="w-full min-h-11 rounded-xl bg-green text-white font-semibold text-sm hover:bg-forest-700 transition-colors"
+          className="w-full h-12 rounded-full bg-forest text-paper font-semibold text-[15px] hover:bg-forest-700 transition-colors"
         >
           Done
         </button>
