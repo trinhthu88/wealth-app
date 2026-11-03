@@ -55,17 +55,17 @@ export function EditAssetSheet({ item, isOpen, onClose, onSave, onDelete }: Edit
     <BottomSheet isOpen={isOpen} onClose={onClose} title={`Edit: ${item.name}`}>
       <div className="space-y-5 pb-4">
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-forest">Label</label>
+          <label className="text-[13px] font-medium text-forest">Label</label>
           <input
             type="text"
             value={name}
             onChange={e => setName(e.target.value)}
-            className="w-full px-4 py-2.5 rounded-xl border border-hairline text-sm text-forest focus:outline-none focus:ring-2 focus:ring-green/30"
+            className="w-full h-12 px-4 rounded-[14px] bg-surface border-0 text-[14px] text-forest placeholder:text-ink-30 focus:outline-none focus:ring-2 focus:ring-forest/30"
           />
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-forest">Current value</label>
+          <label className="text-[13px] font-medium text-forest">Current value</label>
           <div className="flex gap-2">
             <input
               type="number"
@@ -73,11 +73,11 @@ export function EditAssetSheet({ item, isOpen, onClose, onSave, onDelete }: Edit
               onChange={e => setValue(e.target.value)}
               min={0}
               style={{ MozAppearance: "textfield" } as React.CSSProperties}
-              className="flex-1 px-4 py-2.5 rounded-xl border border-hairline text-sm text-forest focus:outline-none focus:ring-2 focus:ring-green/30 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              className="flex-1 min-w-0 h-12 px-4 rounded-[14px] bg-surface border-0 text-[14px] text-forest placeholder:text-ink-30 focus:outline-none focus:ring-2 focus:ring-forest/30 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
-            <div className="inline-flex items-center bg-paper rounded-xl p-0.5">
+            <div className="inline-flex items-center bg-surface rounded-full p-1 shrink-0">
               {CURRENCIES.map(c => (
-                <button key={c} onClick={() => setCurrency(c)} className={cn("px-2.5 py-1.5 rounded-lg text-xs font-medium", currency === c ? "bg-surface text-forest shadow-sm" : "text-ink-40")}>
+                <button key={c} onClick={() => setCurrency(c)} className={cn("h-10 px-3 rounded-full text-[12px] font-semibold", currency === c ? "bg-forest text-paper" : "text-ink-40 hover:text-forest")}>
                   {c}
                 </button>
               ))}
@@ -88,7 +88,7 @@ export function EditAssetSheet({ item, isOpen, onClose, onSave, onDelete }: Edit
         <button
           onClick={handleSave}
           disabled={!name.trim() || numVal <= 0 || saving}
-          className="w-full py-3 rounded-xl bg-green text-white font-semibold text-sm disabled:opacity-50 transition-colors"
+          className="w-full h-12 px-5 rounded-full bg-forest text-paper font-semibold text-[14px] hover:bg-forest-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {saving ? "Saving…" : "Save changes"}
         </button>
@@ -98,13 +98,13 @@ export function EditAssetSheet({ item, isOpen, onClose, onSave, onDelete }: Edit
             <div className="flex gap-2">
               <button
                 onClick={() => { onDelete(item.id); onClose(); }}
-                className="flex-1 py-2.5 rounded-xl bg-clay text-white text-sm font-medium"
+                className="flex-1 h-11 rounded-full bg-clay text-forest text-[14px] font-semibold"
               >
                 Yes, remove
               </button>
               <button
                 onClick={() => setConfirmDelete(false)}
-                className="flex-1 py-2.5 rounded-xl border border-hairline text-ink-60 text-sm"
+                className="flex-1 h-11 rounded-full border-[1.5px] border-forest bg-transparent text-forest text-[14px] font-semibold"
               >
                 Cancel
               </button>
@@ -112,7 +112,7 @@ export function EditAssetSheet({ item, isOpen, onClose, onSave, onDelete }: Edit
           ) : (
             <button
               onClick={() => setConfirmDelete(true)}
-              className="w-full py-2.5 rounded-xl border border-clay/30 text-clay text-sm font-medium hover:bg-clay-tint transition-colors"
+              className="w-full h-11 rounded-full border-[1.5px] border-clay bg-transparent text-clay-ink text-[14px] font-semibold hover:bg-sun-tint transition-colors"
             >
               Remove this asset
             </button>
@@ -168,44 +168,44 @@ export function EditLiabilitySheet({ item, isOpen, onClose, onSave, onDelete }: 
     <BottomSheet isOpen={isOpen} onClose={onClose} title={`Edit: ${item.name}`}>
       <div className="space-y-5 pb-4">
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-forest">Label</label>
-          <input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-hairline text-sm text-forest focus:outline-none focus:ring-2 focus:ring-clay/30" />
+          <label className="text-[13px] font-medium text-forest">Label</label>
+          <input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full h-12 px-4 rounded-[14px] bg-surface border-0 text-[14px] text-forest placeholder:text-ink-30 focus:outline-none focus:ring-2 focus:ring-forest/30" />
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-forest">Outstanding balance</label>
+          <label className="text-[13px] font-medium text-forest">Outstanding balance</label>
           <div className="flex gap-2">
-            <input type="number" value={balance} onChange={e => setBalance(e.target.value)} min={0} style={{ MozAppearance: "textfield" } as React.CSSProperties} className="flex-1 px-4 py-2.5 rounded-xl border border-hairline text-sm text-forest focus:outline-none focus:ring-2 focus:ring-clay/30 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
-            <div className="inline-flex items-center bg-paper rounded-xl p-0.5">
+            <input type="number" value={balance} onChange={e => setBalance(e.target.value)} min={0} style={{ MozAppearance: "textfield" } as React.CSSProperties} className="flex-1 min-w-0 h-12 px-4 rounded-[14px] bg-surface border-0 text-[14px] text-forest placeholder:text-ink-30 focus:outline-none focus:ring-2 focus:ring-forest/30 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+            <div className="inline-flex items-center bg-surface rounded-full p-1 shrink-0">
               {CURRENCIES.map(c => (
-                <button key={c} onClick={() => setCurrency(c)} className={cn("px-2.5 py-1.5 rounded-lg text-xs font-medium", currency === c ? "bg-surface text-forest shadow-sm" : "text-ink-40")}>{c}</button>
+                <button key={c} onClick={() => setCurrency(c)} className={cn("h-10 px-3 rounded-full text-[12px] font-semibold", currency === c ? "bg-forest text-paper" : "text-ink-40 hover:text-forest")}>{c}</button>
               ))}
             </div>
           </div>
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-forest">Monthly payment <span className="text-ink-30 font-normal">(optional)</span></label>
-          <input type="number" value={monthlyPayment} onChange={e => setMonthlyPayment(e.target.value)} placeholder="0" min={0} style={{ MozAppearance: "textfield" } as React.CSSProperties} className="w-full px-4 py-2.5 rounded-xl border border-hairline text-sm text-forest focus:outline-none focus:ring-2 focus:ring-clay/30 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+          <label className="text-[13px] font-medium text-forest">Monthly payment <span className="text-ink-40 font-normal">(optional)</span></label>
+          <input type="number" value={monthlyPayment} onChange={e => setMonthlyPayment(e.target.value)} placeholder="0" min={0} style={{ MozAppearance: "textfield" } as React.CSSProperties} className="w-full h-12 px-4 rounded-[14px] bg-surface border-0 text-[14px] text-forest placeholder:text-ink-30 focus:outline-none focus:ring-2 focus:ring-forest/30 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-forest">Interest rate % <span className="text-ink-30 font-normal">(optional)</span></label>
-          <input type="number" value={interestRate} onChange={e => setInterestRate(e.target.value)} placeholder="e.g. 5.5" min={0} max={50} step={0.1} style={{ MozAppearance: "textfield" } as React.CSSProperties} className="w-full px-4 py-2.5 rounded-xl border border-hairline text-sm text-forest focus:outline-none focus:ring-2 focus:ring-clay/30 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
+          <label className="text-[13px] font-medium text-forest">Interest rate % <span className="text-ink-40 font-normal">(optional)</span></label>
+          <input type="number" value={interestRate} onChange={e => setInterestRate(e.target.value)} placeholder="e.g. 5.5" min={0} max={50} step={0.1} style={{ MozAppearance: "textfield" } as React.CSSProperties} className="w-full h-12 px-4 rounded-[14px] bg-surface border-0 text-[14px] text-forest placeholder:text-ink-30 focus:outline-none focus:ring-2 focus:ring-forest/30 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
         </div>
 
-        <button onClick={handleSave} disabled={!name.trim() || numBalance <= 0 || saving} className="w-full py-3 rounded-xl bg-clay text-white font-semibold text-sm disabled:opacity-50 transition-colors">
+        <button onClick={handleSave} disabled={!name.trim() || numBalance <= 0 || saving} className="w-full h-12 px-5 rounded-full bg-forest text-paper font-semibold text-[14px] hover:bg-forest-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
           {saving ? "Saving…" : "Save changes"}
         </button>
 
         <div className="border-t border-hairline pt-4">
           {confirmDelete ? (
             <div className="flex gap-2">
-              <button onClick={() => { onDelete(item.id); onClose(); }} className="flex-1 py-2.5 rounded-xl bg-clay text-white text-sm font-medium">Yes, remove</button>
-              <button onClick={() => setConfirmDelete(false)} className="flex-1 py-2.5 rounded-xl border border-hairline text-ink-60 text-sm">Cancel</button>
+              <button onClick={() => { onDelete(item.id); onClose(); }} className="flex-1 h-11 rounded-full bg-clay text-forest text-[14px] font-semibold">Yes, remove</button>
+              <button onClick={() => setConfirmDelete(false)} className="flex-1 h-11 rounded-full border-[1.5px] border-forest bg-transparent text-forest text-[14px] font-semibold">Cancel</button>
             </div>
           ) : (
-            <button onClick={() => setConfirmDelete(true)} className="w-full py-2.5 rounded-xl border border-clay/30 text-clay text-sm font-medium hover:bg-clay-tint transition-colors">
+            <button onClick={() => setConfirmDelete(true)} className="w-full h-11 rounded-full border-[1.5px] border-clay bg-transparent text-clay-ink text-[14px] font-semibold hover:bg-sun-tint transition-colors">
               Remove this liability
             </button>
           )}

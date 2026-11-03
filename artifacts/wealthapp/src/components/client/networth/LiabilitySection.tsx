@@ -24,18 +24,18 @@ export default function LiabilitySection({
   return (
     <div className="space-y-3">
       {/* Section header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <h2 className="font-display text-base font-semibold text-forest">Liabilities</h2>
+      <div className="flex items-center justify-between gap-3 px-1">
+        <div className="flex items-baseline gap-2 min-w-0">
+          <h2 className="text-[16px] font-semibold text-forest">Liabilities</h2>
           {!isEmpty && (
-            <span className="text-sm font-semibold text-clay">
+            <span className="text-[15px] font-semibold tabular-nums text-ink-40">
               <CurrencyField amountUsd={totalLiabilities} compact />
             </span>
           )}
         </div>
         <button
           onClick={onAddClick}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-clay/40 text-clay text-sm font-medium hover:bg-clay-tint transition-colors"
+          className="shrink-0 flex items-center gap-1.5 h-11 px-4 rounded-full border-[1.5px] border-forest bg-transparent text-forest text-[14px] font-semibold hover:bg-surface transition-colors"
         >
           <Plus className="h-4 w-4" />
           Add liability
@@ -44,11 +44,11 @@ export default function LiabilitySection({
 
       {/* Synced (from a Property holding's outstanding mortgage) — read-only */}
       {syncedLiabilities.length > 0 && (
-        <div className="bg-clay-tint border border-clay/20 rounded-[18px] overflow-hidden">
-          <p className="text-[11px] font-semibold text-clay-ink uppercase tracking-wide px-3 sm:px-4 py-2 border-b border-clay/10">
+        <div className="bg-surface rounded-[24px] p-1">
+          <p className="tala-eyebrow text-ink-40 px-3 pt-3 pb-1">
             Synced from a property holding — edit the balance there
           </p>
-          <div className="divide-y divide-hairline">
+          <div>
             {syncedLiabilities.map(item => (
               <SyncedLiabilityRow key={item.id} item={item} />
             ))}
@@ -58,7 +58,7 @@ export default function LiabilitySection({
 
       {/* Manual items */}
       {manualLiabilities.length > 0 && (
-        <div className="bg-surface border border-hairline rounded-[18px] overflow-hidden divide-y divide-hairline">
+        <div className="bg-surface rounded-[24px] p-1">
           {manualLiabilities.map(item => (
             <ManualLiabilityRow
               key={item.id}
@@ -72,26 +72,26 @@ export default function LiabilitySection({
 
       {/* Empty state */}
       {isEmpty && (
-        <div className="border-2 border-dashed border-hairline rounded-[18px] py-10 text-center">
-          <p className="text-sm font-medium text-ink-40">No liabilities tracked</p>
-          <p className="text-xs text-ink-30 mt-1">Add mortgages, loans, or credit card balances</p>
+        <div className="bg-surface rounded-[24px] py-10 px-5 text-center">
+          <p className="text-[14px] font-medium text-forest">No liabilities tracked</p>
+          <p className="text-[13px] text-ink-40 mt-1">Add mortgages, loans, or credit card balances</p>
         </div>
       )}
 
       {/* Monthly payments footer */}
       {totalMonthlyPayment > 0 && (
-        <div className="bg-paper border border-hairline rounded-[18px] px-4 py-3 flex items-center justify-between gap-3">
+        <div className="bg-surface rounded-[24px] p-5 flex items-center justify-between gap-3">
           <div>
-            <p className="text-xs text-ink-40">Total monthly debt payments</p>
-            <p className="text-sm font-semibold text-forest">
+            <p className="tala-eyebrow text-ink-40">Total monthly debt payments</p>
+            <p className="mt-1 text-[18px] font-semibold tabular-nums text-forest">
               <CurrencyField amountUsd={totalMonthlyPayment} compact />
-              <span className="text-ink-30 font-normal text-xs">/mo</span>
+              <span className="text-ink-40 font-normal text-[13px]">/mo</span>
             </p>
-            <p className="text-[11px] text-ink-30 mt-1">Counted automatically as an expense in your budget.</p>
+            <p className="text-[13px] text-ink-40 mt-1">Counted automatically as an expense in your budget.</p>
           </div>
           <Link
             href="/client/money"
-            className="text-xs text-green font-medium hover:text-forest shrink-0"
+            className="shrink-0 inline-flex items-center min-h-[44px] px-1 text-[14px] text-green font-semibold underline underline-offset-2 hover:text-forest-700"
           >
             See budget →
           </Link>

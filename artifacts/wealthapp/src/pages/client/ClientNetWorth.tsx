@@ -58,12 +58,12 @@ export default function ClientNetWorth() {
 
   return (
     <ClientAppShell>
-      <div className="max-w-[900px] mx-auto space-y-5">
+      <div className="max-w-[900px] mx-auto space-y-6">
         {isPropertyDebts ? (
           <>
-            <div>
-              <h1 className="font-display text-2xl font-semibold text-forest">Property &amp; debts</h1>
-              <p className="mt-1 text-sm text-ink-40">Track assets and liabilities you have added manually.</p>
+            <div className="px-1">
+              <h1 className="font-display text-[34px] leading-[1.05] text-forest">Property &amp; debts</h1>
+              <p className="mt-2 text-[14px] text-ink-40">Track assets and liabilities you have added manually.</p>
             </div>
             <AssetSection
               syncedAssets={[]}

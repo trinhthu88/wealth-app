@@ -77,17 +77,17 @@ export default function AddLiabilitySheet({ isOpen, onClose, onSave }: Props) {
       <div className="space-y-5 pb-4">
         {/* Category */}
         <div className="space-y-2">
-          <label className="text-sm font-medium text-forest">Category *</label>
+          <label className="text-[13px] font-medium text-forest">Category *</label>
           <div className="flex flex-wrap gap-2">
             {LIABILITY_CATEGORIES.map(cat => (
               <button
                 key={cat.value}
                 onClick={() => setCategory(cat.value)}
                 className={cn(
-                  "px-3 py-1.5 rounded-lg text-sm border transition-all flex items-center gap-1.5",
+                  "h-10 px-3.5 rounded-full text-[13px] font-medium transition-colors flex items-center gap-1.5",
                   category === cat.value
-                    ? "border-clay bg-clay-tint text-clay-ink font-medium"
-                    : "border-hairline text-ink-60 hover:border-clay/40"
+                    ? "bg-forest text-paper"
+                    : "bg-surface text-forest hover:bg-breeze"
                 )}
               >
                 <cat.icon className="w-4 h-4" />
@@ -99,19 +99,19 @@ export default function AddLiabilitySheet({ isOpen, onClose, onSave }: Props) {
 
         {/* Label */}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-forest">Label *</label>
+          <label className="text-[13px] font-medium text-forest">Label *</label>
           <input
             type="text"
             value={name}
             onChange={e => setName(e.target.value)}
             placeholder={catInfo?.placeholder ?? "Describe this liability"}
-            className="w-full px-4 py-2.5 rounded-xl border border-hairline text-sm text-forest placeholder:text-ink-30 focus:outline-none focus:ring-2 focus:ring-clay/30 focus:border-clay"
+            className="w-full h-12 px-4 rounded-[14px] bg-surface border-0 text-[14px] text-forest placeholder:text-ink-30 focus:outline-none focus:ring-2 focus:ring-forest/30"
           />
         </div>
 
         {/* Balance */}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-forest">Outstanding balance *</label>
+          <label className="text-[13px] font-medium text-forest">Outstanding balance *</label>
           <div className="flex gap-2">
             <input
               type="number"
@@ -120,16 +120,16 @@ export default function AddLiabilitySheet({ isOpen, onClose, onSave }: Props) {
               placeholder="0"
               min={0}
               style={{ MozAppearance: "textfield" } as React.CSSProperties}
-              className="flex-1 px-4 py-2.5 rounded-xl border border-hairline text-sm text-forest focus:outline-none focus:ring-2 focus:ring-clay/30 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              className="flex-1 min-w-0 h-12 px-4 rounded-[14px] bg-surface border-0 text-[14px] text-forest placeholder:text-ink-30 focus:outline-none focus:ring-2 focus:ring-forest/30 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
-            <div className="inline-flex items-center bg-paper rounded-xl p-0.5">
+            <div className="inline-flex items-center bg-surface rounded-full p-1 shrink-0">
               {CURRENCIES.map(c => (
                 <button
                   key={c}
                   onClick={() => setCurrency(c)}
                   className={cn(
-                    "px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all",
-                    currency === c ? "bg-surface text-forest shadow-sm" : "text-ink-40"
+                    "h-10 px-3 rounded-full text-[12px] font-semibold transition-all",
+                    currency === c ? "bg-forest text-paper" : "text-ink-40 hover:text-forest"
                   )}
                 >
                   {c}
@@ -141,8 +141,8 @@ export default function AddLiabilitySheet({ isOpen, onClose, onSave }: Props) {
 
         {/* Monthly payment (optional) */}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-forest">
-            Monthly payment <span className="text-ink-30 font-normal">(optional)</span>
+          <label className="text-[13px] font-medium text-forest">
+            Monthly payment <span className="text-ink-40 font-normal">(optional)</span>
           </label>
           <input
             type="number"
@@ -151,14 +151,14 @@ export default function AddLiabilitySheet({ isOpen, onClose, onSave }: Props) {
             placeholder="0"
             min={0}
             style={{ MozAppearance: "textfield" } as React.CSSProperties}
-            className="w-full px-4 py-2.5 rounded-xl border border-hairline text-sm text-forest focus:outline-none focus:ring-2 focus:ring-clay/30 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            className="w-full h-12 px-4 rounded-[14px] bg-surface border-0 text-[14px] text-forest placeholder:text-ink-30 focus:outline-none focus:ring-2 focus:ring-forest/30 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
           />
         </div>
 
         {/* Interest rate (optional) */}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-forest">
-            Annual interest rate % <span className="text-ink-30 font-normal">(optional)</span>
+          <label className="text-[13px] font-medium text-forest">
+            Annual interest rate % <span className="text-ink-40 font-normal">(optional)</span>
           </label>
           <input
             type="number"
@@ -169,16 +169,16 @@ export default function AddLiabilitySheet({ isOpen, onClose, onSave }: Props) {
             max={50}
             step={0.1}
             style={{ MozAppearance: "textfield" } as React.CSSProperties}
-            className="w-full px-4 py-2.5 rounded-xl border border-hairline text-sm text-forest focus:outline-none focus:ring-2 focus:ring-clay/30 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            className="w-full h-12 px-4 rounded-[14px] bg-surface border-0 text-[14px] text-forest placeholder:text-ink-30 focus:outline-none focus:ring-2 focus:ring-forest/30 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
           />
         </div>
 
-        {error && <p className="text-sm text-clay">{error}</p>}
+        {error && <p className="text-[13px] font-medium text-clay-ink">{error}</p>}
 
         <button
           onClick={handleSave}
           disabled={!name.trim() || numBalance <= 0 || saving}
-          className="w-full py-3 rounded-xl bg-clay text-white font-semibold text-sm hover:bg-clay-ink disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="w-full h-12 px-5 rounded-full bg-forest text-paper font-semibold text-[14px] hover:bg-forest-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {saving ? "Saving…" : "Add liability"}
         </button>
