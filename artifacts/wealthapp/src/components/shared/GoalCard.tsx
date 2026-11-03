@@ -199,7 +199,7 @@ export default function GoalCard({
   const hasMenu = !!onDelete;
 
   return (
-    <div className={cn("bg-surface rounded-[28px] p-[20px_22px] shadow-[0_2px_14px_rgba(20,52,42,.06)]", className)}>
+    <div className={cn("bg-surface rounded-[28px] p-[20px_22px] shadow-[0_2px_14px_rgba(12,33,164,.06)]", className)}>
       <div className="flex gap-[18px] items-start">
         <div className="relative w-[76px] h-[76px] flex-none">
           <ProgressRing pct={pct} status={goal.trackStatus} />

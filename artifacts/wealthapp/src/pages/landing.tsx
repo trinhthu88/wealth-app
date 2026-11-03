@@ -229,8 +229,8 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto px-4 py-8 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2.5">
             <svg width="22" height="22" viewBox="0 0 100 100" fill="none" aria-hidden="true">
-              <circle cx="50" cy="50" r="22" fill="#1D9E75" />
-              <g stroke="#1D9E75" strokeWidth="7" strokeLinecap="round">
+              <circle cx="50" cy="50" r="22" fill="#0C21A4" />
+              <g stroke="#0C21A4" strokeWidth="7" strokeLinecap="round">
                 <line x1="50" y1="6" x2="50" y2="18" /><line x1="50" y1="82" x2="50" y2="94" />
                 <line x1="6" y1="50" x2="18" y2="50" /><line x1="82" y1="50" x2="94" y2="50" />
                 <line x1="20" y1="20" x2="27" y2="27" /><line x1="73" y1="73" x2="80" y2="80" />

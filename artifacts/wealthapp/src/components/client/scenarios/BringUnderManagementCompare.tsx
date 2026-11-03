@@ -59,7 +59,7 @@ export default function BringUnderManagementCompare({ holdings }: { holdings: Cl
 
   if (eligible.length === 0) {
     return (
-      <div className="bg-surface border border-hairline rounded-[26px] p-8 text-center text-ink-60 text-[14px]">
+      <div className="bg-surface rounded-[24px] p-8 text-center text-ink-40 text-[14px]">
         No self-tracked holdings to compare yet. Add one from Investment accounts.
       </div>
     );
@@ -74,10 +74,10 @@ export default function BringUnderManagementCompare({ holdings }: { holdings: Cl
               key={h.id}
               onClick={() => setSelectedId(h.id)}
               className={cn(
-                "min-h-[36px] px-3.5 rounded-full border text-[13px] font-semibold whitespace-nowrap transition-colors",
+                "min-h-[44px] px-4 rounded-full text-[14px] font-semibold whitespace-nowrap transition-colors",
                 selectedId === h.id
-                  ? "border-green bg-green-tint text-forest"
-                  : "border-hairline bg-surface text-ink-40 hover:text-forest"
+                  ? "bg-forest text-paper"
+                  : "bg-surface text-forest hover:bg-breeze"
               )}
             >
               {h.label}
@@ -87,81 +87,81 @@ export default function BringUnderManagementCompare({ holdings }: { holdings: Cl
       )}
 
       {selected && (benchmarkLoading || !benchmark) ? (
-        <div className="h-64 bg-surface rounded-[26px] animate-pulse" />
+        <div className="h-64 bg-surface rounded-[28px] animate-pulse" />
       ) : selected && benchmark && projection ? (
         <div className="space-y-[14px]">
           <div>
             <Link href="/client/wealth/investments">
-              <span className="text-[13px] font-semibold text-green cursor-pointer hover:underline mb-1 inline-block">
+              <span className="text-[13px] font-semibold text-green cursor-pointer hover:underline mb-2 inline-flex items-center min-h-[44px]">
                 ← Accounts
               </span>
             </Link>
-            <h2 className="font-display text-[26px] font-semibold text-forest tracking-[-0.02em] mb-1">
+            <h2 className="text-[18px] font-semibold text-forest mb-1">
               {selected.label}, two ways
             </h2>
-            <p className="text-[13px] leading-[1.5] text-ink-60 text-pretty">
+            <p className="text-[14px] leading-[1.5] text-ink-40 text-pretty">
               You track this holding yourself at {projection.asIsReturn.toFixed(1)}%. Below, the same ${Math.round(selected.currentValue).toLocaleString()} under the benchmark rate and under advisor management, both to {new Date().getFullYear() + HORIZON_YEARS}.
             </p>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3">
-            <div className="flex-1 bg-surface border border-hairline rounded-[24px] p-4">
-              <div className="font-mono text-[10px] tracking-[0.12em] uppercase text-ink-40 mb-2.5">Left as-is</div>
+            <div className="flex-1 bg-surface rounded-[24px] p-5">
+              <div className="tala-eyebrow text-ink-40 mb-2.5">Left as-is</div>
               <svg width="100%" height="72" viewBox="0 0 140 72" preserveAspectRatio="none" className="block mb-3">
-                <path d="M0,68 Q80,60 140,30" fill="none" stroke="var(--green-300)" strokeWidth="2.5" strokeLinecap="round" />
-                <path d="M0,68 Q80,60 140,30 L140,72 L0,72 Z" fill="var(--green-300)" opacity=".08" />
+                <path d="M0,68 Q80,60 140,30" fill="none" stroke="var(--breeze)" strokeWidth="2.8" strokeLinecap="round" />
+                <path d="M0,68 Q80,60 140,30 L140,72 L0,72 Z" fill="var(--breeze)" opacity=".35" />
               </svg>
-              <div className="font-display text-[19px] font-bold text-forest tracking-[-0.02em]">
+              <div className="font-display tabular-nums text-[32px] leading-none text-forest">
                 ${Math.round(projection.asIsFinal).toLocaleString()}
               </div>
-              <div className="text-[11px] text-ink-40 mt-1 leading-[1.45]">
+              <div className="text-[12px] text-ink-40 mt-2 leading-[1.45]">
                 in {new Date().getFullYear() + HORIZON_YEARS}, assuming <strong className="text-forest font-semibold">{projection.asIsReturn.toFixed(1)}% p.a.</strong> before fees and tax
               </div>
             </div>
 
-            <div className="flex-1 bg-surface border-[1.5px] border-green rounded-[24px] p-4 shadow-[0_4px_14px_rgba(29,158,117,.12)]">
-              <div className="font-mono text-[10px] tracking-[0.12em] uppercase text-green mb-2.5">Under advisor management</div>
+            <div className="flex-1 bg-forest rounded-[28px] p-5">
+              <div className="tala-eyebrow text-mint mb-2.5">Under advisor management</div>
               <svg width="100%" height="72" viewBox="0 0 140 72" preserveAspectRatio="none" className="block mb-3">
-                <path d="M0,68 Q80,52 140,8" fill="none" stroke="var(--green)" strokeWidth="2.5" strokeLinecap="round" />
-                <path d="M0,68 Q80,52 140,8 L140,72 L0,72 Z" fill="var(--green)" opacity=".10" />
+                <path d="M0,68 Q80,52 140,8" fill="none" stroke="var(--field)" strokeWidth="2.8" strokeLinecap="round" />
+                <path d="M0,68 Q80,52 140,8 L140,72 L0,72 Z" fill="var(--field)" opacity=".18" />
               </svg>
-              <div className="font-display text-[19px] font-bold text-green tracking-[-0.02em]">
+              <div className="font-display tabular-nums text-[32px] leading-none text-paper">
                 {projection.managedFinal != null ? `$${Math.round(projection.managedFinal).toLocaleString()}` : "N/A"}
               </div>
-              <div className="text-[11px] text-ink-40 mt-1 leading-[1.45]">
-                in {new Date().getFullYear() + HORIZON_YEARS}, assuming <strong className="text-forest font-semibold">{projection.managedReturn?.toFixed(1)}% p.a.</strong> net of a 0.9% advice fee
+              <div className="text-[12px] text-mint mt-2 leading-[1.45]">
+                in {new Date().getFullYear() + HORIZON_YEARS}, assuming <strong className="text-paper font-semibold">{projection.managedReturn?.toFixed(1)}% p.a.</strong> net of a 0.9% advice fee
               </div>
             </div>
           </div>
 
-          <div className="bg-surface border border-hairline rounded-[24px] p-[18px]">
-            <div className="font-mono text-[10px] tracking-[0.14em] uppercase text-ink-40 mb-3">What sits behind these numbers</div>
-            <div className="flex justify-between items-center text-[13px] text-forest py-2 border-b border-hairline">
+          <div className="bg-surface rounded-[24px] p-5">
+            <div className="text-[16px] font-semibold text-forest mb-2">What sits behind these numbers</div>
+            <div className="flex justify-between items-center text-[14px] text-forest py-3 border-b border-hairline">
               <span>Starting value</span>
-              <span className="font-mono">${Math.round(selected.currentValue).toLocaleString()}</span>
+              <span className="font-semibold tabular-nums">${Math.round(selected.currentValue).toLocaleString()}</span>
             </div>
-            <div className="flex justify-between items-center text-[13px] text-forest py-2 border-b border-hairline">
+            <div className="flex justify-between items-center text-[14px] text-forest py-3 border-b border-hairline">
               <span>Horizon</span>
-              <span className="font-mono">{HORIZON_YEARS} years</span>
+              <span className="font-semibold tabular-nums">{HORIZON_YEARS} years</span>
             </div>
-            <div className="flex justify-between items-center text-[13px] text-forest py-2 border-b border-hairline">
+            <div className="flex justify-between items-center text-[14px] text-forest py-3 border-b border-hairline">
               <span>Further contributions</span>
-              <span className="font-mono">None assumed</span>
+              <span className="font-semibold tabular-nums">None assumed</span>
             </div>
-            <div className="flex justify-between items-center text-[13px] text-forest py-2">
+            <div className="flex justify-between items-center text-[14px] text-forest py-3">
               <span>Inflation adjustment</span>
-              <span className="font-mono">Not applied</span>
+              <span className="font-semibold tabular-nums">Not applied</span>
             </div>
           </div>
 
-          <div className="bg-paper rounded-[16px] p-[14px]">
-            <div className="text-[11px] leading-[1.55] text-ink-40 text-pretty">
+          <div className="px-1 py-1">
+            <div className="text-[12px] leading-[1.55] text-ink-40 text-pretty">
               <strong className="text-forest font-semibold">Not a guarantee.</strong> Both figures are illustrations based on the assumptions above. Actual returns will differ, and the advised trajectory is not a promise of outperformance. Past performance does not predict future results.
             </div>
           </div>
 
           <Link href={`/client/advisor/messages?about=${encodeURIComponent(`bringing my ${selected.label} under management`)}`}>
-            <button className="w-full min-h-[48px] border-none rounded-[16px] bg-green text-white font-sans text-[14.5px] font-semibold cursor-pointer hover:bg-forest-700 transition-colors">
+            <button className="w-full h-12 px-5 border-none rounded-full bg-forest text-paper font-sans text-[15px] font-semibold cursor-pointer hover:bg-forest-700 transition-colors">
               Ask advisor about this
             </button>
           </Link>

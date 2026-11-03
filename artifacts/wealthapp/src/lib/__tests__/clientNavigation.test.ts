@@ -18,7 +18,7 @@ describe("investment client navigation", () => {
     ["/client/scenarios", "/client/goals/what-if", "goals", "what-if"],
     ["/client/messages", "/client/advisor/messages", "advisor", "messages"],
     ["/client/documents", "/client/advisor/documents", "advisor", "documents"],
-    ["/client/budget", "/client/money", "money", null],
+    ["/client/budget", "/client/money", "home", null],
     ["/client/packages", "/client/wealth/investments", "wealth", "investments"],
     ["/client/transactions", "/client/wealth/investments", "wealth", "investments"],
     ["/client/packages/package-456", "/client/wealth/investments/packages/package-456", "wealth", "investments"],
@@ -39,16 +39,21 @@ describe("investment client navigation", () => {
       .toBe("/client/advisor/messages?about=investment");
   });
 
-  it("shows exactly the five required primary navigation items", () => {
+  it("shows the four primary places (Sol sits between Portfolio and Goals in the shell)", () => {
     expect(CLIENT_PRIMARY_NAV.map(item => item.label)).toEqual([
-      "Home", "Money", "Wealth", "Goals", "Advisor",
+      "Home", "Portfolio", "Goals", "Advisor",
     ]);
-    expect(CLIENT_PRIMARY_NAV).toHaveLength(5);
+    expect(CLIENT_PRIMARY_NAV).toHaveLength(4);
+  });
+
+  it("opens Portfolio on investments and keeps the budget under Home", () => {
+    expect(CLIENT_PRIMARY_NAV.find(item => item.id === "wealth")?.href).toBe("/client/wealth/investments");
+    expect(getClientNavigationState("/client/money").primaryId).toBe("home");
   });
 
   it("provides the required linkable tabs for each grouped destination", () => {
     expect(getClientNavigationState("/client/wealth/overview").tabs?.map(tab => tab.label))
-      .toEqual(["Overview", "Investments", "Property & debts"]);
+      .toEqual(["Investments", "Net worth", "Property & debts"]);
     expect(getClientNavigationState("/client/goals/goals").tabs?.map(tab => tab.label))
       .toEqual(["Goals", "My plan", "What-if"]);
     expect(getClientNavigationState("/client/advisor/messages").tabs?.map(tab => tab.label))

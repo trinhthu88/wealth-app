@@ -20,10 +20,10 @@ export default function PlanProgressRing({
       {/* Ring */}
       <div className="relative shrink-0" style={{ width: 120, height: 120 }}>
         <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90">
-          <circle cx="60" cy="60" r={r} fill="none" stroke="#E2E8F0" strokeWidth="10" />
+          <circle cx="60" cy="60" r={r} fill="none" stroke="var(--hairline)" strokeWidth="10" />
           <circle
             cx="60" cy="60" r={r}
-            fill="none" stroke="#1D9E75" strokeWidth="10"
+            fill="none" stroke="var(--forest)" strokeWidth="10"
             strokeLinecap="round"
             strokeDasharray={circumference}
             strokeDashoffset={dashOffset}
@@ -31,30 +31,30 @@ export default function PlanProgressRing({
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-xl font-bold text-[#042C53]">{completedCount}/{totalCount}</span>
-          <span className="text-[10px] text-slate-400">milestones</span>
+          <span className="font-display tabular-nums text-[28px] leading-none text-forest">{completedCount}/{totalCount}</span>
+          <span className="tala-eyebrow text-ink-40 mt-1">milestones</span>
         </div>
       </div>
 
       {/* Stat chips */}
       <div className="flex flex-wrap gap-2">
         {completedCount > 0 && (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold bg-field text-forest">
             {completedCount} Complete
           </span>
         )}
         {inProgressCount > 0 && (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-[#1D9E75]/10 text-[#1D9E75]">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold bg-forest text-paper">
             {inProgressCount} In progress
           </span>
         )}
         {upcomingCount > 0 && (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-slate-100 text-slate-500">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold bg-surface text-forest">
             {upcomingCount} Upcoming
           </span>
         )}
         {totalCount === 0 && (
-          <span className="text-sm text-slate-400">No milestones yet</span>
+          <span className="text-[14px] text-ink-40">No milestones yet</span>
         )}
       </div>
     </div>

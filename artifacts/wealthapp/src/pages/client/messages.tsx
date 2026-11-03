@@ -117,50 +117,50 @@ export default function ClientMessages() {
     <ClientAppShell>
       <div className="h-full flex flex-col max-w-[860px] mx-auto">
         <div className="mb-4 flex shrink-0 items-center justify-between gap-3">
-          <h1 className="font-display text-[26px] font-semibold text-forest tracking-[-0.02em]">Messages</h1>
+          <h1 className="font-display text-[34px] leading-[1.05] text-forest">Messages</h1>
           <button
             type="button"
             onClick={() => setShowReviewSheet(true)}
-            className="rounded-full bg-forest px-4 py-2 text-[12px] font-semibold text-paper hover:bg-forest-700 sm:text-[13px]"
+            className="shrink-0 h-11 rounded-full bg-forest px-5 text-[14px] font-semibold text-paper hover:bg-forest-700 transition-colors"
           >
             Request a review
           </button>
         </div>
 
-        <div className="bg-surface border border-hairline rounded-[20px] px-4 py-4 mb-4 shadow-[0_2px_14px_rgba(20,52,42,.04)]">
+        <div className="bg-surface rounded-[24px] p-5 mb-4">
           <label className="flex items-center justify-between gap-4 cursor-pointer">
-            <span className="text-[14px] font-semibold text-forest">Share my monthly budget summary with my advisor</span>
+            <span className="text-[14px] font-medium text-forest">Share my monthly budget summary with my advisor</span>
             <input
               type="checkbox"
               checked={clientPreferences?.shareBudgetWithAdvisor ?? false}
               disabled={!clientPreferences || updateBudgetSharing.isPending}
               onChange={event => updateBudgetSharing.mutate(event.target.checked)}
-              className="h-5 w-5 accent-green"
+              className="h-5 w-5 shrink-0 accent-[var(--forest)]"
             />
           </label>
-          <p className="text-[12px] text-ink-40 mt-2">
+          <p className="text-[13px] leading-[1.5] text-ink-40 mt-2">
             When enabled, your advisor can see monthly income, spending, surplus, and savings rate only. Budget line items stay private.
           </p>
         </div>
 
         {convs.length === 0 ? (
-          <div className="bg-surface border border-hairline rounded-[24px] p-12 text-center flex flex-col items-center gap-4 shadow-[0_2px_14px_rgba(20,52,42,.06)]">
+          <div className="bg-surface rounded-[24px] p-10 text-center flex flex-col items-center gap-4">
             <Sol size="lg" animate="float" showFace />
             <div>
-              <h3 className="font-display font-semibold text-forest mb-1">No messages yet</h3>
-              <p className="text-ink-40 text-sm">Send your advisor a message to get started.</p>
+              <h3 className="text-[16px] font-semibold text-forest mb-1">No messages yet</h3>
+              <p className="text-ink-40 text-[14px]">Send your advisor a message to get started.</p>
             </div>
           </div>
         ) : (
-          <div className="bg-surface border border-hairline rounded-[24px] shadow-[0_2px_14px_rgba(20,52,42,.06)] overflow-hidden flex flex-col flex-1 min-h-0">
-            <div className="border-b border-hairline px-4 py-3.5 flex items-center gap-3 shrink-0">
-              <div className="w-[38px] h-[38px] rounded-full bg-[#DCEAE3] flex-none flex items-center justify-center text-[13px] font-semibold text-forest">
+          <div className="bg-surface rounded-[28px] overflow-hidden flex flex-col flex-1 min-h-0">
+            <div className="border-b border-hairline p-4 flex items-center gap-3 shrink-0">
+              <div className="w-11 h-11 rounded-[14px] bg-field flex-none flex items-center justify-center text-[13px] font-semibold text-forest">
                 {advisorInitials}
               </div>
               <div className="min-w-0">
-                <div className="text-[14.5px] font-semibold text-forest truncate">{advisorName ?? "Your advisor"}</div>
+                <div className="text-[15px] font-semibold text-forest truncate">{advisorName ?? "Your advisor"}</div>
                 <div className="text-[12px] text-ink-40 flex items-center gap-1.5">
-                  <MessageSquare className="h-3 w-3 text-green" aria-hidden="true" />
+                  <MessageSquare className="h-3 w-3 text-forest" aria-hidden="true" />
                   Your advisor
                 </div>
               </div>
@@ -175,7 +175,7 @@ export default function ClientMessages() {
               className="flex-1 min-h-0 overflow-y-auto p-4 space-y-1"
             >
               {messages.length === 0 && (
-                <p className="text-center text-sm text-ink-30 pt-8">
+                <p className="text-center text-[14px] text-ink-40 pt-8">
                   No messages yet. Start the conversation!
                 </p>
               )}
@@ -191,7 +191,7 @@ export default function ClientMessages() {
                   <div key={dateKey}>
                     <div className="flex items-center gap-3 my-3">
                       <div className="flex-1 h-px bg-hairline" />
-                      <span className="text-xs text-ink-30 shrink-0">
+                      <span className="text-[12px] font-medium text-ink-40 shrink-0">
                         {dateKey !== "Unknown" ? formatDateSeparator(dateKey) : ""}
                       </span>
                       <div className="flex-1 h-px bg-hairline" />
@@ -208,7 +208,7 @@ export default function ClientMessages() {
                               : "bg-paper text-forest rounded-bl-md"
                           )}>
                             <p>{m.content}</p>
-                            <p className={cn("text-[11px] mt-1", isMe ? "text-mint" : "text-ink-30")}>
+                            <p className={cn("text-[11px] mt-1 tabular-nums", isMe ? "text-mint" : "text-ink-40")}>
                               {timestamp ? new Date(timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : ""}
                             </p>
                           </div>
@@ -225,9 +225,9 @@ export default function ClientMessages() {
                   aria-label="Composing message"
                   className="flex items-center gap-1 px-3 py-1"
                 >
-                  <span className="w-1.5 h-1.5 rounded-full bg-ink-20 animate-bounce [animation-delay:0ms]" />
-                  <span className="w-1.5 h-1.5 rounded-full bg-ink-20 animate-bounce [animation-delay:150ms]" />
-                  <span className="w-1.5 h-1.5 rounded-full bg-ink-20 animate-bounce [animation-delay:300ms]" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-breeze animate-bounce [animation-delay:0ms]" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-breeze animate-bounce [animation-delay:150ms]" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-breeze animate-bounce [animation-delay:300ms]" />
                 </div>
               )}
 
@@ -247,13 +247,13 @@ export default function ClientMessages() {
                   }
                 }}
                 rows={2}
-                className="flex-1 px-4 py-3 rounded-[18px] border border-hairline bg-paper text-sm text-forest placeholder:text-ink-30 resize-none focus:outline-none focus:ring-2 focus:ring-green/30 focus:border-green"
+                className="flex-1 px-4 py-3 rounded-[20px] border border-hairline bg-paper text-[14px] text-forest placeholder:text-ink-40 resize-none focus:outline-none focus:ring-2 focus:ring-forest/30 focus:border-forest"
               />
               <button
                 onClick={handleSend}
                 disabled={!msg.trim() || send.isPending}
                 aria-label="Send message"
-                className="h-11 w-11 self-end flex items-center justify-center rounded-full bg-green text-white hover:bg-forest disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0"
+                className="h-11 w-11 self-end flex items-center justify-center rounded-full bg-forest text-paper hover:bg-forest-700 disabled:bg-hairline disabled:text-ink-40 disabled:cursor-not-allowed transition-colors shrink-0"
               >
                 <Send className="h-4 w-4" />
               </button>

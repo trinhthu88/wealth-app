@@ -78,7 +78,7 @@ export default function BottomSheet({ isOpen, onClose, title, children, height =
         <div role="presentation" className="fixed inset-0 z-40 flex items-end">
           {/* Backdrop */}
           <motion.div
-            className="absolute inset-0 bg-black/50"
+            className="absolute inset-0 bg-forest/45"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -91,21 +91,21 @@ export default function BottomSheet({ isOpen, onClose, title, children, height =
             role="dialog"
             aria-modal="true"
             aria-labelledby={titleId}
-            className={`relative z-10 w-full bg-surface rounded-t-[26px] shadow-2xl flex flex-col overflow-hidden ${heightClass[height]}`}
+            className={`relative z-10 w-full bg-paper rounded-t-[28px] flex flex-col overflow-hidden ${heightClass[height]}`}
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-hairline shrink-0">
-              <h2 id={titleId} className="font-display text-base font-semibold text-forest">
+            <div className="flex items-center justify-between pl-5 pr-3 py-2 border-b border-hairline shrink-0">
+              <h2 id={titleId} className="text-[16px] font-semibold text-forest">
                 {title}
               </h2>
               <button
                 aria-label="Close"
                 onClick={onClose}
-                className="h-8 w-8 flex items-center justify-center rounded-full text-ink-40 hover:text-forest hover:bg-hairline/50 transition-colors"
+                className="h-11 w-11 flex items-center justify-center rounded-full text-ink-40 hover:text-forest hover:bg-surface transition-colors"
               >
                 <X className="h-4 w-4" />
               </button>

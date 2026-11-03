@@ -18,7 +18,6 @@ import { useClientBudget, type InvestmentContribution } from "@/hooks/useClientB
 import { useClientHoldings } from "@/hooks/useClientHoldings";
 import { useNetWorthItems } from "@/hooks/useNetWorthItems";
 import { usePlan } from "@/hooks/usePlan";
-import { cn } from "@/lib/utils";
 
 const EMPTY_FORM: BudgetFormState = {
   primaryIncome: "", secondaryIncome: "", rentalIncome: "", otherIncome: "",
@@ -197,9 +196,9 @@ export default function ClientBudget() {
     return (
       <ClientAppShell>
         <div className="space-y-[14px]">
-          <div className="h-24 bg-surface animate-pulse rounded-[22px]" />
-          <div className="h-20 bg-surface animate-pulse rounded-[22px]" />
-          <div className="h-20 bg-surface animate-pulse rounded-[20px]" />
+          <div className="h-24 bg-surface animate-pulse rounded-[24px]" />
+          <div className="h-40 bg-surface animate-pulse rounded-[28px]" />
+          <div className="h-20 bg-surface animate-pulse rounded-[24px]" />
         </div>
       </ClientAppShell>
     );
@@ -228,11 +227,20 @@ export default function ClientBudget() {
     ? EXPENSE_CATEGORIES
     : QUICK_EXPENSE_ORDER.map(key => EXPENSE_CATEGORIES.find(cat => cat.key === key)!);
 
+  // Split bar: share of income spent / invested / kept (visual only).
+  const pctOfIncome = (v: number) =>
+    incomeTotal > 0 ? Math.max(0, Math.min(100, (v / incomeTotal) * 100)) : 0;
+  const spentW = pctOfIncome(expenseTotal);
+  const investW = Math.min(100 - spentW, pctOfIncome(investTotal));
+  const keptW = Math.min(100 - spentW - investW, pctOfIncome(Math.max(0, netSurplus)));
+  const fmtWhole = (v: number) => `$${Math.round(v).toLocaleString()}`;
+  const splitLabel = `Of ${fmtWhole(incomeTotal)} income: ${fmtWhole(expenseTotal)} spent, ${fmtWhole(investTotal)} invested, ${fmtWhole(netSurplus)} kept`;
+
   return (
     <ClientAppShell>
       <div className="space-y-[14px] pb-12">
-        <div className="mb-2">
-          <h1 className="font-display text-[30px] font-semibold text-forest tracking-[-0.02em]">
+        <div className="px-1 pt-1">
+          <h1 className="font-display text-[34px] leading-[1.05] text-forest">
             {monthTitle(selectedMonth)}
           </h1>
           {selectedMonth === currentMonthStr && (
@@ -249,146 +257,181 @@ export default function ClientBudget() {
           onChange={handleMonthChange}
         />
 
-        {incomeTotal > 0 && biggestExpense && biggestExpense.value > 0 && (
-          <SolNarration
-            line={`You kept ${savingsRatePct}% of income ${monthTitle(selectedMonth)}. ${biggestExpense.label} is your biggest category at $${Math.round(biggestExpense.value).toLocaleString()}.`}
-            detail="A savings rate near 20-30% is strong by most standards. Small month-to-month drift in one category matters far less than the rate holding steady over time."
-            advisorFirstName={advisorFirstName}
-          />
-        )}
-
-        <div className="bg-forest rounded-[26px] p-[22px]">
-          <p className="text-[12.5px] font-semibold text-mint">Kept this {monthTitle(selectedMonth)}</p>
-          <div className="flex items-baseline gap-2.5">
-            <span className="font-display text-[40px] font-semibold text-paper tracking-[-0.03em] tabular-nums">
-              <CurrencyField amountUsd={netSurplus} compact showSign={netSurplus < 0} />
-            </span>
-            {incomeTotal > 0 && (
-              <span className="text-[14px] font-semibold text-sun">{savingsRatePct}% rate</span>
-            )}
-          </div>
-          <div className="grid grid-cols-3 gap-2.5 mt-4">
-            <div>
-              <div className="text-[11.5px] text-mint">Income</div>
-              <div className="text-[16px] font-semibold text-paper tabular-nums"><CurrencyField amountUsd={incomeTotal} compact /></div>
-            </div>
-            <div>
-              <div className="text-[11.5px] text-mint">Spent</div>
-              <div className="text-[16px] font-semibold text-paper tabular-nums"><CurrencyField amountUsd={expenseTotal} compact /></div>
-            </div>
-            <div>
-              <div className="text-[11.5px] text-mint">Invested</div>
-              <div className="text-[16px] font-semibold text-paper tabular-nums"><CurrencyField amountUsd={investTotal} compact /></div>
-            </div>
-          </div>
-        </div>
-
-        <SurplusCTA surplus={netSurplus} monthKey={selectedMonth.slice(0, 7)} />
-
         {isReadOnly && (
-          <div className="flex items-center justify-between bg-paper border border-hairline rounded-xl px-4 py-2.5">
-            <p className="text-sm text-ink-40">Viewing past month — read only</p>
-            <button onClick={() => setIsReadOnly(false)} className="text-sm text-green font-semibold hover:text-forest">
+          <div className="flex items-center justify-between gap-2 bg-surface rounded-[16px] py-1 pr-1 pl-3.5">
+            <p className="text-[13px] text-ink-40">Viewing past month — read only</p>
+            <button
+              onClick={() => setIsReadOnly(false)}
+              className="h-10 px-3.5 rounded-full text-[13px] font-semibold text-forest underline underline-offset-2 hover:text-forest-700"
+            >
               Edit this month
             </button>
           </div>
         )}
 
-        {/* Income */}
-        <div className="bg-surface rounded-[26px] p-[16px_20px] shadow-[0_2px_14px_rgba(20,52,42,.06)]">
-          <div className="flex items-center justify-between mb-1">
-            <p className="text-[15px] font-semibold text-forest">Income</p>
-            <span className="text-[14px] font-semibold text-forest tabular-nums">${Math.round(incomeTotal).toLocaleString()}</span>
-          </div>
-          {visibleIncomeCategories.map((cat, i) => (
-            <BudgetLineRow
-              key={cat.key}
-              label={cat.label}
-              value={n(form[cat.key])}
-              noBorder={i === visibleIncomeCategories.length - 1}
-              onClick={() => !isReadOnly && setActiveField(cat.key)}
-            />
-          ))}
-        </div>
-
-        {/* Expenses */}
-        <div className="bg-surface rounded-[26px] p-[16px_20px] shadow-[0_2px_14px_rgba(20,52,42,.06)]">
-          <div className="flex items-center justify-between mb-1">
-            <p className="text-[15px] font-semibold text-forest">Expenses</p>
-            <span className={cn("text-[14px] font-semibold tabular-nums", expensesOverThreshold ? "text-clay" : "text-forest")}>
-              ${Math.round(expenseTotal).toLocaleString()}
+        <section aria-label={`Kept this ${monthTitle(selectedMonth)}`} className="bg-forest rounded-[28px] p-5 flex flex-col gap-3.5">
+          <p className="tala-eyebrow text-mint">Kept this {monthTitle(selectedMonth)}</p>
+          <div className="flex items-end justify-between gap-2">
+            <span className="font-display tabular-nums text-[56px] leading-[0.9] tracking-[-0.04em] text-paper min-w-0 truncate">
+              <CurrencyField amountUsd={netSurplus} compact showSign={netSurplus < 0} />
             </span>
+            {incomeTotal > 0 && (
+              <span className="shrink-0 rounded-full bg-field px-[11px] py-1.5 text-[12px] font-semibold text-forest whitespace-nowrap">
+                {savingsRatePct}% savings rate
+              </span>
+            )}
           </div>
-          {visibleExpenseCategories.map(cat => {
-            const val = n(form[cat.key]);
-            const overThirty = incomeTotal > 0 && val > incomeTotal * 0.3;
-            return (
+          <div
+            role="img"
+            aria-label={splitLabel}
+            className="flex h-2.5 gap-0.5 overflow-hidden rounded-full bg-white/10"
+          >
+            {spentW > 0 && <span className="h-full bg-sun" style={{ width: `${spentW}%` }} />}
+            {investW > 0 && <span className="h-full bg-field" style={{ width: `${investW}%` }} />}
+            {keptW > 0 && <span className="h-full bg-breeze" style={{ width: `${keptW}%` }} />}
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="flex flex-col gap-[3px]">
+              <div className="text-[12px] text-mint">Income</div>
+              <div className="text-[16px] font-semibold text-paper tabular-nums"><CurrencyField amountUsd={incomeTotal} compact /></div>
+            </div>
+            <div className="flex flex-col gap-[3px]">
+              <div className="flex items-center gap-[5px] text-[12px] text-mint">
+                <span className="h-2 w-2 rounded-[2px] bg-sun" aria-hidden="true" />Spent
+              </div>
+              <div className="text-[16px] font-semibold text-paper tabular-nums"><CurrencyField amountUsd={expenseTotal} compact /></div>
+            </div>
+            <div className="flex flex-col gap-[3px]">
+              <div className="flex items-center gap-[5px] text-[12px] text-mint">
+                <span className="h-2 w-2 rounded-[2px] bg-field" aria-hidden="true" />Invested
+              </div>
+              <div className="text-[16px] font-semibold text-paper tabular-nums"><CurrencyField amountUsd={investTotal} compact /></div>
+            </div>
+          </div>
+        </section>
+
+        {incomeTotal > 0 && biggestExpense && biggestExpense.value > 0 && (
+          <div className="bg-breeze rounded-[24px] p-4">
+            <SolNarration
+              className="mb-0"
+              line={`You kept ${savingsRatePct}% of income ${monthTitle(selectedMonth)}. ${biggestExpense.label} is your biggest category at $${Math.round(biggestExpense.value).toLocaleString()}.`}
+              detail="A savings rate near 20-30% is strong by most standards. Small month-to-month drift in one category matters far less than the rate holding steady over time."
+              advisorFirstName={advisorFirstName}
+            />
+          </div>
+        )}
+
+        <SurplusCTA surplus={netSurplus} monthKey={selectedMonth.slice(0, 7)} />
+
+        {/* Income */}
+        <section aria-label="Income" className="space-y-2.5">
+          <div className="flex items-baseline justify-between px-1 pt-1.5">
+            <h2 className="text-[16px] font-semibold text-forest">Income</h2>
+            <span className="text-[15px] font-semibold text-forest tabular-nums">${Math.round(incomeTotal).toLocaleString()}</span>
+          </div>
+          <div className="bg-surface rounded-[24px] p-1 flex flex-col overflow-hidden">
+            {visibleIncomeCategories.map((cat, i) => (
               <BudgetLineRow
                 key={cat.key}
                 label={cat.label}
-                value={val}
-                tint={overThirty}
+                value={n(form[cat.key])}
+                noBorder={i === visibleIncomeCategories.length - 1}
                 onClick={() => !isReadOnly && setActiveField(cat.key)}
               />
-            );
-          })}
+            ))}
+          </div>
+        </section>
 
-          {debtPaymentsTotal > 0 && (
-            <div className="pt-3">
+        {/* Expenses */}
+        <section aria-label="Expenses" className="space-y-2.5">
+          <div className="flex items-baseline justify-between gap-2 px-1 pt-1.5">
+            <h2 className="text-[16px] font-semibold text-forest">Expenses</h2>
+            <span className="flex items-center gap-2">
+              {expensesOverThreshold && (
+                <span className="rounded-full bg-sun px-2 py-[3px] text-[11px] font-semibold text-forest whitespace-nowrap">
+                  Over 70% of income
+                </span>
+              )}
+              <span className="text-[15px] font-semibold text-forest tabular-nums">
+                ${Math.round(expenseTotal).toLocaleString()}
+              </span>
+            </span>
+          </div>
+          <div className="bg-surface rounded-[24px] p-1 flex flex-col overflow-hidden">
+            {visibleExpenseCategories.map((cat, i) => {
+              const val = n(form[cat.key]);
+              const overThirty = incomeTotal > 0 && val > incomeTotal * 0.3;
+              return (
+                <BudgetLineRow
+                  key={cat.key}
+                  label={cat.label}
+                  value={val}
+                  tint={overThirty}
+                  noBorder={debtPaymentsTotal <= 0 && i === visibleExpenseCategories.length - 1}
+                  onClick={() => !isReadOnly && setActiveField(cat.key)}
+                />
+              );
+            })}
+
+            {debtPaymentsTotal > 0 && (
               <InvestmentContributionRow
                 tone="clay"
                 contribution={{ label: "Debt payments", amount: debtPaymentsTotal, source_id: "liabilities", source_type: "liabilities" }}
                 hint="Synced from your liabilities' monthly repayments — edit these on the Net Worth page."
               />
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        </section>
 
         <button
           type="button"
           aria-expanded={showDetails}
           onClick={() => setShowDetails(value => !value)}
-          className="w-full bg-paper border border-hairline rounded-full py-3 text-[14px] font-semibold text-green hover:text-forest transition-colors"
+          className="w-full h-11 rounded-full border-[1.5px] border-forest bg-transparent text-[14px] font-semibold text-forest hover:bg-surface transition-colors"
         >
           {showDetails ? "Hide details" : "Add detail"}
         </button>
 
         {/* Investments */}
-        <div className="bg-surface rounded-[26px] p-[16px_20px] shadow-[0_2px_14px_rgba(20,52,42,.06)] space-y-3">
-          <div className="flex items-center justify-between">
-            <p className="text-[15px] font-semibold text-forest">Investments</p>
-            <span className="text-[14px] font-semibold text-green tabular-nums">${Math.round(investTotal).toLocaleString()}</span>
+        <section aria-label="Investments" className="space-y-2.5">
+          <div className="px-1 pt-1.5">
+            <div className="flex items-baseline justify-between">
+              <h2 className="text-[16px] font-semibold text-forest">Investments</h2>
+              <span className="text-[15px] font-semibold text-forest tabular-nums">${Math.round(investTotal).toLocaleString()}</span>
+            </div>
+            <p className="text-[13px] text-ink-40 mt-0.5">Fixed monthly amounts going into your investments.</p>
           </div>
-          <p className="text-xs text-ink-30">Fixed monthly amounts going into your investments.</p>
-          {advisedPlanContributions.map(c => (
-            <InvestmentContributionRow key={c.source_id} contribution={c} />
-          ))}
-          <HoldingContributionPicker
-            holdings={holdings}
-            entries={holdingContributions}
-            onChange={handleHoldingContributionsChange}
-            isReadOnly={isReadOnly}
-          />
-          <BudgetLineRow
-            label="Other investments"
-            value={n(form.otherInvestments)}
-            noBorder
-            onClick={() => !isReadOnly && setActiveField("otherInvestments")}
-          />
-        </div>
+          <div className="bg-surface rounded-[24px] p-1 flex flex-col overflow-hidden">
+            {advisedPlanContributions.map(c => (
+              <InvestmentContributionRow key={c.source_id} contribution={c} />
+            ))}
+            <HoldingContributionPicker
+              holdings={holdings}
+              entries={holdingContributions}
+              onChange={handleHoldingContributionsChange}
+              isReadOnly={isReadOnly}
+            />
+            <BudgetLineRow
+              label="Other investments"
+              value={n(form.otherInvestments)}
+              noBorder
+              onClick={() => !isReadOnly && setActiveField("otherInvestments")}
+            />
+          </div>
+        </section>
 
         {!isReadOnly && (
           <button
             type="button"
             onClick={() => { void persist(); }}
             disabled={!hasUnsavedChanges || saving}
-            className="w-full rounded-full bg-green px-5 py-3.5 text-[15px] font-semibold text-paper disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full h-12 rounded-full bg-forest px-5 text-[15px] font-semibold text-paper hover:bg-forest-700 transition-colors disabled:bg-surface disabled:text-ink-40 disabled:cursor-not-allowed"
           >
             {saving ? "Saving…" : hasUnsavedChanges ? "Save budget" : monthData ? "Budget saved" : "No changes to save"}
           </button>
         )}
 
-        <div className="bg-surface rounded-[26px] p-[18px_20px] shadow-[0_2px_14px_rgba(20,52,42,.06)]">
+        <div className="bg-surface rounded-[24px] p-5">
           <BudgetHistoryChart months={months} />
         </div>
 

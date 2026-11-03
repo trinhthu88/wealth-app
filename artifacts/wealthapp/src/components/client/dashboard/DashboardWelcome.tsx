@@ -30,16 +30,16 @@ export default function DashboardWelcome({ isTrackA = false, advisorName }: Prop
   return (
     <div className="flex items-start justify-between gap-3 mb-5">
       <div>
-        <div className="font-mono text-[10px] tracking-[0.14em] uppercase text-[#1D9E75] mb-1.5">
+        <div className="tala-eyebrow text-ink-40 mb-1.5">
           {formatDate()}
         </div>
-        <h1 className="font-display text-[22px] font-bold text-[#042C53] tracking-[-0.02em]">
+        <h1 className="font-display text-[34px] leading-[1.05] text-forest tracking-[-0.02em]">
           {greeting()}, {firstName}
         </h1>
       </div>
       <button
         onClick={toggleCurrency}
-        className="shrink-0 min-h-[44px] px-3.5 rounded-full border border-[#E6E1D8] bg-white font-mono text-[11px] font-medium text-[#042C53] cursor-pointer hover:border-[#1D9E75] hover:text-[#1D9E75] transition-colors"
+        className="shrink-0 min-h-[44px] px-3.5 rounded-full border-[1.5px] border-forest bg-transparent text-[12px] font-semibold text-forest cursor-pointer hover:border-forest hover:text-forest transition-colors"
       >
         {currency}
       </button>

@@ -22,9 +22,11 @@ export default function NetWorthTrendChart({ trendData, hasHistory }: Props) {
 
   if (!hasHistory) {
     return (
-      <div className="bg-surface border border-hairline rounded-[18px] p-6 flex flex-col items-center justify-center gap-3 min-h-[180px]">
-        <TrendingUp className="h-8 w-8 text-green" />
-        <p className="text-sm text-ink-40 text-center max-w-xs">
+      <div className="bg-surface rounded-[24px] p-6 flex flex-col items-center justify-center gap-3 min-h-[180px]">
+        <div className="h-11 w-11 rounded-[14px] bg-field text-forest flex items-center justify-center">
+          <TrendingUp className="h-5 w-5" />
+        </div>
+        <p className="text-[14px] text-ink-40 text-center max-w-xs">
           Your net worth trend will appear here as you update your values over time.
         </p>
       </div>
@@ -33,25 +35,25 @@ export default function NetWorthTrendChart({ trendData, hasHistory }: Props) {
 
   return (
     <div
-      className="bg-surface border border-hairline rounded-[18px] p-4"
+      className="bg-surface rounded-[24px] p-5"
       role="img"
       aria-label={ariaLabel}
     >
-      <p className="text-xs font-semibold text-ink-40 uppercase tracking-wide mb-3">Trend</p>
+      <h2 className="text-[16px] font-semibold text-forest mb-3">Trend</h2>
       <div className="h-[200px]">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={trendData} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--hairline)" />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--hairline-2)" vertical={false} />
             <XAxis
               dataKey="label"
-              tick={{ fontSize: 11, fill: "var(--ink-20)" }}
+              tick={{ fontSize: 11, fill: "var(--ink-40)" }}
               axisLine={false}
               tickLine={false}
               interval="preserveStartEnd"
             />
             <YAxis
               tickFormatter={fmtY}
-              tick={{ fontSize: 11, fill: "var(--ink-20)" }}
+              tick={{ fontSize: 11, fill: "var(--ink-40)" }}
               axisLine={false}
               tickLine={false}
               width={52}
@@ -61,34 +63,34 @@ export default function NetWorthTrendChart({ trendData, hasHistory }: Props) {
                 if (!active || !payload?.length) return null;
                 const d = payload[0].payload as TrendPoint;
                 return (
-                  <div className="bg-surface border border-hairline rounded-xl px-3 py-2 shadow-lg text-xs space-y-1">
+                  <div className="bg-paper rounded-[14px] px-3 py-2 shadow-[0_8px_24px_rgba(12,33,164,0.12)] text-[12px] space-y-1">
                     <p className="font-semibold text-forest">{d.label}</p>
-                    <p className="text-green">Net worth: <span className="font-medium">{fmtY(d.netWorth)}</span></p>
-                    <p className="text-ink-40">Assets: <span className="font-medium text-ink-60">{fmtY(d.assets)}</span></p>
-                    <p className="text-clay">Liabilities: <span className="font-medium">{fmtY(d.liabilities)}</span></p>
+                    <p className="text-forest">Net worth: <span className="font-semibold tabular-nums">{fmtY(d.netWorth)}</span></p>
+                    <p className="text-ink-40">Assets: <span className="font-medium tabular-nums text-forest">{fmtY(d.assets)}</span></p>
+                    <p className="text-ink-40">Liabilities: <span className="font-medium tabular-nums text-forest">{fmtY(d.liabilities)}</span></p>
                   </div>
                 );
               }}
             />
             <Legend
               iconType="line"
-              formatter={(value) => <span className="text-xs text-ink-40">{value}</span>}
+              formatter={(value) => <span className="text-[12px] text-ink-40">{value}</span>}
             />
             <Line
               type="monotone"
               dataKey="netWorth"
               name="Net worth"
-              stroke="var(--green)"
-              strokeWidth={2}
+              stroke="var(--forest)"
+              strokeWidth={2.5}
               dot={false}
-              activeDot={{ r: 4, fill: "var(--green)" }}
+              activeDot={{ r: 4, fill: "var(--forest)" }}
             />
             <Line
               type="monotone"
               dataKey="assets"
               name="Assets"
-              stroke="var(--ink-20)"
-              strokeWidth={1}
+              stroke="var(--mint-dim)"
+              strokeWidth={1.5}
               strokeDasharray="4 2"
               dot={false}
             />
@@ -96,8 +98,8 @@ export default function NetWorthTrendChart({ trendData, hasHistory }: Props) {
               type="monotone"
               dataKey="liabilities"
               name="Liabilities"
-              stroke="var(--clay)"
-              strokeWidth={1}
+              stroke="var(--violet)"
+              strokeWidth={1.5}
               strokeDasharray="4 2"
               dot={false}
             />

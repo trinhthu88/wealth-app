@@ -46,17 +46,17 @@ export default function ConversionCTASection({ totalPortfolioValue, overallCagr,
   const { body, cta } = buildCopy(totalPortfolioValue, overallCagr, topGoals, displayCurrency);
 
   return (
-    <div className="flex items-start gap-3 p-4 bg-teal-50 border border-teal-100 border-l-4 border-l-[#1D9E75] rounded-xl">
-      <Sparkles className="h-4 w-4 text-[#1D9E75] shrink-0 mt-0.5" />
+    <div className="flex items-start gap-3 p-4 bg-breeze rounded-[24px]">
+      <Sparkles className="h-4 w-4 text-forest shrink-0 mt-0.5" />
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-[#042C53] leading-snug">
+        <p className="text-sm text-forest leading-snug">
           {body}{" "}
           <Link href="/client/advisor/messages">
-            <span className="text-[#1D9E75] font-semibold hover:text-[#0F6E56] cursor-pointer">{cta}</span>
+            <span className="text-forest font-semibold underline underline-offset-4 cursor-pointer">{cta}</span>
           </Link>
         </p>
       </div>
-      <button onClick={handleDismiss} aria-label="Dismiss" className="text-[#64748B] hover:text-[#042C53] shrink-0">
+      <button onClick={handleDismiss} aria-label="Dismiss" className="text-ink-40 hover:text-forest shrink-0">
         <X className="h-4 w-4" />
       </button>
     </div>

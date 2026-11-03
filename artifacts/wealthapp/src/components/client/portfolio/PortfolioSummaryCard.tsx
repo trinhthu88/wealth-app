@@ -1,4 +1,5 @@
 import CurrencyField from "@/components/shared/CurrencyField";
+import { cn } from "@/lib/utils";
 
 interface Segment {
   label: string;
@@ -11,64 +12,55 @@ interface Props {
   segments: Segment[];
 }
 
+// Allocation blocks cycle through the palette, largest share first.
+// (Cobalt is reserved for the single hero card above them.)
+const BLOCK_STYLES = [
+  { card: "bg-field text-forest", sub: "text-forest" },
+  { card: "bg-breeze text-forest", sub: "text-forest" },
+  { card: "bg-surface text-forest", sub: "text-ink-40" },
+];
+
 export default function PortfolioSummaryCard({ totalValue, segments }: Props) {
   // Sort segments largest first
   const sorted = [...segments].sort((a, b) => b.value - a.value);
 
-  // Calculate dash arrays for the donut chart
-  const radius = 48;
-  const circumference = 2 * Math.PI * radius;
-
-  let currentOffset = 0;
-  const chartSegments = sorted.map(seg => {
-    const pct = totalValue > 0 ? seg.value / totalValue : 0;
-    const dashArray = pct * circumference;
-    const dashOffset = currentOffset;
-    currentOffset -= dashArray;
-
-    return {
-      ...seg,
-      pct,
-      dashArray: `${dashArray} ${circumference}`,
-      dashOffset,
-    };
-  });
+  const blocks = sorted.map(seg => ({
+    ...seg,
+    pct: totalValue > 0 ? seg.value / totalValue : 0,
+  }));
 
   return (
-    <div className="bg-surface rounded-[28px] p-[22px] shadow-[0_2px_14px_rgba(20,52,42,.06)] mb-4 flex items-center gap-5">
-      <svg viewBox="0 0 120 120" className="w-[132px] h-[132px] flex-none -rotate-90">
-        <circle cx="60" cy="60" r={radius} fill="none" stroke="var(--hairline)" strokeWidth="18" />
-        {chartSegments.map((seg, i) => (
-          seg.pct > 0 && (
-            <circle
-              key={i}
-              cx="60"
-              cy="60"
-              r={radius}
-              fill="none"
-              stroke={seg.color}
-              strokeWidth="18"
-              strokeDasharray={seg.dashArray}
-              strokeDashoffset={seg.dashOffset}
-              className="transition-all duration-1000 ease-out"
-            />
-          )
-        ))}
-      </svg>
-      <div className="flex flex-col gap-[9px]">
-        <div className="font-display text-[26px] font-semibold text-forest tracking-[-0.02em] tabular-nums">
+    <div className="space-y-4">
+      <section
+        aria-label="Invested value"
+        className="bg-forest text-paper rounded-[28px] p-5 flex flex-col gap-3"
+      >
+        <span className="tala-eyebrow text-mint">Invested value</span>
+        <span className="font-display tabular-nums text-[52px] leading-none tracking-[-0.04em] text-paper">
           <CurrencyField amountUsd={totalValue} />
-        </div>
-        {chartSegments.map((seg, i) => (
-          <div key={i} className="flex items-center gap-2 text-[13.5px] text-ink-60">
-            <span
-              className="w-[10px] h-[10px] rounded-[3px] flex-none"
-              style={{ backgroundColor: seg.color }}
-            />
-            <span className="truncate">{seg.label} {Math.round(seg.pct * 100)}%</span>
+        </span>
+      </section>
+
+      {blocks.length > 0 && (
+        <section aria-label="What you own" className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            {blocks.map((seg, i) => {
+              const style = BLOCK_STYLES[i % BLOCK_STYLES.length];
+              return (
+                <div key={i} className={cn("rounded-[24px] p-4 flex flex-col gap-1.5 min-w-0", style.card)}>
+                  <span className="font-display tabular-nums text-[28px] leading-none tracking-[-0.03em]">
+                    {Math.round(seg.pct * 100)}%
+                  </span>
+                  <span className="text-[14px] font-semibold truncate">{seg.label}</span>
+                  <span className={cn("text-[13px] tabular-nums", style.sub)}>
+                    <CurrencyField amountUsd={seg.value} compact />
+                  </span>
+                </div>
+              );
+            })}
           </div>
-        ))}
-      </div>
+        </section>
+      )}
     </div>
   );
 }

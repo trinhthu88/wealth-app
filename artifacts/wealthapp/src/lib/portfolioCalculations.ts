@@ -49,9 +49,9 @@ export function buildFundBreakdown(
 }
 
 export const ASSET_CLASS_COLORS: Record<string, string> = {
-  equity: "#1D9E75",
-  bond: "#042C53",
-  cash: "#94A3B8",
+  equity: "#0C21A4",
+  bond: "#0C21A4",
+  cash: "#8F98C8",
   real_estate: "#F59E0B",
   commodity: "#8B5CF6",
   alternative: "#EC4899",

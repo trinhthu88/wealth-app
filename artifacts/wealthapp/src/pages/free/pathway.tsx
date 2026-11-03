@@ -2,7 +2,7 @@
 // ✓ ALLOWED: Progress bar fill transition
 // ✗ BANNED:  Page-load stagger on sections
 // ✗ BANNED:  JetBrains Mono font
-// ✗ BANNED:  Cream/warm palette (#FAF8F5, #F2EFE9, #A8A095)
+// ✗ BANNED:  Cream/warm palette (#F1F4FE, #F1F4FE, #8F98C8)
 // ✗ BANNED:  Inline style={{ color: '#hexcode' }} — use Tailwind tokens only
 // ✗ BANNED:  Double bottom nav — AppShell is the ONLY nav
 // ✗ BANNED:  The onboarding wizard itself — that lives at /free/onboarding

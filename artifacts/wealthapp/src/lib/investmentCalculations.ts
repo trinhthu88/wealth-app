@@ -4,7 +4,7 @@
 // ✓ ALLOWED: Chart/number counting animation on first load
 // ✗ BANNED:  Page-load stagger (no initial opacity:0 + animate opacity:1 on page content)
 // ✗ BANNED:  Orchestrated delays (no transition={{ delay: 0.05 * index }})
-// ✗ BANNED:  Hero cards with gradient navy background (#042C53 → #0a4a8a)
+// ✗ BANNED:  Hero cards with gradient navy background (#0C21A4 → #0a4a8a)
 //            Use stat cards with white bg + teal accent border instead.
 
 // ── Advised plan calculations ──────────────────────────────────

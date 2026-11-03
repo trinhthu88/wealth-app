@@ -42,18 +42,18 @@ export default function ScenarioAlertSection({ alert }: Props) {
   }
 
   return (
-    <div className="bg-[#042C53] rounded-[24px] p-5 text-white mb-3.5">
-      <div className="font-mono text-[10px] tracking-[0.14em] uppercase text-[#7FCBAE] mb-2.5">
+    <div className="bg-forest rounded-[28px] p-5 text-paper mb-3.5">
+      <div className="tala-eyebrow text-mint mb-2.5">
         One thing to do
       </div>
-      <div className="font-display text-base font-semibold leading-[1.35] mb-1.5">
+      <div className="text-[16px] font-semibold leading-[1.35] mb-1.5">
         {alert.scenarioName ?? "Investment scenario"}
       </div>
-      <div className="text-xs text-[#A9C0D6] leading-[1.5] mb-4">
+      <div className="text-xs text-mint leading-[1.5] mb-4">
         {describeScenario(alert)}
       </div>
       <Link href={`/client/goals/what-if?highlight=${alert.id}`} onClick={handleView}>
-        <button className="w-full min-h-[44px] border-none rounded-[14px] bg-[#1D9E75] text-white font-sans text-sm font-semibold cursor-pointer hover:bg-[#17805F] transition-colors">
+        <button className="w-full min-h-[44px] border-none rounded-full bg-field text-forest font-sans text-sm font-semibold cursor-pointer hover:opacity-90 transition-opacity">
           View scenario
         </button>
       </Link>

@@ -1,7 +1,7 @@
 // ANIMATION RULES FOR THIS PAGE:
 // ✗ BANNED:  Page-load stagger on sections
 // ✗ BANNED:  JetBrains Mono font
-// ✗ BANNED:  Cream/warm palette (#FAF8F5, #F2EFE9, #A8A095)
+// ✗ BANNED:  Cream/warm palette (#F1F4FE, #F1F4FE, #8F98C8)
 // ✗ BANNED:  Inline style={{ color: '#hexcode' }} — use Tailwind tokens only
 // ✗ BANNED:  Double bottom nav — AppShell is the ONLY nav
 
@@ -46,7 +46,7 @@ export default function FreeSettingsPage() {
           <p className="text-[12px] text-ink-40 mt-0.5">Update the details we use to personalise your plan.</p>
         </div>
 
-        <div className="bg-surface rounded-[20px] p-5 shadow-[0_4px_14px_rgba(20,52,42,.06)] space-y-4">
+        <div className="bg-surface rounded-[20px] p-5 shadow-[0_4px_14px_rgba(12,33,164,.06)] space-y-4">
           <div>
             <label className="text-sm font-medium block mb-1.5">Full name</label>
             <input

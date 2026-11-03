@@ -107,15 +107,15 @@ export default function AdminPrices() {
 
       {/* Summary */}
       <div className="grid grid-cols-3 gap-6 mb-8">
-        <div className="bg-surface border border-hairline rounded-[26px] p-6 text-center shadow-[0_2px_14px_rgba(20,52,42,0.04)]">
+        <div className="bg-surface border border-hairline rounded-[26px] p-6 text-center shadow-[0_2px_14px_rgba(12,33,164,0.04)]">
           <div className="font-display text-[32px] font-semibold text-forest leading-none">{funds.filter(f => f.latestPrice).length}</div>
           <div className="text-[13px] text-ink-40 mt-1.5">With prices</div>
         </div>
-        <div className="bg-surface border border-hairline rounded-[26px] p-6 text-center shadow-[0_2px_14px_rgba(20,52,42,0.04)]">
+        <div className="bg-surface border border-hairline rounded-[26px] p-6 text-center shadow-[0_2px_14px_rgba(12,33,164,0.04)]">
           <div className={cn("font-display text-[32px] font-semibold leading-none", stale.length > 0 ? "text-amber-ink" : "text-green")}>{stale.length}</div>
           <div className="text-[13px] text-ink-40 mt-1.5">Stale / missing</div>
         </div>
-        <div className="bg-surface border border-hairline rounded-[26px] p-6 text-center shadow-[0_2px_14px_rgba(20,52,42,0.04)]">
+        <div className="bg-surface border border-hairline rounded-[26px] p-6 text-center shadow-[0_2px_14px_rgba(12,33,164,0.04)]">
           <div className="font-display text-[32px] font-semibold text-forest leading-none">{withSymbol.length}</div>
           <div className="text-[13px] text-ink-40 mt-1.5">API-enabled</div>
         </div>
@@ -132,7 +132,7 @@ export default function AdminPrices() {
       </div>
 
       {withSymbol.length === 0 && (
-        <div className="flex items-start gap-3 text-[14px] text-amber-ink bg-sun-tint border border-[#FBE5C5] rounded-[16px] p-4 mb-6">
+        <div className="flex items-start gap-3 text-[14px] text-amber-ink bg-sun-tint border border-[#FFE6CF] rounded-[16px] p-4 mb-6">
           <AlertCircle className="h-5 w-5 shrink-0 mt-0.5 opacity-80" />
           <span className="leading-relaxed">No funds have a <strong>priceApiSymbol</strong> set. Add it in Fund Management to enable automatic price refresh from Twelve Data.</span>
         </div>
@@ -141,7 +141,7 @@ export default function AdminPrices() {
       {isLoading ? (
         <div className="space-y-2">{Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-16 bg-surface rounded-[26px] animate-pulse" />)}</div>
       ) : (
-        <div className="bg-surface rounded-[26px] overflow-hidden shadow-[0_2px_14px_rgba(20,52,42,0.06)]">
+        <div className="bg-surface rounded-[26px] overflow-hidden shadow-[0_2px_14px_rgba(12,33,164,0.06)]">
           <table className="w-full text-left">
             <thead>
               <tr>

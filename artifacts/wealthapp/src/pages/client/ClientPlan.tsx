@@ -94,8 +94,10 @@ export default function ClientPlan() {
       <ClientAppShell>
         <div className="relative h-[60vh] flex flex-col items-center justify-center text-center px-4 max-w-[860px] mx-auto">
           <div className="absolute -top-10 -right-[50px] w-[200px] h-[200px] rounded-full bg-sun opacity-[0.14] animate-sol-glow mix-blend-screen pointer-events-none" />
-          <Map className="h-10 w-10 text-paper mx-auto mb-3 opacity-90" />
-          <h2 className="font-display text-[24px] font-semibold text-paper mb-2">
+          <div className="w-11 h-11 rounded-[14px] bg-field text-forest flex items-center justify-center mx-auto mb-4">
+            <Map className="h-5 w-5" aria-hidden="true" />
+          </div>
+          <h2 className="font-display text-[28px] leading-[1.1] text-paper mb-2">
             Your pathway hasn't been mapped yet
           </h2>
           <p className="text-[14px] text-mint mb-6 max-w-[280px]">
@@ -103,7 +105,7 @@ export default function ClientPlan() {
           </p>
           <Link
             href="/client/goals/goals"
-            className="inline-flex items-center justify-center h-11 px-6 rounded-full bg-sun text-sun-ink text-[14px] font-semibold hover:bg-sun/90 transition-colors"
+            className="inline-flex items-center justify-center h-11 px-6 rounded-full bg-field text-forest text-[14px] font-semibold hover:bg-field/90 transition-colors"
           >
             Add a goal
           </Link>
@@ -119,7 +121,7 @@ export default function ClientPlan() {
         
         {/* Header Section */}
         <div className="mb-6 relative z-10">
-          <h1 className="font-display text-[30px] font-semibold text-paper tracking-[-0.02em] mb-1">
+          <h1 className="font-display text-[34px] leading-[1.05] text-paper mb-2">
             Your pathway
           </h1>
           <div className="text-[14px] text-mint flex items-center gap-2">
@@ -148,31 +150,31 @@ export default function ClientPlan() {
         />
 
         {/* Review Countdown */}
-        <div className="mb-8 bg-forest-700/50 border border-forest-700 rounded-[22px] p-[18px_20px] flex flex-col sm:flex-row sm:items-center justify-between gap-4 backdrop-blur-sm relative z-10">
+        <div className="mb-6 bg-white/10 rounded-[24px] p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
           <div className="flex items-start gap-3">
             {isReviewOverdue ? (
-              <div className="w-[34px] h-[34px] rounded-full bg-clay/20 text-clay-tint flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-[14px] bg-sun text-forest flex items-center justify-center shrink-0">
                 <AlertTriangle className="h-4 w-4" />
               </div>
             ) : (
-              <div className="w-[34px] h-[34px] rounded-full bg-[#DCEAE3]/10 text-paper flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-[14px] bg-field text-forest flex items-center justify-center shrink-0">
                 <CalendarDays className="h-4 w-4" />
               </div>
             )}
             <div>
-              <div className="text-[14px] font-semibold text-paper">Next review</div>
+              <div className="text-[16px] font-semibold text-paper">Next review</div>
               {nextReviewDate ? (
-                <div className={`text-[13px] ${isReviewOverdue ? "text-clay-tint" : "text-mint"}`}>
+                <div className={`text-[13.5px] mt-0.5 tabular-nums ${isReviewOverdue ? "text-sun-tint font-semibold" : "text-mint"}`}>
                   {formatDate(nextReviewDate)} · {isReviewOverdue ? `Overdue by ${Math.abs(daysUntilReview!)} days` : `${daysUntilReview} days away`}
                 </div>
               ) : (
-                <div className="text-[13px] text-mint opacity-80">No review date set.</div>
+                <div className="text-[13.5px] mt-0.5 text-mint">No review date set.</div>
               )}
             </div>
           </div>
           <button 
             onClick={() => setShowReviewSheet(true)}
-            className="flex-shrink-0 px-5 py-2.5 rounded-full border border-mint-dim text-paper text-[13.5px] font-semibold hover:border-sun hover:text-sun transition-colors"
+            className="flex-shrink-0 h-11 px-5 rounded-full bg-field text-forest text-[14px] font-semibold hover:bg-field/90 transition-colors"
           >
             Request a review
           </button>
@@ -180,30 +182,30 @@ export default function ClientPlan() {
 
         {/* Stats Summary */}
         {totalCount > 0 && (
-          <div className="mb-10 space-y-3 relative z-10">
+          <div className="mb-10 space-y-4 relative z-10">
             <div className="grid grid-cols-3 gap-3">
-              <div className="bg-forest-700/30 rounded-[18px] p-4 text-center border border-forest-700/70">
-                <div className="font-display text-[24px] font-semibold text-sun mb-0.5">{completedCount}</div>
-                <div className="text-[12px] font-medium tracking-[0.04em] uppercase text-mint">Done</div>
+              <div className="bg-field text-forest rounded-[24px] p-4">
+                <div className="tala-eyebrow mb-3">Done</div>
+                <div className="font-display tabular-nums text-[32px] leading-none">{completedCount}</div>
               </div>
-              <div className="bg-forest-700/30 rounded-[18px] p-4 text-center border border-forest-700/70">
-                <div className="font-display text-[24px] font-semibold text-paper mb-0.5">{inProgressCount}</div>
-                <div className="text-[12px] font-medium tracking-[0.04em] uppercase text-mint">Active</div>
+              <div className="bg-breeze text-forest rounded-[24px] p-4">
+                <div className="tala-eyebrow mb-3">Active</div>
+                <div className="font-display tabular-nums text-[32px] leading-none">{inProgressCount}</div>
               </div>
-              <div className="bg-forest-700/30 rounded-[18px] p-4 text-center border border-forest-700/70">
-                <div className="font-display text-[24px] font-semibold text-mint-dim mb-0.5">{upcomingCount}</div>
-                <div className="text-[12px] font-medium tracking-[0.04em] uppercase text-mint-dim">Upcoming</div>
+              <div className="bg-white/10 text-paper rounded-[24px] p-4">
+                <div className="tala-eyebrow text-mint mb-3">Upcoming</div>
+                <div className="font-display tabular-nums text-[32px] leading-none">{upcomingCount}</div>
               </div>
             </div>
-            <div className="rounded-full bg-track-dark p-1" aria-label={`${completionPct}% of plan milestones complete`}>
-              <div className="h-2 rounded-full bg-sun transition-[width] duration-500" style={{ width: `${completionPct}%` }} />
+            <div className="h-2 rounded-full bg-white/20 overflow-hidden" aria-label={`${completionPct}% of plan milestones complete`}>
+              <div className="h-full rounded-full bg-field transition-[width] duration-500" style={{ width: `${completionPct}%` }} />
             </div>
           </div>
         )}
 
         {/* Timeline */}
         <div className="relative pl-[34px] pb-6">
-          <div className="absolute left-[11px] top-[10px] bottom-[14px] w-[2px] bg-gradient-to-b from-sun from-22% via-track-dark via-40% to-track-dark to-100%" />
+          <div className="absolute left-[11px] top-[10px] bottom-[14px] w-[2px] rounded-full bg-white/20" />
 
           {milestones.map((m, index) => {
               const status = statusGroup(m.status);
@@ -214,24 +216,24 @@ export default function ClientPlan() {
                 const gp = m.goalProgress;
                 return (
                   <div key={m.id} className="mb-[28px] relative">
-                    <div className="absolute -left-[34px] top-[2px] w-[24px] h-[24px] rounded-full bg-sun flex items-center justify-center text-[12px] text-sun-ink font-bold z-10 shadow-[0_0_12px_rgba(255,182,39,0.3)]">
-                      <span className="h-2 w-2 rounded-full bg-sun-ink" aria-hidden="true" />
+                    <div className="absolute -left-[34px] top-[0px] w-[24px] h-[24px] rounded-full bg-field flex items-center justify-center z-10">
+                      <span className="h-2 w-2 rounded-full bg-forest" aria-hidden="true" />
                     </div>
-                    <div className="text-[12.5px] font-semibold tracking-[0.06em] text-sun uppercase">
+                    <div className="tala-eyebrow text-field">
                       {year} · DONE
                     </div>
-                    <h2 className="font-display text-[20px] font-semibold text-paper mt-0.5 mb-1">
+                    <h2 className="text-[17px] font-semibold text-paper mt-1.5 mb-1">
                       {m.title}
                     </h2>
-                    {m.notes && <div className="text-[13.5px] text-mint mb-2 max-w-[500px] leading-relaxed">{m.notes}</div>}
+                    {m.notes && <div className="text-[14px] text-mint mb-2 max-w-[500px] leading-relaxed">{m.notes}</div>}
                     {gp && (
                       <>
-                        <div className="text-[13.5px] text-mint mb-2">
+                        <div className="text-[14px] text-mint tabular-nums mb-2">
                           ${Math.round(gp.currentAmount).toLocaleString()} of ${Math.round(gp.targetAmount).toLocaleString()}
                         </div>
-                        <div className="rounded-full bg-track-dark h-[6px] max-w-[420px]" aria-label={`${Math.round(gp.progressPct)}% of ${m.title} funded`}>
+                        <div className="rounded-full bg-white/20 h-2 max-w-[420px] overflow-hidden" aria-label={`${Math.round(gp.progressPct)}% of ${m.title} funded`}>
                           <div
-                            className="h-full rounded-full bg-sun transition-[width] duration-500"
+                            className="h-full rounded-full bg-field transition-[width] duration-500"
                             style={{ width: `${Math.min(100, Math.max(0, gp.progressPct))}%` }}
                           />
                         </div>
@@ -245,29 +247,29 @@ export default function ClientPlan() {
                 const gp = m.goalProgress;
                 return (
                   <div key={m.id} className={cn("mb-[28px] relative", isNext && "animate-rise-up")}>
-                    <div className="absolute -left-[34px] top-[2px] w-[24px] h-[24px] rounded-full bg-forest border-[3px] border-sun z-10 shadow-[0_0_12px_rgba(255,182,39,0.3)]" />
-                    <div className="text-[12.5px] font-semibold tracking-[0.06em] text-sun uppercase">
+                    <div className="absolute -left-[34px] top-[0px] w-[24px] h-[24px] rounded-full bg-forest border-[3px] border-field z-10 ring-4 ring-field/20" />
+                    <div className="tala-eyebrow text-field">
                       {year} · IN PROGRESS {isNext && "· NEXT UP"}
                     </div>
-                    <h2 className="font-display text-[20px] font-semibold text-paper mt-0.5 mb-1">
+                    <h2 className="text-[17px] font-semibold text-paper mt-1.5 mb-1">
                       {m.title}
                     </h2>
                     {gp ? (
                       <>
-                        <div className="text-[13.5px] text-mint mb-2">
+                        <div className="text-[14px] text-mint tabular-nums mb-2">
                           ${Math.round(gp.currentAmount).toLocaleString()} of ${Math.round(gp.targetAmount).toLocaleString()}
                         </div>
-                        <div className="rounded-full bg-track-dark h-[6px] max-w-[420px]" aria-label={`${Math.round(gp.progressPct)}% of ${m.title} funded`}>
+                        <div className="rounded-full bg-white/20 h-2 max-w-[420px] overflow-hidden" aria-label={`${Math.round(gp.progressPct)}% of ${m.title} funded`}>
                           <div
-                            className="h-full rounded-full bg-sun transition-[width] duration-500"
+                            className="h-full rounded-full bg-field transition-[width] duration-500"
                             style={{ width: `${Math.min(100, Math.max(0, gp.progressPct))}%` }}
                           />
                         </div>
                       </>
                     ) : (
                       <>
-                        {m.notes && <div className="text-[13.5px] text-mint mb-2 max-w-[500px] leading-relaxed">{m.notes}</div>}
-                        <div className="mt-3 inline-flex rounded-full border border-sun/40 px-3 py-1 text-[12px] font-semibold text-sun">
+                        {m.notes && <div className="text-[14px] text-mint mb-2 max-w-[500px] leading-relaxed">{m.notes}</div>}
+                        <div className="mt-3 inline-flex rounded-full bg-field px-2.5 py-1 text-[12px] font-semibold text-forest">
                           Active milestone
                         </div>
                       </>
@@ -281,22 +283,22 @@ export default function ClientPlan() {
                 const gp = m.goalProgress;
                 return (
                   <div key={m.id} className="mb-[26px] relative">
-                    <div className="absolute -left-[34px] top-[2px] w-[24px] h-[24px] rounded-full border-[2px] border-mint-dim z-10 bg-forest" />
-                    <div className="text-[12.5px] font-semibold tracking-[0.06em] text-mint-dim uppercase">
+                    <div className="absolute -left-[34px] top-[0px] w-[24px] h-[24px] rounded-full border-[2px] border-white/40 z-10 bg-forest" />
+                    <div className="tala-eyebrow text-mint">
                       {year}
                     </div>
-                    <h2 className="font-display text-[20px] font-semibold text-[#DCEAE3] mt-0.5 mb-1">
+                    <h2 className="text-[17px] font-semibold text-paper/85 mt-1.5 mb-1">
                       {m.title}
                     </h2>
-                    {m.notes && <div className="text-[13.5px] text-mint-dim mb-2 max-w-[500px] leading-relaxed">{m.notes}</div>}
+                    {m.notes && <div className="text-[14px] text-mint mb-2 max-w-[500px] leading-relaxed">{m.notes}</div>}
                     {gp && (
                       <>
-                        <div className="text-[13.5px] text-mint-dim mb-2">
+                        <div className="text-[14px] text-mint tabular-nums mb-2">
                           ${Math.round(gp.currentAmount).toLocaleString()} of ${Math.round(gp.targetAmount).toLocaleString()}
                         </div>
-                        <div className="rounded-full bg-track-dark h-[6px] max-w-[420px]" aria-label={`${Math.round(gp.progressPct)}% of ${m.title} funded`}>
+                        <div className="rounded-full bg-white/20 h-2 max-w-[420px] overflow-hidden" aria-label={`${Math.round(gp.progressPct)}% of ${m.title} funded`}>
                           <div
-                            className="h-full rounded-full bg-sun transition-[width] duration-500"
+                            className="h-full rounded-full bg-field transition-[width] duration-500"
                             style={{ width: `${Math.min(100, Math.max(0, gp.progressPct))}%` }}
                           />
                         </div>

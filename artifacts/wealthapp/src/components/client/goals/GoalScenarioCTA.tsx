@@ -34,16 +34,16 @@ export default function GoalScenarioCTA({ goalId, goalTitle, status }: Props) {
   }
 
   return (
-    <div className="mt-3 flex items-start gap-2.5 p-3 rounded-xl bg-amber-50 border border-amber-200">
-      <TrendingUp className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-      <div className="flex-1 min-w-0 text-xs text-amber-800">
+    <div className="mt-3 flex items-start gap-3 p-4 rounded-[16px] bg-sun-tint text-forest">
+      <TrendingUp className="h-4 w-4 text-clay-ink shrink-0 mt-0.5" />
+      <div className="flex-1 min-w-0 text-[13.5px] leading-[1.45] text-forest">
         {isTrackA ? (
           <>
             This goal needs attention. Run a scenario to see how adjusting your investment could get you back on track.{" "}
             <Link
               href={`/client/goals/what-if?goalId=${goalId}&type=retire_earlier`}
               onClick={markInterest}
-              className="font-semibold text-[#1D9E75] hover:underline"
+              className="font-semibold text-forest underline underline-offset-2 hover:no-underline"
             >
               Model this goal →
             </Link>
@@ -54,7 +54,7 @@ export default function GoalScenarioCTA({ goalId, goalTitle, status }: Props) {
             <Link
               href="/client/advisor/messages"
               onClick={() => { markInterest(); track("upgrade_cta_clicked", { location: "goal_scenario_cta" }); }}
-              className="font-semibold text-[#1D9E75] hover:underline"
+              className="font-semibold text-forest underline underline-offset-2 hover:no-underline"
             >
               See how an advisor can help →
             </Link>
@@ -63,10 +63,10 @@ export default function GoalScenarioCTA({ goalId, goalTitle, status }: Props) {
       </div>
       <button
         onClick={dismiss}
-        className="shrink-0 h-5 w-5 flex items-center justify-center text-amber-400 hover:text-amber-600 transition-colors"
+        className="shrink-0 -mt-2 -mr-2 h-11 w-11 flex items-center justify-center rounded-full text-forest/60 hover:text-forest transition-colors"
         aria-label="Dismiss"
       >
-        <X className="h-3 w-3" />
+        <X className="h-4 w-4" />
       </button>
     </div>
   );

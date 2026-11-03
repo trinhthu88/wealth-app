@@ -21,7 +21,7 @@ export default function NetWorthDeltaCard({ netWorth, deltaAbs, currency = "USD"
   const positive = (deltaAbs ?? 0) >= 0;
 
   return (
-    <div className={cn("bg-surface rounded-[20px] p-[18px] shadow-[0_4px_14px_rgba(20,52,42,0.06)]", className)}>
+    <div className={cn("bg-surface rounded-[20px] p-[18px] shadow-[0_4px_14px_rgba(12,33,164,0.06)]", className)}>
       <p className="text-[11px] tracking-[0.11em] uppercase text-ink-40 mb-1">Net Worth</p>
       <div className="flex items-end gap-2.5 flex-wrap">
         <span className="font-display text-[26px] font-semibold text-forest tracking-[-0.01em]">

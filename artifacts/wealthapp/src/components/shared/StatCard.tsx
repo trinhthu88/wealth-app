@@ -21,7 +21,7 @@ const iconBgMap = {
 export default function StatCard({ label, value, sub, icon: Icon, trend, className, color = "teal" }: StatCardProps) {
   return (
     <div
-      className={cn("bg-surface rounded-[26px] p-5 shadow-[0_2px_14px_rgba(20,52,42,0.06)]", className)}
+      className={cn("bg-surface rounded-[26px] p-5 shadow-[0_2px_14px_rgba(12,33,164,0.06)]", className)}
     >
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">

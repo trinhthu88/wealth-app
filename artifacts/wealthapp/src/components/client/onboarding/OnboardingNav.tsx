@@ -31,7 +31,7 @@ export default function OnboardingNav({
           onClick={onBack}
           type="button"
           data-testid="button-onboarding-back"
-          className="min-h-[48px] min-w-[80px] border border-[#E6E1D8] rounded-[16px] bg-white text-[#042C53] font-sans text-sm font-semibold cursor-pointer hover:bg-[#F2EFE9] transition-colors"
+          className="h-12 min-w-[88px] px-5 border-[1.5px] border-forest rounded-full bg-transparent text-forest font-sans text-[15px] font-semibold cursor-pointer hover:bg-surface transition-colors"
         >
           Back
         </button>
@@ -42,7 +42,7 @@ export default function OnboardingNav({
           onClick={onSkip}
           type="button"
           data-testid="button-onboarding-skip"
-          className="min-h-[48px] px-4 border border-[#E6E1D8] rounded-[16px] bg-white text-[#6B6459] font-sans text-sm font-semibold cursor-pointer hover:bg-[#F2EFE9] transition-colors"
+          className="h-12 px-5 border-[1.5px] border-hairline-2 rounded-full bg-transparent text-ink-40 font-sans text-[15px] font-semibold cursor-pointer hover:bg-surface transition-colors"
         >
           Skip
         </button>
@@ -54,10 +54,10 @@ export default function OnboardingNav({
         data-testid={continueTestId}
         disabled={!canContinue || isLoading}
         className={cn(
-          "min-h-[48px] flex-1 border-none rounded-[16px] font-sans text-sm font-semibold cursor-pointer transition-colors flex items-center justify-center gap-2",
+          "h-12 flex-1 px-5 border-none rounded-full font-sans text-[15px] font-semibold cursor-pointer transition-colors flex items-center justify-center gap-2",
           canContinue && !isLoading
-            ? "bg-[#1D9E75] text-white hover:bg-[#17805F]"
-            : "bg-[#E6E1D8] text-[#A8A095] cursor-not-allowed"
+            ? "bg-forest text-paper hover:bg-forest-700"
+            : "bg-surface text-ink-40 cursor-not-allowed"
         )}
       >
         {isLoading ? (

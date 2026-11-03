@@ -36,7 +36,7 @@ export default function BudgetMonthStrip({ selectedMonth, months, currentMonthSt
   }, []);
 
   return (
-    <div ref={scrollerRef} className="flex gap-2 overflow-x-auto pb-1 scrollbar-none mb-2">
+    <div ref={scrollerRef} role="group" aria-label="Choose month" className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
       {window_.map(monthStr => {
         const isSelected = selectedMonth === monthStr;
         const isCurrent = monthStr === currentMonthStr;
@@ -52,17 +52,17 @@ export default function BudgetMonthStrip({ selectedMonth, months, currentMonthSt
             onClick={() => !isFuture && onChange(monthStr)}
             aria-current={isSelected ? "date" : undefined}
             className={cn(
-              "flex-shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[13px] font-semibold whitespace-nowrap transition-colors",
+              "flex-shrink-0 flex items-center gap-1.5 h-10 px-4 rounded-full border-[1.5px] text-[13px] font-semibold whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/30",
               isFuture
-                ? "bg-hairline text-ink-30 cursor-not-allowed"
+                ? "border-hairline bg-transparent text-ink-40 opacity-50 cursor-not-allowed"
                 : isSelected
-                ? "bg-forest text-paper"
-                : "bg-surface text-ink-40 hover:bg-hairline/50",
+                ? "border-forest bg-forest text-paper"
+                : "border-hairline-2 bg-transparent text-forest hover:bg-surface",
             )}
           >
             {formatLabel(monthStr)}
             {hasData && !isSelected && !isFuture && (
-              <span className="h-1.5 w-1.5 rounded-full bg-green" aria-hidden="true" />
+              <span className="h-1.5 w-1.5 rounded-full bg-forest" aria-hidden="true" />
             )}
           </button>
         );

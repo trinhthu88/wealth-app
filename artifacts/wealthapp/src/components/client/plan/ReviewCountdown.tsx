@@ -13,24 +13,24 @@ function formatDate(d: string) {
 
 export default function ReviewCountdown({ nextReviewDate, daysUntilReview, isReviewOverdue, onRequestReview }: Props) {
   return (
-    <div className="bg-white border border-[#E2E8F0] rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div className="bg-surface rounded-[24px] p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div className="flex items-start gap-3">
         {isReviewOverdue ? (
-          <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+          <span className="w-10 h-10 rounded-[14px] bg-sun text-forest flex items-center justify-center shrink-0"><AlertTriangle className="h-4 w-4" /></span>
         ) : (
-          <CalendarDays className="h-5 w-5 text-slate-400 shrink-0 mt-0.5" />
+          <span className="w-10 h-10 rounded-[14px] bg-field text-forest flex items-center justify-center shrink-0"><CalendarDays className="h-4 w-4" /></span>
         )}
         <div>
-          <p className="text-sm font-semibold text-[#042C53]">Next review</p>
+          <p className="text-[16px] font-semibold text-forest">Next review</p>
           {nextReviewDate ? (
-            <p className={`text-sm mt-0.5 ${isReviewOverdue ? "text-amber-600" : "text-slate-500"}`}>
+            <p className={`text-[13.5px] mt-0.5 tabular-nums ${isReviewOverdue ? "text-clay-ink font-semibold" : "text-ink-40"}`}>
               {formatDate(nextReviewDate)} ·{" "}
               {isReviewOverdue
                 ? `Overdue by ${Math.abs(daysUntilReview!)} days`
                 : `${daysUntilReview} days away`}
             </p>
           ) : (
-            <p className="text-sm text-slate-400 mt-0.5">
+            <p className="text-[13.5px] text-ink-40 mt-0.5">
               No review date set. Ask your advisor to schedule one.
             </p>
           )}
@@ -38,7 +38,7 @@ export default function ReviewCountdown({ nextReviewDate, daysUntilReview, isRev
       </div>
       <button
         onClick={onRequestReview}
-        className="flex-shrink-0 px-4 py-2 rounded-xl border border-[#1D9E75] text-[#1D9E75] text-sm font-medium hover:bg-[#1D9E75]/5 transition-colors"
+        className="flex-shrink-0 h-11 px-5 rounded-full border-[1.5px] border-forest bg-transparent text-forest text-[14px] font-semibold hover:bg-forest/5 transition-colors"
       >
         Request a review →
       </button>

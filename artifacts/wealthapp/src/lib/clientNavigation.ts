@@ -1,7 +1,9 @@
+// Four places plus Sol (rendered between Portfolio and Goals by the app
+// shell, not a route). The monthly budget lives under Home: it opens from the
+// dashboard's budget card, so /client/money highlights Home.
 export const CLIENT_PRIMARY_NAV = [
   { id: "home", label: "Home", href: "/client/dashboard" },
-  { id: "money", label: "Money", href: "/client/money" },
-  { id: "wealth", label: "Wealth", href: "/client/wealth/overview" },
+  { id: "wealth", label: "Portfolio", href: "/client/wealth/investments" },
   { id: "goals", label: "Goals", href: "/client/goals/goals" },
   { id: "advisor", label: "Advisor", href: "/client/advisor/messages" },
 ] as const;
@@ -9,8 +11,8 @@ export const CLIENT_PRIMARY_NAV = [
 export type ClientPrimaryNavId = (typeof CLIENT_PRIMARY_NAV)[number]["id"];
 
 const WEALTH_TABS = [
-  { id: "overview", label: "Overview", href: "/client/wealth/overview" },
   { id: "investments", label: "Investments", href: "/client/wealth/investments" },
+  { id: "overview", label: "Net worth", href: "/client/wealth/overview" },
   { id: "property-debts", label: "Property & debts", href: "/client/wealth/property-debts" },
 ] as const;
 
@@ -48,7 +50,7 @@ export function getClientNavigationState(location: string): ClientNavigationStat
   if (pathname === "/client/dashboard") {
     primaryId = "home";
   } else if (pathname === "/client/money") {
-    primaryId = "money";
+    primaryId = "home";
   } else if (pathname.startsWith("/client/wealth/")) {
     primaryId = "wealth";
     sectionLabel = "Wealth";

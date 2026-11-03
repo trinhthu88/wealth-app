@@ -2,7 +2,7 @@
 // ✓ ALLOWED: BottomSheet spring animation
 // ✗ BANNED:  Page-load stagger on sections
 // ✗ BANNED:  JetBrains Mono font
-// ✗ BANNED:  Cream/warm palette (#FAF8F5, #F2EFE9, #A8A095)
+// ✗ BANNED:  Cream/warm palette (#F1F4FE, #F1F4FE, #8F98C8)
 // ✗ BANNED:  Inline style={{ color: '#hexcode' }} — use Tailwind tokens only
 // ✗ BANNED:  Double bottom nav — AppShell is the ONLY nav
 
@@ -147,7 +147,7 @@ export default function FreePortfolioPage() {
                 <p className="text-xs text-ink-40 mt-1">Add a stock, crypto, or cash position to get started.</p>
               </div>
             ) : (
-              <div className="bg-surface rounded-[20px] overflow-hidden shadow-[0_4px_14px_rgba(20,52,42,.06)]">
+              <div className="bg-surface rounded-[20px] overflow-hidden shadow-[0_4px_14px_rgba(12,33,164,.06)]">
                 {holdings.map((h, idx) => {
                   const info = ASSET_CLASS_INFO[h.assetClass] ?? ASSET_CLASS_INFO.other;
                   return (

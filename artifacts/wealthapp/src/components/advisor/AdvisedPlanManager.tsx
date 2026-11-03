@@ -112,7 +112,7 @@ function PlanCard({ plan, clientId }: { plan: AdvisedPlan; clientId: string }) {
   const showsLumpSum = plan.planType === "lump_sum" || plan.planType === "combination";
 
   return (
-    <div className="bg-surface border border-hairline rounded-[24px] overflow-hidden shadow-[0_2px_14px_rgba(20,52,42,0.04)]">
+    <div className="bg-surface border border-hairline rounded-[24px] overflow-hidden shadow-[0_2px_14px_rgba(12,33,164,0.04)]">
       <div className="p-5">
         <div className="flex items-start justify-between gap-4 mb-4">
           <div>

@@ -15,26 +15,26 @@ interface Props {
 // dismisses, or navigates on its own.
 export default function SolCard({ message, onAccept, onDismiss, className }: Props) {
   return (
-    <div className={cn("flex items-start gap-2.5 p-3 rounded-xl bg-sun-tint border border-sun/30", className)}>
+    <div className={cn("flex items-start gap-3 p-4 rounded-[24px] bg-breeze text-forest", className)}>
       <Sol size="xs" animate="none" showFace showRays={false} className="mt-0.5" />
-      <div className="flex-1 min-w-0 text-[13px] text-sun-ink leading-[1.45]">
+      <div className="flex-1 min-w-0 text-[14px] text-forest leading-[1.5]">
         <p>{message.body}</p>
         {onAccept && message.actionLabel && (
           <button
             onClick={onAccept}
-            className="mt-1.5 font-semibold text-[13px] text-green hover:underline cursor-pointer"
+            className="mt-3 inline-flex items-center h-11 px-5 rounded-full bg-forest text-paper font-semibold text-[14px] hover:bg-forest-700 transition-colors cursor-pointer"
           >
-            {message.actionLabel} →
+            {message.actionLabel}
           </button>
         )}
       </div>
       {onDismiss && (
         <button
           onClick={onDismiss}
-          className="shrink-0 h-6 w-6 flex items-center justify-center text-sun-ink/40 hover:text-sun-ink transition-colors cursor-pointer"
+          className="shrink-0 -mt-2 -mr-2 h-11 w-11 flex items-center justify-center rounded-full text-forest/60 hover:text-forest transition-colors cursor-pointer"
           aria-label="Dismiss"
         >
-          <X className="h-3.5 w-3.5" />
+          <X className="h-4 w-4" />
         </button>
       )}
     </div>

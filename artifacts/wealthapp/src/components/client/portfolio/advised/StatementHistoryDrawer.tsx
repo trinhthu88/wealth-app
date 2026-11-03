@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ChevronDown } from "lucide-react";
 import BottomSheet from "@/components/client/BottomSheet";
 import StatementDetailView from "./StatementDetailView";
 import { cn } from "@/lib/utils";
@@ -33,18 +34,18 @@ export default function StatementHistoryDrawer({ isOpen, onClose, plan, statemen
   return (
     <BottomSheet isOpen={isOpen} onClose={onClose} title={`${plan.nickname ?? plan.productName} — Statements`} height="full">
       {/* Plan summary */}
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mb-5 pb-4 border-b border-slate-100 text-sm">
+      <div className="grid grid-cols-3 gap-2 mb-5 bg-surface rounded-[24px] p-4 text-[14px]">
         <div>
-          <span className="text-xs text-slate-400">Net contribution</span>
-          <p className="font-semibold text-[#042C53]">${nc.toLocaleString("en-US", { maximumFractionDigits: 0 })}</p>
+          <span className="tala-eyebrow text-ink-40">Net contribution</span>
+          <p className="mt-1 text-[16px] font-semibold text-forest tabular-nums">${nc.toLocaleString("en-US", { maximumFractionDigits: 0 })}</p>
         </div>
         <div>
-          <span className="text-xs text-slate-400">Account value</span>
-          <p className="font-semibold text-[#042C53]">${cv.toLocaleString("en-US", { maximumFractionDigits: 0 })}</p>
+          <span className="tala-eyebrow text-ink-40">Account value</span>
+          <p className="mt-1 text-[16px] font-semibold text-forest tabular-nums">${cv.toLocaleString("en-US", { maximumFractionDigits: 0 })}</p>
         </div>
         <div>
-          <span className="text-xs text-slate-400">Gain / loss</span>
-          <p className={cn("font-semibold", isPos ? "text-emerald-600" : "text-red-500")}>
+          <span className="tala-eyebrow text-ink-40">Gain / loss</span>
+          <p className={cn("mt-1 text-[16px] font-semibold tabular-nums", isPos ? "text-forest" : "text-clay-ink")}>
             {isPos ? "+" : "-"}${Math.abs(gl).toLocaleString("en-US", { maximumFractionDigits: 0 })}
           </p>
         </div>
@@ -52,8 +53,8 @@ export default function StatementHistoryDrawer({ isOpen, onClose, plan, statemen
 
       {statements.length === 0 ? (
         <div className="py-8 text-center">
-          <p className="text-sm text-slate-500">No statements yet.</p>
-          <p className="text-xs text-slate-400 mt-1">Your advisor will add your first statement soon.</p>
+          <p className="text-[14px] text-ink-40">No statements yet.</p>
+          <p className="text-[13px] text-ink-40 mt-1">Your advisor will add your first statement soon.</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -64,26 +65,26 @@ export default function StatementHistoryDrawer({ isOpen, onClose, plan, statemen
             const isReturnPos = returns >= 0;
 
             return (
-              <div key={stmt.id} className="border border-slate-200 rounded-xl overflow-hidden">
+              <div key={stmt.id} className="bg-surface rounded-[24px] overflow-hidden">
                 <button
-                  className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-slate-50 transition-colors"
+                  className="w-full min-h-11 flex items-center justify-between p-4 text-left hover:bg-paper/60 transition-colors"
                   onClick={() => setExpandedId(isExpanded ? null : stmt.id)}
                 >
                   <div>
-                    <p className="text-sm font-semibold text-[#042C53]">{periodLabel(stmt)}</p>
-                    <p className="text-xs text-slate-400 mt-0.5">
+                    <p className="text-[15px] font-semibold text-forest">{periodLabel(stmt)}</p>
+                    <p className="text-[13px] text-ink-40 mt-0.5 tabular-nums">
                       Closing: ${closingV.toLocaleString("en-US", { maximumFractionDigits: 0 })}
                     </p>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
-                    <span className={cn("text-sm font-medium", isReturnPos ? "text-emerald-600" : "text-red-500")}>
+                    <span className={cn("rounded-full px-2.5 py-1 text-[12px] font-semibold tabular-nums text-forest", isReturnPos ? "bg-field" : "bg-sun")}>
                       {isReturnPos ? "+" : ""}${returns.toLocaleString("en-US", { maximumFractionDigits: 0 })}
                     </span>
-                    <span className={cn("text-xs", isExpanded ? "rotate-180" : "")}>▾</span>
+                    <ChevronDown className={cn("h-4 w-4 text-ink-40 transition-transform", isExpanded ? "rotate-180" : "")} aria-hidden="true" />
                   </div>
                 </button>
                 {isExpanded && (
-                  <div className="px-4 py-4 border-t border-slate-100 bg-slate-50">
+                  <div className="p-4 border-t border-hairline bg-paper rounded-b-[24px]">
                     <StatementDetailView
                       statement={stmt}
                       holdings={holdingsByStatement[stmt.id] ?? []}
@@ -97,7 +98,7 @@ export default function StatementHistoryDrawer({ isOpen, onClose, plan, statemen
         </div>
       )}
 
-      <p className="text-xs text-slate-400 text-center mt-6">Statement data is entered by your advisor.</p>
+      <p className="text-[12px] text-ink-40 text-center mt-6">Statement data is entered by your advisor.</p>
     </BottomSheet>
   );
 }

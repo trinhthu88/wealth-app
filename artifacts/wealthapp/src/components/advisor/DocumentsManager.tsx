@@ -66,7 +66,7 @@ export default function DocumentsManager({ basePath, enabled }: Props) {
 
   return (
     <div className="space-y-6">
-      <div className="bg-surface border border-hairline rounded-[26px] p-6 shadow-[0_2px_14px_rgba(20,52,42,0.04)] space-y-4">
+      <div className="bg-surface border border-hairline rounded-[26px] p-6 shadow-[0_2px_14px_rgba(12,33,164,0.04)] space-y-4">
         <h3 className="font-display text-[18px] font-semibold text-forest">Upload a document</h3>
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5 col-span-2">
@@ -111,13 +111,13 @@ export default function DocumentsManager({ basePath, enabled }: Props) {
       )}
 
       {filtered.length === 0 ? (
-        <div className="text-center py-12 bg-surface rounded-[26px] shadow-[0_2px_14px_rgba(20,52,42,0.06)] text-[14px] text-ink-40">
+        <div className="text-center py-12 bg-surface rounded-[26px] shadow-[0_2px_14px_rgba(12,33,164,0.06)] text-[14px] text-ink-40">
           {documents.length === 0 ? "No documents uploaded." : "No documents in this category."}
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {filtered.map(d => (
-            <div key={d.id} className="bg-surface border border-hairline rounded-[20px] p-5 shadow-[0_2px_14px_rgba(20,52,42,0.04)]">
+            <div key={d.id} className="bg-surface border border-hairline rounded-[20px] p-5 shadow-[0_2px_14px_rgba(12,33,164,0.04)]">
               <div className="flex justify-between items-start mb-2">
                 <div className="font-semibold text-[15px] text-forest">{d.title}</div>
                 <span className="text-[11px] px-2 py-0.5 rounded-[4px] font-medium tracking-wide uppercase bg-surface border border-hairline text-ink-60 capitalize">{d.category}</span>

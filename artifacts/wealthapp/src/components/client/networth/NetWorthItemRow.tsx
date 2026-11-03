@@ -1,5 +1,8 @@
 import { useState } from "react";
-import { Pencil, Trash2, ExternalLink } from "lucide-react";
+import {
+  Pencil, Trash2, ExternalLink, TrendingUp, Home, Landmark, Shield, Briefcase,
+  MoreHorizontal, Wallet, CreditCard, Car, GraduationCap, type LucideIcon,
+} from "lucide-react";
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
 import SyncedItemBadge from "./SyncedItemBadge";
@@ -35,48 +38,64 @@ function fmtDate(date: string | null) {
   }
 }
 
-const CATEGORY_DOTS: Record<string, string> = {
-  investment:       "var(--green)",
-  property:         "var(--forest)",
-  cash:             "var(--mint)",
-  savings:          "var(--mint)",
-  pension:          "var(--violet)",
-  business:         "var(--sun)",
-  other_asset:      "var(--sand)",
-  real_estate:      "var(--forest)",
-  mortgage:         "var(--clay-ink)",
-  personal_loan:    "var(--clay)",
-  credit_card:      "#F2A98A",
-  business_debt:    "var(--clay-ink)",
-  other_liability:  "#F6C7B4",
-  car_loan:         "var(--clay)",
-  student_loan:     "#F2A98A",
-  other:            "var(--clay)",
+type TileStyle = { icon: LucideIcon; className: string };
+
+const CATEGORY_TILES: Record<string, TileStyle> = {
+  investment:       { icon: TrendingUp,     className: "bg-forest text-paper" },
+  property:         { icon: Home,           className: "bg-field text-forest" },
+  real_estate:      { icon: Home,           className: "bg-field text-forest" },
+  cash:             { icon: Landmark,       className: "bg-breeze text-forest" },
+  savings:          { icon: Landmark,       className: "bg-breeze text-forest" },
+  pension:          { icon: Shield,         className: "bg-breeze text-forest" },
+  business:         { icon: Briefcase,      className: "bg-field text-forest" },
+  other_asset:      { icon: MoreHorizontal, className: "bg-paper text-forest" },
+  mortgage:         { icon: Home,           className: "bg-breeze text-forest" },
+  personal_loan:    { icon: Wallet,         className: "bg-breeze text-forest" },
+  credit_card:      { icon: CreditCard,     className: "bg-breeze text-forest" },
+  business_debt:    { icon: Briefcase,      className: "bg-breeze text-forest" },
+  other_liability:  { icon: MoreHorizontal, className: "bg-breeze text-forest" },
+  car_loan:         { icon: Car,            className: "bg-breeze text-forest" },
+  student_loan:     { icon: GraduationCap,  className: "bg-breeze text-forest" },
+  other:            { icon: MoreHorizontal, className: "bg-breeze text-forest" },
 };
 
-export function SyncedAssetRow({ item }: SyncedAssetRowProps) {
-  const dot = CATEGORY_DOTS[item.category] ?? "var(--ink-20)";
+const FALLBACK_TILE: TileStyle = { icon: MoreHorizontal, className: "bg-paper text-forest" };
+
+function CategoryTile({ category }: { category: string }) {
+  const tile = CATEGORY_TILES[category] ?? FALLBACK_TILE;
+  const Icon = tile.icon;
   return (
-    <div className="flex items-center justify-between py-3 px-3 sm:px-4">
+    <div
+      className={cn("h-11 w-11 rounded-[14px] shrink-0 flex items-center justify-center", tile.className)}
+      aria-hidden="true"
+    >
+      <Icon className="h-[18px] w-[18px]" />
+    </div>
+  );
+}
+
+export function SyncedAssetRow({ item }: SyncedAssetRowProps) {
+  return (
+    <div className="flex items-center justify-between gap-2 p-3 border-b border-hairline last:border-0">
       <div className="flex items-center gap-3 min-w-0 flex-1">
-        <div className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: dot }} />
+        <CategoryTile category={item.category} />
         <div className="min-w-0">
-          <p className="text-sm font-medium text-forest truncate">{item.label}</p>
+          <p className="text-[15px] font-semibold text-forest truncate">{item.label}</p>
           <div className="flex items-center gap-2 mt-0.5">
             <SyncedItemBadge />
             {item.lastUpdated && (
-              <span className="text-[11px] text-ink-30">Updated {fmtDate(item.lastUpdated)}</span>
+              <span className="text-[12px] text-ink-40">Updated {fmtDate(item.lastUpdated)}</span>
             )}
           </div>
         </div>
       </div>
-      <div className="flex items-center gap-2 shrink-0 ml-2">
-        <span className="text-sm font-semibold text-forest">
+      <div className="flex items-center gap-2 shrink-0">
+        <span className="text-[15px] font-semibold tabular-nums text-forest">
           <CurrencyField amountUsd={item.valueUsd} compact />
         </span>
         <Link
           href="/client/wealth/investments"
-          className="text-[11px] text-green font-medium flex items-center gap-0.5 hover:text-forest"
+          className="min-h-[44px] px-1 text-[13px] text-green font-semibold underline underline-offset-2 flex items-center gap-1 hover:text-forest-700"
         >
           Portfolio <ExternalLink className="h-3 w-3" />
         </Link>
@@ -87,34 +106,33 @@ export function SyncedAssetRow({ item }: SyncedAssetRowProps) {
 
 export function ManualAssetRow({ item, onEdit, onDelete }: ManualAssetRowProps) {
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const dot = CATEGORY_DOTS[item.category] ?? "var(--ink-20)";
 
   return (
-    <div className="flex items-center justify-between py-3 px-3 sm:px-4">
+    <div className="flex items-center justify-between gap-2 p-3 border-b border-hairline last:border-0">
       <div className="flex items-center gap-3 min-w-0 flex-1">
-        <div className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: dot }} />
+        <CategoryTile category={item.category} />
         <div className="min-w-0">
-          <p className="text-sm font-medium text-forest truncate">{item.name}</p>
-          <p className="text-[11px] text-ink-30 capitalize mt-0.5">
+          <p className="text-[15px] font-semibold text-forest truncate">{item.name}</p>
+          <p className="text-[13px] text-ink-40 capitalize mt-0.5 truncate">
             {item.category.replace(/_/g, " ")}
           </p>
         </div>
       </div>
-      <div className="flex items-center gap-1.5 shrink-0 ml-2">
-        <span className="text-sm font-semibold text-forest">
+      <div className="flex items-center gap-1.5 shrink-0">
+        <span className="text-[15px] font-semibold tabular-nums text-forest">
           <CurrencyField amountUsd={item.valueUsd} compact />
         </span>
         {confirmDelete ? (
           <div className="flex items-center gap-1">
             <button
               onClick={() => { onDelete(item.id); setConfirmDelete(false); }}
-              className="text-[11px] text-white bg-clay px-2 py-1 rounded-lg font-medium"
+              className="h-11 px-4 rounded-full bg-sun text-forest text-[13px] font-semibold"
             >
               Remove
             </button>
             <button
               onClick={() => setConfirmDelete(false)}
-              className="text-[11px] text-ink-40 px-2 py-1"
+              className="h-11 px-3 rounded-full text-[13px] font-medium text-ink-40 hover:text-forest"
             >
               Cancel
             </button>
@@ -124,16 +142,16 @@ export function ManualAssetRow({ item, onEdit, onDelete }: ManualAssetRowProps) 
             <button
               onClick={() => onEdit(item)}
               aria-label={`Edit ${item.name}`}
-              className="h-7 w-7 flex items-center justify-center rounded-lg text-ink-30 hover:text-green hover:bg-hairline/50 transition-colors"
+              className="h-11 w-11 flex items-center justify-center rounded-full text-ink-40 hover:text-forest hover:bg-paper transition-colors"
             >
-              <Pencil className="h-3.5 w-3.5" />
+              <Pencil className="h-4 w-4" />
             </button>
             <button
               onClick={() => setConfirmDelete(true)}
               aria-label={`Delete ${item.name}`}
-              className="h-7 w-7 flex items-center justify-center rounded-lg text-ink-30 hover:text-clay hover:bg-hairline/50 transition-colors"
+              className="h-11 w-11 flex items-center justify-center rounded-full text-ink-40 hover:text-clay-ink hover:bg-paper transition-colors"
             >
-              <Trash2 className="h-3.5 w-3.5" />
+              <Trash2 className="h-4 w-4" />
             </button>
           </>
         )}
@@ -147,25 +165,24 @@ export function ManualAssetRow({ item, onEdit, onDelete }: ManualAssetRowProps) 
 // synthetic `mortgage-<holdingId>` string), so they must never be sent to the
 // liabilities edit/delete API. Edit the balance from the holding itself.
 export function SyncedLiabilityRow({ item }: SyncedLiabilityRowProps) {
-  const dot = CATEGORY_DOTS[item.category] ?? "var(--clay)";
   return (
-    <div className="flex items-center justify-between py-3 px-3 sm:px-4">
+    <div className="flex items-center justify-between gap-2 p-3 border-b border-hairline last:border-0">
       <div className="flex items-center gap-3 min-w-0 flex-1">
-        <div className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: dot }} />
+        <CategoryTile category={item.category} />
         <div className="min-w-0">
-          <p className="text-sm font-medium text-forest truncate">{item.name}</p>
+          <p className="text-[15px] font-semibold text-forest truncate">{item.name}</p>
           <div className="flex items-center gap-2 mt-0.5">
             <SyncedItemBadge />
           </div>
         </div>
       </div>
-      <div className="flex items-center gap-2 shrink-0 ml-2">
-        <span className="text-sm font-semibold text-clay">
+      <div className="flex items-center gap-2 shrink-0">
+        <span className="text-[15px] font-semibold tabular-nums text-forest">
           <CurrencyField amountUsd={item.balanceUsd} compact />
         </span>
         <Link
           href="/client/wealth/investments"
-          className="text-[11px] text-green font-medium flex items-center gap-0.5 hover:text-forest"
+          className="min-h-[44px] px-1 text-[13px] text-green font-semibold underline underline-offset-2 flex items-center gap-1 hover:text-forest-700"
         >
           Portfolio <ExternalLink className="h-3 w-3" />
         </Link>
@@ -176,36 +193,35 @@ export function SyncedLiabilityRow({ item }: SyncedLiabilityRowProps) {
 
 export function ManualLiabilityRow({ item, onEdit, onDelete }: ManualLiabilityRowProps) {
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const dot = CATEGORY_DOTS[item.category] ?? "var(--clay)";
 
   return (
-    <div className="flex items-center justify-between py-3 px-3 sm:px-4">
+    <div className="flex items-center justify-between gap-2 p-3 border-b border-hairline last:border-0">
       <div className="flex items-center gap-3 min-w-0 flex-1">
-        <div className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: dot }} />
+        <CategoryTile category={item.category} />
         <div className="min-w-0">
-          <p className="text-sm font-medium text-forest truncate">{item.name}</p>
-          <p className="text-[11px] text-ink-30 capitalize mt-0.5">
+          <p className="text-[15px] font-semibold text-forest truncate">{item.name}</p>
+          <p className="text-[13px] text-ink-40 capitalize mt-0.5 truncate">
             {item.category.replace(/_/g, " ")}
             {item.interestRatePercent ? ` · ${item.interestRatePercent}% p.a.` : ""}
             {item.monthlyPaymentUsd ? ` · $${Math.round(item.monthlyPaymentUsd).toLocaleString()}/mo` : ""}
           </p>
         </div>
       </div>
-      <div className="flex items-center gap-1.5 shrink-0 ml-2">
-        <span className="text-sm font-semibold text-clay">
+      <div className="flex items-center gap-1.5 shrink-0">
+        <span className="text-[15px] font-semibold tabular-nums text-forest">
           <CurrencyField amountUsd={item.balanceUsd} compact />
         </span>
         {confirmDelete ? (
           <div className="flex items-center gap-1">
             <button
               onClick={() => { onDelete(item.id); setConfirmDelete(false); }}
-              className="text-[11px] text-white bg-clay px-2 py-1 rounded-lg font-medium"
+              className="h-11 px-4 rounded-full bg-sun text-forest text-[13px] font-semibold"
             >
               Remove
             </button>
             <button
               onClick={() => setConfirmDelete(false)}
-              className="text-[11px] text-ink-40 px-2 py-1"
+              className="h-11 px-3 rounded-full text-[13px] font-medium text-ink-40 hover:text-forest"
             >
               Cancel
             </button>
@@ -215,16 +231,16 @@ export function ManualLiabilityRow({ item, onEdit, onDelete }: ManualLiabilityRo
             <button
               onClick={() => onEdit(item)}
               aria-label={`Edit ${item.name}`}
-              className="h-7 w-7 flex items-center justify-center rounded-lg text-ink-30 hover:text-green hover:bg-hairline/50 transition-colors"
+              className="h-11 w-11 flex items-center justify-center rounded-full text-ink-40 hover:text-forest hover:bg-paper transition-colors"
             >
-              <Pencil className="h-3.5 w-3.5" />
+              <Pencil className="h-4 w-4" />
             </button>
             <button
               onClick={() => setConfirmDelete(true)}
               aria-label={`Delete ${item.name}`}
-              className="h-7 w-7 flex items-center justify-center rounded-lg text-ink-30 hover:text-clay hover:bg-hairline/50 transition-colors"
+              className="h-11 w-11 flex items-center justify-center rounded-full text-ink-40 hover:text-clay-ink hover:bg-paper transition-colors"
             >
-              <Trash2 className="h-3.5 w-3.5" />
+              <Trash2 className="h-4 w-4" />
             </button>
           </>
         )}

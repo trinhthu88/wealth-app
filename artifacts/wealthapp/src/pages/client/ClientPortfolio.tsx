@@ -19,14 +19,11 @@ import { cn } from "@/lib/utils";
 type Tab = "advised" | "self";
 const UNITS_BASED_TYPES = new Set(["stock_etf", "etf", "mutual_fund", "bond", "commodity", "crypto"]);
 
-// Sunrise Colors for Donut Chart
+// Palette colours for allocation segments
 const CHART_COLORS = [
-  "var(--green)",
-  "var(--green-300)",
-  "var(--forest)",
-  "var(--sun)",
-  "var(--sand)",
-  "var(--mint)",
+  "var(--field)",
+  "var(--breeze)",
+  "var(--surface)",
 ];
 
 const SELF_GROUPS: { key: string; label: string; types: string[] }[] = [
@@ -102,10 +99,10 @@ export default function ClientPortfolio() {
 
   return (
     <ClientAppShell>
-      <div className="space-y-[14px] pb-8">
-        <div className="flex items-start justify-between gap-4 mb-1">
+      <div className="space-y-4 pb-8">
+        <div className="flex items-start justify-between gap-4 px-1">
           <div>
-            <h1 className="font-display text-[30px] font-semibold text-forest tracking-[-0.02em] mb-[4px]">Portfolio</h1>
+            <h1 className="font-display text-[34px] leading-[1.05] text-forest mb-1">Portfolio</h1>
             <div className="text-[14px] text-ink-40">
               {planTypeLabel ? `${planTypeLabel} profile` : "Portfolio"}
               {lastReviewed && ` · reviewed ${new Date(lastReviewed + "T00:00:00").toLocaleDateString("en-US", { month: "short", year: "numeric" })}`}
@@ -128,7 +125,7 @@ export default function ClientPortfolio() {
           />
         ) : null}
 
-        <div className="flex gap-1 rounded-full border border-hairline bg-surface p-1 mb-2" role="tablist" aria-label="Portfolio mode">
+        <div className="flex gap-1 rounded-full bg-surface p-1" role="tablist" aria-label="Portfolio mode">
           <button
             type="button"
             role="tab"
@@ -158,17 +155,22 @@ export default function ClientPortfolio() {
         {tab === "advised" && !plansLoading && totalAdvisedValue > 0 && (
           <>
             <PortfolioSummaryCard totalValue={totalAdvisedValue} segments={advisedSegments} />
-            <div className="flex gap-3 mb-4">
-              <div className="flex-1 bg-green-tint rounded-[20px] p-[15px_16px]">
-                <div className="text-[12.5px] font-semibold text-green">Total growth</div>
-                <div className={cn("font-display text-[23px] font-semibold tracking-[-0.02em]", totalGrowth >= 0 ? "text-forest" : "text-clay")}>
-                  <CurrencyField amountUsd={totalGrowth} compact showSign />
+            <div className="flex gap-3">
+              <div className="flex-1 bg-surface rounded-[24px] p-4">
+                <div className="tala-eyebrow text-ink-40 mb-1.5">Total growth</div>
+                <div className="flex">
+                  <span className={cn(
+                    "rounded-full px-2.5 py-1 text-[15px] font-semibold tabular-nums text-forest",
+                    totalGrowth >= 0 ? "bg-field" : "bg-sun",
+                  )}>
+                    <CurrencyField amountUsd={totalGrowth} compact showSign />
+                  </span>
                 </div>
               </div>
               {planTypeLabel && (
-                <div className="flex-1 bg-surface rounded-[20px] p-[15px_16px] shadow-[0_2px_14px_rgba(20,52,42,.06)]">
-                  <div className="text-[12.5px] font-semibold text-ink-40">Plan type</div>
-                  <div className="font-display text-[23px] font-semibold text-forest tracking-[-0.02em]">{planTypeLabel}</div>
+                <div className="flex-1 bg-surface rounded-[24px] p-4">
+                  <div className="tala-eyebrow text-ink-40 mb-1.5">Plan type</div>
+                  <div className="text-[18px] font-semibold text-forest">{planTypeLabel}</div>
                 </div>
               )}
             </div>
@@ -179,29 +181,25 @@ export default function ClientPortfolio() {
           <PortfolioSummaryCard totalValue={totalSelfValue} segments={selfSegments} />
         )}
 
-        <div className="mb-[14px]">
-          <span className="inline-flex rounded-full bg-forest px-[14px] py-[8px] text-[13px] font-semibold text-paper">
-            Holdings
-          </span>
-        </div>
+        <h2 className="px-1 pt-1 text-[16px] font-semibold text-forest">Holdings</h2>
 
         {tab === "advised" ? (
           plansLoading ? (
-            <div className="h-40 bg-surface animate-pulse rounded-[26px]" />
+            <div className="h-40 bg-surface animate-pulse rounded-[24px]" />
           ) : plans.length === 0 ? (
-            <div className="bg-surface rounded-[26px] p-8 text-center text-[15px] text-ink-40 shadow-[0_2px_14px_rgba(20,52,42,.06)]">
+            <div className="bg-surface rounded-[24px] p-8 text-center text-[14px] text-ink-40">
               No advisor-managed investments yet.
             </div>
           ) : (
             <AdvisedPlanSection plans={plans} />
           )
         ) : holdingsLoading ? (
-          <div className="h-40 bg-surface animate-pulse rounded-[26px]" />
+          <div className="h-40 bg-surface animate-pulse rounded-[24px]" />
         ) : (
           <div className="space-y-4">
-            <div className="bg-surface rounded-[26px] p-[6px_20px] shadow-[0_2px_14px_rgba(20,52,42,.06)]">
+            <div className="bg-surface rounded-[24px] p-1">
               {holdings.length === 0 ? (
-                <div className="py-6 text-center text-[15px] text-ink-40">
+                <div className="p-6 text-center text-[14px] text-ink-40">
                   No self-tracked holdings yet.
                 </div>
               ) : (
@@ -221,7 +219,7 @@ export default function ClientPortfolio() {
               <button
                 type="button"
                 onClick={() => setAddOpen(true)}
-                className="inline-flex min-h-11 items-center gap-2 rounded-full bg-forest px-5 text-[13.5px] font-semibold text-paper transition-colors hover:bg-forest-700"
+                className="inline-flex h-11 items-center gap-2 rounded-full bg-forest px-5 text-[14px] font-semibold text-paper transition-colors hover:bg-forest-700"
               >
                 <Plus className="h-4 w-4" aria-hidden="true" />
                 Add holding

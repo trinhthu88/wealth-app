@@ -24,7 +24,7 @@ export default function BudgetCategoryCard({ label, total, pctOfIncome, borderCo
     <button
       type="button"
       onClick={onClick}
-      className="w-full text-left bg-surface rounded-[20px] p-[16px_18px] shadow-[0_2px_14px_rgba(20,52,42,.06)] flex items-center gap-3.5"
+      className="w-full text-left bg-surface rounded-[20px] p-[16px_18px] shadow-[0_2px_14px_rgba(12,33,164,.06)] flex items-center gap-3.5"
       style={{ borderLeft: `4px solid ${borderColor}` }}
     >
       <div className="flex-1 min-w-0">

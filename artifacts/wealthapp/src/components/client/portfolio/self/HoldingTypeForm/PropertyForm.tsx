@@ -57,14 +57,14 @@ export default function PropertyForm({ initial, onSubmit, submitLabel }: Props) 
       </Field>
       <Field label="Current estimated value" required error={errors.currentValue}>
         <AmountWithCurrency amount={currentValue} onAmountChange={setCurrentValue} currency={currency} onCurrencyChange={setCurrency} />
-        <p className="text-xs text-slate-400">Your best estimate of what it would sell for today.</p>
-        <p className="text-xs text-slate-400">Enter the current USD-equivalent value. We don't yet convert other currencies automatically.</p>
+        <p className="text-xs text-ink-40">Your best estimate of what it would sell for today.</p>
+        <p className="text-xs text-ink-40">Enter the current USD-equivalent value. We don't yet convert other currencies automatically.</p>
       </Field>
       <Field label="Outstanding mortgage">
         <AmountWithCurrency amount={mortgage} onAmountChange={setMortgage} currency={currency} onCurrencyChange={setCurrency} />
-        <p className="text-xs text-slate-400">Leave blank if property is fully owned.</p>
+        <p className="text-xs text-ink-40">Leave blank if property is fully owned.</p>
         {(parseFloat(currentValue) > 0 || parseFloat(mortgage) > 0) && (
-          <p className="text-xs text-slate-500 mt-1">Net equity: {formatCurrency(equity, currency)}</p>
+          <p className="text-xs text-ink-40 mt-1">Net equity: {formatCurrency(equity, currency)}</p>
         )}
       </Field>
       <Field label="Monthly rental income">
@@ -74,7 +74,7 @@ export default function PropertyForm({ initial, onSubmit, submitLabel }: Props) 
         <TextInput value={address} onChange={setAddress} placeholder="e.g. 12 Nguyen Hue, District 1" />
       </Field>
       <Field label="Country">
-        <select value={country} onChange={e => setCountry(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#042C53] bg-white focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/30">
+        <select value={country} onChange={e => setCountry(e.target.value)} className="w-full px-4 py-2.5 rounded-[14px] border border-hairline text-[14px] text-forest bg-surface focus:outline-none focus:ring-2 focus:ring-green/30">
           <option value="">Select country…</option>
           {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
         </select>

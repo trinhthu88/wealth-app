@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..700&family=Montserrat:wght@400;500;600;700&display=swap');
 
 @layer theme, base, clerk, components, utilities;
 @import "tailwindcss";
@@ -39,12 +39,12 @@
   --color-destructive-foreground: #FFFFFF;
 
   --color-sidebar: var(--forest);
-  --color-sidebar-foreground: #FDF6EC;
+  --color-sidebar-foreground: #FFFEFD;
   --color-sidebar-border: var(--forest-700);
   --color-sidebar-primary: var(--green);
   --color-sidebar-primary-foreground: #FFFFFF;
   --color-sidebar-accent: var(--forest-700);
-  --color-sidebar-accent-foreground: #FDF6EC;
+  --color-sidebar-accent-foreground: #FFFEFD;
   --color-sidebar-ring: var(--green);
 
   --font-sans: var(--app-font-sans);
@@ -80,6 +80,8 @@
   --color-sand: var(--sand);
   --color-violet: var(--violet);
   --color-violet-tint: var(--violet-tint);
+  --color-field: var(--field);
+  --color-breeze: var(--breeze);
 
   --radius-sm: 8px;
   --radius-md: 16px;
@@ -97,39 +99,45 @@
 }
 
 :root {
-  --paper: #FDF6EC;
-  --surface: #FFFFFF;
-  --forest: #14342A;
-  --forest-700: #1D4A3A;
-  --forest-900: #0E2620;
-  --green: #1D9E75;
-  --green-300: #7FC9A6;
-  --green-tint: #E7F5EE;
-  --mint: #8FBFA9;
-  --mint-dim: #8FAFA0;
-  --sun: #FFB627;
-  --sun-deep: #F5A623;
-  --sun-tint: #FFF0DA;
-  --sun-ink: #3A2405;
-  --amber-ink: #5A3A0A;
-  --clay: #E8663D;
-  --clay-tint: #FDEDE7;
-  --clay-ink: #A3452A;
-  --ink-60: #4A5C54;
-  --ink-40: #7A8B82;
-  --ink-30: #8C9A93;
-  --ink-20: #A6B3AC;
-  --hairline: #F2E9DB;
-  --hairline-2: #EDE3D4;
-  --track: #EFE5D6;
-  --track-dark: #2F5A48;
-  --sand: #E4D7C3;
-  /* Investments category accent (Budget page) — no existing token covers violet. */
-  --violet: #7C3AED;
-  --violet-tint: #F1EAFD;
+  /* tala palette (2026 redesign): Soft Cloud, Cobalt Pulse, Spring Field,
+     Blue Breeze, Sunset Pop. Token names are kept from the earlier "Sunrise"
+     theme so every screen inherits the new look without per-page changes:
+     forest/green = Cobalt Pulse, sun/clay = Sunset Pop, mint = Blue Breeze. */
+  --paper: #FFFEFD;        /* Soft Cloud — page background */
+  --surface: #F1F4FE;      /* card / input surface, a whisper of Blue Breeze */
+  --forest: #0C21A4;       /* Cobalt Pulse — text, hero cards, menu bar */
+  --forest-700: #1A30B8;
+  --forest-900: #08167A;
+  --green: #0C21A4;        /* primary actions */
+  --green-300: #B8C7F8;
+  --green-tint: #E3E9FD;
+  --mint: #B8C7F8;         /* Blue Breeze — light text on Cobalt */
+  --mint-dim: #9FB0EC;
+  --field: #D4D67D;        /* Spring Field — highlights, active tab, gains */
+  --breeze: #B8C7F8;       /* Blue Breeze — soft cards */
+  --sun: #FF891F;          /* Sunset Pop — Sol, "needs attention" */
+  --sun-deep: #E9740A;
+  --sun-tint: #FFE6CF;
+  --sun-ink: #3A1F00;
+  --amber-ink: #7A3E00;
+  --clay: #FF891F;
+  --clay-tint: #FFE6CF;
+  --clay-ink: #9A4A00;
+  --ink-60: #3A4785;
+  --ink-40: #4A5590;
+  --ink-30: #6E78AD;
+  --ink-20: #8F98C8;
+  --hairline: #E3E9FD;
+  --hairline-2: #D5DDFA;
+  --track: #E3E9FD;
+  --track-dark: #2A3DB8;
+  --sand: #D4D67D;
+  /* Investments category accent (Budget page). */
+  --violet: #6E7FE0;
+  --violet-tint: #E3E9FD;
 
-  --app-font-display: 'Bricolage Grotesque', sans-serif;
-  --app-font-sans: 'Figtree', sans-serif;
+  --app-font-display: 'Fraunces', Georgia, serif;
+  --app-font-sans: 'Montserrat', system-ui, sans-serif;
 
   --radius: 26px;
 }
@@ -137,12 +145,12 @@
 .dark {
   /* No dark mode mapping specified in handoff except specific screens like Pathway.
      We default to using standard mapped tokens when requested but will enforce Sunrise rules per screen. */
-  --paper: #14342A;
-  --surface: #1D4A3A;
-  --forest: #FDF6EC;
-  --forest-700: #EFE5D6;
-  --forest-900: #FDF6EC;
-  --green-tint: #0E2620;
+  --paper: #08167A;
+  --surface: #0C21A4;
+  --forest: #FFFEFD;
+  --forest-700: #E3E9FD;
+  --forest-900: #FFFEFD;
+  --green-tint: #08167A;
 }
 
 @layer base {
@@ -154,13 +162,17 @@
     min-width: 320px;
     text-rendering: optimizeLegibility;
   }
-  h1, h2, h3 { 
-    font-family: var(--app-font-display); 
-    @apply font-semibold tracking-[-0.02em]; 
-  }
-  h4, h5, h6 { 
+  /* Fraunces is reserved for page titles and key numbers; section
+     subtitles (h3–h6) are Montserrat so each screen has one clear focus. */
+  h1, h2 {
     font-family: var(--app-font-display);
-    @apply font-semibold tracking-[-0.01em]; 
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    font-variation-settings: 'SOFT' 100;
+  }
+  h3, h4, h5, h6 {
+    font-family: var(--app-font-sans);
+    @apply font-semibold tracking-[0.005em];
   }
 
   :where(button, a, input, select, textarea):focus-visible {
@@ -179,7 +191,7 @@
     background: var(--surface);
     border: 1px solid var(--hairline);
     border-radius: 26px;
-    box-shadow: 0 2px 14px rgba(20, 52, 42, 0.06);
+    box-shadow: 0 2px 14px rgba(12, 33, 164, 0.06);
   }
 
   .sunrise-control {
@@ -211,7 +223,7 @@
 
   .sunrise-button-primary:hover {
     background: var(--forest-700);
-    box-shadow: 0 4px 14px rgba(29, 158, 117, 0.2);
+    box-shadow: 0 4px 14px rgba(12, 33, 164, 0.2);
   }
 
   .sunrise-button-primary:active {
@@ -220,13 +232,24 @@
 }
 
 @layer utilities {
-  .font-display { font-family: var(--app-font-display); }
+  /* Display type stays calm: Fraunces at medium weight for titles and light
+     weight for big tabular numbers, whatever weight utility a screen uses. */
+  .font-display {
+    font-family: var(--app-font-display);
+    font-weight: 500 !important;
+    font-variation-settings: 'SOFT' 100;
+  }
+  .font-display.tabular-nums {
+    font-weight: 300 !important;
+    letter-spacing: -0.035em;
+    font-variant-numeric: lining-nums tabular-nums;
+  }
   
   .tala-eyebrow {
     font-family: var(--app-font-sans);
-    font-size: 13px;
+    font-size: 11px;
     font-weight: 600;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
   }
   

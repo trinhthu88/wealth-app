@@ -53,38 +53,41 @@ export default function AddHoldingSheet({ isOpen, onClose, onAdd }: Props) {
     <BottomSheet isOpen={isOpen} onClose={handleClose} title="Add an investment" height="full">
       {!selectedType ? (
         <div className="space-y-3">
-          <p className="text-xs text-slate-500 pb-1">Live prices are fetched automatically for market-linked investments.</p>
+          <p className="text-[13px] text-ink-40 pb-1">Live prices are fetched automatically for market-linked investments.</p>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {HOLDING_TYPE_CONFIG.map(cfg => (
               <button
                 key={cfg.type}
                 onClick={() => setSelectedType(cfg.type)}
                 className={cn(
-                  "flex flex-col items-start gap-1.5 p-4 rounded-xl border-2 border-slate-200 hover:border-[#1D9E75]/50 transition-all text-left",
-                  cfg.color
+                  "flex flex-col items-start gap-2 p-4 rounded-[24px] bg-surface hover:bg-breeze focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green transition-colors text-left"
                 )}
               >
                 <div className="flex items-center justify-between w-full">
                   {(() => {
                     const Icon = ICON_MAP[cfg.type] || MoreHorizontal;
-                    return <Icon className="w-6 h-6 text-slate-700" />;
+                    return (
+                      <span className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-field text-forest">
+                        <Icon className="w-5 h-5" aria-hidden="true" />
+                      </span>
+                    );
                   })()}
                   {cfg.priceSource === "api" && (
-                    <span className="text-[9px] font-semibold text-emerald-600 bg-emerald-100 border border-emerald-200 px-1.5 py-0.5 rounded-full">LIVE</span>
+                    <span className="text-[10px] font-semibold tracking-[0.08em] text-paper bg-forest px-2 py-0.5 rounded-full">LIVE</span>
                   )}
                 </div>
-                <span className={cn("text-xs font-semibold", cfg.textColor)}>{cfg.label}</span>
-                <span className="text-[11px] text-slate-500 leading-tight">{cfg.description}</span>
+                <span className="text-[14px] font-semibold text-forest">{cfg.label}</span>
+                <span className="text-[12px] text-ink-40 leading-snug">{cfg.description}</span>
               </button>
             ))}
           </div>
         </div>
       ) : (
         <div>
-          <button onClick={() => setSelectedType(null)} className="flex items-center gap-1.5 text-sm text-[#1D9E75] mb-5 hover:text-[#0F6E56]">
+          <button onClick={() => setSelectedType(null)} className="inline-flex min-h-11 items-center gap-1.5 text-[14px] font-semibold text-green mb-3 hover:text-forest-700">
             <ChevronLeft className="h-4 w-4" /> Back
           </button>
-          <p className="text-base font-semibold text-[#042C53] mb-4">{getHoldingTypeConfig(selectedType).label}</p>
+          <p className="text-[16px] font-semibold text-forest mb-4">{getHoldingTypeConfig(selectedType).label}</p>
           {selectedType === "stock_etf" && <StockEtfForm {...formProps!} />}
           {selectedType === "etf" && <EtfForm {...formProps!} />}
           {selectedType === "mutual_fund" && <MutualFundForm {...formProps!} />}

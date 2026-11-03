@@ -31,7 +31,7 @@ export default function HealthScoreRing({ score, size = "md", animate = true, da
     return () => clearTimeout(timeout);
   }, [score, animate, circ, offset]);
 
-  // Token colors (index.css): green #1D9E75, sun #FFB627, clay #E8663D —
+  // Token colors (index.css): green #0C21A4, sun #FF891F, clay #FF891F —
   // matches the same 3-tier scale used elsewhere for score/status coloring.
   const color = darkMode ? "white"
     : score >= 70 ? "var(--green)"

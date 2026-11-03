@@ -8,11 +8,11 @@ import { cn } from "@/lib/utils";
 import type { PlanMilestone } from "@/hooks/usePlan";
 
 const STATUS_BADGES: Record<string, { label: string; className: string }> = {
-  completed:   { label: "Completed",  className: "bg-emerald-50 text-emerald-700 border border-emerald-200" },
-  in_progress: { label: "In progress",  className: "bg-[#1D9E75]/10 text-[#1D9E75] border border-[#1D9E75]/20" },
-  active:      { label: "In progress",  className: "bg-[#1D9E75]/10 text-[#1D9E75] border border-[#1D9E75]/20" },
-  upcoming:    { label: "Upcoming",     className: "bg-slate-100 text-slate-500 border border-slate-200" },
-  pending:     { label: "Upcoming",     className: "bg-slate-100 text-slate-500 border border-slate-200" },
+  completed:   { label: "Completed",    className: "bg-field text-forest" },
+  in_progress: { label: "In progress",  className: "bg-forest text-paper" },
+  active:      { label: "In progress",  className: "bg-forest text-paper" },
+  upcoming:    { label: "Upcoming",     className: "bg-paper text-forest" },
+  pending:     { label: "Upcoming",     className: "bg-paper text-forest" },
 };
 
 function fmtDate(d: string | null) {
@@ -42,17 +42,17 @@ export default function MilestoneCard({ step, isNext }: Props) {
   const hasLongText = (step.notes?.length ?? 0) > 120;
 
   return (
-    <div className="bg-white border border-[#E2E8F0] rounded-xl p-4 space-y-3">
+    <div className="bg-surface rounded-[24px] p-5 space-y-3 text-forest">
       {/* Top row */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2 flex-wrap min-w-0">
-          <span className={cn("inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold shrink-0", badge.className)}>
+          <span className={cn("inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-semibold leading-none shrink-0", badge.className)}>
             {badge.label}
           </span>
-          <h3 className="text-sm font-semibold text-[#042C53]">{step.title}</h3>
+          <h3 className="text-[16px] font-semibold text-forest">{step.title}</h3>
         </div>
         {step.targetDate && (
-          <span className={cn("text-xs shrink-0 ml-2 whitespace-nowrap", overdue ? "text-amber-600 font-medium" : "text-slate-400")}>
+          <span className={cn("text-[12px] shrink-0 ml-2 whitespace-nowrap", overdue ? "text-clay-ink font-semibold" : "text-ink-40")}>
             {overdue ? `Due ${fmtDate(step.targetDate)} — overdue` : fmtDate(step.targetDate)}
           </span>
         )}
@@ -60,33 +60,33 @@ export default function MilestoneCard({ step, isNext }: Props) {
 
       {/* Completed date */}
       {step.completedDate && (
-        <p className="text-xs text-emerald-600">Completed {fmtDate(step.completedDate)}</p>
+        <p className="text-[12px] text-ink-40">Completed {fmtDate(step.completedDate)}</p>
       )}
 
       {/* Description */}
       {(step.notes || step.goalProgress) && (
         <div>
           {step.notes && (
-            <p className={cn("text-sm text-slate-500", !expanded && hasLongText && "line-clamp-3")}>
+            <p className={cn("text-[14px] text-ink-40 leading-[1.5]", !expanded && hasLongText && "line-clamp-3")}>
               {step.notes}
             </p>
           )}
           {hasLongText && (
             <button
               onClick={() => setExpanded(v => !v)}
-              className="text-xs text-[#1D9E75] font-medium mt-1 hover:underline"
+              className="text-[13px] text-green font-semibold mt-1 hover:underline"
             >
               {expanded ? "Show less" : "Read more"}
             </button>
           )}
           {step.goalProgress && (
             <div className={cn(step.notes && "mt-2")}>
-              <p className="text-sm text-slate-500 mb-1.5">
+              <p className="text-[14px] text-ink-40 tabular-nums mb-1.5">
                 ${Math.round(step.goalProgress.currentAmount).toLocaleString()} of ${Math.round(step.goalProgress.targetAmount).toLocaleString()}
               </p>
-              <div className="rounded-full bg-slate-100 h-1.5 max-w-[280px]" aria-label={`${Math.round(step.goalProgress.progressPct)}% of ${step.title} funded`}>
+              <div className="rounded-full bg-forest/15 h-2 max-w-[280px] overflow-hidden" aria-label={`${Math.round(step.goalProgress.progressPct)}% of ${step.title} funded`}>
                 <div
-                  className="h-full rounded-full bg-[#1D9E75] transition-[width] duration-500"
+                  className="h-full rounded-full bg-forest transition-[width] duration-500"
                   style={{ width: `${Math.min(100, Math.max(0, step.goalProgress.progressPct))}%` }}
                 />
               </div>
@@ -99,7 +99,7 @@ export default function MilestoneCard({ step, isNext }: Props) {
       {step.linkedGoal && (
         <Link
           href="/client/goals/goals"
-          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#1D9E75]/10 text-[#1D9E75] text-xs font-medium hover:bg-[#1D9E75]/20 transition-colors"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-field text-forest text-[12px] font-semibold hover:bg-field/80 transition-colors"
         >
           <Target className="h-3.5 w-3.5" /> {step.linkedGoal.title}
         </Link>
@@ -107,20 +107,20 @@ export default function MilestoneCard({ step, isNext }: Props) {
 
       {/* Action row */}
       {canComment && (
-        <div className="flex items-center gap-3 pt-1 border-t border-slate-50 flex-wrap">
+        <div className="flex items-center gap-3 pt-1 border-t border-hairline flex-wrap">
           <button
             onClick={() => { setShowAddComment(v => !v); setShowComments(true); }}
-            className="flex items-center gap-1 text-xs text-slate-500 hover:text-[#1D9E75] transition-colors"
+            className="flex items-center gap-1.5 min-h-11 text-[13px] font-semibold text-forest hover:underline underline-offset-2 transition-colors"
           >
             <MessageSquare className="h-3.5 w-3.5" />
             Add a comment
           </button>
           {comments.length > 0 && (
             <>
-              <span className="text-slate-200">·</span>
+              <span className="text-ink-20" aria-hidden="true">·</span>
               <button
                 onClick={() => setShowComments(v => !v)}
-                className="flex items-center gap-1 text-xs text-slate-500 hover:text-[#042C53] transition-colors"
+                className="flex items-center gap-1.5 min-h-11 text-[13px] font-semibold text-forest hover:underline underline-offset-2 transition-colors"
               >
                 {comments.length} comment{comments.length !== 1 ? "s" : ""}
                 {showComments ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}

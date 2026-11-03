@@ -100,20 +100,20 @@ const clerkAppearance = {
     logoLinkUrl: basePath || "/",
   },
   variables: {
-    colorPrimary: "#1D9E75", // green
-    colorForeground: "#14342A", // forest
+    colorPrimary: "#0C21A4", // green
+    colorForeground: "#0C21A4", // forest
     colorMutedForeground: "#7A8B82", // ink-40
-    colorDanger: "#E8663D", // clay
-    colorBackground: "#FDF6EC", // paper
+    colorDanger: "#FF891F", // clay
+    colorBackground: "#FFFEFD", // paper
     colorInput: "#FFFFFF", // surface
-    colorInputForeground: "#14342A", // forest
+    colorInputForeground: "#0C21A4", // forest
     colorNeutral: "#F2E9DB", // hairline
     fontFamily: "Figtree, sans-serif",
     borderRadius: "26px",
   },
   elements: {
     rootBox: "w-full flex justify-center",
-    cardBox: "bg-surface rounded-[32px] w-[440px] max-w-full overflow-hidden shadow-[0_2px_14px_rgba(20,52,42,0.06)] border-0",
+    cardBox: "bg-surface rounded-[32px] w-[440px] max-w-full overflow-hidden shadow-[0_2px_14px_rgba(12,33,164,0.06)] border-0",
     card: "!shadow-none !border-0 !bg-transparent !rounded-none p-6 md:p-8",
     footer: "!shadow-none !border-0 !bg-transparent !rounded-none",
     headerTitle: "font-display font-semibold text-[30px] tracking-[-0.02em]",

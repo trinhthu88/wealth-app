@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams, Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowUpRight, ChevronLeft, ChevronRight } from "lucide-react";
 import ClientAppShell from "@/components/client/AppShell";
 import CurrencyField from "@/components/shared/CurrencyField";
 import SolNarration from "@/components/client/SolNarration";
@@ -13,13 +13,19 @@ import { usePlan } from "@/hooks/usePlan";
 import { cn } from "@/lib/utils";
 
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
-  inforce:   { label: "In force",    className: "bg-green-tint text-green" },
-  matured:   { label: "Paid up",     className: "bg-sun-tint text-amber-ink" },
-  surrender: { label: "Lapsed",      className: "bg-clay-tint text-clay-ink" },
-  scenario:  { label: "Scenario",    className: "bg-hairline text-ink-40" },
+  inforce:   { label: "In force",    className: "bg-forest text-paper" },
+  matured:   { label: "Paid up",     className: "bg-field text-forest" },
+  surrender: { label: "Lapsed",      className: "bg-sun text-forest" },
+  scenario:  { label: "Scenario",    className: "bg-surface text-forest" },
 };
 
-const FUND_COLORS = ["var(--green)", "var(--forest)", "var(--green-300)", "var(--sun)", "var(--sand)"];
+// Leading tile colours for fund rows (background / text).
+const FUND_TILES = [
+  "bg-forest text-paper",
+  "bg-field text-forest",
+  "bg-breeze text-forest",
+  "bg-paper text-forest",
+];
 
 function n(v: string | number | null | undefined) { return parseFloat(String(v ?? "0")) || 0; }
 
@@ -73,7 +79,7 @@ export default function AdvisedPlanDetail() {
       <ClientAppShell>
         <div className="space-y-3">
           <div className="h-8 w-40 bg-surface animate-pulse rounded-lg" />
-          <div className="h-40 bg-surface animate-pulse rounded-[26px]" />
+          <div className="h-40 bg-surface animate-pulse rounded-[28px]" />
         </div>
       </ClientAppShell>
     );
@@ -83,14 +89,14 @@ export default function AdvisedPlanDetail() {
     return (
       <ClientAppShell>
         <div className="text-center py-16">
-          <p className="text-[15px] text-ink-40 mb-4">This plan could not be found.</p>
+          <p className="text-[14px] text-ink-40 mb-4">This plan could not be found.</p>
           <Link href="/client/wealth/investments" className="text-[14px] font-semibold text-green">Back to Investments</Link>
         </div>
       </ClientAppShell>
     );
   }
 
-  const status = STATUS_CONFIG[plan.status] ?? { label: plan.status, className: "bg-hairline text-ink-40" };
+  const status = STATUS_CONFIG[plan.status] ?? { label: plan.status, className: "bg-surface text-forest" };
   const isGain = plan.gainLoss >= 0;
   const advisorFirstName = advisorName?.split(" ")[0] ?? null;
 
@@ -120,60 +126,62 @@ export default function AdvisedPlanDetail() {
         <div>
           <Link
             href="/client/wealth/investments"
-            className="inline-flex items-center gap-1 text-[13.5px] font-semibold text-ink-40 hover:text-forest mb-3"
+            className="inline-flex min-h-11 items-center gap-1 text-[14px] font-medium text-ink-40 hover:text-forest mb-1"
           >
             <ChevronLeft className="h-4 w-4" aria-hidden="true" />
             Portfolio
           </Link>
           <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="font-display text-[26px] font-semibold text-forest tracking-[-0.02em]">
+            <h1 className="font-display text-[34px] leading-[1.05] text-forest">
               {plan.nickname ?? plan.productName}
             </h1>
-            <span className={cn("text-[10px] font-bold tracking-[0.06em] uppercase px-2 py-0.5 rounded-md shrink-0", status.className)}>
+            <span className={cn("rounded-full px-2.5 py-1 text-[12px] font-semibold shrink-0", status.className)}>
               {status.label}
             </span>
           </div>
-          <p className="text-[13.5px] text-ink-40 mt-0.5">
+          <p className="text-[14px] text-ink-40 mt-1">
             {plan.providerName}{plan.policyNumber ? ` · ${plan.policyNumber}` : ""}
           </p>
         </div>
 
         <SolNarration line={solLine} detail={solDetail} advisorFirstName={advisorFirstName} />
 
-        {/* Dark account value hero */}
-        <div className="bg-forest rounded-[28px] p-[22px]">
-          <p className="text-[12.5px] font-semibold text-mint">
+        {/* Cobalt account value hero */}
+        <section aria-label="Account value" className="bg-forest text-paper rounded-[28px] p-5 flex flex-col gap-3">
+          <p className="tala-eyebrow text-mint">
             Account value{plan.latestStatementDate ? ` · ${new Date(plan.latestStatementDate + "T00:00:00").toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" })}` : ""}
           </p>
-          <p className="font-display text-[40px] font-semibold text-paper tracking-[-0.03em] tabular-nums my-0.5 mb-3">
+          <p className="font-display tabular-nums text-[52px] leading-none tracking-[-0.04em] text-paper">
             <CurrencyField amountUsd={n(plan.latestAccountValue)} currency={plan.currency} compact />
           </p>
-          <div className="grid grid-cols-3 gap-2.5">
+          <div className="grid grid-cols-3 gap-2.5 pt-3 border-t border-white/20">
             <div>
-              <div className="text-[11.5px] text-mint">Paid in</div>
-              <div className="text-[16px] font-semibold text-paper tabular-nums"><CurrencyField amountUsd={netContributed} currency={plan.currency} compact /></div>
+              <div className="tala-eyebrow text-mint">Paid in</div>
+              <div className="mt-1 text-[16px] font-semibold text-paper tabular-nums"><CurrencyField amountUsd={netContributed} currency={plan.currency} compact /></div>
             </div>
             <div>
-              <div className="text-[11.5px] text-mint">Growth</div>
-              <div className={cn("text-[16px] font-semibold tabular-nums", isGain ? "text-sun" : "text-clay")}>
-                <CurrencyField amountUsd={plan.gainLoss} currency={plan.currency} compact showSign />
+              <div className="tala-eyebrow text-mint">Growth</div>
+              <div className="mt-1 flex">
+                <span className={cn("rounded-full px-2 py-0.5 text-[14px] font-semibold tabular-nums text-forest", isGain ? "bg-field" : "bg-sun")}>
+                  <CurrencyField amountUsd={plan.gainLoss} currency={plan.currency} compact showSign />
+                </span>
               </div>
             </div>
             <div>
-              <div className="text-[11.5px] text-mint">Term left</div>
-              <div className="text-[16px] font-semibold text-paper tabular-nums">{term != null ? `${term} yrs` : "—"}</div>
+              <div className="tala-eyebrow text-mint">Term left</div>
+              <div className="mt-1 text-[16px] font-semibold text-paper tabular-nums">{term != null ? `${term} yrs` : "—"}</div>
             </div>
           </div>
-        </div>
+        </section>
 
-        <div className="bg-surface rounded-[26px] p-[22px] shadow-[0_2px_14px_rgba(20,52,42,.06)]">
-          <p className="text-[15px] font-semibold text-forest mb-3">Funds</p>
+        <section aria-label="Funds" className="space-y-3">
+          <h2 className="px-1 text-[16px] font-semibold text-forest">Funds</h2>
           {holdings.length === 0 ? (
-            <p className="text-[13.5px] text-ink-40 py-2">
+            <p className="bg-surface rounded-[24px] p-5 text-[14px] text-ink-40">
               No fund data available — your advisor will update this after the next statement.
             </p>
           ) : (
-            <div>
+            <div className="bg-surface rounded-[24px] p-1">
               {holdings.map((h, i) => {
                 const val = n(h.finalValue);
                 const pct = totalHoldingValue > 0 ? Math.round((val / totalHoldingValue) * 100) : 0;
@@ -182,61 +190,66 @@ export default function AdvisedPlanDetail() {
                     key={h.id}
                     type="button"
                     onClick={() => navigate(`/client/wealth/investments/${plan.id}/funds/${h.fundCode}`)}
-                    className="w-full flex items-center gap-3 py-[11px] border-t border-hairline first:border-t-0 text-left hover:bg-hairline/20 transition-colors"
+                    className="w-full flex items-center gap-3 p-3 border-b border-hairline last:border-0 rounded-[20px] text-left hover:bg-paper/60 transition-colors"
                   >
-                    <span className="w-[10px] h-[34px] rounded-[4px] shrink-0" style={{ background: FUND_COLORS[i % FUND_COLORS.length] }} />
+                    <span
+                      aria-hidden="true"
+                      className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] text-[11px] font-semibold", FUND_TILES[i % FUND_TILES.length])}
+                    >
+                      {h.fundCode.slice(0, 4)}
+                    </span>
                     <div className="flex-1 min-w-0">
-                      <div className="text-[14.5px] font-semibold text-forest truncate">{h.fundName}</div>
-                      <div className="text-[12.5px] text-ink-40">{h.fundCode}{h.unitsHeld ? ` · ${Number(h.unitsHeld).toLocaleString()} units` : ""}</div>
+                      <div className="text-[15px] font-semibold text-forest truncate">{h.fundName}</div>
+                      <div className="text-[13px] text-ink-40">{h.fundCode}{h.unitsHeld ? ` · ${Number(h.unitsHeld).toLocaleString()} units` : ""}</div>
                     </div>
                     <div className="text-right shrink-0">
                       <div className="text-[15px] font-semibold text-forest tabular-nums"><CurrencyField amountUsd={val} currency={plan.currency} compact /></div>
-                      <div className="text-[12px] text-ink-30">{pct}% of plan</div>
+                      <div className="text-[12px] text-ink-40 tabular-nums">{pct}% of plan</div>
                     </div>
-                    <ChevronRight className="h-4 w-4 text-ink-30 shrink-0" aria-hidden="true" />
+                    <ChevronRight className="h-4 w-4 text-ink-40 shrink-0" aria-hidden="true" />
                   </button>
                 );
               })}
             </div>
           )}
-        </div>
+        </section>
 
-        <div className="bg-surface rounded-[26px] p-[22px] shadow-[0_2px_14px_rgba(20,52,42,.06)]">
-          <div className="flex items-center gap-2 mb-3">
-            <p className="text-[15px] font-semibold text-forest">Transactions</p>
+        <section aria-label="Transactions" className="space-y-3">
+          <div className="flex items-center gap-2 px-1">
+            <h2 className="text-[16px] font-semibold text-forest">Transactions</h2>
             {transactions.length > 0 && (
-              <span className="text-[11px] font-semibold text-ink-40 bg-hairline rounded-full px-2 py-0.5">
+              <span className="text-[12px] font-semibold text-forest bg-surface rounded-full px-2.5 py-0.5 tabular-nums">
                 {transactions.length}
               </span>
             )}
           </div>
           {txLoading ? (
             <div className="space-y-2">
-              {[0, 1, 2].map(i => <div key={i} className="h-10 bg-hairline/60 animate-pulse rounded-lg" />)}
+              {[0, 1, 2].map(i => <div key={i} className="h-12 bg-surface animate-pulse rounded-[14px]" />)}
             </div>
           ) : transactions.length === 0 ? (
-            <p className="text-[13.5px] text-ink-40 py-2">
+            <p className="bg-surface rounded-[24px] p-5 text-[14px] text-ink-40">
               Full transaction history will appear here once your advisor enters statement details.
             </p>
           ) : (
-            <div>
+            <div className="bg-surface rounded-[24px] p-1">
               {groupedTx.map(group => (
                 <div key={group.month}>
-                  <p className="sticky top-0 bg-surface py-1.5 text-[11.5px] font-semibold text-ink-40 uppercase tracking-wide">
+                  <p className="sticky top-0 bg-surface px-3 pt-3 pb-1 tala-eyebrow text-ink-40">
                     {group.month}
                   </p>
                   <div>
                     {group.rows.map(t => {
                       const amt = n(t.netAmount);
                       return (
-                        <div key={t.id} className="flex items-center justify-between py-2.5 border-b border-hairline last:border-0">
+                        <div key={t.id} className="flex items-center justify-between p-3 border-b border-hairline last:border-0">
                           <div className="min-w-0 pr-3">
-                            <p className="text-[13.5px] text-forest truncate">{t.description}</p>
-                            <p className="text-[12px] text-ink-40">
+                            <p className="text-[14px] font-medium text-forest truncate">{t.description}</p>
+                            <p className="text-[13px] text-ink-40">
                               {new Date(t.transactionDate + "T00:00:00").toLocaleDateString("en-US", { day: "2-digit", month: "short", year: "numeric" })}
                             </p>
                           </div>
-                          <span className={cn("text-[13.5px] font-semibold tabular-nums shrink-0", amt >= 0 ? "text-green" : "text-clay")}>
+                          <span className={cn("text-[14px] font-semibold tabular-nums shrink-0", amt >= 0 ? "text-forest" : "text-clay-ink")}>
                             {amt >= 0 ? "+" : ""}
                             <CurrencyField amountUsd={amt} currency={plan.currency} compact />
                           </span>
@@ -248,23 +261,33 @@ export default function AdvisedPlanDetail() {
               ))}
             </div>
           )}
-        </div>
+        </section>
 
         <div className="grid grid-cols-2 gap-3">
           <button
             type="button"
             onClick={() => setHistoryOpen(true)}
-            className="text-left bg-surface rounded-[20px] p-[16px] shadow-[0_2px_14px_rgba(20,52,42,.06)]"
+            className="flex flex-col justify-between gap-4 text-left bg-breeze rounded-[24px] p-4 min-h-[132px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green"
           >
-            <div className="text-[14px] font-semibold text-forest">Statement history</div>
-            <div className="text-[12.5px] text-ink-40 mt-0.5">All quarters, in detail</div>
+            <span className="w-9 h-9 rounded-full bg-forest text-paper flex items-center justify-center self-end" aria-hidden="true">
+              <ArrowUpRight className="h-4 w-4" />
+            </span>
+            <span>
+              <span className="block text-[15px] font-semibold text-forest">Statement history</span>
+              <span className="block text-[13px] text-forest mt-0.5">All quarters, in detail</span>
+            </span>
           </button>
           <Link
             href={`/client/goals/what-if?planId=${plan.id}`}
-            className="bg-sun-tint rounded-[20px] p-[16px] block"
+            className="flex flex-col justify-between gap-4 bg-field rounded-[24px] p-4 min-h-[132px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green"
           >
-            <div className="text-[14px] font-semibold text-amber-ink">Run a what-if</div>
-            <div className="text-[12.5px] text-[#B07A22] mt-0.5">On this plan</div>
+            <span className="w-9 h-9 rounded-full bg-forest text-paper flex items-center justify-center self-end" aria-hidden="true">
+              <ArrowUpRight className="h-4 w-4" />
+            </span>
+            <span>
+              <span className="block text-[15px] font-semibold text-forest">Run a what-if</span>
+              <span className="block text-[13px] text-forest mt-0.5">On this plan</span>
+            </span>
           </Link>
         </div>
       </div>

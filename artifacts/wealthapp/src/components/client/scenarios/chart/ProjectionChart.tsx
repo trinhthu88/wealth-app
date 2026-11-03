@@ -30,7 +30,7 @@ export default function ProjectionChart({ result }: Props) {
     <div role="img" aria-label={ariaLabel} className="h-[280px] w-full">
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={sampled} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
+          <CartesianGrid vertical={false} stroke="var(--hairline)" />
           <XAxis
             dataKey="month"
             ticks={xTicks}
@@ -39,13 +39,13 @@ export default function ProjectionChart({ result }: Props) {
               d.setMonth(d.getMonth() + m);
               return d.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
             }}
-            tick={{ fontSize: 11, fill: "#94A3B8" }}
+            tick={{ fontSize: 11, fill: "var(--ink-40)" }}
             axisLine={false}
             tickLine={false}
           />
           <YAxis
             tickFormatter={fmtY}
-            tick={{ fontSize: 11, fill: "#94A3B8" }}
+            tick={{ fontSize: 11, fill: "var(--ink-40)" }}
             axisLine={false}
             tickLine={false}
             width={52}
@@ -56,11 +56,11 @@ export default function ProjectionChart({ result }: Props) {
               const d = payload[0].payload;
               const diff = d.scenario - d.baseline;
               return (
-                <div className="bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-lg text-xs space-y-1">
-                  <p className="font-semibold text-[#042C53]">{d.label}</p>
-                  <p className="text-slate-400">Baseline: <span className="font-medium text-slate-600">{fmtY(d.baseline)}</span></p>
-                  <p className="text-[#1D9E75]">Scenario: <span className="font-medium">{fmtY(d.scenario)}</span></p>
-                  <p className={diff >= 0 ? "text-emerald-600" : "text-red-500"}>
+                <div className="bg-paper border border-hairline rounded-[14px] px-3 py-2 text-[12px] tabular-nums space-y-1">
+                  <p className="font-semibold text-forest">{d.label}</p>
+                  <p className="text-ink-40">Baseline: <span className="font-medium text-forest">{fmtY(d.baseline)}</span></p>
+                  <p className="text-forest">Scenario: <span className="font-semibold">{fmtY(d.scenario)}</span></p>
+                  <p className={diff >= 0 ? "text-forest" : "text-clay-ink"}>
                     Difference: <span className="font-medium">{diff >= 0 ? "+" : ""}{fmtY(diff)}</span>
                   </p>
                 </div>
@@ -68,14 +68,14 @@ export default function ProjectionChart({ result }: Props) {
             }}
           />
 
-          <Area type="monotone" dataKey="baseline" stroke="#94A3B8" strokeWidth={2} fill="#94A3B8" fillOpacity={0.15} name="Baseline" />
-          <Area type="monotone" dataKey="scenario" stroke="#1D9E75" strokeWidth={2} fill="#1D9E75" fillOpacity={0.2} name="Scenario" />
+          <Area type="monotone" dataKey="baseline" stroke="var(--breeze)" strokeWidth={2} fill="var(--breeze)" fillOpacity={0.35} name="Baseline" />
+          <Area type="monotone" dataKey="scenario" stroke="var(--forest)" strokeWidth={2.8} strokeLinecap="round" fill="var(--forest)" fillOpacity={0.12} name="Scenario" />
 
           {/* Market drop reference lines */}
           {params.type === "market_drop" && (
             <>
-              <ReferenceLine x={1} stroke="#EF4444" strokeDasharray="4 2" label={{ value: "Drop", position: "insideTopLeft", fontSize: 10, fill: "#EF4444" }} />
-              <ReferenceLine x={params.recoveryMonths} stroke="#F59E0B" strokeDasharray="4 2" label={{ value: "Recovery", position: "insideTopLeft", fontSize: 10, fill: "#F59E0B" }} />
+              <ReferenceLine x={1} stroke="var(--sun)" strokeDasharray="4 4" strokeWidth={1.5} label={{ value: "Drop", position: "insideTopLeft", fontSize: 11, fontWeight: 600, fill: "var(--clay-ink)" }} />
+              <ReferenceLine x={params.recoveryMonths} stroke="var(--ink-30)" strokeDasharray="4 4" strokeWidth={1.5} label={{ value: "Recovery", position: "insideTopLeft", fontSize: 11, fontWeight: 600, fill: "var(--ink-40)" }} />
             </>
           )}
 
@@ -83,9 +83,10 @@ export default function ProjectionChart({ result }: Props) {
           {params.type === "retire_earlier" && (
             <ReferenceLine
               y={params.targetAmount}
-              stroke="#1D9E75"
-              strokeDasharray="4 2"
-              label={{ value: `Goal: ${fmtY(params.targetAmount)}`, position: "insideTopRight", fontSize: 10, fill: "#1D9E75" }}
+              stroke="var(--forest)"
+              strokeDasharray="4 4"
+              strokeWidth={1.5}
+              label={{ value: `Goal: ${fmtY(params.targetAmount)}`, position: "insideTopRight", fontSize: 11, fontWeight: 600, fill: "var(--forest)" }}
             />
           )}
         </AreaChart>

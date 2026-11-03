@@ -13,8 +13,8 @@ export function Field({ label, required, children, error }: {
 }) {
   return (
     <div className="space-y-1">
-      <label className="text-sm font-medium text-[#042C53]">
-        {label}{required && <span className="text-red-400 ml-0.5">*</span>}
+      <label className="text-[13px] font-medium text-forest">
+        {label}{required && <span className="text-clay-ink ml-0.5">*</span>}
       </label>
       {children}
       {error && <p className="text-xs text-red-500">{error}</p>}
@@ -32,7 +32,7 @@ export function TextInput({ value, onChange, placeholder, uppercase, className }
       onChange={e => onChange(uppercase ? e.target.value.toUpperCase() : e.target.value)}
       onBlur={uppercase ? e => onChange(e.target.value.toUpperCase()) : undefined}
       placeholder={placeholder}
-      className={cn("w-full px-4 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#042C53] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/30 focus:border-[#1D9E75]", className)}
+      className={cn("w-full px-4 py-2.5 rounded-[14px] border border-hairline bg-surface text-[14px] text-forest placeholder:text-ink-30 focus:outline-none focus:ring-2 focus:ring-green/30 focus:border-forest", className)}
     />
   );
 }
@@ -46,7 +46,7 @@ export function TextareaInput({ value, onChange, placeholder, rows = 3 }: {
       onChange={e => onChange(e.target.value)}
       placeholder={placeholder}
       rows={rows}
-      className="w-full px-4 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#042C53] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/30 focus:border-[#1D9E75] resize-none"
+      className="w-full px-4 py-2.5 rounded-[14px] border border-hairline bg-surface text-[14px] text-forest placeholder:text-ink-30 focus:outline-none focus:ring-2 focus:ring-green/30 focus:border-forest resize-none"
     />
   );
 }
@@ -63,7 +63,7 @@ export function NumberInput({ value, onChange, placeholder, step = "any", min = 
       step={step}
       min={min}
       style={{ MozAppearance: "textfield" } as React.CSSProperties}
-      className={cn("w-full px-4 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#042C53] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/30 focus:border-[#1D9E75] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none", className)}
+      className={cn("w-full px-4 py-2.5 rounded-[14px] border border-hairline bg-surface text-[14px] text-forest placeholder:text-ink-30 focus:outline-none focus:ring-2 focus:ring-green/30 focus:border-forest [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none", className)}
     />
   );
 }
@@ -78,7 +78,7 @@ export function AmountWithCurrency({ amount, onAmountChange }: {
   return (
     <div className="flex gap-2">
       <NumberInput value={amount} onChange={onAmountChange} className="flex-1" />
-      <span className="px-3 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-slate-500 bg-slate-50 select-none">
+      <span className="px-3 py-2.5 rounded-[14px] border border-hairline text-[14px] text-ink-40 bg-paper select-none">
         USD
       </span>
     </div>
@@ -94,7 +94,7 @@ export function DateInput({ value, onChange, label, required }: {
       value={value}
       onChange={e => onChange(e.target.value)}
       max={new Date().toISOString().split("T")[0]}
-      className="w-full px-4 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#042C53] focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/30 focus:border-[#1D9E75]"
+      className="w-full px-4 py-2.5 rounded-[14px] border border-hairline bg-surface text-[14px] text-forest focus:outline-none focus:ring-2 focus:ring-green/30 focus:border-forest"
     />
   );
 }
@@ -283,20 +283,20 @@ export function SymbolSearchInput({ value, onChange, onSelect, symbolType, place
           onChange={handleInput}
           onFocus={handleFocus}
           placeholder={placeholder ?? "Search or pick from popular…"}
-          className="w-full px-4 py-2.5 pr-9 rounded-xl border border-[#E2E8F0] text-sm text-[#042C53] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/30 focus:border-[#1D9E75]"
+          className="w-full px-4 py-2.5 pr-9 rounded-[14px] border border-hairline bg-surface text-[14px] text-forest placeholder:text-ink-30 focus:outline-none focus:ring-2 focus:ring-green/30 focus:border-forest"
         />
         {fetching ? (
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs animate-pulse">…</span>
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-40 text-xs animate-pulse">…</span>
         ) : selected && value ? (
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 h-2 w-2 rounded-full bg-[#1D9E75]" aria-label="Selected" />
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 h-2 w-2 rounded-full bg-forest" aria-label="Selected" />
         ) : (
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none">▾</span>
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-40 text-xs pointer-events-none">▾</span>
         )}
       </div>
       {open && displayList.length > 0 && (
-        <ul className="absolute z-50 mt-1 w-full bg-white border border-[#E2E8F0] rounded-xl shadow-lg max-h-64 overflow-y-auto">
+        <ul className="absolute z-50 mt-1 w-full bg-paper border border-hairline rounded-[14px] shadow-lg max-h-64 overflow-y-auto">
           {showingPopular && (
-            <li className="px-4 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide bg-slate-50 border-b border-slate-100">
+            <li className="px-4 py-1.5 tala-eyebrow text-ink-40 bg-surface border-b border-hairline">
               Popular {symbolType === "crypto" ? "Cryptocurrencies" : symbolType === "etf" ? "ETFs" : symbolType === "mutual_fund" ? "Mutual Funds" : symbolType === "commodity" ? "Commodities" : symbolType === "bond" ? "Bonds" : "Stocks"}
             </li>
           )}
@@ -304,13 +304,13 @@ export function SymbolSearchInput({ value, onChange, onSelect, symbolType, place
             <li
               key={item.symbol}
               onMouseDown={() => handleSelect(item)}
-              className="flex items-center justify-between px-4 py-2.5 cursor-pointer hover:bg-[#F0FBF7] text-sm"
+              className="flex items-center justify-between px-4 py-2.5 cursor-pointer hover:bg-surface text-sm"
             >
               <div className="flex flex-col min-w-0">
-                <span className="font-semibold text-[#042C53] truncate">{item.symbol}</span>
-                <span className="text-xs text-slate-500 truncate">{item.name}</span>
+                <span className="font-semibold text-forest truncate">{item.symbol}</span>
+                <span className="text-xs text-ink-40 truncate">{item.name}</span>
               </div>
-              <span className="ml-2 text-[10px] text-slate-400 uppercase flex-shrink-0 bg-slate-100 px-1.5 py-0.5 rounded">{item.type}</span>
+              <span className="ml-2 text-[10px] text-ink-40 uppercase flex-shrink-0 bg-surface px-1.5 py-0.5 rounded-full">{item.type}</span>
             </li>
           ))}
         </ul>
@@ -358,17 +358,17 @@ export function ExpectedReturnField({ value, onChange, holdingType, ticker, coin
     <Field label="Expected annual return (optional)">
       <div className="flex items-center gap-2">
         <NumberInput value={value} onChange={onChange} placeholder="e.g. 7" step="0.1" className="flex-1" />
-        <span className="text-sm text-slate-400">%</span>
+        <span className="text-sm text-ink-40">%</span>
       </div>
       {loading ? (
-        <p className="text-xs text-slate-400 mt-1 animate-pulse">Checking benchmark…</p>
+        <p className="text-xs text-ink-40 mt-1 animate-pulse">Checking benchmark…</p>
       ) : preview?.benchmarkValue != null ? (
         <div className="mt-1.5 space-y-1">
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-ink-40">
             Benchmark: {preview.benchmarkValue.toFixed(1)}%{preview.benchmarkLabel ? ` — ${preview.benchmarkLabel}` : ""}
           </p>
           {preview.deviation && (
-            <p className="flex items-start gap-1 text-xs text-amber-600">
+            <p className="flex items-start gap-1 text-xs text-clay-ink">
               <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
               {preview.deviation.deltaPoints.toFixed(1)} points {preview.deviation.isOptimistic ? "above" : "below"} the historical benchmark — your projection will be more {preview.deviation.isOptimistic ? "optimistic" : "conservative"} than historical averages suggest.
             </p>
@@ -386,7 +386,7 @@ export function SubmitButton({ label, disabled, loading, onClick }: {
     <button
       onClick={onClick}
       disabled={disabled || loading}
-      className="w-full py-3 rounded-xl bg-[#1D9E75] text-white font-semibold text-sm hover:bg-[#0F6E56] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+      className="w-full h-12 px-5 rounded-full bg-forest text-paper font-semibold text-[14px] hover:bg-forest-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
     >
       {loading ? "Saving…" : label}
     </button>

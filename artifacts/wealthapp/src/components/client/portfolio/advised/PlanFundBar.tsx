@@ -1,16 +1,16 @@
 import type { AdvisedPlanHolding } from "@/hooks/useAdvisedPlans";
 
 const FUND_COLORS: Record<string, string> = {
-  ISSP: "#1D9E75",
-  ISHT: "#0F6E56",
-  IBIT: "#F59E0B",
-  ISEM: "#3B82F6",
-  ISAC: "#6366F1",
+  ISSP: "var(--forest)",
+  ISHT: "var(--field)",
+  IBIT: "var(--breeze)",
+  ISEM: "var(--forest-700)",
+  ISAC: "var(--mint-dim)",
 };
 function colorFor(code: string): string {
   if (FUND_COLORS[code]) return FUND_COLORS[code];
   const h = code.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
-  const hues = ["#1D9E75", "#0F6E56", "#3B82F6", "#6366F1", "#0EA5E9", "#8B5CF6"];
+  const hues = ["var(--forest)", "var(--field)", "var(--breeze)", "var(--forest-700)", "var(--mint-dim)", "var(--green-tint)"];
   return hues[h % hues.length];
 }
 
@@ -24,8 +24,8 @@ export default function PlanFundBar({ holdings }: Props) {
   if (withAlloc.length === 0) {
     return (
       <div className="space-y-1">
-        <div className="h-2 w-full rounded-full bg-slate-200" />
-        <p className="text-xs text-slate-400">No fund data — advisor will update this.</p>
+        <div className="h-2 w-full rounded-full bg-forest/15" />
+        <p className="text-[12px] text-ink-40">No fund data — advisor will update this.</p>
       </div>
     );
   }
@@ -34,7 +34,7 @@ export default function PlanFundBar({ holdings }: Props) {
 
   return (
     <div className="space-y-1.5">
-      <div className="flex h-2 w-full rounded-full overflow-hidden">
+      <div className="flex h-2 w-full rounded-full overflow-hidden bg-forest/15">
         {withAlloc.map((h, i) => (
           <div
             key={i}
@@ -42,7 +42,7 @@ export default function PlanFundBar({ holdings }: Props) {
           />
         ))}
       </div>
-      <p className="text-[11px] text-slate-500">
+      <p className="text-[12px] text-ink-40 tabular-nums">
         {withAlloc.map(h => `${h.fundCode} ${parseFloat(h.futureAllocationPct).toFixed(0)}%`).join(" · ")}
       </p>
     </div>

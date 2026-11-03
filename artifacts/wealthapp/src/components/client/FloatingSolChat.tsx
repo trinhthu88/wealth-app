@@ -5,6 +5,7 @@ import { apiFetch } from "@/lib/api";
 import BottomSheet from "./BottomSheet";
 import Sol from "@/components/Sol";
 import { cn } from "@/lib/utils";
+import { OPEN_SOL_CHAT_EVENT } from "@/lib/solChat";
 
 interface SolMessage {
   id: string;
@@ -31,6 +32,13 @@ export default function FloatingSolChat({ isOnboarding = false }: { isOnboarding
   const [isSending, setIsSending] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const queryClient = useQueryClient();
+
+  // The Sol button in the mobile menu bar opens this same sheet.
+  useEffect(() => {
+    const open = () => setIsOpen(true);
+    window.addEventListener(OPEN_SOL_CHAT_EVENT, open);
+    return () => window.removeEventListener(OPEN_SOL_CHAT_EVENT, open);
+  }, []);
 
   const conversationQuery = useQuery<SolConversation>({
     queryKey: ["sol-conversation"],
@@ -88,10 +96,10 @@ export default function FloatingSolChat({ isOnboarding = false }: { isOnboarding
         title="Chat with Sol"
         onClick={() => setIsOpen(true)}
         className={cn(
-          "fixed z-20 flex h-14 w-14 items-center justify-center rounded-full border border-green/20 bg-surface shadow-[0_8px_28px_rgba(20,52,42,.22)] transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green focus-visible:ring-offset-2",
+          "fixed z-20 flex h-14 w-14 items-center justify-center rounded-full border border-green/20 bg-surface shadow-[0_8px_28px_rgba(12,33,164,.22)] transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green focus-visible:ring-offset-2",
           isOnboarding
             ? "top-[calc(env(safe-area-inset-top)+1rem)]"
-            : "bottom-[calc(104px+env(safe-area-inset-bottom))] lg:bottom-6",
+            : "hidden lg:flex lg:bottom-6",
         )}
         style={{ right: "max(1rem, env(safe-area-inset-right))" }}
       >

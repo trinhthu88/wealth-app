@@ -38,7 +38,7 @@ export default function HoldingContributionPicker({ holdings, entries, onChange,
   if (investable.length === 0 && entries.length === 0) return null;
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 p-3 border-b border-hairline">
       {entries.map((entry, i) => {
         const optionsForRow = investable.filter(h => h.id === entry.holdingId || !chosenIds.has(h.id));
         return (
@@ -49,7 +49,7 @@ export default function HoldingContributionPicker({ holdings, entries, onChange,
                 onValueChange={v => updateEntry(i, { holdingId: v })}
                 disabled={isReadOnly}
               >
-                <SelectTrigger className="h-11 rounded-xl border-hairline bg-surface text-sm">
+                <SelectTrigger className="h-11 rounded-[14px] border-hairline bg-paper text-[14px] text-forest">
                   <SelectValue placeholder="Choose a holding…" />
                 </SelectTrigger>
                 <SelectContent>
@@ -68,15 +68,15 @@ export default function HoldingContributionPicker({ holdings, entries, onChange,
               readOnly={isReadOnly}
               style={{ MozAppearance: "textfield" } as React.CSSProperties}
               className={cn(
-                "w-28 shrink-0 min-h-11 px-3 py-2 rounded-xl border text-sm text-forest focus:outline-none focus:ring-2 focus:ring-green/30 focus:border-green [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
-                isReadOnly ? "bg-paper border-hairline text-ink-30 cursor-default" : "border-hairline bg-surface"
+                "w-28 shrink-0 min-h-11 px-3 py-2 rounded-[14px] border text-[14px] font-semibold tabular-nums text-forest focus:outline-none focus:ring-2 focus:ring-forest/30 focus:border-forest [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
+                isReadOnly ? "bg-transparent border-hairline text-ink-40 cursor-default" : "border-hairline bg-paper"
               )}
             />
             {!isReadOnly && (
               <button
                 onClick={() => removeEntry(i)}
                 aria-label="Remove contribution"
-                className="shrink-0 h-8 w-8 flex items-center justify-center text-ink-30 hover:text-clay"
+                className="shrink-0 h-11 w-11 flex items-center justify-center rounded-full text-ink-40 hover:bg-paper hover:text-forest"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -88,7 +88,7 @@ export default function HoldingContributionPicker({ holdings, entries, onChange,
       {!isReadOnly && canAddMore && (
         <button
           onClick={addEntry}
-          className="text-xs font-medium text-green hover:text-forest"
+          className="min-h-11 px-1 text-[13px] font-semibold text-forest underline underline-offset-2 hover:text-forest-700"
         >
           + Add contribution to a holding
         </button>

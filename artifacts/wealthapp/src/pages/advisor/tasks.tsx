@@ -111,7 +111,7 @@ export default function AdvisorTasks() {
                   {colTasks.map(t => {
                     const isOverdue = t.dueDate && new Date(t.dueDate) < new Date() && t.status !== "done";
                     return (
-                      <div key={t.id} className="bg-surface border border-hairline rounded-[22px] p-4 shadow-[0_2px_14px_rgba(20,52,42,0.03)] hover:shadow-[0_4px_20px_rgba(20,52,42,0.06)] transition-shadow">
+                      <div key={t.id} className="bg-surface border border-hairline rounded-[22px] p-4 shadow-[0_2px_14px_rgba(12,33,164,0.03)] hover:shadow-[0_4px_20px_rgba(12,33,164,0.06)] transition-shadow">
                         <div className="flex items-start justify-between gap-3">
                           <span className="font-medium text-[15px] text-forest leading-snug">{t.title}</span>
                           <button onClick={() => del.mutate(t.id)} className="text-ink-30 hover:text-clay shrink-0 transition-colors bg-paper rounded-full p-1.5"><Trash2 className="h-3.5 w-3.5" /></button>
