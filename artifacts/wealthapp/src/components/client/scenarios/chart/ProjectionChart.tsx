@@ -39,13 +39,13 @@ export default function ProjectionChart({ result }: Props) {
               d.setMonth(d.getMonth() + m);
               return d.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
             }}
-            tick={{ fontSize: 11, fill: "#94A3B8" }}
+            tick={{ fontSize: 11, fill: "#8F98C8" }}
             axisLine={false}
             tickLine={false}
           />
           <YAxis
             tickFormatter={fmtY}
-            tick={{ fontSize: 11, fill: "#94A3B8" }}
+            tick={{ fontSize: 11, fill: "#8F98C8" }}
             axisLine={false}
             tickLine={false}
             width={52}
@@ -57,9 +57,9 @@ export default function ProjectionChart({ result }: Props) {
               const diff = d.scenario - d.baseline;
               return (
                 <div className="bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-lg text-xs space-y-1">
-                  <p className="font-semibold text-[#042C53]">{d.label}</p>
+                  <p className="font-semibold text-[#0C21A4]">{d.label}</p>
                   <p className="text-slate-400">Baseline: <span className="font-medium text-slate-600">{fmtY(d.baseline)}</span></p>
-                  <p className="text-[#1D9E75]">Scenario: <span className="font-medium">{fmtY(d.scenario)}</span></p>
+                  <p className="text-[#0C21A4]">Scenario: <span className="font-medium">{fmtY(d.scenario)}</span></p>
                   <p className={diff >= 0 ? "text-emerald-600" : "text-red-500"}>
                     Difference: <span className="font-medium">{diff >= 0 ? "+" : ""}{fmtY(diff)}</span>
                   </p>
@@ -68,8 +68,8 @@ export default function ProjectionChart({ result }: Props) {
             }}
           />
 
-          <Area type="monotone" dataKey="baseline" stroke="#94A3B8" strokeWidth={2} fill="#94A3B8" fillOpacity={0.15} name="Baseline" />
-          <Area type="monotone" dataKey="scenario" stroke="#1D9E75" strokeWidth={2} fill="#1D9E75" fillOpacity={0.2} name="Scenario" />
+          <Area type="monotone" dataKey="baseline" stroke="#8F98C8" strokeWidth={2} fill="#8F98C8" fillOpacity={0.15} name="Baseline" />
+          <Area type="monotone" dataKey="scenario" stroke="#0C21A4" strokeWidth={2} fill="#0C21A4" fillOpacity={0.2} name="Scenario" />
 
           {/* Market drop reference lines */}
           {params.type === "market_drop" && (
@@ -83,9 +83,9 @@ export default function ProjectionChart({ result }: Props) {
           {params.type === "retire_earlier" && (
             <ReferenceLine
               y={params.targetAmount}
-              stroke="#1D9E75"
+              stroke="#0C21A4"
               strokeDasharray="4 2"
-              label={{ value: `Goal: ${fmtY(params.targetAmount)}`, position: "insideTopRight", fontSize: 10, fill: "#1D9E75" }}
+              label={{ value: `Goal: ${fmtY(params.targetAmount)}`, position: "insideTopRight", fontSize: 10, fill: "#0C21A4" }}
             />
           )}
         </AreaChart>

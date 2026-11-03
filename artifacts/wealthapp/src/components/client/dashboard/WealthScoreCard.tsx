@@ -69,7 +69,7 @@ export default function WealthScoreCard() {
 
   if (isGated) {
     return (
-      <div className="bg-surface rounded-[26px] border-l-[3px] border-l-green p-[22px_24px] shadow-[0_2px_14px_rgba(20,52,42,.06)] text-center">
+      <div className="bg-surface rounded-[26px] border-l-[3px] border-l-green p-[22px_24px] shadow-[0_2px_14px_rgba(12,33,164,.06)] text-center">
         <div className="font-display text-[16px] font-semibold text-forest mb-1.5">Wealth Score</div>
         <p className="text-[13.5px] text-ink-40 leading-relaxed text-pretty">
           Your Wealth Score is building — check back after 3 months of activity.
@@ -80,7 +80,7 @@ export default function WealthScoreCard() {
 
   if (!hasData || !row?.details) {
     return (
-      <div className="bg-surface rounded-[26px] border-l-[3px] border-l-green p-[22px_24px] shadow-[0_2px_14px_rgba(20,52,42,.06)] text-center">
+      <div className="bg-surface rounded-[26px] border-l-[3px] border-l-green p-[22px_24px] shadow-[0_2px_14px_rgba(12,33,164,.06)] text-center">
         <div className="font-display text-[16px] font-semibold text-forest mb-1.5">Wealth Score</div>
         <p className="text-[13.5px] text-ink-40 leading-relaxed text-pretty">
           Add your current budget, goals, and portfolio details so tala can calculate your score.
@@ -98,7 +98,7 @@ export default function WealthScoreCard() {
       <button
         type="button"
         onClick={() => setDetailOpen(true)}
-        className="w-full text-left bg-surface rounded-[26px] border-l-[3px] border-l-green p-[18px_22px] shadow-[0_2px_14px_rgba(20,52,42,.06)] flex items-center gap-4 transition-colors hover:bg-hairline/20"
+        className="w-full text-left bg-surface rounded-[26px] border-l-[3px] border-l-green p-[18px_22px] shadow-[0_2px_14px_rgba(12,33,164,.06)] flex items-center gap-4 transition-colors hover:bg-hairline/20"
         aria-haspopup="dialog"
       >
         <WealthScoreRing score={row.overallScore} size={72} />

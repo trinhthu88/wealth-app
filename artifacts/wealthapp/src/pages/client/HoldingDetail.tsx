@@ -106,7 +106,7 @@ export default function HoldingDetail() {
           </div>
         </div>
 
-        <div className="bg-surface rounded-[26px] p-[22px] shadow-[0_2px_14px_rgba(20,52,42,.06)] space-y-4">
+        <div className="bg-surface rounded-[26px] p-[22px] shadow-[0_2px_14px_rgba(12,33,164,.06)] space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-[13px] text-ink-40 mb-1">Current value</p>
@@ -129,7 +129,7 @@ export default function HoldingDetail() {
           </div>
         </div>
 
-        <div className="bg-surface rounded-[26px] p-[22px] shadow-[0_2px_14px_rgba(20,52,42,.06)]">
+        <div className="bg-surface rounded-[26px] p-[22px] shadow-[0_2px_14px_rgba(12,33,164,.06)]">
           <div className="flex items-center justify-between mb-3">
             <p className="text-[15px] font-semibold text-forest">Transaction history</p>
             <button

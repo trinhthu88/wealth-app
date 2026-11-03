@@ -75,7 +75,7 @@ export default function FundDetail() {
           advisorFirstName={advisorFirstName}
         />
 
-        <div className="bg-surface rounded-[26px] p-[22px] shadow-[0_2px_14px_rgba(20,52,42,.06)]">
+        <div className="bg-surface rounded-[26px] p-[22px] shadow-[0_2px_14px_rgba(12,33,164,.06)]">
           <p className="text-[12.5px] font-semibold text-ink-40">Holding value</p>
           <p className="font-display text-[40px] font-semibold text-forest tracking-[-0.03em] tabular-nums">
             <CurrencyField amountUsd={value} currency={plan.currency} compact />
@@ -91,7 +91,7 @@ export default function FundDetail() {
           </div>
         </div>
 
-        <div className="bg-surface rounded-[26px] p-[22px] shadow-[0_2px_14px_rgba(20,52,42,.06)]">
+        <div className="bg-surface rounded-[26px] p-[22px] shadow-[0_2px_14px_rgba(12,33,164,.06)]">
           <p className="text-[16px] font-semibold text-forest mb-1">Where new money goes</p>
           <p className="text-[13.5px] text-ink-60 leading-relaxed mb-3.5 text-pretty">
             Future contributions split by the allocation your advisor set at outset. Changing it is an advised decision.

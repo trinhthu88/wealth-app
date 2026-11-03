@@ -45,7 +45,7 @@ export default function BudgetHistoryChart({ months }: Props) {
                 income: n(preview.totalIncome),
               }]} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
                 <Bar dataKey="expenses" stackId="a" fill="var(--clay)" radius={[0, 0, 4, 4]} />
-                <Bar dataKey="investments" stackId="a" fill="var(--green)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="investments" stackId="a" fill="var(--field)" radius={[4, 4, 0, 0]} />
                 <Line type="monotone" dataKey="income" stroke="var(--forest)" strokeWidth={2} dot={false} />
                 <XAxis dataKey="label" tick={{ fontSize: 11, fill: "var(--ink-20)" }} axisLine={false} tickLine={false} />
               </ComposedChart>
@@ -101,7 +101,7 @@ export default function BudgetHistoryChart({ months }: Props) {
               formatter={(value) => <span className="text-xs text-ink-40">{value}</span>}
             />
             <Bar dataKey="expenses" name="Expenses" stackId="a" fill="var(--clay)" fillOpacity={0.85} />
-            <Bar dataKey="investments" name="Investments" stackId="a" fill="var(--green)" fillOpacity={0.85} />
+            <Bar dataKey="investments" name="Investments" stackId="a" fill="var(--field)" fillOpacity={0.85} />
             <Line type="monotone" dataKey="income" name="Income" stroke="var(--forest)" strokeWidth={2} dot={false} />
             <Line type="monotone" dataKey="surplus" name="Surplus" stroke="var(--ink-20)" strokeWidth={1.5} strokeDasharray="4 2" dot={false} />
           </ComposedChart>

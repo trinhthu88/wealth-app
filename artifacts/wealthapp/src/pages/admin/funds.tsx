@@ -152,21 +152,21 @@ export default function AdminFundsPage() {
       )}
 
       {priceForm && (
-        <div className="bg-sun-tint border border-[#FBE5C5] rounded-[26px] p-6 mb-8 shadow-2xl">
+        <div className="bg-sun-tint border border-[#FFE6CF] rounded-[26px] p-6 mb-8 shadow-2xl">
           <h3 className="font-display text-[20px] font-semibold text-amber-ink mb-5">Manual Price Entry</h3>
           <div className="text-[14px] text-amber-ink mb-4 font-medium">{funds.find(f => f.id === priceForm.fundId)?.name}</div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label className="text-[13px] font-medium text-amber-ink/80 block">Price date</label>
-              <Input className="h-11 rounded-[12px] border-[#FBE5C5] bg-surface px-4 text-forest" type="date" value={priceForm.date} onChange={(e) => setPriceForm(p => p ? { ...p, date: e.target.value } : null)} />
+              <Input className="h-11 rounded-[12px] border-[#FFE6CF] bg-surface px-4 text-forest" type="date" value={priceForm.date} onChange={(e) => setPriceForm(p => p ? { ...p, date: e.target.value } : null)} />
             </div>
             <div className="space-y-1.5">
               <label className="text-[13px] font-medium text-amber-ink/80 block">Price (USD)</label>
-              <Input className="h-11 rounded-[12px] border-[#FBE5C5] bg-surface px-4 text-forest" type="number" step="0.01" value={priceForm.price} onChange={(e) => setPriceForm(p => p ? { ...p, price: e.target.value } : null)} />
+              <Input className="h-11 rounded-[12px] border-[#FFE6CF] bg-surface px-4 text-forest" type="number" step="0.01" value={priceForm.price} onChange={(e) => setPriceForm(p => p ? { ...p, price: e.target.value } : null)} />
             </div>
           </div>
           <div className="flex gap-3 mt-6">
-            <Button variant="outline" className="flex-1 rounded-full h-11 border-[#FBE5C5] text-amber-ink hover:bg-surface/50" onClick={() => setPriceForm(null)}>Cancel</Button>
+            <Button variant="outline" className="flex-1 rounded-full h-11 border-[#FFE6CF] text-amber-ink hover:bg-surface/50" onClick={() => setPriceForm(null)}>Cancel</Button>
             <Button className="flex-1 rounded-full h-11 bg-amber-ink text-surface hover:bg-sun-deep" disabled={priceMut.isPending} onClick={() =>
               priceMut.mutate({ fundId: priceForm.fundId, priceDate: priceForm.date, priceNative: priceForm.price, priceUsd: priceForm.price, source: "manual" })
             }>
@@ -177,15 +177,15 @@ export default function AdminFundsPage() {
       )}
 
       {isLoading ? (
-        <div className="space-y-3">{[1, 2, 3].map((i) => <div key={i} className="h-20 bg-surface rounded-[26px] animate-pulse shadow-[0_2px_14px_rgba(20,52,42,0.06)]" />)}</div>
+        <div className="space-y-3">{[1, 2, 3].map((i) => <div key={i} className="h-20 bg-surface rounded-[26px] animate-pulse shadow-[0_2px_14px_rgba(12,33,164,0.06)]" />)}</div>
       ) : funds.length === 0 ? (
-        <div className="bg-surface rounded-[26px] p-16 text-center shadow-[0_2px_14px_rgba(20,52,42,0.06)]">
+        <div className="bg-surface rounded-[26px] p-16 text-center shadow-[0_2px_14px_rgba(12,33,164,0.06)]">
           <Building className="h-14 w-14 text-ink-20 mx-auto mb-4" />
           <h3 className="font-display text-[20px] font-semibold text-forest mb-2">No funds in library</h3>
           <p className="text-[14px] text-ink-40">Add your first fund to start building portfolios.</p>
         </div>
       ) : (
-        <div className="bg-surface rounded-[26px] overflow-hidden shadow-[0_2px_14px_rgba(20,52,42,0.06)]">
+        <div className="bg-surface rounded-[26px] overflow-hidden shadow-[0_2px_14px_rgba(12,33,164,0.06)]">
           <table className="w-full text-left">
             <thead>
               <tr>

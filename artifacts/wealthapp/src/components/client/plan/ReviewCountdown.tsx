@@ -13,7 +13,7 @@ function formatDate(d: string) {
 
 export default function ReviewCountdown({ nextReviewDate, daysUntilReview, isReviewOverdue, onRequestReview }: Props) {
   return (
-    <div className="bg-white border border-[#E2E8F0] rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div className="bg-white border border-[#E3E9FD] rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
       <div className="flex items-start gap-3">
         {isReviewOverdue ? (
           <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
@@ -21,7 +21,7 @@ export default function ReviewCountdown({ nextReviewDate, daysUntilReview, isRev
           <CalendarDays className="h-5 w-5 text-slate-400 shrink-0 mt-0.5" />
         )}
         <div>
-          <p className="text-sm font-semibold text-[#042C53]">Next review</p>
+          <p className="text-sm font-semibold text-[#0C21A4]">Next review</p>
           {nextReviewDate ? (
             <p className={`text-sm mt-0.5 ${isReviewOverdue ? "text-amber-600" : "text-slate-500"}`}>
               {formatDate(nextReviewDate)} ·{" "}
@@ -38,7 +38,7 @@ export default function ReviewCountdown({ nextReviewDate, daysUntilReview, isRev
       </div>
       <button
         onClick={onRequestReview}
-        className="flex-shrink-0 px-4 py-2 rounded-xl border border-[#1D9E75] text-[#1D9E75] text-sm font-medium hover:bg-[#1D9E75]/5 transition-colors"
+        className="flex-shrink-0 px-4 py-2 rounded-xl border border-[#0C21A4] text-[#0C21A4] text-sm font-medium hover:bg-[#0C21A4]/5 transition-colors"
       >
         Request a review →
       </button>

@@ -295,7 +295,7 @@ export default function ClientBudget() {
         )}
 
         {/* Income */}
-        <div className="bg-surface rounded-[26px] p-[16px_20px] shadow-[0_2px_14px_rgba(20,52,42,.06)]">
+        <div className="bg-surface rounded-[26px] p-[16px_20px] shadow-[0_2px_14px_rgba(12,33,164,.06)]">
           <div className="flex items-center justify-between mb-1">
             <p className="text-[15px] font-semibold text-forest">Income</p>
             <span className="text-[14px] font-semibold text-forest tabular-nums">${Math.round(incomeTotal).toLocaleString()}</span>
@@ -312,7 +312,7 @@ export default function ClientBudget() {
         </div>
 
         {/* Expenses */}
-        <div className="bg-surface rounded-[26px] p-[16px_20px] shadow-[0_2px_14px_rgba(20,52,42,.06)]">
+        <div className="bg-surface rounded-[26px] p-[16px_20px] shadow-[0_2px_14px_rgba(12,33,164,.06)]">
           <div className="flex items-center justify-between mb-1">
             <p className="text-[15px] font-semibold text-forest">Expenses</p>
             <span className={cn("text-[14px] font-semibold tabular-nums", expensesOverThreshold ? "text-clay" : "text-forest")}>
@@ -354,7 +354,7 @@ export default function ClientBudget() {
         </button>
 
         {/* Investments */}
-        <div className="bg-surface rounded-[26px] p-[16px_20px] shadow-[0_2px_14px_rgba(20,52,42,.06)] space-y-3">
+        <div className="bg-surface rounded-[26px] p-[16px_20px] shadow-[0_2px_14px_rgba(12,33,164,.06)] space-y-3">
           <div className="flex items-center justify-between">
             <p className="text-[15px] font-semibold text-forest">Investments</p>
             <span className="text-[14px] font-semibold text-green tabular-nums">${Math.round(investTotal).toLocaleString()}</span>
@@ -388,7 +388,7 @@ export default function ClientBudget() {
           </button>
         )}
 
-        <div className="bg-surface rounded-[26px] p-[18px_20px] shadow-[0_2px_14px_rgba(20,52,42,.06)]">
+        <div className="bg-surface rounded-[26px] p-[18px_20px] shadow-[0_2px_14px_rgba(12,33,164,.06)]">
           <BudgetHistoryChart months={months} />
         </div>
 

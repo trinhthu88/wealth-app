@@ -96,7 +96,7 @@ export default function ClientSetupChecklistCard({ onRiskCheck }: Props) {
   }
 
   return (
-    <section className="overflow-hidden rounded-[26px] border border-[#D8E6DE] bg-[#EFF6F0] p-4 shadow-[0_2px_14px_rgba(20,52,42,.05)] sm:p-5" data-testid="card-client-setup-checklist">
+    <section className="overflow-hidden rounded-[26px] border border-[#D8E6DE] bg-[#EFF6F0] p-4 shadow-[0_2px_14px_rgba(12,33,164,.05)] sm:p-5" data-testid="card-client-setup-checklist">
       <header className="flex items-start justify-between gap-4">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-green">Your next steps</p>

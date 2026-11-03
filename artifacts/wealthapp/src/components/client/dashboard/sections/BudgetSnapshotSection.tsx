@@ -32,16 +32,16 @@ export default function BudgetSnapshotSection({ budget, isTrackA, planNickname }
     : 0;
 
   return (
-    <div className="bg-white border border-[#E2E8F0] rounded-xl p-4 space-y-3 h-full">
+    <div className="bg-white border border-[#E3E9FD] rounded-xl p-4 space-y-3 h-full">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold text-[#042C53]">Budget · {monthLabel}</p>
+        <p className="text-sm font-semibold text-[#0C21A4]">Budget · {monthLabel}</p>
       </div>
 
       {isEmpty ? (
         <div className="py-4 text-center space-y-2">
-          <p className="text-sm text-[#64748B]">No budget set for this month.</p>
+          <p className="text-sm text-[#4A5590]">No budget set for this month.</p>
           <Link href="/client/money">
-            <span className="text-sm font-medium text-[#1D9E75] hover:text-[#0F6E56]">Set up budget →</span>
+            <span className="text-sm font-medium text-[#0C21A4] hover:text-[#08167A]">Set up budget →</span>
           </Link>
         </div>
       ) : (
@@ -53,20 +53,20 @@ export default function BudgetSnapshotSection({ budget, isTrackA, planNickname }
               { label: "Investments", value: investments, color: "text-blue-500" },
             ].map(row => (
               <div key={row.label} className="flex items-center justify-between text-sm">
-                <span className="text-[#64748B]">{row.label}</span>
-                <span className={cn("font-medium text-[#042C53]", row.color)}>
+                <span className="text-[#4A5590]">{row.label}</span>
+                <span className={cn("font-medium text-[#0C21A4]", row.color)}>
                   <CurrencyField amountUsd={row.value} compact />
                 </span>
               </div>
             ))}
             {isTrackA && rspAmount > 0 && (
-              <p className="text-[11px] text-[#64748B] pl-1">
+              <p className="text-[11px] text-[#4A5590] pl-1">
                 Includes <CurrencyField amountUsd={rspAmount} compact /> RSP{planNickname ? ` (${planNickname})` : ""}
               </p>
             )}
 
             <div className="border-t border-slate-100 pt-2 flex items-center justify-between text-sm font-semibold">
-              <span className="text-[#042C53]">Surplus</span>
+              <span className="text-[#0C21A4]">Surplus</span>
               <div className="flex items-center gap-2">
                 <span className={surplus >= 0 ? "text-emerald-600" : "text-red-500"}>
                   <CurrencyField amountUsd={surplus} compact />
@@ -78,13 +78,13 @@ export default function BudgetSnapshotSection({ budget, isTrackA, planNickname }
 
           {/* Mini progress bar */}
           <div className="space-y-0.5">
-            <div className="flex items-center justify-between text-[11px] text-[#64748B]">
+            <div className="flex items-center justify-between text-[11px] text-[#4A5590]">
               <span>Savings rate</span>
               <span>{savingsRate.toFixed(0)}%</span>
             </div>
             <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
               <div
-                className="h-full bg-[#1D9E75] rounded-full transition-all"
+                className="h-full bg-[#0C21A4] rounded-full transition-all"
                 style={{ width: `${Math.min(100, savingsRate)}%` }}
               />
             </div>
@@ -92,7 +92,7 @@ export default function BudgetSnapshotSection({ budget, isTrackA, planNickname }
 
           <div className="flex justify-end">
             <Link href="/client/money">
-              <span className="text-sm font-medium text-[#1D9E75] hover:text-[#0F6E56]">View full budget →</span>
+              <span className="text-sm font-medium text-[#0C21A4] hover:text-[#08167A]">View full budget →</span>
             </Link>
           </div>
         </>

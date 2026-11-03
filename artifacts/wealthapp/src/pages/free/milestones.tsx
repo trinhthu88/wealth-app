@@ -45,7 +45,7 @@ export default function MilestonesPage() {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
-          className="relative overflow-hidden rounded-[22px] mb-5 bg-forest p-5 shadow-[0_2px_14px_rgba(20,52,42,.06)]"
+          className="relative overflow-hidden rounded-[22px] mb-5 bg-forest p-5 shadow-[0_2px_14px_rgba(12,33,164,.06)]"
         >
           {/* Decorative dots */}
           <div className="absolute top-3 right-[60px] h-2 w-2 rounded-full bg-sun opacity-70" />
@@ -83,7 +83,7 @@ export default function MilestonesPage() {
                   key={m.key}
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="bg-surface border border-hairline rounded-[20px] text-center p-3 shadow-[0_2px_14px_rgba(20,52,42,.06)]"
+                  className="bg-surface border border-hairline rounded-[20px] text-center p-3 shadow-[0_2px_14px_rgba(12,33,164,.06)]"
                 >
                   <div className={`mx-auto flex h-[52px] w-[52px] items-center justify-center rounded-[12px] mb-2 ${isStreakBadge(m.key) ? "bg-sun-tint" : "bg-green-tint"}`}>
                     <Target className="h-6 w-6 text-primary" aria-hidden="true" />
@@ -108,7 +108,7 @@ export default function MilestonesPage() {
               {locked.slice(0, 3).map(m => (
                 <div
                   key={m.key}
-                  className="rounded-[20px] bg-sun-tint border-[1.5px] border-dashed border-sun shadow-[0_2px_8px_rgba(255,182,39,.12)] text-center p-3"
+                  className="rounded-[20px] bg-sun-tint border-[1.5px] border-dashed border-sun shadow-[0_2px_8px_rgba(255,137,31,.12)] text-center p-3"
                 >
                   <div className="mx-auto flex h-[52px] w-[52px] items-center justify-center rounded-[12px] mb-2 bg-sun/20">
                     <Target className="h-6 w-6 text-primary" aria-hidden="true" />
@@ -133,7 +133,7 @@ export default function MilestonesPage() {
               {locked.slice(3).map(m => (
                 <div
                   key={m.key}
-                  className="bg-surface border border-hairline rounded-[20px] text-center p-3 opacity-50 shadow-[0_2px_14px_rgba(20,52,42,.04)]"
+                  className="bg-surface border border-hairline rounded-[20px] text-center p-3 opacity-50 shadow-[0_2px_14px_rgba(12,33,164,.04)]"
                 >
                   <div className="mx-auto flex h-[52px] w-[52px] items-center justify-center rounded-[12px] mb-2 bg-hairline">
                     <Target className="h-6 w-6 text-muted-foreground" aria-hidden="true" />
@@ -161,7 +161,7 @@ export default function MilestonesPage() {
             {/* Preview of first earnable badges */}
             <div className="grid grid-cols-3 gap-[10px] mt-2">
               {MILESTONES.slice(0, 3).map(m => (
-                <div key={m.key} className="bg-surface border border-hairline rounded-[20px] text-center p-3 opacity-50 shadow-[0_2px_14px_rgba(20,52,42,.04)]">
+                <div key={m.key} className="bg-surface border border-hairline rounded-[20px] text-center p-3 opacity-50 shadow-[0_2px_14px_rgba(12,33,164,.04)]">
                   <div className="mx-auto flex h-[52px] w-[52px] items-center justify-center rounded-[12px] mb-2 bg-hairline">
                     <Target className="h-6 w-6 text-muted-foreground" aria-hidden="true" />
                   </div>

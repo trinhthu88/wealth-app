@@ -60,7 +60,7 @@ export default function AddHoldingSheet({ isOpen, onClose, onAdd }: Props) {
                 key={cfg.type}
                 onClick={() => setSelectedType(cfg.type)}
                 className={cn(
-                  "flex flex-col items-start gap-1.5 p-4 rounded-xl border-2 border-slate-200 hover:border-[#1D9E75]/50 transition-all text-left",
+                  "flex flex-col items-start gap-1.5 p-4 rounded-xl border-2 border-slate-200 hover:border-[#0C21A4]/50 transition-all text-left",
                   cfg.color
                 )}
               >
@@ -81,10 +81,10 @@ export default function AddHoldingSheet({ isOpen, onClose, onAdd }: Props) {
         </div>
       ) : (
         <div>
-          <button onClick={() => setSelectedType(null)} className="flex items-center gap-1.5 text-sm text-[#1D9E75] mb-5 hover:text-[#0F6E56]">
+          <button onClick={() => setSelectedType(null)} className="flex items-center gap-1.5 text-sm text-[#0C21A4] mb-5 hover:text-[#08167A]">
             <ChevronLeft className="h-4 w-4" /> Back
           </button>
-          <p className="text-base font-semibold text-[#042C53] mb-4">{getHoldingTypeConfig(selectedType).label}</p>
+          <p className="text-base font-semibold text-[#0C21A4] mb-4">{getHoldingTypeConfig(selectedType).label}</p>
           {selectedType === "stock_etf" && <StockEtfForm {...formProps!} />}
           {selectedType === "etf" && <EtfForm {...formProps!} />}
           {selectedType === "mutual_fund" && <MutualFundForm {...formProps!} />}

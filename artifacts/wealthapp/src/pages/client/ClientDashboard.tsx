@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { Hourglass, TrendingUp, Target, MessageSquare, Sparkles, X } from "lucide-react";
+import { Hourglass, TrendingUp, Target, MessageSquare, Sparkles, X, Wallet, ArrowUpRight } from "lucide-react";
 import ClientAppShell from "@/components/client/AppShell";
 import Sol from "@/components/Sol";
 import SolNarration from "@/components/client/SolNarration";
@@ -79,7 +79,7 @@ export default function ClientDashboard() {
             </div>
           </div>
 
-          <div className="bg-surface rounded-[26px] p-[28px_24px] shadow-[0_2px_14px_rgba(20,52,42,.06)] text-center">
+          <div className="bg-surface rounded-[26px] p-[28px_24px] shadow-[0_2px_14px_rgba(12,33,164,.06)] text-center">
             <div className="w-[48px] h-[48px] rounded-full bg-forest flex items-center justify-center text-paper mx-auto mb-4">
               <Hourglass className="h-6 w-6" />
             </div>
@@ -89,20 +89,20 @@ export default function ClientDashboard() {
             </p>
             <div className="space-y-3 max-w-[320px] mx-auto">
               <Link href="/client/wealth/investments">
-                <div className="bg-paper border border-[#E6E1D8] rounded-[18px] p-[16px] flex items-center gap-3 cursor-pointer hover:border-green transition-colors">
-                  <div className="w-8 h-8 rounded-full bg-[#F3F0EA] flex items-center justify-center text-forest"><TrendingUp className="h-4 w-4" /></div>
+                <div className="bg-paper border border-[#E3E9FD] rounded-[18px] p-[16px] flex items-center gap-3 cursor-pointer hover:border-green transition-colors">
+                  <div className="w-8 h-8 rounded-full bg-[#F1F4FE] flex items-center justify-center text-forest"><TrendingUp className="h-4 w-4" /></div>
                   <span className="text-[14px] font-semibold text-forest">Add other investments</span>
                 </div>
               </Link>
               <Link href="/client/goals/goals">
-                <div className="bg-paper border border-[#E6E1D8] rounded-[18px] p-[16px] flex items-center gap-3 cursor-pointer hover:border-green transition-colors">
-                  <div className="w-8 h-8 rounded-full bg-[#F3F0EA] flex items-center justify-center text-forest"><Target className="h-4 w-4" /></div>
+                <div className="bg-paper border border-[#E3E9FD] rounded-[18px] p-[16px] flex items-center gap-3 cursor-pointer hover:border-green transition-colors">
+                  <div className="w-8 h-8 rounded-full bg-[#F1F4FE] flex items-center justify-center text-forest"><Target className="h-4 w-4" /></div>
                   <span className="text-[14px] font-semibold text-forest">Set a financial goal</span>
                 </div>
               </Link>
               <Link href="/client/advisor/messages">
-                <div className="bg-paper border border-[#E6E1D8] rounded-[18px] p-[16px] flex items-center gap-3 cursor-pointer hover:border-green transition-colors">
-                  <div className="w-8 h-8 rounded-full bg-[#F3F0EA] flex items-center justify-center text-forest"><MessageSquare className="h-4 w-4" /></div>
+                <div className="bg-paper border border-[#E3E9FD] rounded-[18px] p-[16px] flex items-center gap-3 cursor-pointer hover:border-green transition-colors">
+                  <div className="w-8 h-8 rounded-full bg-[#F1F4FE] flex items-center justify-center text-forest"><MessageSquare className="h-4 w-4" /></div>
                   <span className="text-[14px] font-semibold text-forest">Message your advisor</span>
                 </div>
               </Link>
@@ -114,6 +114,7 @@ export default function ClientDashboard() {
     );
   }
 
+  const budgetMonthLabel = new Date().toLocaleDateString("en-US", { month: "long" });
   const topGoal = data.topGoals[0] ?? null;
   const goalPct = topGoal?.targetAmount ? Math.min(100, Math.round((n(topGoal.currentAmount) / n(topGoal.targetAmount)) * 100)) : null;
 
@@ -140,8 +141,8 @@ export default function ClientDashboard() {
 
         {recentStatementPlan && !dismissedCelebration && (
           <div className="relative bg-forest rounded-[22px] p-[16px_44px_16px_18px] flex items-center gap-3 overflow-hidden mb-1">
-            <span className="absolute top-[10px] right-[44px] text-[#FFB627] text-[13px] animate-sparkle">✦</span>
-            <span className="absolute bottom-[14px] right-[88px] text-[#FFB627] text-[9px] animate-sparkle [animation-delay:0.8s]" />
+            <span className="absolute top-[10px] right-[44px] text-[#FF891F] text-[13px] animate-sparkle">✦</span>
+            <span className="absolute bottom-[14px] right-[88px] text-[#FF891F] text-[9px] animate-sparkle [animation-delay:0.8s]" />
             <div className="w-[34px] h-[34px] rounded-full bg-sun flex-none flex items-center justify-center text-[16px] text-sun-ink">✓</div>
             <div>
               <div className="text-[15px] font-semibold text-paper">Statement posted</div>
@@ -186,7 +187,7 @@ export default function ClientDashboard() {
         {/* Net worth card */}
         <Link
           href="/client/wealth/overview"
-          className="bg-surface rounded-[26px] p-[22px_24px_16px] shadow-[0_2px_14px_rgba(20,52,42,.06)] block transition-colors hover:ring-1 hover:ring-green"
+          className="bg-surface rounded-[26px] p-[22px_24px_16px] shadow-[0_2px_14px_rgba(12,33,164,.06)] block transition-colors hover:ring-1 hover:ring-green"
         >
           <div className="flex justify-between items-baseline">
             <span className="text-[13.5px] font-semibold text-ink-40">Net worth</span>
@@ -257,11 +258,37 @@ export default function ClientDashboard() {
         {/* Wealth Score */}
         <WealthScoreCard />
 
+        {/* Monthly budget — the budget lives under Home, so this card is its entry point */}
+        <Link
+          href="/client/money"
+          className="bg-surface rounded-[24px] p-3 flex items-center gap-3.5 transition-colors hover:ring-1 hover:ring-green"
+        >
+          <div className="w-14 h-14 rounded-2xl bg-field flex-none flex items-center justify-center text-forest">
+            <Wallet className="h-6 w-6" aria-hidden="true" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="tala-eyebrow text-ink-40">{budgetMonthLabel} budget</div>
+            <div className="text-[15px] font-semibold text-forest mt-1">
+              {data.currentBudget ? (
+                <>
+                  <CurrencyField amountUsd={n(data.currentBudget.netSurplus)} compact showSign={n(data.currentBudget.netSurplus) < 0} /> kept
+                  {" · "}{Math.round(n(data.currentBudget.savingsRatePct))}% savings rate
+                </>
+              ) : (
+                "Set up this month’s budget"
+              )}
+            </div>
+          </div>
+          <div className="w-9 h-9 rounded-full bg-forest text-paper flex-none flex items-center justify-center">
+            <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+          </div>
+        </Link>
+
         {/* Two-up: top goal + next milestone */}
         {(topGoal || nextMilestone) && (
           <div className="grid grid-cols-2 gap-3">
             {topGoal ? (
-              <Link href="/client/goals/goals" className="bg-surface rounded-[22px] p-[18px] shadow-[0_2px_14px_rgba(20,52,42,.06)] cursor-pointer block">
+              <Link href="/client/goals/goals" className="bg-surface rounded-[22px] p-[18px] shadow-[0_2px_14px_rgba(12,33,164,.06)] cursor-pointer block">
                 <div className="text-[12.5px] font-semibold text-ink-40 truncate">{topGoal.title}</div>
                 {goalPct != null ? (
                   <>
@@ -277,7 +304,7 @@ export default function ClientDashboard() {
                 )}
               </Link>
             ) : (
-              <Link href="/client/goals/goals" className="bg-surface rounded-[22px] p-[18px] shadow-[0_2px_14px_rgba(20,52,42,.06)] cursor-pointer flex flex-col items-center justify-center text-center">
+              <Link href="/client/goals/goals" className="bg-surface rounded-[22px] p-[18px] shadow-[0_2px_14px_rgba(12,33,164,.06)] cursor-pointer flex flex-col items-center justify-center text-center">
                 <Target className="h-6 w-6 text-green mb-2" />
                 <div className="text-[14px] font-semibold text-forest">Set a goal</div>
               </Link>
@@ -297,7 +324,7 @@ export default function ClientDashboard() {
 
         {/* Track B Conversion CTA */}
         {data.isTrackB && (
-          <div className="bg-sun-tint rounded-[26px] p-[22px_24px_22px] shadow-[0_2px_14px_rgba(20,52,42,.06)]">
+          <div className="bg-sun-tint rounded-[26px] p-[22px_24px_22px] shadow-[0_2px_14px_rgba(12,33,164,.06)]">
             <div className="font-display text-[22px] font-semibold text-amber-ink tracking-[-0.01em] mb-2">Upgrade to Advised</div>
             <div className="text-[14.5px] text-[#A67523] mb-4 text-pretty leading-snug">
               Unlock personalized strategies, goal projections, and a dedicated advisor to accelerate your wealth.
@@ -315,13 +342,13 @@ export default function ClientDashboard() {
         {/* Advisor card */}
         {data.isTrackA && data.advisorName && (
           <Link href="/client/advisor/messages">
-            <div className="bg-surface rounded-[26px] p-[18px_20px] shadow-[0_2px_14px_rgba(20,52,42,.06)] cursor-pointer">
+            <div className="bg-surface rounded-[26px] p-[18px_20px] shadow-[0_2px_14px_rgba(12,33,164,.06)] cursor-pointer">
               <div className="flex justify-between items-center mb-3">
                 <span className="font-display text-[16.5px] font-semibold text-forest">Your advisor</span>
                 <span className="text-[12.5px] font-semibold text-green">Message</span>
               </div>
               <div className="flex items-center gap-3">
-                <div className="w-[38px] h-[38px] rounded-full bg-[#DCEAE3] flex-none flex items-center justify-center text-[14px] font-semibold text-forest">
+                <div className="w-[38px] h-[38px] rounded-full bg-[#E3E9FD] flex-none flex items-center justify-center text-[14px] font-semibold text-forest">
                   {data.advisorName.split(" ").map(p => p[0]).join("")}
                 </div>
                 <div className={cn("text-[13.5px] text-ink-60 leading-[1.45] text-pretty")}>

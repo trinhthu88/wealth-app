@@ -127,7 +127,7 @@ export default function ClientMessages() {
           </button>
         </div>
 
-        <div className="bg-surface border border-hairline rounded-[20px] px-4 py-4 mb-4 shadow-[0_2px_14px_rgba(20,52,42,.04)]">
+        <div className="bg-surface border border-hairline rounded-[20px] px-4 py-4 mb-4 shadow-[0_2px_14px_rgba(12,33,164,.04)]">
           <label className="flex items-center justify-between gap-4 cursor-pointer">
             <span className="text-[14px] font-semibold text-forest">Share my monthly budget summary with my advisor</span>
             <input
@@ -144,7 +144,7 @@ export default function ClientMessages() {
         </div>
 
         {convs.length === 0 ? (
-          <div className="bg-surface border border-hairline rounded-[24px] p-12 text-center flex flex-col items-center gap-4 shadow-[0_2px_14px_rgba(20,52,42,.06)]">
+          <div className="bg-surface border border-hairline rounded-[24px] p-12 text-center flex flex-col items-center gap-4 shadow-[0_2px_14px_rgba(12,33,164,.06)]">
             <Sol size="lg" animate="float" showFace />
             <div>
               <h3 className="font-display font-semibold text-forest mb-1">No messages yet</h3>
@@ -152,9 +152,9 @@ export default function ClientMessages() {
             </div>
           </div>
         ) : (
-          <div className="bg-surface border border-hairline rounded-[24px] shadow-[0_2px_14px_rgba(20,52,42,.06)] overflow-hidden flex flex-col flex-1 min-h-0">
+          <div className="bg-surface border border-hairline rounded-[24px] shadow-[0_2px_14px_rgba(12,33,164,.06)] overflow-hidden flex flex-col flex-1 min-h-0">
             <div className="border-b border-hairline px-4 py-3.5 flex items-center gap-3 shrink-0">
-              <div className="w-[38px] h-[38px] rounded-full bg-[#DCEAE3] flex-none flex items-center justify-center text-[13px] font-semibold text-forest">
+              <div className="w-[38px] h-[38px] rounded-full bg-[#E3E9FD] flex-none flex items-center justify-center text-[13px] font-semibold text-forest">
                 {advisorInitials}
               </div>
               <div className="min-w-0">

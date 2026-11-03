@@ -155,7 +155,7 @@ export default function ClientPlan() {
                 <AlertTriangle className="h-4 w-4" />
               </div>
             ) : (
-              <div className="w-[34px] h-[34px] rounded-full bg-[#DCEAE3]/10 text-paper flex items-center justify-center shrink-0">
+              <div className="w-[34px] h-[34px] rounded-full bg-[#E3E9FD]/10 text-paper flex items-center justify-center shrink-0">
                 <CalendarDays className="h-4 w-4" />
               </div>
             )}
@@ -214,7 +214,7 @@ export default function ClientPlan() {
                 const gp = m.goalProgress;
                 return (
                   <div key={m.id} className="mb-[28px] relative">
-                    <div className="absolute -left-[34px] top-[2px] w-[24px] h-[24px] rounded-full bg-sun flex items-center justify-center text-[12px] text-sun-ink font-bold z-10 shadow-[0_0_12px_rgba(255,182,39,0.3)]">
+                    <div className="absolute -left-[34px] top-[2px] w-[24px] h-[24px] rounded-full bg-sun flex items-center justify-center text-[12px] text-sun-ink font-bold z-10 shadow-[0_0_12px_rgba(255,137,31,0.3)]">
                       <span className="h-2 w-2 rounded-full bg-sun-ink" aria-hidden="true" />
                     </div>
                     <div className="text-[12.5px] font-semibold tracking-[0.06em] text-sun uppercase">
@@ -245,7 +245,7 @@ export default function ClientPlan() {
                 const gp = m.goalProgress;
                 return (
                   <div key={m.id} className={cn("mb-[28px] relative", isNext && "animate-rise-up")}>
-                    <div className="absolute -left-[34px] top-[2px] w-[24px] h-[24px] rounded-full bg-forest border-[3px] border-sun z-10 shadow-[0_0_12px_rgba(255,182,39,0.3)]" />
+                    <div className="absolute -left-[34px] top-[2px] w-[24px] h-[24px] rounded-full bg-forest border-[3px] border-sun z-10 shadow-[0_0_12px_rgba(255,137,31,0.3)]" />
                     <div className="text-[12.5px] font-semibold tracking-[0.06em] text-sun uppercase">
                       {year} · IN PROGRESS {isNext && "· NEXT UP"}
                     </div>
@@ -285,7 +285,7 @@ export default function ClientPlan() {
                     <div className="text-[12.5px] font-semibold tracking-[0.06em] text-mint-dim uppercase">
                       {year}
                     </div>
-                    <h2 className="font-display text-[20px] font-semibold text-[#DCEAE3] mt-0.5 mb-1">
+                    <h2 className="font-display text-[20px] font-semibold text-[#E3E9FD] mt-0.5 mb-1">
                       {m.title}
                     </h2>
                     {m.notes && <div className="text-[13.5px] text-mint-dim mb-2 max-w-[500px] leading-relaxed">{m.notes}</div>}

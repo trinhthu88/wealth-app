@@ -37,7 +37,7 @@ export default function ScenarioInputPanel({ source, scenarioType, goals, onRun,
   return (
     <div className="space-y-4">
       <div>
-        <p className="text-base font-semibold text-[#042C53]">{TYPE_LABELS[scenarioType] ?? scenarioType}</p>
+        <p className="text-base font-semibold text-[#0C21A4]">{TYPE_LABELS[scenarioType] ?? scenarioType}</p>
         <p className="text-xs text-slate-500">Source: {source.label}</p>
       </div>
 

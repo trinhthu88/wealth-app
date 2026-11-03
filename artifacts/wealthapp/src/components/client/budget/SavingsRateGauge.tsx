@@ -1,5 +1,5 @@
 function gaugeColor(rate: number): string {
-  if (rate >= 20) return "#1D9E75";
+  if (rate >= 20) return "#0C21A4";
   if (rate >= 10) return "#F59E0B";
   return "#EF4444";
 }
@@ -49,7 +49,7 @@ export default function SavingsRateGauge({ savingsRatePct }: Props) {
         <path
           d={`M ${startX} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`}
           fill="none"
-          stroke="#E2E8F0"
+          stroke="#E3E9FD"
           strokeWidth="8"
           strokeLinecap="round"
         />
@@ -64,14 +64,14 @@ export default function SavingsRateGauge({ savingsRatePct }: Props) {
           />
         )}
         {/* Target tick at 20% */}
-        <line x1={tInnerX} y1={tInnerY} x2={tOuterX} y2={tOuterY} stroke="#94A3B8" strokeWidth="1.5" />
+        <line x1={tInnerX} y1={tInnerY} x2={tOuterX} y2={tOuterY} stroke="#8F98C8" strokeWidth="1.5" />
         {/* Target label */}
-        <text x={tOuterX + 1} y={tOuterY - 2} fontSize="5" fill="#94A3B8" textAnchor="middle">20%</text>
+        <text x={tOuterX + 1} y={tOuterY - 2} fontSize="5" fill="#8F98C8" textAnchor="middle">20%</text>
         {/* Center % value */}
-        <text x={cx} y={cy - 4} textAnchor="middle" fontSize="18" fontWeight="600" fill="#042C53">
+        <text x={cx} y={cy - 4} textAnchor="middle" fontSize="18" fontWeight="600" fill="#0C21A4">
           {savingsRatePct < 0 ? "–" : `${Math.round(Math.max(0, savingsRatePct))}%`}
         </text>
-        <text x={cx} y={cy + 8} textAnchor="middle" fontSize="7" fill="#94A3B8">
+        <text x={cx} y={cy + 8} textAnchor="middle" fontSize="7" fill="#8F98C8">
           savings rate
         </text>
       </svg>

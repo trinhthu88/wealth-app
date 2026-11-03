@@ -166,7 +166,7 @@ export default function AdvisorLeadDetail() {
       </div>
 
       {!hasAccount && lead && (
-        <div className="mb-6 bg-sun-tint border border-[#FBE5C5] rounded-[20px] p-4 text-[13px] text-amber-ink">
+        <div className="mb-6 bg-sun-tint border border-[#FFE6CF] rounded-[20px] p-4 text-[13px] text-amber-ink">
           This lead came from the anonymous quiz funnel and isn't linked to an account yet — Goals, Net Worth,
           Self-holdings, Messages, and Plans aren't available until it is.
         </div>
@@ -190,19 +190,19 @@ export default function AdvisorLeadDetail() {
         {/* ── Overview ── */}
         <TabsContent value="overview">
           {!hasAccount ? (
-            <div className="text-center py-16 bg-surface rounded-[26px] shadow-[0_2px_14px_rgba(20,52,42,0.06)] text-[14px] text-ink-40">
+            <div className="text-center py-16 bg-surface rounded-[26px] shadow-[0_2px_14px_rgba(12,33,164,0.06)] text-[14px] text-ink-40">
               Nothing to show yet for an unlinked lead.
             </div>
           ) : (
             <div className="space-y-6">
               <div className="grid gap-4 md:grid-cols-2">
-                <div className="bg-surface border border-hairline rounded-[26px] p-6 shadow-[0_2px_14px_rgba(20,52,42,0.04)]">
+                <div className="bg-surface border border-hairline rounded-[26px] p-6 shadow-[0_2px_14px_rgba(12,33,164,0.04)]">
                   <h3 className="font-display text-[18px] font-semibold text-forest mb-4">Net worth</h3>
                   <div className="flex justify-between text-[14px] mb-2"><span className="text-ink-60">Assets</span><span className="font-semibold text-forest tabular-nums">{fmtCurrency(totalAssets)}</span></div>
                   <div className="flex justify-between text-[14px] mb-2"><span className="text-ink-60">Liabilities</span><span className="font-semibold text-clay tabular-nums">{fmtCurrency(totalLiabilities)}</span></div>
                   <div className="flex justify-between text-[15px] pt-2 border-t border-hairline"><span className="font-semibold text-forest">Net</span><span className="font-semibold text-forest tabular-nums">{fmtCurrency(totalAssets - totalLiabilities)}</span></div>
                 </div>
-                <div className="bg-surface border border-hairline rounded-[26px] p-6 shadow-[0_2px_14px_rgba(20,52,42,0.04)]">
+                <div className="bg-surface border border-hairline rounded-[26px] p-6 shadow-[0_2px_14px_rgba(12,33,164,0.04)]">
                   <h3 className="font-display text-[18px] font-semibold text-forest mb-4">Self-held holdings</h3>
                   {holdings.length === 0 ? (
                     <p className="text-[14px] text-ink-40">None recorded.</p>
@@ -222,11 +222,11 @@ export default function AdvisorLeadDetail() {
               <div>
                 <h3 className="font-display text-[18px] font-semibold text-forest mb-4">Goals</h3>
                 {goals.length === 0 ? (
-                  <div className="text-center py-12 bg-surface rounded-[26px] shadow-[0_2px_14px_rgba(20,52,42,0.06)] text-[14px] text-ink-40">No goals found.</div>
+                  <div className="text-center py-12 bg-surface rounded-[26px] shadow-[0_2px_14px_rgba(12,33,164,0.06)] text-[14px] text-ink-40">No goals found.</div>
                 ) : (
                   <div className="grid gap-4 md:grid-cols-2">
                     {goals.map(g => (
-                      <div key={g.id} className="bg-surface border border-hairline rounded-[26px] p-6 shadow-[0_2px_14px_rgba(20,52,42,0.06)]">
+                      <div key={g.id} className="bg-surface border border-hairline rounded-[26px] p-6 shadow-[0_2px_14px_rgba(12,33,164,0.06)]">
                         <h4 className="font-display text-[18px] font-semibold text-forest mb-1">{g.title}</h4>
                         <p className="text-[13px] text-ink-40 tracking-wide uppercase capitalize">{g.goalType.replace(/_/g, " ")}</p>
                         {g.targetAmount && (
@@ -247,11 +247,11 @@ export default function AdvisorLeadDetail() {
         {/* ── Messages ── */}
         <TabsContent value="messages">
           {!hasAccount ? (
-            <div className="text-center py-16 bg-surface rounded-[26px] shadow-[0_2px_14px_rgba(20,52,42,0.06)] text-[14px] text-ink-40">
+            <div className="text-center py-16 bg-surface rounded-[26px] shadow-[0_2px_14px_rgba(12,33,164,0.06)] text-[14px] text-ink-40">
               Messaging isn't available until this lead is linked to an account.
             </div>
           ) : (
-            <div className="flex flex-col h-[600px] border border-hairline rounded-[26px] bg-surface overflow-hidden shadow-[0_2px_14px_rgba(20,52,42,0.06)]">
+            <div className="flex flex-col h-[600px] border border-hairline rounded-[26px] bg-surface overflow-hidden shadow-[0_2px_14px_rgba(12,33,164,0.06)]">
               <div className="p-4 border-b border-hairline bg-paper flex items-center gap-3 shrink-0">
                 <div className="h-10 w-10 rounded-full bg-sun-tint flex items-center justify-center text-amber-ink font-bold text-[15px]">
                   {(lead?.firstName ?? lead?.email)?.[0]?.toUpperCase() ?? "L"}
@@ -304,7 +304,7 @@ export default function AdvisorLeadDetail() {
         {/* ── Documents ── */}
         <TabsContent value="documents">
           {!hasAccount ? (
-            <div className="text-center py-16 bg-surface rounded-[26px] shadow-[0_2px_14px_rgba(20,52,42,0.06)] text-[14px] text-ink-40">
+            <div className="text-center py-16 bg-surface rounded-[26px] shadow-[0_2px_14px_rgba(12,33,164,0.06)] text-[14px] text-ink-40">
               Documents aren't available until this lead is linked to an account.
             </div>
           ) : (
@@ -316,7 +316,7 @@ export default function AdvisorLeadDetail() {
         <TabsContent value="profile">
           {lead && (
             <div className="space-y-6">
-              <div className="bg-surface border border-hairline rounded-[26px] p-6 shadow-[0_2px_14px_rgba(20,52,42,0.04)] space-y-5">
+              <div className="bg-surface border border-hairline rounded-[26px] p-6 shadow-[0_2px_14px_rgba(12,33,164,0.04)] space-y-5">
                 <h3 className="font-display text-[20px] font-semibold text-forest">Relationship status</h3>
                 <select
                   className="w-64 h-11 border border-hairline rounded-[12px] bg-paper px-4 text-[14px] text-forest focus:outline-none focus:ring-2 focus:ring-green capitalize"
@@ -330,7 +330,7 @@ export default function AdvisorLeadDetail() {
                 )}
               </div>
 
-              <div className="bg-surface border border-hairline rounded-[26px] p-6 shadow-[0_2px_14px_rgba(20,52,42,0.04)] space-y-4">
+              <div className="bg-surface border border-hairline rounded-[26px] p-6 shadow-[0_2px_14px_rgba(12,33,164,0.04)] space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="font-display text-[20px] font-semibold text-forest">Internal notes</h3>
                   <Button size="sm" className="rounded-full h-9 px-4 bg-green text-surface hover:bg-green-300"
@@ -353,7 +353,7 @@ export default function AdvisorLeadDetail() {
         {/* ── Plans ── */}
         <TabsContent value="plans">
           {!hasAccount ? (
-            <div className="text-center py-16 bg-surface rounded-[26px] shadow-[0_2px_14px_rgba(20,52,42,0.06)] text-[14px] text-ink-40">
+            <div className="text-center py-16 bg-surface rounded-[26px] shadow-[0_2px_14px_rgba(12,33,164,0.06)] text-[14px] text-ink-40">
               Plans aren't available until this lead is linked to an account.
             </div>
           ) : (

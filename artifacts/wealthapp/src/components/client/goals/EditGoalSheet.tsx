@@ -78,8 +78,8 @@ export default function EditGoalSheet({ goal, isOpen, onClose, onSave, onDelete 
       <div className="space-y-4 pb-4">
         {/* Current progress (read-only) */}
         {hasLinks ? (
-          <div className="bg-[#1D9E75]/5 border border-[#1D9E75]/20 rounded-xl p-3 text-xs text-slate-600">
-            <span className="font-semibold text-[#1D9E75]">Auto-tracked:</span> progress updates from your linked investments.
+          <div className="bg-[#0C21A4]/5 border border-[#0C21A4]/20 rounded-xl p-3 text-xs text-slate-600">
+            <span className="font-semibold text-[#0C21A4]">Auto-tracked:</span> progress updates from your linked investments.
           </div>
         ) : goal.targetAmountNum && goal.computedCurrentAmount > 0 ? (
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-600">
@@ -89,18 +89,18 @@ export default function EditGoalSheet({ goal, isOpen, onClose, onSave, onDelete 
 
         {/* Title */}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-[#042C53]">Goal name</label>
+          <label className="text-sm font-medium text-[#0C21A4]">Goal name</label>
           <input
             type="text"
             value={title}
             onChange={e => setTitle(e.target.value)}
-            className="w-full px-4 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#042C53] focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/30"
+            className="w-full px-4 py-2.5 rounded-xl border border-[#E3E9FD] text-sm text-[#0C21A4] focus:outline-none focus:ring-2 focus:ring-[#0C21A4]/30"
           />
         </div>
 
         {/* Target amount */}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-[#042C53]">Target amount <span className="text-slate-400 font-normal">(optional)</span></label>
+          <label className="text-sm font-medium text-[#0C21A4]">Target amount <span className="text-slate-400 font-normal">(optional)</span></label>
           <div className="flex gap-2">
             <input
               type="number"
@@ -109,11 +109,11 @@ export default function EditGoalSheet({ goal, isOpen, onClose, onSave, onDelete 
               placeholder="0"
               min={0}
               style={{ MozAppearance: "textfield" } as React.CSSProperties}
-              className="flex-1 px-4 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#042C53] focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/30 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              className="flex-1 px-4 py-2.5 rounded-xl border border-[#E3E9FD] text-sm text-[#0C21A4] focus:outline-none focus:ring-2 focus:ring-[#0C21A4]/30 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
             <div className="inline-flex items-center bg-slate-100 rounded-xl p-0.5">
               {CURRENCIES.map(c => (
-                <button key={c} onClick={() => setCurrency(c)} className={cn("px-2.5 py-1.5 rounded-lg text-xs font-medium", currency === c ? "bg-white text-[#042C53] shadow-sm" : "text-slate-500")}>
+                <button key={c} onClick={() => setCurrency(c)} className={cn("px-2.5 py-1.5 rounded-lg text-xs font-medium", currency === c ? "bg-white text-[#0C21A4] shadow-sm" : "text-slate-500")}>
                   {c}
                 </button>
               ))}
@@ -124,7 +124,7 @@ export default function EditGoalSheet({ goal, isOpen, onClose, onSave, onDelete 
         {/* Manual current amount (only if no links) */}
         {!hasLinks && (
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-[#042C53]">
+            <label className="text-sm font-medium text-[#0C21A4]">
               Current amount saved <span className="text-slate-400 font-normal">(optional)</span>
             </label>
             <input
@@ -134,7 +134,7 @@ export default function EditGoalSheet({ goal, isOpen, onClose, onSave, onDelete 
               placeholder="0"
               min={0}
               style={{ MozAppearance: "textfield" } as React.CSSProperties}
-              className="w-full px-4 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#042C53] focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/30 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              className="w-full px-4 py-2.5 rounded-xl border border-[#E3E9FD] text-sm text-[#0C21A4] focus:outline-none focus:ring-2 focus:ring-[#0C21A4]/30 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
             <p className="text-xs text-slate-400">Link investments above to auto-track this.</p>
           </div>
@@ -142,23 +142,23 @@ export default function EditGoalSheet({ goal, isOpen, onClose, onSave, onDelete 
 
         {/* Target date */}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-[#042C53]">Target date <span className="text-slate-400 font-normal">(optional)</span></label>
+          <label className="text-sm font-medium text-[#0C21A4]">Target date <span className="text-slate-400 font-normal">(optional)</span></label>
           <input
             type="month"
             value={targetDate}
             onChange={e => setTargetDate(e.target.value)}
-            className="w-full px-4 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#042C53] focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/30"
+            className="w-full px-4 py-2.5 rounded-xl border border-[#E3E9FD] text-sm text-[#0C21A4] focus:outline-none focus:ring-2 focus:ring-[#0C21A4]/30"
           />
         </div>
 
         {/* Priority */}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-[#042C53]">Priority</label>
+          <label className="text-sm font-medium text-[#0C21A4]">Priority</label>
           <div className="flex gap-2">
             {PRIORITIES.map(p => (
               <button key={p.value} onClick={() => setPriority(p.value)}
                 className={cn("flex-1 py-2 rounded-xl border text-sm font-medium transition-all",
-                  priority === p.value ? "border-[#1D9E75] bg-[#1D9E75]/10 text-[#1D9E75]" : "border-slate-200 text-slate-500")}>
+                  priority === p.value ? "border-[#0C21A4] bg-[#0C21A4]/10 text-[#0C21A4]" : "border-slate-200 text-slate-500")}>
                 {p.label}
               </button>
             ))}
@@ -167,19 +167,19 @@ export default function EditGoalSheet({ goal, isOpen, onClose, onSave, onDelete 
 
         {/* Notes */}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-[#042C53]">Notes <span className="text-slate-400 font-normal">(optional)</span></label>
+          <label className="text-sm font-medium text-[#0C21A4]">Notes <span className="text-slate-400 font-normal">(optional)</span></label>
           <textarea
             value={notes}
             onChange={e => setNotes(e.target.value)}
             rows={2}
-            className="w-full px-4 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#042C53] resize-none focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/30"
+            className="w-full px-4 py-2.5 rounded-xl border border-[#E3E9FD] text-sm text-[#0C21A4] resize-none focus:outline-none focus:ring-2 focus:ring-[#0C21A4]/30"
           />
         </div>
 
         <button
           onClick={handleSave}
           disabled={!title.trim() || saving}
-          className="w-full py-3 rounded-xl bg-[#1D9E75] text-white font-semibold text-sm disabled:opacity-50 transition-colors"
+          className="w-full py-3 rounded-xl bg-[#0C21A4] text-white font-semibold text-sm disabled:opacity-50 transition-colors"
         >
           {saving ? "Saving…" : "Save changes"}
         </button>

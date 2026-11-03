@@ -52,7 +52,7 @@ export default function MarketDropForm({ currentValue, currentMonthly, sourceLab
       <ReturnSlider value={annualReturn} onChange={setAnnualReturn} />
       <div className="rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5">
         <p className="text-xs text-slate-500">Estimated recovery</p>
-        <p className="text-sm font-semibold text-[#042C53]">
+        <p className="text-sm font-semibold text-[#0C21A4]">
           ~{recoveryMonths} month{recoveryMonths === 1 ? "" : "s"}, based on your {annualReturn}% expected return
         </p>
       </div>

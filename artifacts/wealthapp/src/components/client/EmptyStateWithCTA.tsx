@@ -30,7 +30,7 @@ export default function EmptyStateWithCTA({
           <Icon className="h-6 w-6 text-slate-400" />
         </div>
       )}
-      <h3 className="text-sm font-semibold text-[#042C53] mb-1">{title}</h3>
+      <h3 className="text-sm font-semibold text-[#0C21A4] mb-1">{title}</h3>
       {description && (
         <p className="text-sm text-slate-500 max-w-xs leading-relaxed mb-5">{description}</p>
       )}
@@ -38,7 +38,7 @@ export default function EmptyStateWithCTA({
         {action && (
           <button
             onClick={action.onClick}
-            className="px-4 py-2 rounded-lg bg-[#1D9E75] text-white text-sm font-medium hover:bg-[#0F6E56] transition-colors"
+            className="px-4 py-2 rounded-lg bg-[#0C21A4] text-white text-sm font-medium hover:bg-[#08167A] transition-colors"
           >
             {action.label}
           </button>

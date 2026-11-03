@@ -36,11 +36,11 @@ export default function StatementHistoryDrawer({ isOpen, onClose, plan, statemen
       <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mb-5 pb-4 border-b border-slate-100 text-sm">
         <div>
           <span className="text-xs text-slate-400">Net contribution</span>
-          <p className="font-semibold text-[#042C53]">${nc.toLocaleString("en-US", { maximumFractionDigits: 0 })}</p>
+          <p className="font-semibold text-[#0C21A4]">${nc.toLocaleString("en-US", { maximumFractionDigits: 0 })}</p>
         </div>
         <div>
           <span className="text-xs text-slate-400">Account value</span>
-          <p className="font-semibold text-[#042C53]">${cv.toLocaleString("en-US", { maximumFractionDigits: 0 })}</p>
+          <p className="font-semibold text-[#0C21A4]">${cv.toLocaleString("en-US", { maximumFractionDigits: 0 })}</p>
         </div>
         <div>
           <span className="text-xs text-slate-400">Gain / loss</span>
@@ -70,7 +70,7 @@ export default function StatementHistoryDrawer({ isOpen, onClose, plan, statemen
                   onClick={() => setExpandedId(isExpanded ? null : stmt.id)}
                 >
                   <div>
-                    <p className="text-sm font-semibold text-[#042C53]">{periodLabel(stmt)}</p>
+                    <p className="text-sm font-semibold text-[#0C21A4]">{periodLabel(stmt)}</p>
                     <p className="text-xs text-slate-400 mt-0.5">
                       Closing: ${closingV.toLocaleString("en-US", { maximumFractionDigits: 0 })}
                     </p>

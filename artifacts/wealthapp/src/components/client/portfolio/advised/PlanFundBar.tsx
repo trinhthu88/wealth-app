@@ -1,8 +1,8 @@
 import type { AdvisedPlanHolding } from "@/hooks/useAdvisedPlans";
 
 const FUND_COLORS: Record<string, string> = {
-  ISSP: "#1D9E75",
-  ISHT: "#0F6E56",
+  ISSP: "#0C21A4",
+  ISHT: "#08167A",
   IBIT: "#F59E0B",
   ISEM: "#3B82F6",
   ISAC: "#6366F1",
@@ -10,7 +10,7 @@ const FUND_COLORS: Record<string, string> = {
 function colorFor(code: string): string {
   if (FUND_COLORS[code]) return FUND_COLORS[code];
   const h = code.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
-  const hues = ["#1D9E75", "#0F6E56", "#3B82F6", "#6366F1", "#0EA5E9", "#8B5CF6"];
+  const hues = ["#0C21A4", "#08167A", "#3B82F6", "#6366F1", "#0EA5E9", "#8B5CF6"];
   return hues[h % hues.length];
 }
 

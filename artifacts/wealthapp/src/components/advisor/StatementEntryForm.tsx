@@ -35,7 +35,7 @@ function Field({ label, required, children, hint }: { label: string; required?: 
   );
 }
 function Input({ value, onChange, placeholder, type = "text", step, className }: { value: string; onChange: (v: string) => void; placeholder?: string; type?: string; step?: string; className?: string }) {
-  return <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} step={step} className={cn("w-full px-3 py-2 rounded-lg border border-slate-200 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/30 focus:border-[#1D9E75]", className)} />;
+  return <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} step={step} className={cn("w-full px-3 py-2 rounded-lg border border-slate-200 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0C21A4]/30 focus:border-[#0C21A4]", className)} />;
 }
 
 interface Props {
@@ -147,7 +147,7 @@ export default function StatementEntryForm({ mode, clientId, planId, existingNet
               {PLAN_TYPES.map(pt => {
                 const Icon = pt.icon;
                 return (
-                  <button key={pt.id} onClick={() => setPlanType(pt.id)} className={cn("flex flex-1 items-center justify-center gap-1.5 py-2 rounded-lg border text-xs font-medium transition-all", planType === pt.id ? "border-[#1D9E75] bg-[#1D9E75]/10 text-[#1D9E75]" : "border-slate-200 text-slate-600 hover:border-[#1D9E75]/40")}>
+                  <button key={pt.id} onClick={() => setPlanType(pt.id)} className={cn("flex flex-1 items-center justify-center gap-1.5 py-2 rounded-lg border text-xs font-medium transition-all", planType === pt.id ? "border-[#0C21A4] bg-[#0C21A4]/10 text-[#0C21A4]" : "border-slate-200 text-slate-600 hover:border-[#0C21A4]/40")}>
                     <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                     <span>{pt.label}</span>
                   </button>
@@ -156,7 +156,7 @@ export default function StatementEntryForm({ mode, clientId, planId, existingNet
             </div>
             <div className="grid grid-cols-3 gap-2">
               {(["USD", "VND", "EUR"] as const).map(c => (
-                <button key={c} onClick={() => setCurrency(c)} className={cn("py-2 rounded-lg border text-sm font-medium", currency === c ? "border-[#1D9E75] bg-[#1D9E75]/10 text-[#1D9E75]" : "border-slate-200 text-slate-600")}>
+                <button key={c} onClick={() => setCurrency(c)} className={cn("py-2 rounded-lg border text-sm font-medium", currency === c ? "border-[#0C21A4] bg-[#0C21A4]/10 text-[#0C21A4]" : "border-slate-200 text-slate-600")}>
                   {c}
                 </button>
               ))}
@@ -168,7 +168,7 @@ export default function StatementEntryForm({ mode, clientId, planId, existingNet
               <Field label="Maturity date"><Input type="date" value={maturityDate} onChange={setMaturityDate} /></Field>
             </div>
             <Field label="Status">
-              <select value={status} onChange={e => setStatus(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/30">
+              <select value={status} onChange={e => setStatus(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0C21A4]/30">
                 {["inforce", "paid_up", "lapsed", "matured", "surrendered"].map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             </Field>
@@ -187,7 +187,7 @@ export default function StatementEntryForm({ mode, clientId, planId, existingNet
             <Field label="Statement date"><Input type="date" value={statementDate} onChange={setStatementDate} /></Field>
             <div className="flex gap-2">
               {(["summary", "full_detail"] as const).map(m => (
-                <button key={m} onClick={() => setEntryMode(m)} className={cn("flex-1 py-2 rounded-lg border text-xs font-medium", entryMode === m ? "border-[#1D9E75] bg-[#1D9E75]/10 text-[#1D9E75]" : "border-slate-200 text-slate-600")}>
+                <button key={m} onClick={() => setEntryMode(m)} className={cn("flex-1 py-2 rounded-lg border text-xs font-medium", entryMode === m ? "border-[#0C21A4] bg-[#0C21A4]/10 text-[#0C21A4]" : "border-slate-200 text-slate-600")}>
                   {m === "summary" ? "Summary (page 1)" : "Full detail (page 1 + 2)"}
                 </button>
               ))}
@@ -226,7 +226,7 @@ export default function StatementEntryForm({ mode, clientId, planId, existingNet
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <p className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Fund holdings snapshot</p>
-              <button onClick={() => setFunds(f => [...f, emptyFund()])} className="text-xs text-[#1D9E75] font-medium flex items-center gap-1">
+              <button onClick={() => setFunds(f => [...f, emptyFund()])} className="text-xs text-[#0C21A4] font-medium flex items-center gap-1">
                 <Plus className="h-3.5 w-3.5" /> Add fund row
               </button>
             </div>
@@ -247,7 +247,7 @@ export default function StatementEntryForm({ mode, clientId, planId, existingNet
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Transaction lines</p>
-                <button onClick={() => setTransactions(t => [...t, emptyTx()])} className="text-xs text-[#1D9E75] font-medium flex items-center gap-1">
+                <button onClick={() => setTransactions(t => [...t, emptyTx()])} className="text-xs text-[#0C21A4] font-medium flex items-center gap-1">
                   <Plus className="h-3.5 w-3.5" /> Add line
                 </button>
               </div>
@@ -270,7 +270,7 @@ export default function StatementEntryForm({ mode, clientId, planId, existingNet
 
       <div className="flex gap-3 pt-2 border-t border-slate-100">
         <button onClick={onCancel} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50">Cancel</button>
-        <button onClick={handleSave} disabled={saving} className="flex-1 py-2.5 rounded-xl bg-[#1D9E75] text-white text-sm font-semibold hover:bg-[#0F6E56] disabled:opacity-60 flex items-center justify-center gap-2">
+        <button onClick={handleSave} disabled={saving} className="flex-1 py-2.5 rounded-xl bg-[#0C21A4] text-white text-sm font-semibold hover:bg-[#08167A] disabled:opacity-60 flex items-center justify-center gap-2">
           {saving && <Loader2 className="h-4 w-4 animate-spin" />}
           {saving ? "Saving…" : mode === "new_plan" ? "Create plan" : "Save statement"}
         </button>

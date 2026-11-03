@@ -7,12 +7,13 @@ interface SolProps {
   size?: SolSize;
   animate?: SolAnimate;
   showFace?: boolean;
+  /** Shows the soft scalloped halo around Sol (the "rays" of the earlier mark). */
   showRays?: boolean;
   className?: string;
-  fill?: string;       // Default var(--sun)
-  rayStroke?: string;  // Default var(--sun-deep)
-  faceFill?: string;   // Default var(--sun-ink)
-  bodyStroke?: string; // Default #E8963D (clay-like from spec)
+  fill?: string;       // Body. Default var(--sun) — Sunset Pop
+  rayStroke?: string;  // Halo. Default #FFC98F — a light Sunset tint
+  faceFill?: string;   // Eyes and smile. Default var(--forest) — Cobalt Pulse
+  bodyStroke?: string; // Optional outline; none by default (flat style)
 }
 
 const SIZES: Record<SolSize, number> = {
@@ -23,6 +24,16 @@ const SIZES: Record<SolSize, number> = {
   xl: 160,
 };
 
+// Eight soft lobes on a circle of radius 25 around the centre (32, 32).
+const HALO_LOBES = Array.from({ length: 8 }, (_, i) => {
+  const angle = (i * Math.PI) / 4;
+  return { cx: 32 + 25 * Math.cos(angle), cy: 32 + 25 * Math.sin(angle) };
+});
+
+/**
+ * Sol — tala's money buddy. Flat, calm style: a scalloped sun halo, a warm
+ * round body with no outline, and a content closed-eye face.
+ */
 export default function Sol({
   size = "md",
   animate = "idle",
@@ -30,16 +41,13 @@ export default function Sol({
   showRays = true,
   className,
   fill = "var(--sun)",
-  rayStroke = "var(--sun-deep)",
-  faceFill = "var(--sun-ink)",
-  bodyStroke = "#E8963D"
+  rayStroke = "#FFC98F",
+  faceFill = "var(--forest)",
+  bodyStroke,
 }: SolProps) {
   const px = SIZES[size];
-  const scale = px / 64; // The reference SVG is 64x64
-
   const isAnimated = animate !== "none";
   const breatheClass = animate === "breathe" || animate === "idle" || animate === "float" ? "animate-sol-breathe" : "";
-  const spinClass = isAnimated ? "animate-sol-spin" : "";
   const blinkClass = isAnimated && showFace ? "animate-sol-blink" : "";
 
   return (
@@ -47,45 +55,34 @@ export default function Sol({
       className={cn("relative inline-flex items-center justify-center flex-none", breatheClass, className)}
       style={{ width: px, height: px }}
     >
-      <svg
-        viewBox="0 0 64 64"
-        style={{ width: px, height: px, overflow: "visible" }}
-        aria-hidden="true"
-      >
-        {/* Rays */}
+      <svg viewBox="0 0 64 64" style={{ width: px, height: px, overflow: "visible" }} aria-hidden="true">
         {showRays && (
-          <g className={spinClass} style={{ transformOrigin: "32px 32px" }}>
-            <g stroke={rayStroke} strokeWidth="3" strokeLinecap="round">
-              <line x1="32" y1="2" x2="32" y2="9"></line>
-              <line x1="32" y1="55" x2="32" y2="62"></line>
-              <line x1="2" y1="32" x2="9" y2="32"></line>
-              <line x1="55" y1="32" x2="62" y2="32"></line>
-              <line x1="11" y1="11" x2="16" y2="16"></line>
-              <line x1="48" y1="48" x2="53" y2="53"></line>
-              <line x1="53" y1="11" x2="48" y2="16"></line>
-              <line x1="16" y1="48" x2="11" y2="53"></line>
-            </g>
+          <g fill={rayStroke}>
+            {HALO_LOBES.map((lobe, i) => (
+              <circle key={i} cx={lobe.cx} cy={lobe.cy} r="7" />
+            ))}
+            <circle cx="32" cy="32" r="25" />
           </g>
         )}
 
-        {/* Core circle */}
-        <circle cx="32" cy="32" r="21" fill={fill}></circle>
-        <circle cx="32" cy="32" r="21" fill="none" stroke={bodyStroke} strokeWidth="1.5"></circle>
+        <circle cx="32" cy="33" r="20" fill={fill} stroke={bodyStroke} strokeWidth={bodyStroke ? 1.5 : undefined} />
 
-        {/* Face */}
         {showFace && (
           <>
-            <g className={blinkClass} style={{ transformOrigin: "32px 29px" }}>
-              <circle cx="25" cy="29" r="2.6" fill={faceFill}></circle>
-              <circle cx="39" cy="29" r="2.6" fill={faceFill}></circle>
-            </g>
-            <path
-              d="M25 37.5 Q32 43 39 37.5"
+            <g
+              className={blinkClass}
+              style={{ transformOrigin: "32px 33px" }}
               fill="none"
               stroke={faceFill}
               strokeWidth="2.4"
               strokeLinecap="round"
-            ></path>
+            >
+              <path d="M22.5 32.5 q3 2.8 6 0" />
+              <path d="M35.5 32.5 q3 2.8 6 0" />
+            </g>
+            <path d="M28.5 39 q3.5 2.6 7 0" fill="none" stroke={faceFill} strokeWidth="2.4" strokeLinecap="round" />
+            <ellipse cx="21" cy="37.5" rx="2.6" ry="1.6" fill="#FFC2A8" opacity="0.55" />
+            <ellipse cx="43" cy="37.5" rx="2.6" ry="1.6" fill="#FFC2A8" opacity="0.55" />
           </>
         )}
       </svg>

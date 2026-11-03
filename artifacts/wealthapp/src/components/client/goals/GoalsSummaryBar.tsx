@@ -14,7 +14,7 @@ export default function GoalsSummaryBar({ totalActive, onTrack, atRisk, offTrack
 
   return (
     <div className="flex flex-wrap gap-2">
-      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-[#1D9E75]/10 text-[#1D9E75]">
+      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-[#0C21A4]/10 text-[#0C21A4]">
         <Target className="h-3.5 w-3.5" />
         {totalActive} active {totalActive === 1 ? "goal" : "goals"}
       </span>

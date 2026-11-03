@@ -5,7 +5,7 @@ import type { ScenarioResult } from "@/lib/investmentCalculations";
 import type { ScenarioRun } from "@/hooks/useScenarios";
 import { runScenario as runFromParams } from "@/lib/investmentCalculations";
 
-const COLORS = ["#1D9E75", "#3B82F6", "#F59E0B", "#8B5CF6"];
+const COLORS = ["#0C21A4", "#3B82F6", "#F59E0B", "#8B5CF6"];
 
 function fmtY(v: number) {
   if (Math.abs(v) >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
@@ -48,7 +48,7 @@ export default function ScenarioCompareView({ current, saved, onSaveCurrent, onC
   const xTicks = chartData.filter((d: any) => d.month % 12 === 0).map((d: any) => d.month);
 
   return (
-    <div className="bg-surface border border-hairline rounded-[26px] p-5 space-y-4 shadow-[0_2px_14px_rgba(20,52,42,.06)]">
+    <div className="bg-surface border border-hairline rounded-[26px] p-5 space-y-4 shadow-[0_2px_14px_rgba(12,33,164,.06)]">
       <div className="flex items-center justify-between">
         <p className="text-[14px] font-semibold text-forest">Compare scenarios</p>
         <button onClick={onClose} className="text-[13px] text-ink-40 hover:text-forest">Close ×</button>

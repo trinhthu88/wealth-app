@@ -92,7 +92,7 @@ export default function TickerHoldingForm({
         )}
         {pricePreview && (
           <div className="mt-1.5 flex items-center gap-2 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2">
-            <span className="text-xs font-semibold text-[#042C53]">${pricePreview.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</span>
+            <span className="text-xs font-semibold text-[#0C21A4]">${pricePreview.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</span>
             <span className={`text-xs font-medium ${pricePreview.change >= 0 ? "text-emerald-600" : "text-red-500"}`}>
               {pricePreview.change >= 0 ? "▲" : "▼"} {Math.abs(pricePreview.change).toFixed(2)}%
             </span>

@@ -5,16 +5,16 @@ import { useProfile } from "@/hooks/useProfile";
 import { cn } from "@/lib/utils";
 import Sol from "../Sol";
 import {
-  LayoutDashboard, PieChart, Target, Wallet, MessageSquare, ChevronLeft, ChevronRight,
+  House, ChartLine, Target, UserRound, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { CLIENT_PRIMARY_NAV, getClientNavigationState, type ClientPrimaryNavId } from "@/lib/clientNavigation";
+import { openSolChat } from "@/lib/solChat";
 
 const NAV_ICONS: Record<ClientPrimaryNavId, React.ElementType> = {
-  home: LayoutDashboard,
-  money: Wallet,
-  wealth: PieChart,
+  home: House,
+  wealth: ChartLine,
   goals: Target,
-  advisor: MessageSquare,
+  advisor: UserRound,
 };
 
 function ClientNavigationLink({
@@ -31,24 +31,23 @@ function ClientNavigationLink({
     <Link
       href={item.href}
       aria-current={active ? "page" : undefined}
+      aria-label={mobile && !active ? item.label : undefined}
       className={mobile
-        ? "flex min-w-0 flex-col items-center gap-[5px] outline-none"
+        ? cn(
+            "flex h-12 min-w-12 items-center justify-center gap-2 rounded-full text-[14px] font-semibold transition-colors",
+            active ? "bg-field px-4 pl-3 text-forest" : "text-paper hover:bg-white/10",
+          )
         : cn(
             "flex items-center gap-3 rounded-2xl px-3 py-3 text-[15px] font-semibold transition-all duration-150",
             active ? "bg-green-tint text-green" : "text-ink-40 hover:bg-hairline/30 hover:text-forest",
           )}
     >
       <Icon
-        className={cn(
-          mobile ? "h-5 w-5" : "h-[18px] w-[18px] shrink-0",
-          active ? "text-green" : mobile ? "text-ink-20" : "",
-        )}
-        strokeWidth={active && mobile ? 2.25 : 2}
+        className={cn(mobile ? "h-[22px] w-[22px]" : "h-[18px] w-[18px] shrink-0", !mobile && active && "text-green")}
+        strokeWidth={2}
         aria-hidden="true"
       />
-      <span className={cn(mobile ? "truncate text-[10.5px] font-semibold leading-none" : "", active && mobile ? "text-green" : mobile ? "text-ink-20" : "")}>
-        {item.label}
-      </span>
+      {(!mobile || active) && <span className={mobile ? "whitespace-nowrap leading-none" : ""}>{item.label}</span>}
     </Link>
   );
 }
@@ -168,18 +167,22 @@ export default function ClientAppShell({ children }: { children: React.ReactNode
         <nav
           aria-label="Main client navigation"
           data-testid="mobile-client-navigation"
-          className="fixed bottom-0 left-0 right-0 z-30 h-[calc(72px+env(safe-area-inset-bottom))] border-t border-hairline-2 bg-surface pb-[env(safe-area-inset-bottom)] pt-3 lg:hidden"
+          className="fixed inset-x-4 bottom-[calc(16px+env(safe-area-inset-bottom))] z-30 mx-auto flex h-[68px] max-w-[420px] items-center justify-between rounded-full bg-forest px-2.5 shadow-[0_10px_30px_rgba(12,33,164,0.25)] lg:hidden"
         >
-          <div className="grid grid-cols-5 gap-1 px-1">
-            {CLIENT_PRIMARY_NAV.map((item) => (
-              <ClientNavigationLink
-                key={item.id}
-                item={item}
-                active={navigation.primaryId === item.id}
-                mobile
-              />
-            ))}
-          </div>
+          {CLIENT_PRIMARY_NAV.slice(0, 2).map((item) => (
+            <ClientNavigationLink key={item.id} item={item} active={navigation.primaryId === item.id} mobile />
+          ))}
+          <button
+            type="button"
+            onClick={openSolChat}
+            aria-label="Ask Sol"
+            className="flex h-[52px] w-[52px] items-center justify-center rounded-full bg-surface transition-transform hover:scale-105"
+          >
+            <Sol size="sm" animate="none" />
+          </button>
+          {CLIENT_PRIMARY_NAV.slice(2).map((item) => (
+            <ClientNavigationLink key={item.id} item={item} active={navigation.primaryId === item.id} mobile />
+          ))}
         </nav>
       </div>
     </div>

@@ -33,7 +33,7 @@ export default function MilestoneComments({ comments }: Props) {
           <div key={c.id} className={`flex gap-2 ${isOwn ? "flex-row-reverse" : "flex-row"}`}>
             <div
               className="h-7 w-7 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5"
-              style={{ background: isAdvisor ? "#1D9E75" : "#042C53", color: "white" }}
+              style={{ background: isAdvisor ? "#0C21A4" : "#0C21A4", color: "white" }}
             >
               {initials(c.authorName)}
             </div>
@@ -42,7 +42,7 @@ export default function MilestoneComments({ comments }: Props) {
                 className="px-3 py-2 rounded-xl text-sm"
                 style={{
                   background: isAdvisor ? "#F0FDF8" : "#EEF2FF",
-                  color: "#042C53",
+                  color: "#0C21A4",
                   borderRadius: isOwn ? "12px 12px 2px 12px" : "12px 12px 12px 2px",
                 }}
               >

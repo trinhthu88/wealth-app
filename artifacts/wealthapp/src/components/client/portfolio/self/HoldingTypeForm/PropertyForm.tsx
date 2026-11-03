@@ -74,7 +74,7 @@ export default function PropertyForm({ initial, onSubmit, submitLabel }: Props) 
         <TextInput value={address} onChange={setAddress} placeholder="e.g. 12 Nguyen Hue, District 1" />
       </Field>
       <Field label="Country">
-        <select value={country} onChange={e => setCountry(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#042C53] bg-white focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/30">
+        <select value={country} onChange={e => setCountry(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-[#E3E9FD] text-sm text-[#0C21A4] bg-white focus:outline-none focus:ring-2 focus:ring-[#0C21A4]/30">
           <option value="">Select country…</option>
           {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
         </select>

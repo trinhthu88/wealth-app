@@ -43,7 +43,7 @@ export default function GoalScenarioCTA({ goalId, goalTitle, status }: Props) {
             <Link
               href={`/client/goals/what-if?goalId=${goalId}&type=retire_earlier`}
               onClick={markInterest}
-              className="font-semibold text-[#1D9E75] hover:underline"
+              className="font-semibold text-[#0C21A4] hover:underline"
             >
               Model this goal →
             </Link>
@@ -54,7 +54,7 @@ export default function GoalScenarioCTA({ goalId, goalTitle, status }: Props) {
             <Link
               href="/client/advisor/messages"
               onClick={() => { markInterest(); track("upgrade_cta_clicked", { location: "goal_scenario_cta" }); }}
-              className="font-semibold text-[#1D9E75] hover:underline"
+              className="font-semibold text-[#0C21A4] hover:underline"
             >
               See how an advisor can help →
             </Link>

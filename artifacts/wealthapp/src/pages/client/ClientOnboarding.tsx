@@ -171,7 +171,7 @@ export default function ClientOnboarding() {
               Your advisor has brought your starting picture together. We’ll help you get oriented, then move at your pace.
             </p>
           </div>
-          <div className="rounded-[24px] border border-hairline bg-surface p-5 shadow-[0_2px_14px_rgba(20,52,42,.05)]">
+          <div className="rounded-[24px] border border-hairline bg-surface p-5 shadow-[0_2px_14px_rgba(12,33,164,.05)]">
             <p className="text-xs font-semibold uppercase tracking-[0.1em] text-ink-40">Guided by your advisor</p>
             <p className="mt-1 font-display text-xl font-semibold text-forest" data-testid="text-onboarding-advisor">
               {checklist.isLoading ? "Loading your advisor…" : advisor || "Your advisor"}

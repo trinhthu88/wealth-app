@@ -55,7 +55,7 @@ export default function AdvisorDashboard() {
       </div>
 
       <div className="grid md:grid-cols-2 gap-6 mb-6">
-        <div className="bg-surface rounded-[26px] p-6 shadow-[0_2px_14px_rgba(20,52,42,0.06)]">
+        <div className="bg-surface rounded-[26px] p-6 shadow-[0_2px_14px_rgba(12,33,164,0.06)]">
           <div className="flex items-center justify-between mb-5">
             <h3 className="font-display text-[20px] font-semibold text-forest">Recent Clients</h3>
             <Link href="/advisor/clients" className="text-[14px] font-medium text-green hover:text-forest transition-colors flex items-center">
@@ -86,7 +86,7 @@ export default function AdvisorDashboard() {
           )}
         </div>
 
-        <div className="bg-surface rounded-[26px] p-6 shadow-[0_2px_14px_rgba(20,52,42,0.06)]">
+        <div className="bg-surface rounded-[26px] p-6 shadow-[0_2px_14px_rgba(12,33,164,0.06)]">
           <div className="flex items-center justify-between mb-5">
             <h3 className="font-display text-[20px] font-semibold text-forest">Upcoming Tasks</h3>
             <Link href="/advisor/tasks" className="text-[14px] font-medium text-green hover:text-forest transition-colors flex items-center">
@@ -122,7 +122,7 @@ export default function AdvisorDashboard() {
 
       {/* AUM Breakdown */}
       {clients.length > 0 && (
-        <div className="bg-surface rounded-[26px] p-6 mb-6 shadow-[0_2px_14px_rgba(20,52,42,0.06)]">
+        <div className="bg-surface rounded-[26px] p-6 mb-6 shadow-[0_2px_14px_rgba(12,33,164,0.06)]">
           <h3 className="font-display text-[20px] font-semibold text-forest mb-5">Client AUM Overview</h3>
           <div className="space-y-4">
             {clients.filter(c => c.portfolioValue > 0).sort((a, b) => b.portfolioValue - a.portfolioValue).slice(0, 6).map(c => {
@@ -142,7 +142,7 @@ export default function AdvisorDashboard() {
       )}
 
       {activeLeads.length > 0 && (
-        <div className="bg-sun-tint border border-[#FBE5C5] rounded-[26px] p-6 shadow-[0_2px_14px_rgba(20,52,42,0.04)]">
+        <div className="bg-sun-tint border border-[#FFE6CF] rounded-[26px] p-6 shadow-[0_2px_14px_rgba(12,33,164,0.04)]">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-display text-[20px] font-semibold text-amber-ink">Active Leads ({activeLeads.length})</h3>
             <Link href="/advisor/leads">

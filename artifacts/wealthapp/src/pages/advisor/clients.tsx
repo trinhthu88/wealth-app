@@ -86,13 +86,13 @@ export default function AdvisorClients() {
       {isLoading ? (
         <div className="space-y-3">{Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-[72px] bg-surface rounded-[26px] animate-pulse" />)}</div>
       ) : filtered.length === 0 ? (
-        <div className="bg-surface rounded-[26px] p-16 text-center shadow-[0_2px_14px_rgba(20,52,42,0.06)]">
+        <div className="bg-surface rounded-[26px] p-16 text-center shadow-[0_2px_14px_rgba(12,33,164,0.06)]">
           <Users className="h-14 w-14 text-ink-20 mx-auto mb-4" />
           <h3 className="font-display text-[20px] font-semibold text-forest mb-2">{search ? "No matching clients" : "No clients yet"}</h3>
           <p className="text-[14px] text-ink-40">{search ? "Try a different search term." : "Clients are promoted from the lead pipeline — add a lead using the button above."}</p>
         </div>
       ) : (
-        <div className="bg-surface rounded-[26px] shadow-[0_2px_14px_rgba(20,52,42,0.06)] overflow-hidden">
+        <div className="bg-surface rounded-[26px] shadow-[0_2px_14px_rgba(12,33,164,0.06)] overflow-hidden">
           <table className="w-full text-left">
             <thead>
               <tr>

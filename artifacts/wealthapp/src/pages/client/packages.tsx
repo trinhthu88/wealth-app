@@ -79,14 +79,14 @@ export default function PackagesPage() {
       <div className="max-w-[860px] mx-auto space-y-5">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-[#042C53]">My Packages</h1>
+            <h1 className="text-xl font-bold text-[#0C21A4]">My Packages</h1>
             <p className="text-sm text-slate-400 mt-0.5">
               {activeCount} active · Total {fmtCurrency(totalValue)}
             </p>
           </div>
           <button
             onClick={() => setRequestOpen(true)}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-[#1D9E75] text-[#1D9E75] text-sm font-medium hover:bg-[#1D9E75]/5 transition-colors"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-[#0C21A4] text-[#0C21A4] text-sm font-medium hover:bg-[#0C21A4]/5 transition-colors"
           >
             <Plus className="h-4 w-4" />
             Request package
@@ -98,17 +98,17 @@ export default function PackagesPage() {
             {[1, 2].map((i) => <div key={i} className="h-36 bg-slate-100 rounded-xl animate-pulse" />)}
           </div>
         ) : isError ? (
-          <div className="bg-white border border-[#E2E8F0] rounded-xl p-8 flex flex-col items-center gap-3 text-center">
+          <div className="bg-white border border-[#E3E9FD] rounded-xl p-8 flex flex-col items-center gap-3 text-center">
             <AlertCircle className="h-8 w-8 text-slate-300" />
             <p className="text-sm font-medium text-slate-500">Couldn't load packages</p>
             <p className="text-xs text-slate-400">Try refreshing the page.</p>
           </div>
         ) : packages.length === 0 ? (
-          <div className="bg-white border border-[#E2E8F0] rounded-xl p-12 text-center space-y-3">
+          <div className="bg-white border border-[#E3E9FD] rounded-xl p-12 text-center space-y-3">
             <p className="text-sm text-slate-400">No packages yet. Request one and your advisor will set it up.</p>
             <button
               onClick={() => setRequestOpen(true)}
-              className="px-5 py-2.5 rounded-xl bg-[#1D9E75] text-white text-sm font-semibold hover:bg-[#0F6E56] transition-colors"
+              className="px-5 py-2.5 rounded-xl bg-[#0C21A4] text-white text-sm font-semibold hover:bg-[#08167A] transition-colors"
             >
               Request your first package
             </button>
@@ -124,11 +124,11 @@ export default function PackagesPage() {
 
               return (
                 <Link key={pkg.id} href={`/client/wealth/investments/packages/${pkg.id}`}>
-                  <a className="block bg-white border border-[#E2E8F0] rounded-xl p-5 hover:shadow-sm transition-shadow">
+                  <a className="block bg-white border border-[#E3E9FD] rounded-xl p-5 hover:shadow-sm transition-shadow">
                     <div className="flex items-start justify-between mb-3">
                       <div>
                         <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-semibold text-base text-[#042C53]">{pkg.nickname}</h3>
+                          <h3 className="font-semibold text-base text-[#0C21A4]">{pkg.nickname}</h3>
                           <span className={cn(
                             "text-xs px-2 py-0.5 rounded-full font-medium",
                             STATUS_COLORS[pkg.status] ?? "bg-slate-100 text-slate-600"
@@ -145,7 +145,7 @@ export default function PackagesPage() {
 
                     {isActive ? (
                       <div>
-                        <div className="text-2xl font-bold text-[#042C53] mb-1">{fmtCurrency(value)}</div>
+                        <div className="text-2xl font-bold text-[#0C21A4] mb-1">{fmtCurrency(value)}</div>
                         <div className={cn(
                           "flex items-center gap-1 text-sm mb-3",
                           ret >= 0 ? "text-emerald-600" : "text-red-500"
@@ -169,7 +169,7 @@ export default function PackagesPage() {
                                   key={a.fundId}
                                   style={{
                                     width: `${a.weightPercent}%`,
-                                    backgroundColor: ASSET_CLASS_COLORS[a.fund?.assetClass ?? "equity"] ?? "#94A3B8",
+                                    backgroundColor: ASSET_CLASS_COLORS[a.fund?.assetClass ?? "equity"] ?? "#8F98C8",
                                   }}
                                   className="h-full"
                                 />
@@ -180,7 +180,7 @@ export default function PackagesPage() {
                                 <span key={a.fundId} className="text-xs text-slate-400 flex items-center gap-1">
                                   <span
                                     className="w-2 h-2 rounded-sm inline-block"
-                                    style={{ background: ASSET_CLASS_COLORS[a.fund?.assetClass ?? "equity"] ?? "#94A3B8" }}
+                                    style={{ background: ASSET_CLASS_COLORS[a.fund?.assetClass ?? "equity"] ?? "#8F98C8" }}
                                   />
                                   {a.fund?.name ?? "Fund"} {parseFloat(a.weightPercent).toFixed(0)}%
                                 </span>
@@ -203,7 +203,7 @@ export default function PackagesPage() {
             {/* Request new package */}
             <button
               onClick={() => setRequestOpen(true)}
-              className="w-full bg-white border-2 border-dashed border-[#E2E8F0] rounded-xl p-6 text-center hover:border-[#1D9E75]/40 transition-colors"
+              className="w-full bg-white border-2 border-dashed border-[#E3E9FD] rounded-xl p-6 text-center hover:border-[#0C21A4]/40 transition-colors"
             >
               <Plus className="h-6 w-6 text-slate-400 mx-auto mb-2" />
               <div className="font-medium text-sm text-slate-600">Request a new package</div>
@@ -223,7 +223,7 @@ export default function PackagesPage() {
             Your request will be sent to your advisor as a message.
           </p>
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-[#042C53]">
+            <label className="text-sm font-medium text-[#0C21A4]">
               Notes <span className="text-slate-400 font-normal">(optional)</span>
             </label>
             <textarea
@@ -231,13 +231,13 @@ export default function PackagesPage() {
               onChange={e => setRequestNotes(e.target.value)}
               placeholder="e.g. I'd like a lump sum package focused on bonds…"
               rows={3}
-              className="w-full px-4 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#042C53] placeholder:text-slate-400 resize-none focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/30 focus:border-[#1D9E75]"
+              className="w-full px-4 py-2.5 rounded-xl border border-[#E3E9FD] text-sm text-[#0C21A4] placeholder:text-slate-400 resize-none focus:outline-none focus:ring-2 focus:ring-[#0C21A4]/30 focus:border-[#0C21A4]"
             />
           </div>
           <button
             onClick={() => sendRequest.mutate(requestNotes)}
             disabled={sendRequest.isPending}
-            className="w-full py-3 rounded-xl bg-[#1D9E75] text-white font-semibold text-sm hover:bg-[#0F6E56] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="w-full py-3 rounded-xl bg-[#0C21A4] text-white font-semibold text-sm hover:bg-[#08167A] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {sendRequest.isPending ? "Sending…" : "Send request →"}
           </button>

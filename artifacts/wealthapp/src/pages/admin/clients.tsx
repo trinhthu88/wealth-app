@@ -85,15 +85,15 @@ export default function AdminClients() {
 
       {/* Summary stats */}
       <div className="grid grid-cols-3 gap-6 mb-8">
-        <div className="bg-surface border border-hairline rounded-[26px] p-6 text-center shadow-[0_2px_14px_rgba(20,52,42,0.04)]">
+        <div className="bg-surface border border-hairline rounded-[26px] p-6 text-center shadow-[0_2px_14px_rgba(12,33,164,0.04)]">
           <div className="font-display text-[32px] font-semibold text-forest leading-none">{clients.length}</div>
           <div className="text-[13px] text-ink-40 mt-1.5">Total clients</div>
         </div>
-        <div className="bg-surface border border-hairline rounded-[26px] p-6 text-center shadow-[0_2px_14px_rgba(20,52,42,0.04)]">
+        <div className="bg-surface border border-hairline rounded-[26px] p-6 text-center shadow-[0_2px_14px_rgba(12,33,164,0.04)]">
           <div className="font-display text-[32px] font-semibold text-green leading-none">{activeCount}</div>
           <div className="text-[13px] text-ink-40 mt-1.5">Active</div>
         </div>
-        <div className="bg-surface border border-hairline rounded-[26px] p-6 text-center shadow-[0_2px_14px_rgba(20,52,42,0.04)]">
+        <div className="bg-surface border border-hairline rounded-[26px] p-6 text-center shadow-[0_2px_14px_rgba(12,33,164,0.04)]">
           <div className="font-display text-[32px] font-semibold text-amber-ink leading-none">{unassigned}</div>
           <div className="text-[13px] text-ink-40 mt-1.5">Unassigned</div>
         </div>
@@ -116,13 +116,13 @@ export default function AdminClients() {
       {isLoading ? (
         <div className="space-y-2">{Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-16 bg-surface rounded-[26px] animate-pulse" />)}</div>
       ) : filtered.length === 0 ? (
-        <div className="bg-surface rounded-[26px] p-16 text-center shadow-[0_2px_14px_rgba(20,52,42,0.06)]">
+        <div className="bg-surface rounded-[26px] p-16 text-center shadow-[0_2px_14px_rgba(12,33,164,0.06)]">
           <UserCheck className="h-14 w-14 text-ink-20 mx-auto mb-4" />
           <h3 className="font-display text-[20px] font-semibold text-forest mb-2">No clients found</h3>
           <p className="text-[14px] text-ink-40">Create clients via User Management.</p>
         </div>
       ) : (
-        <div className="bg-surface rounded-[26px] overflow-hidden shadow-[0_2px_14px_rgba(20,52,42,0.06)]">
+        <div className="bg-surface rounded-[26px] overflow-hidden shadow-[0_2px_14px_rgba(12,33,164,0.06)]">
           <table className="w-full text-left">
             <thead>
               <tr>

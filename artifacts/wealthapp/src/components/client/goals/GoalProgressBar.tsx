@@ -13,7 +13,7 @@ export default function GoalProgressBar({ progressPct, currentAmount, targetAmou
     return (
       <button
         onClick={onSetTarget}
-        className="text-xs text-[#1D9E75] font-medium hover:underline text-left"
+        className="text-xs text-[#0C21A4] font-medium hover:underline text-left"
       >
         Set a target amount to track progress →
       </button>
@@ -27,7 +27,7 @@ export default function GoalProgressBar({ progressPct, currentAmount, targetAmou
       {/* Bar */}
       <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
         <div
-          className="h-full bg-[#1D9E75] rounded-full transition-none"
+          className="h-full bg-[#0C21A4] rounded-full transition-none"
           style={{ width: `${pct}%` }}
         />
       </div>
@@ -36,7 +36,7 @@ export default function GoalProgressBar({ progressPct, currentAmount, targetAmou
         <span className="text-slate-500">
           <CurrencyField amountUsd={currentAmount} compact /> / <CurrencyField amountUsd={targetAmount} compact />
         </span>
-        <span className="font-semibold text-[#042C53]">{Math.round(pct)}%</span>
+        <span className="font-semibold text-[#0C21A4]">{Math.round(pct)}%</span>
       </div>
       {hasLinks && (
         <p className="text-[11px] text-slate-400">Auto-updated from linked investments.</p>

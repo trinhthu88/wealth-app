@@ -187,19 +187,19 @@ export default function AdvisorClientDetail() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <div className="bg-surface border border-hairline rounded-[26px] p-5 text-center shadow-[0_2px_14px_rgba(20,52,42,0.04)]">
+        <div className="bg-surface border border-hairline rounded-[26px] p-5 text-center shadow-[0_2px_14px_rgba(12,33,164,0.04)]">
           <div className="font-display text-[24px] font-semibold text-forest tabular-nums leading-none mb-1">{fmtCurrency(totalValue)}</div>
           <div className="text-[12px] text-ink-40 tracking-wide uppercase">Portfolio</div>
         </div>
-        <div className="bg-surface border border-hairline rounded-[26px] p-5 text-center shadow-[0_2px_14px_rgba(20,52,42,0.04)]">
+        <div className="bg-surface border border-hairline rounded-[26px] p-5 text-center shadow-[0_2px_14px_rgba(12,33,164,0.04)]">
           <div className="font-display text-[24px] font-semibold text-forest tabular-nums leading-none mb-1">{plans.length}</div>
           <div className="text-[12px] text-ink-40 tracking-wide uppercase">Plans</div>
         </div>
-        <div className="bg-surface border border-hairline rounded-[26px] p-5 text-center shadow-[0_2px_14px_rgba(20,52,42,0.04)]">
+        <div className="bg-surface border border-hairline rounded-[26px] p-5 text-center shadow-[0_2px_14px_rgba(12,33,164,0.04)]">
           <div className="font-display text-[24px] font-semibold text-forest tabular-nums leading-none mb-1">{goals.length}</div>
           <div className="text-[12px] text-ink-40 tracking-wide uppercase">Goals</div>
         </div>
-        <div className="bg-surface border border-hairline rounded-[26px] p-5 text-center shadow-[0_2px_14px_rgba(20,52,42,0.04)]">
+        <div className="bg-surface border border-hairline rounded-[26px] p-5 text-center shadow-[0_2px_14px_rgba(12,33,164,0.04)]">
           <div className="font-display text-[20px] font-semibold text-forest leading-none mb-1">{clientProfile?.kycStatus?.replace(/_/g, " ") ?? "—"}</div>
           <div className="text-[12px] text-ink-40 tracking-wide uppercase">KYC</div>
         </div>
@@ -225,7 +225,7 @@ export default function AdvisorClientDetail() {
         <TabsContent value="profile">
           {clientProfile && (
             <div className="space-y-6">
-              <div className="bg-surface border border-hairline rounded-[26px] p-6 shadow-[0_2px_14px_rgba(20,52,42,0.04)]">
+              <div className="bg-surface border border-hairline rounded-[26px] p-6 shadow-[0_2px_14px_rgba(12,33,164,0.04)]">
                 <h3 className="font-display text-[20px] font-semibold text-forest mb-3">Monthly budget summary</h3>
                 {!clientProfile.shareBudgetWithAdvisor ? (
                   <p className="text-[14px] text-ink-40">This client hasn’t shared their monthly budget summary.</p>
@@ -254,7 +254,7 @@ export default function AdvisorClientDetail() {
                 )}
               </div>
 
-              <div className="bg-surface border border-hairline rounded-[26px] p-6 shadow-[0_2px_14px_rgba(20,52,42,0.04)] space-y-5">
+              <div className="bg-surface border border-hairline rounded-[26px] p-6 shadow-[0_2px_14px_rgba(12,33,164,0.04)] space-y-5">
                 <h3 className="font-display text-[20px] font-semibold text-forest">Client Status</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -288,7 +288,7 @@ export default function AdvisorClientDetail() {
                 </div>
               </div>
 
-              <div className="bg-surface border border-hairline rounded-[26px] p-6 shadow-[0_2px_14px_rgba(20,52,42,0.04)] space-y-4">
+              <div className="bg-surface border border-hairline rounded-[26px] p-6 shadow-[0_2px_14px_rgba(12,33,164,0.04)] space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="font-display text-[20px] font-semibold text-forest">Advisor Internal Notes</h3>
                   <Button size="sm" className="rounded-full h-9 px-4 bg-green text-surface hover:bg-green-300"
@@ -318,11 +318,11 @@ export default function AdvisorClientDetail() {
         {/* ── Goals ── */}
         <TabsContent value="goals">
           {goals.length === 0 ? (
-            <div className="text-center py-16 bg-surface rounded-[26px] shadow-[0_2px_14px_rgba(20,52,42,0.06)] text-[14px] text-ink-40">No goals found.</div>
+            <div className="text-center py-16 bg-surface rounded-[26px] shadow-[0_2px_14px_rgba(12,33,164,0.06)] text-[14px] text-ink-40">No goals found.</div>
           ) : (
             <div className="grid gap-4 md:grid-cols-2">
               {goals.map((g) => (
-                <div key={g.id} className="bg-surface border border-hairline rounded-[26px] p-6 shadow-[0_2px_14px_rgba(20,52,42,0.06)]">
+                <div key={g.id} className="bg-surface border border-hairline rounded-[26px] p-6 shadow-[0_2px_14px_rgba(12,33,164,0.06)]">
                   <div className="flex justify-between items-start mb-4">
                     <div>
                       <h4 className="font-display text-[20px] font-semibold text-forest mb-1">{g.title}</h4>
@@ -356,11 +356,11 @@ export default function AdvisorClientDetail() {
         {/* ── Tasks ── */}
         <TabsContent value="tasks">
           {tasks.length === 0 ? (
-            <div className="text-center py-16 bg-surface rounded-[26px] shadow-[0_2px_14px_rgba(20,52,42,0.06)] text-[14px] text-ink-40">No tasks for this client.</div>
+            <div className="text-center py-16 bg-surface rounded-[26px] shadow-[0_2px_14px_rgba(12,33,164,0.06)] text-[14px] text-ink-40">No tasks for this client.</div>
           ) : (
             <div className="space-y-3">
               {tasks.map((t) => (
-                <div key={t.id} className="bg-surface border border-hairline rounded-[20px] p-5 flex items-center justify-between shadow-[0_2px_14px_rgba(20,52,42,0.04)]">
+                <div key={t.id} className="bg-surface border border-hairline rounded-[20px] p-5 flex items-center justify-between shadow-[0_2px_14px_rgba(12,33,164,0.04)]">
                   <div>
                     <h4 className={cn("font-medium text-[16px]", t.status === "completed" ? "text-ink-40 line-through" : "text-forest")}>{t.title}</h4>
                     {t.dueDate && <p className="text-[13px] text-ink-40 mt-1 tabular-nums">Due: {new Date(t.dueDate).toLocaleDateString()}</p>}
@@ -381,7 +381,7 @@ export default function AdvisorClientDetail() {
 
         {/* ── Messages ── */}
         <TabsContent value="messages">
-          <div className="flex flex-col h-[600px] border border-hairline rounded-[26px] bg-surface overflow-hidden shadow-[0_2px_14px_rgba(20,52,42,0.06)]">
+          <div className="flex flex-col h-[600px] border border-hairline rounded-[26px] bg-surface overflow-hidden shadow-[0_2px_14px_rgba(12,33,164,0.06)]">
             <div className="p-4 border-b border-hairline bg-paper flex items-center gap-3 shrink-0">
               <div className="h-10 w-10 rounded-full bg-sun-tint flex items-center justify-center text-amber-ink font-bold text-[15px]">
                 {profile?.fullName?.[0]?.toUpperCase() ?? "C"}

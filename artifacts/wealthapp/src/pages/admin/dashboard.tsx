@@ -48,7 +48,7 @@ export default function AdminDashboard() {
 
       <div className="grid md:grid-cols-2 gap-6 mb-6">
         {/* Advisor Workload */}
-        <div className="bg-surface rounded-[26px] p-6 shadow-[0_2px_14px_rgba(20,52,42,0.06)]">
+        <div className="bg-surface rounded-[26px] p-6 shadow-[0_2px_14px_rgba(12,33,164,0.06)]">
           <div className="flex items-center justify-between mb-5">
             <h3 className="font-display text-[20px] font-semibold text-forest">Advisor Workload</h3>
             <Link href="/admin/clients" className="text-[14px] font-medium text-green hover:text-forest transition-colors flex items-center">
@@ -81,7 +81,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Role Distribution */}
-        <div className="bg-surface rounded-[26px] p-6 shadow-[0_2px_14px_rgba(20,52,42,0.06)] flex flex-col">
+        <div className="bg-surface rounded-[26px] p-6 shadow-[0_2px_14px_rgba(12,33,164,0.06)] flex flex-col">
           <div className="flex items-center justify-between mb-5">
             <h3 className="font-display text-[20px] font-semibold text-forest">Role Distribution</h3>
           </div>
@@ -128,23 +128,23 @@ export default function AdminDashboard() {
 
       {/* Quick links */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <Link href="/admin/clients" className="bg-surface rounded-[20px] p-5 flex flex-col gap-3 shadow-[0_2px_14px_rgba(20,52,42,0.06)] hover:shadow-[0_4px_20px_rgba(20,52,42,0.08)] transition-shadow">
+        <Link href="/admin/clients" className="bg-surface rounded-[20px] p-5 flex flex-col gap-3 shadow-[0_2px_14px_rgba(12,33,164,0.06)] hover:shadow-[0_4px_20px_rgba(12,33,164,0.08)] transition-shadow">
           <div className="h-10 w-10 rounded-[14px] bg-sun-tint flex items-center justify-center shrink-0"><UserCheck className="h-5 w-5 text-amber-ink" /></div>
           <div><div className="font-semibold text-forest text-[15px]">All Clients</div><div className="text-[13px] text-ink-40">{clients.length} investment clients</div></div>
         </Link>
-        <Link href="/admin/prices" className="bg-surface rounded-[20px] p-5 flex flex-col gap-3 shadow-[0_2px_14px_rgba(20,52,42,0.06)] hover:shadow-[0_4px_20px_rgba(20,52,42,0.08)] transition-shadow">
+        <Link href="/admin/prices" className="bg-surface rounded-[20px] p-5 flex flex-col gap-3 shadow-[0_2px_14px_rgba(12,33,164,0.06)] hover:shadow-[0_4px_20px_rgba(12,33,164,0.08)] transition-shadow">
           <div className="h-10 w-10 rounded-[14px] bg-green-tint flex items-center justify-center shrink-0"><DollarSign className="h-5 w-5 text-green" /></div>
           <div><div className="font-semibold text-forest text-[15px]">Fund Prices</div><div className="text-[13px] text-ink-40">Manage prices</div></div>
         </Link>
-        <Link href="/admin/benchmarks" className="bg-surface rounded-[20px] p-5 flex flex-col gap-3 shadow-[0_2px_14px_rgba(20,52,42,0.06)] hover:shadow-[0_4px_20px_rgba(20,52,42,0.08)] transition-shadow">
+        <Link href="/admin/benchmarks" className="bg-surface rounded-[20px] p-5 flex flex-col gap-3 shadow-[0_2px_14px_rgba(12,33,164,0.06)] hover:shadow-[0_4px_20px_rgba(12,33,164,0.08)] transition-shadow">
           <div className="h-10 w-10 rounded-[14px] bg-paper border border-hairline flex items-center justify-center shrink-0"><TrendingUp className="h-5 w-5 text-forest" /></div>
           <div><div className="font-semibold text-forest text-[15px]">Benchmarks</div><div className="text-[13px] text-ink-40">Expected returns</div></div>
         </Link>
-        <Link href="/admin/blog" className="bg-surface rounded-[20px] p-5 flex flex-col gap-3 shadow-[0_2px_14px_rgba(20,52,42,0.06)] hover:shadow-[0_4px_20px_rgba(20,52,42,0.08)] transition-shadow">
+        <Link href="/admin/blog" className="bg-surface rounded-[20px] p-5 flex flex-col gap-3 shadow-[0_2px_14px_rgba(12,33,164,0.06)] hover:shadow-[0_4px_20px_rgba(12,33,164,0.08)] transition-shadow">
           <div className="h-10 w-10 rounded-[14px] bg-paper border border-hairline flex items-center justify-center shrink-0"><BookOpen className="h-5 w-5 text-forest" /></div>
           <div><div className="font-semibold text-forest text-[15px]">Blog</div><div className="text-[13px] text-ink-40">{posts.length} articles</div></div>
         </Link>
-        <Link href="/admin/leads" className="bg-surface rounded-[20px] p-5 flex flex-col gap-3 shadow-[0_2px_14px_rgba(20,52,42,0.06)] hover:shadow-[0_4px_20px_rgba(20,52,42,0.08)] transition-shadow">
+        <Link href="/admin/leads" className="bg-surface rounded-[20px] p-5 flex flex-col gap-3 shadow-[0_2px_14px_rgba(12,33,164,0.06)] hover:shadow-[0_4px_20px_rgba(12,33,164,0.08)] transition-shadow">
           <div className="h-10 w-10 rounded-[14px] bg-clay-tint flex items-center justify-center shrink-0"><Star className="h-5 w-5 text-clay-ink" /></div>
           <div><div className="font-semibold text-forest text-[15px]">Leads</div><div className="text-[13px] text-ink-40">{leads.filter(l => l.status === "unassigned").length} unassigned</div></div>
         </Link>

@@ -166,7 +166,7 @@ export default function AdvisedPlanDetail() {
           </div>
         </div>
 
-        <div className="bg-surface rounded-[26px] p-[22px] shadow-[0_2px_14px_rgba(20,52,42,.06)]">
+        <div className="bg-surface rounded-[26px] p-[22px] shadow-[0_2px_14px_rgba(12,33,164,.06)]">
           <p className="text-[15px] font-semibold text-forest mb-3">Funds</p>
           {holdings.length === 0 ? (
             <p className="text-[13.5px] text-ink-40 py-2">
@@ -201,7 +201,7 @@ export default function AdvisedPlanDetail() {
           )}
         </div>
 
-        <div className="bg-surface rounded-[26px] p-[22px] shadow-[0_2px_14px_rgba(20,52,42,.06)]">
+        <div className="bg-surface rounded-[26px] p-[22px] shadow-[0_2px_14px_rgba(12,33,164,.06)]">
           <div className="flex items-center gap-2 mb-3">
             <p className="text-[15px] font-semibold text-forest">Transactions</p>
             {transactions.length > 0 && (
@@ -254,7 +254,7 @@ export default function AdvisedPlanDetail() {
           <button
             type="button"
             onClick={() => setHistoryOpen(true)}
-            className="text-left bg-surface rounded-[20px] p-[16px] shadow-[0_2px_14px_rgba(20,52,42,.06)]"
+            className="text-left bg-surface rounded-[20px] p-[16px] shadow-[0_2px_14px_rgba(12,33,164,.06)]"
           >
             <div className="text-[14px] font-semibold text-forest">Statement history</div>
             <div className="text-[12.5px] text-ink-40 mt-0.5">All quarters, in detail</div>

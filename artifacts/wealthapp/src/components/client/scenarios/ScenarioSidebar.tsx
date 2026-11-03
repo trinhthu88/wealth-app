@@ -69,7 +69,7 @@ export default function ScenarioSidebar({
     <div className="space-y-5 w-full">
       {/* Source picker */}
       <div className="space-y-2">
-        <p className="text-xs font-semibold text-[#64748B] uppercase tracking-wide">What to model</p>
+        <p className="text-xs font-semibold text-[#4A5590] uppercase tracking-wide">What to model</p>
         <div className="space-y-1.5">
           {sources.map(s => (
             <button
@@ -78,8 +78,8 @@ export default function ScenarioSidebar({
               className={cn(
                 "w-full text-left px-3 py-2.5 rounded-xl border transition-all text-sm",
                 selectedSource?.id === s.id
-                  ? "border-[#1D9E75] bg-[#1D9E75]/5 text-[#042C53]"
-                  : "border-slate-200 text-slate-600 hover:border-[#1D9E75]/30"
+                  ? "border-[#0C21A4] bg-[#0C21A4]/5 text-[#0C21A4]"
+                  : "border-slate-200 text-slate-600 hover:border-[#0C21A4]/30"
               )}
             >
               <p className="font-medium truncate">{s.label}</p>
@@ -107,8 +107,8 @@ export default function ScenarioSidebar({
                   className={cn(
                     "w-full text-left px-3 py-2 rounded-xl border transition-all text-sm",
                     selectedSource?.id === `goal-${g.id}`
-                      ? "border-[#1D9E75] bg-[#1D9E75]/5"
-                      : "border-slate-200 text-slate-600 hover:border-[#1D9E75]/30"
+                      ? "border-[#0C21A4] bg-[#0C21A4]/5"
+                      : "border-slate-200 text-slate-600 hover:border-[#0C21A4]/30"
                   )}
                 >
                   <p className="font-medium truncate">{g.title}</p>
@@ -125,7 +125,7 @@ export default function ScenarioSidebar({
       {/* Type picker */}
       {selectedSource && (
         <div className="space-y-2">
-          <p className="text-xs font-semibold text-[#64748B] uppercase tracking-wide">Scenario type</p>
+          <p className="text-xs font-semibold text-[#4A5590] uppercase tracking-wide">Scenario type</p>
           <div className="space-y-1.5">
             {SCENARIO_TYPES.filter(t => {
               if (t.type === "retire_earlier") return goals.length > 0 || selectedSource.kind === "goal";
@@ -154,7 +154,7 @@ export default function ScenarioSidebar({
       <div>
         <button
           onClick={() => setSavedOpen(v => !v)}
-          className="flex items-center gap-2 text-xs font-semibold text-[#64748B] uppercase tracking-wide w-full"
+          className="flex items-center gap-2 text-xs font-semibold text-[#4A5590] uppercase tracking-wide w-full"
         >
           {savedOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
           Saved scenarios ({savedScenarios.length})
@@ -167,11 +167,11 @@ export default function ScenarioSidebar({
               savedScenarios.map(run => (
                 <div key={run.id} className="flex items-center justify-between px-2 py-2 bg-slate-50 rounded-lg border border-slate-200">
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs font-medium text-[#042C53] truncate">{run.scenarioName ?? "Scenario"}</p>
+                    <p className="text-xs font-medium text-[#0C21A4] truncate">{run.scenarioName ?? "Scenario"}</p>
                     <p className="text-[11px] text-slate-400">{run.scenarioType.replace(/_/g, " ")}</p>
                   </div>
                   <div className="flex items-center gap-1 shrink-0 ml-2">
-                    <button onClick={() => onLoadSaved(run)} className="text-[11px] text-[#1D9E75] font-medium hover:text-[#0F6E56]">Load</button>
+                    <button onClick={() => onLoadSaved(run)} className="text-[11px] text-[#0C21A4] font-medium hover:text-[#08167A]">Load</button>
                     {deleteConfirm === run.id ? (
                       <div className="flex gap-1">
                         <button onClick={() => { onDeleteSaved(run.id); setDeleteConfirm(null); }} className="text-[11px] text-red-500 font-medium">Yes</button>
@@ -193,8 +193,8 @@ export default function ScenarioSidebar({
       {/* Advisor scenarios */}
       {advisorScenarios.length > 0 && (
         <div className="space-y-2">
-          <p className="text-xs font-semibold text-[#64748B] uppercase tracking-wide flex items-center gap-1.5">
-            <Sparkles className="h-3.5 w-3.5 text-[#1D9E75]" />
+          <p className="text-xs font-semibold text-[#4A5590] uppercase tracking-wide flex items-center gap-1.5">
+            <Sparkles className="h-3.5 w-3.5 text-[#0C21A4]" />
             From your advisor
           </p>
           {advisorScenarios.map(run => (

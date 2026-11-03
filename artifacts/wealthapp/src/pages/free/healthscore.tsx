@@ -3,7 +3,7 @@
 // ✓ ALLOWED: BottomSheet spring animation
 // ✗ BANNED:  Page-load stagger on sections
 // ✗ BANNED:  JetBrains Mono font
-// ✗ BANNED:  Cream/warm palette (#FAF8F5, #F2EFE9, #A8A095)
+// ✗ BANNED:  Cream/warm palette (#F1F4FE, #F1F4FE, #8F98C8)
 // ✗ BANNED:  Inline style={{ color: '#hexcode' }} — use Tailwind tokens only
 // ✗ BANNED:  Double bottom nav — AppShell is the ONLY nav
 
@@ -102,7 +102,7 @@ function monthKey(d: Date) { return `${d.getFullYear()}-${String(d.getMonth() + 
 
 function insightCardStyle(text: string): { background: string; border: string } {
   if (/on track|ahead|positive|grew|great|excellent/i.test(text))
-    return { background: "var(--green-tint)", border: "1px solid rgba(29,158,117,0.25)" };
+    return { background: "var(--green-tint)", border: "1px solid rgba(12,33,164,0.25)" };
   if (/setting|unlock|attention|focus|shortfall/i.test(text))
     return { background: "var(--sun-tint)", border: "1px solid rgba(245,185,71,0.35)" };
   return { background: "var(--surface)", border: "1px solid var(--hairline)" };

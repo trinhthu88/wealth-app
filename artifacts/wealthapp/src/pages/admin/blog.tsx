@@ -159,7 +159,7 @@ export default function AdminBlog() {
       {isLoading ? (
         <div className="space-y-4">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-24 bg-surface rounded-[26px] animate-pulse" />)}</div>
       ) : posts.length === 0 ? (
-        <div className="bg-surface rounded-[26px] p-16 text-center shadow-[0_2px_14px_rgba(20,52,42,0.06)]">
+        <div className="bg-surface rounded-[26px] p-16 text-center shadow-[0_2px_14px_rgba(12,33,164,0.06)]">
           <BookOpen className="h-14 w-14 text-ink-20 mx-auto mb-4" />
           <h3 className="font-display text-[20px] font-semibold text-forest mb-2">No posts yet</h3>
           <p className="text-[14px] text-ink-40 mb-6">Create your first financial insights article.</p>
@@ -168,7 +168,7 @@ export default function AdminBlog() {
       ) : (
         <div className="space-y-4">
           {posts.map(p => (
-            <div key={p.id} className="bg-surface rounded-[26px] px-6 py-5 flex items-center gap-5 shadow-[0_2px_14px_rgba(20,52,42,0.06)]">
+            <div key={p.id} className="bg-surface rounded-[26px] px-6 py-5 flex items-center gap-5 shadow-[0_2px_14px_rgba(12,33,164,0.06)]">
               <div className="h-14 w-14 rounded-[16px] bg-paper border border-hairline flex items-center justify-center shrink-0">
                 <BookOpen className="h-6 w-6 text-forest" />
               </div>

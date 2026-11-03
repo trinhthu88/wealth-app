@@ -82,18 +82,18 @@ export default function TransactionsPage() {
     <ClientAppShell>
       <div className="max-w-[860px] mx-auto space-y-5">
         <div>
-          <h1 className="text-xl font-bold text-[#042C53]">Transactions</h1>
+          <h1 className="text-xl font-bold text-[#0C21A4]">Transactions</h1>
           <p className="text-sm text-slate-400 mt-0.5">{transactions.length} total transactions</p>
         </div>
 
         {/* Summary bar */}
         {transactions.length > 0 && (
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-white border border-[#E2E8F0] rounded-xl p-4">
+            <div className="bg-white border border-[#E3E9FD] rounded-xl p-4">
               <p className="text-xs text-slate-400 mb-1">Total contributed</p>
               <p className="text-lg font-bold text-emerald-600">{fmtCurrency(totalIn)}</p>
             </div>
-            <div className="bg-white border border-[#E2E8F0] rounded-xl p-4">
+            <div className="bg-white border border-[#E3E9FD] rounded-xl p-4">
               <p className="text-xs text-slate-400 mb-1">Total withdrawn</p>
               <p className="text-lg font-bold text-red-500">{fmtCurrency(totalOut)}</p>
             </div>
@@ -110,8 +110,8 @@ export default function TransactionsPage() {
                 className={cn(
                   "px-3 py-1.5 rounded-lg border text-sm font-medium transition-all",
                   filter === opt.value
-                    ? "border-[#1D9E75] bg-[#1D9E75]/10 text-[#1D9E75]"
-                    : "border-slate-200 text-slate-600 hover:border-[#1D9E75]/30"
+                    ? "border-[#0C21A4] bg-[#0C21A4]/10 text-[#0C21A4]"
+                    : "border-slate-200 text-slate-600 hover:border-[#0C21A4]/30"
                 )}
               >
                 {opt.label}
@@ -125,17 +125,17 @@ export default function TransactionsPage() {
             {[1, 2, 3, 4, 5].map((i) => <div key={i} className="h-16 bg-slate-100 rounded-xl animate-pulse" />)}
           </div>
         ) : isError ? (
-          <div className="bg-white border border-[#E2E8F0] rounded-xl p-8 flex flex-col items-center gap-3 text-center">
+          <div className="bg-white border border-[#E3E9FD] rounded-xl p-8 flex flex-col items-center gap-3 text-center">
             <AlertCircle className="h-8 w-8 text-slate-300" />
             <p className="text-sm font-medium text-slate-500">Couldn't load transactions</p>
             <p className="text-xs text-slate-400">Try refreshing the page.</p>
           </div>
         ) : transactions.length === 0 ? (
-          <div className="bg-white border border-[#E2E8F0] rounded-xl p-12 text-center">
+          <div className="bg-white border border-[#E3E9FD] rounded-xl p-12 text-center">
             <p className="text-sm text-slate-400">No transactions yet. Your advisor will record transactions as they happen.</p>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="bg-white border border-[#E2E8F0] rounded-xl p-8 text-center">
+          <div className="bg-white border border-[#E3E9FD] rounded-xl p-8 text-center">
             <p className="text-sm text-slate-400">No transactions match this filter.</p>
           </div>
         ) : (
@@ -145,13 +145,13 @@ export default function TransactionsPage() {
                 <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 px-1">
                   {fmtMonth(month)}
                 </div>
-                <div className="bg-white border border-[#E2E8F0] rounded-xl overflow-hidden">
+                <div className="bg-white border border-[#E3E9FD] rounded-xl overflow-hidden">
                   {grouped[month].map((tx, i) => {
                     const isOut = TX_OUTFLOWS.includes(tx.transactionType);
                     return (
                       <div key={tx.id} className={cn(
                         "flex items-center gap-3 px-4 py-3.5",
-                        i < grouped[month].length - 1 && "border-b border-[#E2E8F0]"
+                        i < grouped[month].length - 1 && "border-b border-[#E3E9FD]"
                       )}>
                         <div className={cn(
                           "w-9 h-9 rounded-full flex items-center justify-center shrink-0",
@@ -162,7 +162,7 @@ export default function TransactionsPage() {
                             : <TrendingUp className="h-4 w-4 text-emerald-600" />}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium text-[#042C53]">
+                          <div className="text-sm font-medium text-[#0C21A4]">
                             {TX_TYPE_LABELS[tx.transactionType] ?? tx.transactionType}
                           </div>
                           <div className="text-xs text-slate-400 flex items-center gap-1.5 flex-wrap mt-0.5">

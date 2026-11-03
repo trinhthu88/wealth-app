@@ -71,14 +71,14 @@ export default function TrackBConversionCTA({ context, relevantValue, relevantGo
 
   return (
     <div className={cn(
-      "flex items-start gap-3 p-3 rounded-xl bg-teal-50 border-l-4 border-[#1D9E75]",
+      "flex items-start gap-3 p-3 rounded-xl bg-teal-50 border-l-4 border-[#0C21A4]",
       className
     )}>
-      <Sparkles className="h-4 w-4 text-[#1D9E75] shrink-0 mt-0.5" />
+      <Sparkles className="h-4 w-4 text-[#0C21A4] shrink-0 mt-0.5" />
       <div className="flex-1 min-w-0">
         <p className="text-[13px] text-slate-700 leading-snug">
           {body}{" "}
-          <Link href="/client/advisor/messages" className="text-[#1D9E75] font-medium hover:underline">
+          <Link href="/client/advisor/messages" className="text-[#0C21A4] font-medium hover:underline">
             {cta}
           </Link>
         </p>

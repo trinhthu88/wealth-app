@@ -118,7 +118,7 @@ export default function AdminBenchmarks() {
           {benchmarksLoading ? (
             <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-16 bg-surface rounded-[26px] animate-pulse" />)}</div>
           ) : (
-            <div className="bg-surface rounded-[26px] shadow-[0_2px_14px_rgba(20,52,42,0.06)] overflow-hidden">
+            <div className="bg-surface rounded-[26px] shadow-[0_2px_14px_rgba(12,33,164,0.06)] overflow-hidden">
               <table className="w-full text-left">
                 <thead>
                   <tr>
@@ -152,7 +152,7 @@ export default function AdminBenchmarks() {
           {strategiesLoading ? (
             <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-16 bg-surface rounded-[26px] animate-pulse" />)}</div>
           ) : (
-            <div className="bg-surface rounded-[26px] shadow-[0_2px_14px_rgba(20,52,42,0.06)] overflow-hidden">
+            <div className="bg-surface rounded-[26px] shadow-[0_2px_14px_rgba(12,33,164,0.06)] overflow-hidden">
               <table className="w-full text-left">
                 <thead>
                   <tr>

@@ -47,7 +47,7 @@ export default function PublicNav() {
               <Link href="/sign-in" className="text-forest hover:text-green transition-colors">
                 Sign In
               </Link>
-              <Link href="/sign-up" className="bg-green text-paper px-5 py-2.5 rounded-full hover:bg-forest transition-colors shadow-[0_3px_10px_rgba(29,158,117,.16)]">
+              <Link href="/sign-up" className="bg-green text-paper px-5 py-2.5 rounded-full hover:bg-forest transition-colors shadow-[0_3px_10px_rgba(12,33,164,.16)]">
                 Get Started
               </Link>
             </div>

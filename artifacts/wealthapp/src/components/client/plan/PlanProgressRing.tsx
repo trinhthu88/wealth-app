@@ -20,10 +20,10 @@ export default function PlanProgressRing({
       {/* Ring */}
       <div className="relative shrink-0" style={{ width: 120, height: 120 }}>
         <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90">
-          <circle cx="60" cy="60" r={r} fill="none" stroke="#E2E8F0" strokeWidth="10" />
+          <circle cx="60" cy="60" r={r} fill="none" stroke="#E3E9FD" strokeWidth="10" />
           <circle
             cx="60" cy="60" r={r}
-            fill="none" stroke="#1D9E75" strokeWidth="10"
+            fill="none" stroke="#0C21A4" strokeWidth="10"
             strokeLinecap="round"
             strokeDasharray={circumference}
             strokeDashoffset={dashOffset}
@@ -31,7 +31,7 @@ export default function PlanProgressRing({
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-xl font-bold text-[#042C53]">{completedCount}/{totalCount}</span>
+          <span className="text-xl font-bold text-[#0C21A4]">{completedCount}/{totalCount}</span>
           <span className="text-[10px] text-slate-400">milestones</span>
         </div>
       </div>
@@ -44,7 +44,7 @@ export default function PlanProgressRing({
           </span>
         )}
         {inProgressCount > 0 && (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-[#1D9E75]/10 text-[#1D9E75]">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-[#0C21A4]/10 text-[#0C21A4]">
             {inProgressCount} In progress
           </span>
         )}

@@ -43,20 +43,20 @@ export default function PauseContributionsForm({ currentValue, currentMonthly, s
     <div className="space-y-5">
       <SourceDisplay label={sourceLabel} currentValue={currentValue} currentMonthly={currentMonthly} />
       <div className="space-y-1.5">
-        <label className="text-sm font-medium text-[#042C53]">Pause contributions for</label>
+        <label className="text-sm font-medium text-[#0C21A4]">Pause contributions for</label>
         <div className="flex flex-wrap gap-1.5">
           {PAUSE_OPTIONS.map(opt => (
             <button
               key={opt.value}
               onClick={() => { setPauseMonths(opt.value); setIsCustom(false); }}
-              className={cn("px-3 py-1.5 rounded-lg text-sm font-medium border transition-all", !isCustom && pauseMonths === opt.value ? "border-[#1D9E75] bg-[#1D9E75]/10 text-[#1D9E75]" : "border-slate-200 text-slate-600 hover:border-[#1D9E75]/40")}
+              className={cn("px-3 py-1.5 rounded-lg text-sm font-medium border transition-all", !isCustom && pauseMonths === opt.value ? "border-[#0C21A4] bg-[#0C21A4]/10 text-[#0C21A4]" : "border-slate-200 text-slate-600 hover:border-[#0C21A4]/40")}
             >
               {opt.label}
             </button>
           ))}
           <button
             onClick={() => setIsCustom(v => !v)}
-            className={cn("px-3 py-1.5 rounded-lg text-sm font-medium border transition-all", isCustom ? "border-[#1D9E75] bg-[#1D9E75]/10 text-[#1D9E75]" : "border-slate-200 text-slate-600 hover:border-[#1D9E75]/40")}
+            className={cn("px-3 py-1.5 rounded-lg text-sm font-medium border transition-all", isCustom ? "border-[#0C21A4] bg-[#0C21A4]/10 text-[#0C21A4]" : "border-slate-200 text-slate-600 hover:border-[#0C21A4]/40")}
           >
             Custom
           </button>
@@ -69,7 +69,7 @@ export default function PauseContributionsForm({ currentValue, currentMonthly, s
                 max={36}
                 onChange={e => setCustomPause(e.target.value)}
                 placeholder="6"
-                className="w-16 px-2 py-1.5 rounded-lg border border-[#1D9E75] text-sm text-center text-[#042C53] focus:outline-none"
+                className="w-16 px-2 py-1.5 rounded-lg border border-[#0C21A4] text-sm text-center text-[#0C21A4] focus:outline-none"
               />
               <span className="text-sm text-slate-500">months</span>
             </div>

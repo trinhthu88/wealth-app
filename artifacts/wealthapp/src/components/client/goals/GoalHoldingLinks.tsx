@@ -93,10 +93,10 @@ export default function GoalHoldingLinks({ goalId, links, allLinks, goals, plans
   }
 
   return (
-    <div className="mt-3 border border-[#E2E8F0] rounded-xl overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-3 bg-[#F8FAFB] border-b border-[#E2E8F0]">
+    <div className="mt-3 border border-[#E3E9FD] rounded-xl overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 bg-[#F8FAFB] border-b border-[#E3E9FD]">
         <div>
-          <p className="text-sm font-semibold text-[#042C53]">Link investments to this goal</p>
+          <p className="text-sm font-semibold text-[#0C21A4]">Link investments to this goal</p>
           <p className="text-xs text-slate-400 mt-0.5">Progress updates automatically from linked investments.</p>
         </div>
         <button type="button" onClick={onClose} aria-label="Close investment links" data-testid={`button-close-goal-links-${goalId}`} className="h-7 w-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
@@ -112,7 +112,7 @@ export default function GoalHoldingLinks({ goalId, links, allLinks, goals, plans
         {/* Advised plans */}
         {activePlans.length > 0 && (
           <div className="space-y-2">
-            <p className="text-[11px] font-semibold text-[#64748B] uppercase tracking-wide">Advised plans</p>
+            <p className="text-[11px] font-semibold text-[#4A5590] uppercase tracking-wide">Advised plans</p>
             {activePlans.map(plan => {
               const key = `advised_plan:${plan.id}`;
               const isLinked = linkedIds.has(key);
@@ -125,7 +125,7 @@ export default function GoalHoldingLinks({ goalId, links, allLinks, goals, plans
               return (
                 <div key={plan.id} className="flex items-center justify-between py-2 px-3 bg-white border border-slate-100 rounded-xl">
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-[#042C53] truncate">{plan.nickname ?? plan.productName}</p>
+                    <p className="text-sm font-medium text-[#0C21A4] truncate">{plan.nickname ?? plan.productName}</p>
                     <p className="text-xs text-slate-400">
                       <CurrencyField amountUsd={value} compact />
                       {link && ` · ${link.allocationPct}% allocated`}
@@ -142,14 +142,14 @@ export default function GoalHoldingLinks({ goalId, links, allLinks, goals, plans
                           value={allocationPct}
                           onChange={e => setAllocationPct(Math.min(remainingPct, Math.max(1, parseInt(e.target.value) || 1)))}
                           min={1} max={remainingPct}
-                          className="w-16 px-2 py-1 rounded-lg border border-[#1D9E75] text-sm text-center"
+                          className="w-16 px-2 py-1 rounded-lg border border-[#0C21A4] text-sm text-center"
                         />
                         <span className="text-xs text-slate-400">of {remainingPct}% available</span>
                         <button
                           type="button"
                           onClick={() => handleLink("advised_plan", plan.id, plan.nickname ?? plan.productName)}
                           data-testid={`button-confirm-link-plan-${plan.id}`}
-                          className="px-3 py-1 bg-[#1D9E75] text-white text-xs rounded-lg font-medium"
+                          className="px-3 py-1 bg-[#0C21A4] text-white text-xs rounded-lg font-medium"
                         >
                           Confirm
                         </button>
@@ -183,7 +183,7 @@ export default function GoalHoldingLinks({ goalId, links, allLinks, goals, plans
                         type="button"
                         onClick={() => startLinking(key, remainingPct)}
                         data-testid={`button-link-plan-${plan.id}`}
-                        className="ml-2 flex items-center gap-1 px-2.5 py-1 bg-[#1D9E75]/10 text-[#1D9E75] text-xs rounded-lg font-medium hover:bg-[#1D9E75]/20 transition-colors shrink-0"
+                        className="ml-2 flex items-center gap-1 px-2.5 py-1 bg-[#0C21A4]/10 text-[#0C21A4] text-xs rounded-lg font-medium hover:bg-[#0C21A4]/20 transition-colors shrink-0"
                       >
                         <LinkIcon className="h-3 w-3" />
                         Link
@@ -199,7 +199,7 @@ export default function GoalHoldingLinks({ goalId, links, allLinks, goals, plans
         {/* Self-holdings */}
         {investableHoldings.length > 0 && (
           <div className="space-y-2">
-            <p className="text-[11px] font-semibold text-[#64748B] uppercase tracking-wide">Self-held investments</p>
+            <p className="text-[11px] font-semibold text-[#4A5590] uppercase tracking-wide">Self-held investments</p>
             {investableHoldings.map(holding => {
               const key = `self_holding:${holding.id}`;
               const isLinked = linkedIds.has(key);
@@ -211,7 +211,7 @@ export default function GoalHoldingLinks({ goalId, links, allLinks, goals, plans
               return (
                 <div key={holding.id} className="flex items-center justify-between py-2 px-3 bg-white border border-slate-100 rounded-xl">
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-[#042C53] truncate">
+                    <p className="text-sm font-medium text-[#0C21A4] truncate">
                       {holding.label}{holding.ticker ? ` · ${holding.ticker}` : ""}
                     </p>
                     <p className="text-xs text-slate-400">
@@ -231,14 +231,14 @@ export default function GoalHoldingLinks({ goalId, links, allLinks, goals, plans
                           value={allocationPct}
                           onChange={e => setAllocationPct(Math.min(remainingPct, Math.max(1, parseInt(e.target.value) || 1)))}
                           min={1} max={remainingPct}
-                          className="w-16 px-2 py-1 rounded-lg border border-[#1D9E75] text-sm text-center"
+                          className="w-16 px-2 py-1 rounded-lg border border-[#0C21A4] text-sm text-center"
                         />
                         <span className="text-xs text-slate-400">of {remainingPct}% available</span>
                         <button
                           type="button"
                           onClick={() => handleLink("self_holding", holding.id, holding.ticker ? `${holding.label} · ${holding.ticker}` : holding.label)}
                           data-testid={`button-confirm-link-holding-${holding.id}`}
-                          className="px-3 py-1 bg-[#1D9E75] text-white text-xs rounded-lg font-medium"
+                          className="px-3 py-1 bg-[#0C21A4] text-white text-xs rounded-lg font-medium"
                         >
                           Confirm
                         </button>
@@ -272,7 +272,7 @@ export default function GoalHoldingLinks({ goalId, links, allLinks, goals, plans
                         type="button"
                         onClick={() => startLinking(key, remainingPct)}
                         data-testid={`button-link-holding-${holding.id}`}
-                        className="ml-2 flex items-center gap-1 px-2.5 py-1 bg-[#1D9E75]/10 text-[#1D9E75] text-xs rounded-lg font-medium hover:bg-[#1D9E75]/20 transition-colors shrink-0"
+                        className="ml-2 flex items-center gap-1 px-2.5 py-1 bg-[#0C21A4]/10 text-[#0C21A4] text-xs rounded-lg font-medium hover:bg-[#0C21A4]/20 transition-colors shrink-0"
                       >
                         <LinkIcon className="h-3 w-3" />
                         Link

@@ -85,7 +85,7 @@ export default function AddGoalSheet({ isOpen, onClose, onSave }: Props) {
       <div className="space-y-6 pb-4">
         {/* Step 1: Goal type */}
         <div className="space-y-3">
-          <p className="text-sm font-semibold text-[#042C53]">What type of goal?</p>
+          <p className="text-sm font-semibold text-[#0C21A4]">What type of goal?</p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
             {GOAL_TYPES.map(t => (
               <button
@@ -94,12 +94,12 @@ export default function AddGoalSheet({ isOpen, onClose, onSave }: Props) {
                 className={cn(
                   "flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all text-center",
                   selectedType === t.id
-                    ? "border-[#1D9E75] bg-[#1D9E75]/5"
-                    : "border-slate-200 hover:border-[#1D9E75]/30"
+                    ? "border-[#0C21A4] bg-[#0C21A4]/5"
+                    : "border-slate-200 hover:border-[#0C21A4]/30"
                 )}
               >
-                <t.icon className={cn("w-6 h-6 mb-1", selectedType === t.id ? "text-[#1D9E75]" : "text-slate-600")} />
-                <span className="text-xs font-medium text-[#042C53] leading-tight">{t.label}</span>
+                <t.icon className={cn("w-6 h-6 mb-1", selectedType === t.id ? "text-[#0C21A4]" : "text-slate-600")} />
+                <span className="text-xs font-medium text-[#0C21A4] leading-tight">{t.label}</span>
               </button>
             ))}
           </div>
@@ -110,20 +110,20 @@ export default function AddGoalSheet({ isOpen, onClose, onSave }: Props) {
           <div className="space-y-4 border-t border-slate-100 pt-4">
             {/* Goal name */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-[#042C53]">Goal name *</label>
+              <label className="text-sm font-medium text-[#0C21A4]">Goal name *</label>
               <input
                 type="text"
                 value={title}
                 onChange={e => setTitle(e.target.value)}
                 placeholder="Name your goal"
                 autoFocus
-                className="w-full px-4 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#042C53] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/30 focus:border-[#1D9E75]"
+                className="w-full px-4 py-2.5 rounded-xl border border-[#E3E9FD] text-sm text-[#0C21A4] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0C21A4]/30 focus:border-[#0C21A4]"
               />
             </div>
 
             {/* Target amount (optional) */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-[#042C53]">
+              <label className="text-sm font-medium text-[#0C21A4]">
                 Target amount <span className="text-slate-400 font-normal">(optional)</span>
               </label>
               <div className="flex gap-2">
@@ -134,11 +134,11 @@ export default function AddGoalSheet({ isOpen, onClose, onSave }: Props) {
                   placeholder="0"
                   min={0}
                   style={{ MozAppearance: "textfield" } as React.CSSProperties}
-                  className="flex-1 px-4 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#042C53] focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/30 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  className="flex-1 px-4 py-2.5 rounded-xl border border-[#E3E9FD] text-sm text-[#0C21A4] focus:outline-none focus:ring-2 focus:ring-[#0C21A4]/30 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
                 <div className="inline-flex items-center bg-slate-100 rounded-xl p-0.5">
                   {CURRENCIES.map(c => (
-                    <button key={c} onClick={() => setCurrency(c)} className={cn("px-2.5 py-1.5 rounded-lg text-xs font-medium", currency === c ? "bg-white text-[#042C53] shadow-sm" : "text-slate-500")}>
+                    <button key={c} onClick={() => setCurrency(c)} className={cn("px-2.5 py-1.5 rounded-lg text-xs font-medium", currency === c ? "bg-white text-[#0C21A4] shadow-sm" : "text-slate-500")}>
                       {c}
                     </button>
                   ))}
@@ -149,7 +149,7 @@ export default function AddGoalSheet({ isOpen, onClose, onSave }: Props) {
 
             {/* Target date (optional) */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-[#042C53]">
+              <label className="text-sm font-medium text-[#0C21A4]">
                 Target date <span className="text-slate-400 font-normal">(optional)</span>
               </label>
               <input
@@ -157,14 +157,14 @@ export default function AddGoalSheet({ isOpen, onClose, onSave }: Props) {
                 value={targetDate}
                 onChange={e => setTargetDate(e.target.value)}
                 min={minTargetDate()}
-                className="w-full px-4 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#042C53] focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/30"
+                className="w-full px-4 py-2.5 rounded-xl border border-[#E3E9FD] text-sm text-[#0C21A4] focus:outline-none focus:ring-2 focus:ring-[#0C21A4]/30"
               />
               <p className="text-xs text-slate-400">When do you want to reach this goal?</p>
             </div>
 
             {/* Priority */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-[#042C53]">Priority</label>
+              <label className="text-sm font-medium text-[#0C21A4]">Priority</label>
               <div className="flex gap-2">
                 {PRIORITIES.map(p => (
                   <button
@@ -173,8 +173,8 @@ export default function AddGoalSheet({ isOpen, onClose, onSave }: Props) {
                     className={cn(
                       "flex-1 py-2 rounded-xl border text-sm font-medium transition-all",
                       priority === p.value
-                        ? "border-[#1D9E75] bg-[#1D9E75]/10 text-[#1D9E75]"
-                        : "border-slate-200 text-slate-500 hover:border-[#1D9E75]/30"
+                        ? "border-[#0C21A4] bg-[#0C21A4]/10 text-[#0C21A4]"
+                        : "border-slate-200 text-slate-500 hover:border-[#0C21A4]/30"
                     )}
                   >
                     {p.label}
@@ -185,7 +185,7 @@ export default function AddGoalSheet({ isOpen, onClose, onSave }: Props) {
 
             {/* Notes */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-[#042C53]">
+              <label className="text-sm font-medium text-[#0C21A4]">
                 Notes <span className="text-slate-400 font-normal">(optional)</span>
               </label>
               <textarea
@@ -193,7 +193,7 @@ export default function AddGoalSheet({ isOpen, onClose, onSave }: Props) {
                 onChange={e => setNotes(e.target.value)}
                 placeholder="Any additional context about this goal..."
                 rows={2}
-                className="w-full px-4 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#042C53] placeholder:text-slate-400 resize-none focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/30"
+                className="w-full px-4 py-2.5 rounded-xl border border-[#E3E9FD] text-sm text-[#0C21A4] placeholder:text-slate-400 resize-none focus:outline-none focus:ring-2 focus:ring-[#0C21A4]/30"
               />
             </div>
 
@@ -202,7 +202,7 @@ export default function AddGoalSheet({ isOpen, onClose, onSave }: Props) {
             <button
               onClick={handleSave}
               disabled={!title.trim() || saving}
-              className="w-full py-3 rounded-xl bg-[#1D9E75] text-white font-semibold text-sm hover:bg-[#0F6E56] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="w-full py-3 rounded-xl bg-[#0C21A4] text-white font-semibold text-sm hover:bg-[#08167A] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {saving ? "Saving…" : "Save goal"}
             </button>

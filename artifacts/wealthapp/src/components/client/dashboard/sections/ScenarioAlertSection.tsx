@@ -42,7 +42,7 @@ export default function ScenarioAlertSection({ alert }: Props) {
   }
 
   return (
-    <div className="bg-[#042C53] rounded-[24px] p-5 text-white mb-3.5">
+    <div className="bg-[#0C21A4] rounded-[24px] p-5 text-white mb-3.5">
       <div className="font-mono text-[10px] tracking-[0.14em] uppercase text-[#7FCBAE] mb-2.5">
         One thing to do
       </div>
@@ -53,7 +53,7 @@ export default function ScenarioAlertSection({ alert }: Props) {
         {describeScenario(alert)}
       </div>
       <Link href={`/client/goals/what-if?highlight=${alert.id}`} onClick={handleView}>
-        <button className="w-full min-h-[44px] border-none rounded-[14px] bg-[#1D9E75] text-white font-sans text-sm font-semibold cursor-pointer hover:bg-[#17805F] transition-colors">
+        <button className="w-full min-h-[44px] border-none rounded-[14px] bg-[#0C21A4] text-white font-sans text-sm font-semibold cursor-pointer hover:bg-[#1A30B8] transition-colors">
           View scenario
         </button>
       </Link>

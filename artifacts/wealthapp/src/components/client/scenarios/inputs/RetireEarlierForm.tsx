@@ -86,11 +86,11 @@ export default function RetireEarlierForm({ currentValue, currentMonthly, source
         </div>
       ) : (
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-[#042C53]">Which goal?</label>
+          <label className="text-sm font-medium text-[#0C21A4]">Which goal?</label>
           <select
             value={selectedGoalId}
             onChange={e => selectGoal(e.target.value)}
-            className="w-full px-3 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#042C53] bg-white focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/30"
+            className="w-full px-3 py-2.5 rounded-xl border border-[#E3E9FD] text-sm text-[#0C21A4] bg-white focus:outline-none focus:ring-2 focus:ring-[#0C21A4]/30"
           >
             <option value="">Select a goal…</option>
             {goals.map(g => (
@@ -110,26 +110,26 @@ export default function RetireEarlierForm({ currentValue, currentMonthly, source
       />
 
       <div className="space-y-1.5">
-        <label className="text-sm font-medium text-[#042C53]">Your current target date</label>
+        <label className="text-sm font-medium text-[#0C21A4]">Your current target date</label>
         <input
           type="month"
           value={currentTargetDate}
           onChange={e => setCurrentTargetDate(e.target.value)}
-          className="w-full px-4 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#042C53] focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/30"
+          className="w-full px-4 py-2.5 rounded-xl border border-[#E3E9FD] text-sm text-[#0C21A4] focus:outline-none focus:ring-2 focus:ring-[#0C21A4]/30"
         />
       </div>
 
       <div className="space-y-1.5">
-        <label className="text-sm font-medium text-[#042C53]">I want to reach this by</label>
+        <label className="text-sm font-medium text-[#0C21A4]">I want to reach this by</label>
         <input
           type="month"
           value={earlierTargetDate}
           onChange={e => setEarlierTargetDate(e.target.value)}
           max={currentTargetDate}
-          className="w-full px-4 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#042C53] focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/30"
+          className="w-full px-4 py-2.5 rounded-xl border border-[#E3E9FD] text-sm text-[#0C21A4] focus:outline-none focus:ring-2 focus:ring-[#0C21A4]/30"
         />
         {yearsSooner && Number(yearsSooner) > 0 && (
-          <p className="text-xs text-[#1D9E75] font-medium">That's {yearsSooner} years sooner</p>
+          <p className="text-xs text-[#0C21A4] font-medium">That's {yearsSooner} years sooner</p>
         )}
         {newTargetMonths >= currentTargetMonths && currentTargetDate && earlierTargetDate && (
           <p className="text-xs text-red-500">Must be before your current target date.</p>

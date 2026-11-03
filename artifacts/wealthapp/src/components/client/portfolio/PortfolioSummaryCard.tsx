@@ -35,7 +35,7 @@ export default function PortfolioSummaryCard({ totalValue, segments }: Props) {
   });
 
   return (
-    <div className="bg-surface rounded-[28px] p-[22px] shadow-[0_2px_14px_rgba(20,52,42,.06)] mb-4 flex items-center gap-5">
+    <div className="bg-surface rounded-[28px] p-[22px] shadow-[0_2px_14px_rgba(12,33,164,.06)] mb-4 flex items-center gap-5">
       <svg viewBox="0 0 120 120" className="w-[132px] h-[132px] flex-none -rotate-90">
         <circle cx="60" cy="60" r={radius} fill="none" stroke="var(--hairline)" strokeWidth="18" />
         {chartSegments.map((seg, i) => (

@@ -63,7 +63,7 @@ export default function StatementDetailView({ statement: s, holdings, transactio
           <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Period activity</p>
           {rows.map((r, i) => (
             <div key={i}>
-              <div className={cn("flex items-center justify-between py-1.5 text-sm", r.neutral && "font-semibold text-[#042C53]")}>
+              <div className={cn("flex items-center justify-between py-1.5 text-sm", r.neutral && "font-semibold text-[#0C21A4]")}>
                 <div className="flex items-center gap-1">
                   {r.expandable && (
                     <button onClick={() => setFeesExpanded(v => !v)} className="text-slate-400 hover:text-slate-600">
@@ -72,7 +72,7 @@ export default function StatementDetailView({ statement: s, holdings, transactio
                   )}
                   <span className={r.neutral ? "" : "text-slate-600"}>{r.label}</span>
                 </div>
-                <span className={cn("font-medium tabular-nums", r.neutral ? "text-[#042C53]" : r.value >= 0 ? "text-emerald-600" : "text-red-500")}>
+                <span className={cn("font-medium tabular-nums", r.neutral ? "text-[#0C21A4]" : r.value >= 0 ? "text-emerald-600" : "text-red-500")}>
                   {r.neutral ? fmtAbs(r.value) : fmt(r.value)}
                 </span>
               </div>
@@ -92,7 +92,7 @@ export default function StatementDetailView({ statement: s, holdings, transactio
               )}
             </div>
           ))}
-          <div className="border-t border-slate-200 pt-2 flex items-center justify-between text-sm font-bold text-[#042C53]">
+          <div className="border-t border-slate-200 pt-2 flex items-center justify-between text-sm font-bold text-[#0C21A4]">
             <span>Closing value</span>
             <span className="tabular-nums">{fmtAbs(closing)}</span>
           </div>
@@ -117,13 +117,13 @@ export default function StatementDetailView({ statement: s, holdings, transactio
                 <tbody>
                   {holdings.map((h, i) => (
                     <tr key={i} className="border-b border-slate-50">
-                      <td className="py-1.5 text-[#042C53] font-mono font-medium">{h.fundCode}</td>
+                      <td className="py-1.5 text-[#0C21A4] font-mono font-medium">{h.fundCode}</td>
                       <td className="py-1.5 text-right text-slate-600 tabular-nums">{parseFloat(h.unitsHeld ?? "0").toFixed(2)}</td>
                       <td className="py-1.5 text-right text-slate-600 tabular-nums">${parseFloat(h.unitValue ?? "0").toFixed(2)}</td>
-                      <td className="py-1.5 text-right font-medium text-[#042C53] tabular-nums">${n(h.finalValue ?? h.holdingValue).toLocaleString("en-US", { maximumFractionDigits: 0 })}</td>
+                      <td className="py-1.5 text-right font-medium text-[#0C21A4] tabular-nums">${n(h.finalValue ?? h.holdingValue).toLocaleString("en-US", { maximumFractionDigits: 0 })}</td>
                     </tr>
                   ))}
-                  <tr className="font-semibold text-[#042C53]">
+                  <tr className="font-semibold text-[#0C21A4]">
                     <td className="py-1.5" colSpan={3}>Total</td>
                     <td className="py-1.5 text-right tabular-nums">${fundTotal.toLocaleString("en-US", { maximumFractionDigits: 0 })}</td>
                   </tr>
@@ -142,7 +142,7 @@ export default function StatementDetailView({ statement: s, holdings, transactio
         <div>
           <button
             onClick={() => setTxExpanded(v => !v)}
-            className="flex items-center gap-1.5 text-sm font-medium text-[#1D9E75] hover:text-[#0F6E56]"
+            className="flex items-center gap-1.5 text-sm font-medium text-[#0C21A4] hover:text-[#08167A]"
           >
             {txExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
             {txExpanded ? "Hide" : "Show"} transactions ({transactions.length})
@@ -164,7 +164,7 @@ export default function StatementDetailView({ statement: s, holdings, transactio
                     return (
                       <tr key={i} className="border-b border-slate-50">
                         <td className="py-1 text-slate-500 tabular-nums">{new Date(t.transactionDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}</td>
-                        <td className="py-1 font-mono text-[#042C53]">{t.fundCode}</td>
+                        <td className="py-1 font-mono text-[#0C21A4]">{t.fundCode}</td>
                         <td className="py-1 text-slate-600">{t.description}</td>
                         <td className={cn("py-1 text-right font-medium tabular-nums", amt >= 0 ? "text-emerald-600" : "text-red-500")}>
                           {fmt(amt)}

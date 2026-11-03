@@ -120,7 +120,7 @@ export default function ScenarioSummaryStats({ result, horizonYears }: Props) {
         {fourthCard()}
       </div>
 
-      <p className="text-[11px] italic text-[#64748B]">
+      <p className="text-[11px] italic text-[#4A5590]">
         Projections are illustrative only. Actual returns will vary. Past performance does not guarantee future results.
       </p>
     </div>

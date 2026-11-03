@@ -125,7 +125,7 @@ export default function ClientDocuments() {
             ))}
           </div>
         ) : docs.length === 0 ? (
-          <div className="bg-surface border border-hairline rounded-[24px] p-12 text-center flex flex-col items-center gap-4 shadow-[0_2px_14px_rgba(20,52,42,.06)]">
+          <div className="bg-surface border border-hairline rounded-[24px] p-12 text-center flex flex-col items-center gap-4 shadow-[0_2px_14px_rgba(12,33,164,.06)]">
             <Sol size="lg" animate="float" showFace />
             <div>
               <h3 className="font-display font-semibold text-forest mb-1">No documents yet</h3>
@@ -139,7 +139,7 @@ export default function ClientDocuments() {
               const showBadge = role === "client" || role === "system";
 
               return (
-                <div key={d.id} className="bg-surface border border-hairline rounded-[20px] px-[17px] py-[15px] flex items-center gap-3.5 shadow-[0_2px_14px_rgba(20,52,42,.06)]">
+                <div key={d.id} className="bg-surface border border-hairline rounded-[20px] px-[17px] py-[15px] flex items-center gap-3.5 shadow-[0_2px_14px_rgba(12,33,164,.06)]">
                   <div className="h-10 w-10 rounded-[10px] bg-green-tint flex items-center justify-center shrink-0">
                     <FileText className="h-5 w-5 text-green" />
                   </div>

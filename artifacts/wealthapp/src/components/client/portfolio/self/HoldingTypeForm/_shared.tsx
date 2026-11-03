@@ -13,7 +13,7 @@ export function Field({ label, required, children, error }: {
 }) {
   return (
     <div className="space-y-1">
-      <label className="text-sm font-medium text-[#042C53]">
+      <label className="text-sm font-medium text-[#0C21A4]">
         {label}{required && <span className="text-red-400 ml-0.5">*</span>}
       </label>
       {children}
@@ -32,7 +32,7 @@ export function TextInput({ value, onChange, placeholder, uppercase, className }
       onChange={e => onChange(uppercase ? e.target.value.toUpperCase() : e.target.value)}
       onBlur={uppercase ? e => onChange(e.target.value.toUpperCase()) : undefined}
       placeholder={placeholder}
-      className={cn("w-full px-4 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#042C53] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/30 focus:border-[#1D9E75]", className)}
+      className={cn("w-full px-4 py-2.5 rounded-xl border border-[#E3E9FD] text-sm text-[#0C21A4] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0C21A4]/30 focus:border-[#0C21A4]", className)}
     />
   );
 }
@@ -46,7 +46,7 @@ export function TextareaInput({ value, onChange, placeholder, rows = 3 }: {
       onChange={e => onChange(e.target.value)}
       placeholder={placeholder}
       rows={rows}
-      className="w-full px-4 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#042C53] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/30 focus:border-[#1D9E75] resize-none"
+      className="w-full px-4 py-2.5 rounded-xl border border-[#E3E9FD] text-sm text-[#0C21A4] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0C21A4]/30 focus:border-[#0C21A4] resize-none"
     />
   );
 }
@@ -63,7 +63,7 @@ export function NumberInput({ value, onChange, placeholder, step = "any", min = 
       step={step}
       min={min}
       style={{ MozAppearance: "textfield" } as React.CSSProperties}
-      className={cn("w-full px-4 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#042C53] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/30 focus:border-[#1D9E75] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none", className)}
+      className={cn("w-full px-4 py-2.5 rounded-xl border border-[#E3E9FD] text-sm text-[#0C21A4] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0C21A4]/30 focus:border-[#0C21A4] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none", className)}
     />
   );
 }
@@ -78,7 +78,7 @@ export function AmountWithCurrency({ amount, onAmountChange }: {
   return (
     <div className="flex gap-2">
       <NumberInput value={amount} onChange={onAmountChange} className="flex-1" />
-      <span className="px-3 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-slate-500 bg-slate-50 select-none">
+      <span className="px-3 py-2.5 rounded-xl border border-[#E3E9FD] text-sm text-slate-500 bg-slate-50 select-none">
         USD
       </span>
     </div>
@@ -94,7 +94,7 @@ export function DateInput({ value, onChange, label, required }: {
       value={value}
       onChange={e => onChange(e.target.value)}
       max={new Date().toISOString().split("T")[0]}
-      className="w-full px-4 py-2.5 rounded-xl border border-[#E2E8F0] text-sm text-[#042C53] focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/30 focus:border-[#1D9E75]"
+      className="w-full px-4 py-2.5 rounded-xl border border-[#E3E9FD] text-sm text-[#0C21A4] focus:outline-none focus:ring-2 focus:ring-[#0C21A4]/30 focus:border-[#0C21A4]"
     />
   );
 }
@@ -283,18 +283,18 @@ export function SymbolSearchInput({ value, onChange, onSelect, symbolType, place
           onChange={handleInput}
           onFocus={handleFocus}
           placeholder={placeholder ?? "Search or pick from popular…"}
-          className="w-full px-4 py-2.5 pr-9 rounded-xl border border-[#E2E8F0] text-sm text-[#042C53] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1D9E75]/30 focus:border-[#1D9E75]"
+          className="w-full px-4 py-2.5 pr-9 rounded-xl border border-[#E3E9FD] text-sm text-[#0C21A4] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0C21A4]/30 focus:border-[#0C21A4]"
         />
         {fetching ? (
           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs animate-pulse">…</span>
         ) : selected && value ? (
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 h-2 w-2 rounded-full bg-[#1D9E75]" aria-label="Selected" />
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 h-2 w-2 rounded-full bg-[#0C21A4]" aria-label="Selected" />
         ) : (
           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none">▾</span>
         )}
       </div>
       {open && displayList.length > 0 && (
-        <ul className="absolute z-50 mt-1 w-full bg-white border border-[#E2E8F0] rounded-xl shadow-lg max-h-64 overflow-y-auto">
+        <ul className="absolute z-50 mt-1 w-full bg-white border border-[#E3E9FD] rounded-xl shadow-lg max-h-64 overflow-y-auto">
           {showingPopular && (
             <li className="px-4 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide bg-slate-50 border-b border-slate-100">
               Popular {symbolType === "crypto" ? "Cryptocurrencies" : symbolType === "etf" ? "ETFs" : symbolType === "mutual_fund" ? "Mutual Funds" : symbolType === "commodity" ? "Commodities" : symbolType === "bond" ? "Bonds" : "Stocks"}
@@ -307,7 +307,7 @@ export function SymbolSearchInput({ value, onChange, onSelect, symbolType, place
               className="flex items-center justify-between px-4 py-2.5 cursor-pointer hover:bg-[#F0FBF7] text-sm"
             >
               <div className="flex flex-col min-w-0">
-                <span className="font-semibold text-[#042C53] truncate">{item.symbol}</span>
+                <span className="font-semibold text-[#0C21A4] truncate">{item.symbol}</span>
                 <span className="text-xs text-slate-500 truncate">{item.name}</span>
               </div>
               <span className="ml-2 text-[10px] text-slate-400 uppercase flex-shrink-0 bg-slate-100 px-1.5 py-0.5 rounded">{item.type}</span>
@@ -386,7 +386,7 @@ export function SubmitButton({ label, disabled, loading, onClick }: {
     <button
       onClick={onClick}
       disabled={disabled || loading}
-      className="w-full py-3 rounded-xl bg-[#1D9E75] text-white font-semibold text-sm hover:bg-[#0F6E56] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+      className="w-full py-3 rounded-xl bg-[#0C21A4] text-white font-semibold text-sm hover:bg-[#08167A] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
     >
       {loading ? "Saving…" : label}
     </button>

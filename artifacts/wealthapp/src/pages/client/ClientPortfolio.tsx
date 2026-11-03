@@ -166,7 +166,7 @@ export default function ClientPortfolio() {
                 </div>
               </div>
               {planTypeLabel && (
-                <div className="flex-1 bg-surface rounded-[20px] p-[15px_16px] shadow-[0_2px_14px_rgba(20,52,42,.06)]">
+                <div className="flex-1 bg-surface rounded-[20px] p-[15px_16px] shadow-[0_2px_14px_rgba(12,33,164,.06)]">
                   <div className="text-[12.5px] font-semibold text-ink-40">Plan type</div>
                   <div className="font-display text-[23px] font-semibold text-forest tracking-[-0.02em]">{planTypeLabel}</div>
                 </div>
@@ -189,7 +189,7 @@ export default function ClientPortfolio() {
           plansLoading ? (
             <div className="h-40 bg-surface animate-pulse rounded-[26px]" />
           ) : plans.length === 0 ? (
-            <div className="bg-surface rounded-[26px] p-8 text-center text-[15px] text-ink-40 shadow-[0_2px_14px_rgba(20,52,42,.06)]">
+            <div className="bg-surface rounded-[26px] p-8 text-center text-[15px] text-ink-40 shadow-[0_2px_14px_rgba(12,33,164,.06)]">
               No advisor-managed investments yet.
             </div>
           ) : (
@@ -199,7 +199,7 @@ export default function ClientPortfolio() {
           <div className="h-40 bg-surface animate-pulse rounded-[26px]" />
         ) : (
           <div className="space-y-4">
-            <div className="bg-surface rounded-[26px] p-[6px_20px] shadow-[0_2px_14px_rgba(20,52,42,.06)]">
+            <div className="bg-surface rounded-[26px] p-[6px_20px] shadow-[0_2px_14px_rgba(12,33,164,.06)]">
               {holdings.length === 0 ? (
                 <div className="py-6 text-center text-[15px] text-ink-40">
                   No self-tracked holdings yet.

@@ -119,7 +119,7 @@ export default function BringUnderManagementCompare({ holdings }: { holdings: Cl
               </div>
             </div>
 
-            <div className="flex-1 bg-surface border-[1.5px] border-green rounded-[24px] p-4 shadow-[0_4px_14px_rgba(29,158,117,.12)]">
+            <div className="flex-1 bg-surface border-[1.5px] border-green rounded-[24px] p-4 shadow-[0_4px_14px_rgba(12,33,164,.12)]">
               <div className="font-mono text-[10px] tracking-[0.12em] uppercase text-green mb-2.5">Under advisor management</div>
               <svg width="100%" height="72" viewBox="0 0 140 72" preserveAspectRatio="none" className="block mb-3">
                 <path d="M0,68 Q80,52 140,8" fill="none" stroke="var(--green)" strokeWidth="2.5" strokeLinecap="round" />

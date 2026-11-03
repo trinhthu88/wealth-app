@@ -109,22 +109,22 @@ export default function PackageDetailPage() {
     <ClientAppShell>
       <div className="max-w-[860px] mx-auto">
       <div className="mb-4">
-        <Link href="/client/wealth/investments" className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-[#042C53] transition-colors">
+        <Link href="/client/wealth/investments" className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-[#0C21A4] transition-colors">
           <ArrowLeft className="h-4 w-4" /> Investment accounts
         </Link>
       </div>
 
-      <div className="bg-white border border-[#E2E8F0] rounded-xl p-5 mb-5">
+      <div className="bg-white border border-[#E3E9FD] rounded-xl p-5 mb-5">
         <div className="flex items-start justify-between mb-4">
           <div>
             <div className="text-xs text-slate-400 mb-1">{TYPE_LABELS[pkg.type] ?? pkg.type}</div>
-            <h1 className="text-2xl font-bold text-[#042C53]">{pkg.nickname}</h1>
+            <h1 className="text-2xl font-bold text-[#0C21A4]">{pkg.nickname}</h1>
           </div>
           <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${pkg.status === "active" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
             {pkg.status === "pending_setup" ? "Setting up" : pkg.status}
           </span>
         </div>
-        <div className="text-3xl font-bold text-[#042C53] mb-1">{fmtCurrency(value)}</div>
+        <div className="text-3xl font-bold text-[#0C21A4] mb-1">{fmtCurrency(value)}</div>
         <div className={`flex items-center gap-1 text-sm ${ret >= 0 ? "text-emerald-600" : "text-red-500"}`}>
           {ret >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
           {ret >= 0 ? "+" : ""}{fmtCurrency(Math.abs(ret))} ({ret >= 0 ? "+" : ""}{retPct.toFixed(2)}%) since inception
@@ -153,8 +153,8 @@ export default function PackageDetailPage() {
                     <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={(v) => v.slice(5)} />
                     <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} width={55} />
                     <Tooltip formatter={(v: any) => fmtCurrency(v)} />
-                    <Area type="monotone" dataKey="value" fill="#1D9E7520" stroke="#1D9E75" strokeWidth={2} name="Portfolio value" />
-                    <Line type="monotone" dataKey="invested" stroke="#94A3B8" strokeWidth={1.5} strokeDasharray="4 4" dot={false} name="Total invested" />
+                    <Area type="monotone" dataKey="value" fill="#1D9E7520" stroke="#0C21A4" strokeWidth={2} name="Portfolio value" />
+                    <Line type="monotone" dataKey="invested" stroke="#8F98C8" strokeWidth={1.5} strokeDasharray="4 4" dot={false} name="Total invested" />
                   </ComposedChart>
                 </ResponsiveContainer>
               </div>
@@ -195,13 +195,13 @@ export default function PackageDetailPage() {
                 <h3 className="font-semibold mb-3 text-sm">Asset Class Breakdown</h3>
                 <div className="h-2.5 rounded-full overflow-hidden flex mb-3">
                   {Object.entries(assetClassAgg).map(([cls, pct]) => (
-                    <div key={cls} style={{ width: `${pct}%`, backgroundColor: ASSET_CLASS_COLORS[cls] ?? "#94A3B8" }} className="h-full" />
+                    <div key={cls} style={{ width: `${pct}%`, backgroundColor: ASSET_CLASS_COLORS[cls] ?? "#8F98C8" }} className="h-full" />
                   ))}
                 </div>
                 <div className="flex flex-wrap gap-x-4 gap-y-1.5">
                   {Object.entries(assetClassAgg).map(([cls, pct]) => (
                     <span key={cls} className="text-xs flex items-center gap-1.5">
-                      <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: ASSET_CLASS_COLORS[cls] ?? "#94A3B8" }} />
+                      <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: ASSET_CLASS_COLORS[cls] ?? "#8F98C8" }} />
                       <span className="capitalize">{cls.replace("_", " ")}</span>
                       <span className="font-medium">{pct.toFixed(1)}%</span>
                     </span>

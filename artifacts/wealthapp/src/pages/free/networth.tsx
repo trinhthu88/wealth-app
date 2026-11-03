@@ -3,7 +3,7 @@
 // ✓ ALLOWED: BottomSheet spring animation
 // ✗ BANNED:  Page-load stagger on sections
 // ✗ BANNED:  JetBrains Mono font
-// ✗ BANNED:  Cream/warm palette (#FAF8F5, #F2EFE9, #A8A095)
+// ✗ BANNED:  Cream/warm palette (#F1F4FE, #F1F4FE, #8F98C8)
 // ✗ BANNED:  Inline style={{ color: '#hexcode' }} — use Tailwind tokens only
 // ✗ BANNED:  Double bottom nav — AppShell is the ONLY nav
 
@@ -33,11 +33,11 @@ const FREE_HISTORY_MONTHS = 3;
 // general-purpose categorical palette, so these 5 distinct hues are the closest
 // available tokens rather than a precise one-to-one mapping — flagged for review.
 const ASSET_CAT_INFO: Record<string, { label: string; icon: React.ElementType; color: string; bg: string }> = {
-  cash:        { label: "Cash",        icon: Landmark, color: "var(--green)", bg: "rgba(29,158,117,0.15)" },
-  savings:     { label: "Savings",     icon: PiggyBank, color: "var(--sun)", bg: "rgba(255,182,39,0.15)" },
-  investment:  { label: "Investment",  icon: TrendingUp, color: "var(--forest-700)", bg: "rgba(29,74,58,0.15)" },
+  cash:        { label: "Cash",        icon: Landmark, color: "var(--green)", bg: "rgba(12,33,164,0.15)" },
+  savings:     { label: "Savings",     icon: PiggyBank, color: "var(--sun)", bg: "rgba(255,137,31,0.15)" },
+  investment:  { label: "Investment",  icon: TrendingUp, color: "var(--forest-700)", bg: "rgba(26,48,184,0.15)" },
   business:    { label: "Business",    icon: Briefcase, color: "var(--clay-ink)", bg: "rgba(163,69,42,0.15)" },
-  real_estate: { label: "Real Estate", icon: Home, color: "var(--ink-60)", bg: "rgba(74,92,84,0.15)" },
+  real_estate: { label: "Real Estate", icon: Home, color: "var(--ink-60)", bg: "rgba(74,85,144,0.15)" },
 };
 // Fallback for any legacy categories still in DB
 const ASSET_CAT_FALLBACK = { label: "Other", icon: FileText, color: "var(--ink-40)", bg: "rgba(122,139,130,0.12)" };
@@ -187,7 +187,7 @@ export default function NetWorthPage() {
 
             {/* Trend */}
             {trendData.length >= 2 && (
-              <div className="bg-surface rounded-[20px] p-[18px] shadow-[0_4px_14px_rgba(20,52,42,.06)]">
+              <div className="bg-surface rounded-[20px] p-[18px] shadow-[0_4px_14px_rgba(12,33,164,.06)]">
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-[11px] tracking-[0.11em] uppercase text-ink-40">History</p>
                   {netWorthDelta !== null && netWorthDelta !== 0 && (
@@ -212,7 +212,7 @@ export default function NetWorthPage() {
 
             {/* Chart */}
             {(assets.length > 0 || liabilities.length > 0) && (
-              <div className="bg-surface rounded-[20px] p-[18px] shadow-[0_4px_14px_rgba(20,52,42,.06)]">
+              <div className="bg-surface rounded-[20px] p-[18px] shadow-[0_4px_14px_rgba(12,33,164,.06)]">
                 <p className="text-[11px] tracking-[0.11em] uppercase text-ink-40 mb-3">
                   Overview
                 </p>
@@ -227,7 +227,7 @@ export default function NetWorthPage() {
                     <BarChart data={chartData} barSize={40}>
                       <XAxis dataKey="name" tick={{ fontSize: 11, fill: "var(--ink-40)" }} axisLine={false} tickLine={false} />
                       <YAxis tick={{ fontSize: 10, fill: "var(--ink-40)" }} tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} axisLine={false} tickLine={false} />
-                      <Tooltip formatter={(v: number) => [fmt(v), ""]} cursor={{ fill: "rgba(20,52,42,0.04)" }} />
+                      <Tooltip formatter={(v: number) => [fmt(v), ""]} cursor={{ fill: "rgba(12,33,164,0.04)" }} />
                       <Bar dataKey="value" radius={[6, 6, 0, 0]}>
                         {chartData.map((d, i) => <Cell key={i} fill={d.fill} />)}
                       </Bar>
@@ -242,7 +242,7 @@ export default function NetWorthPage() {
               {(["assets", "liabilities"] as const).map(t => (
                 <button key={t} onClick={() => setTab(t)}
                   className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all capitalize ${
-                    tab === t ? "bg-surface text-forest shadow-[0_1px_4px_rgba(20,52,42,.08)]" : "bg-transparent text-ink-40"
+                    tab === t ? "bg-surface text-forest shadow-[0_1px_4px_rgba(12,33,164,.08)]" : "bg-transparent text-ink-40"
                   }`}>
                   {t === "assets" ? `Assets (${assets.length})` : `Liabilities (${liabilities.length})`}
                 </button>
@@ -270,7 +270,7 @@ export default function NetWorthPage() {
                     <p className="text-xs text-ink-40 mt-1">Track what you own to see your net worth.</p>
                   </div>
                 ) : (
-                  <div className="bg-surface rounded-[20px] overflow-hidden shadow-[0_4px_14px_rgba(20,52,42,.06)]">
+                  <div className="bg-surface rounded-[20px] overflow-hidden shadow-[0_4px_14px_rgba(12,33,164,.06)]">
                     {assets.map((a, idx) => {
                       const info = ASSET_CAT_INFO[a.category] ?? ASSET_CAT_FALLBACK;
                       return (
@@ -324,7 +324,7 @@ export default function NetWorthPage() {
                 .filter(c => c.total > 0);
               if (totals.length === 0) return null;
               return (
-                <div className="bg-surface rounded-[20px] overflow-hidden shadow-[0_4px_14px_rgba(20,52,42,.06)]">
+                <div className="bg-surface rounded-[20px] overflow-hidden shadow-[0_4px_14px_rgba(12,33,164,.06)]">
                   <p className="text-[11px] tracking-[0.11em] uppercase text-ink-40 p-[14px_18px_8px]">
                     By category
                   </p>
@@ -367,7 +367,7 @@ export default function NetWorthPage() {
                     <p className="text-xs text-ink-40 mt-1">Track what you owe for a complete picture.</p>
                   </div>
                 ) : (
-                  <div className="bg-surface rounded-[20px] overflow-hidden shadow-[0_4px_14px_rgba(20,52,42,.06)]">
+                  <div className="bg-surface rounded-[20px] overflow-hidden shadow-[0_4px_14px_rgba(12,33,164,.06)]">
                     {liabilities.map((l, idx) => {
                       const info = LIABILITY_CAT_INFO[l.category] ?? { label: l.category, icon: AlertCircle };
                       return (

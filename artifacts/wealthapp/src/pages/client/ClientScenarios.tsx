@@ -166,7 +166,7 @@ export default function ClientScenarios() {
           {/* Main panel */}
           <div className="flex-1 min-w-0 space-y-5">
             {!selectedSource || !selectedType ? (
-              <div className="flex flex-col items-center justify-center py-16 text-center bg-surface border border-hairline rounded-[26px] shadow-[0_2px_14px_rgba(20,52,42,.06)]">
+              <div className="flex flex-col items-center justify-center py-16 text-center bg-surface border border-hairline rounded-[26px] shadow-[0_2px_14px_rgba(12,33,164,.06)]">
                 <BarChart2 className="h-10 w-10 text-green/40 mb-3" />
                 <p className="text-sm font-semibold text-forest">Choose a source and scenario type</p>
                 <p className="text-xs text-ink-30 mt-1">to see your projection</p>
@@ -174,7 +174,7 @@ export default function ClientScenarios() {
             ) : (
               <>
                 {/* Input panel */}
-                <div className="bg-surface rounded-[26px] p-[20px_22px] shadow-[0_2px_14px_rgba(20,52,42,.06)]">
+                <div className="bg-surface rounded-[26px] p-[20px_22px] shadow-[0_2px_14px_rgba(12,33,164,.06)]">
                   <ScenarioInputPanel
                     source={selectedSource}
                     scenarioType={selectedType}

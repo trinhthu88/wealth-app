@@ -26,7 +26,7 @@ export default function AdvisedPlanCardFull({ plan, onOpen }: Props) {
     <button
       type="button"
       onClick={onOpen}
-      className="w-full text-left bg-surface rounded-[26px] p-[20px_22px] shadow-[0_2px_14px_rgba(20,52,42,.06)] transition-all hover:shadow-[0_4px_20px_rgba(20,52,42,.08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green"
+      className="w-full text-left bg-surface rounded-[26px] p-[20px_22px] shadow-[0_2px_14px_rgba(12,33,164,.06)] transition-all hover:shadow-[0_4px_20px_rgba(12,33,164,.08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green"
     >
       <div className="flex items-start justify-between gap-3 mb-4">
         <div className="min-w-0 flex-1">

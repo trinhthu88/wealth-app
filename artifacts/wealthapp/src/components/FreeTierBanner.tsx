@@ -35,16 +35,16 @@ export default function FreeTierBanner({ feature, benefit, storageKey }: Props) 
   }
 
   return (
-    <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-[#042C53]/5 border border-[#042C53]/10 text-sm">
-      <Lock className="h-3.5 w-3.5 text-[#042C53]/40 shrink-0" />
+    <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-[#0C21A4]/5 border border-[#0C21A4]/10 text-sm">
+      <Lock className="h-3.5 w-3.5 text-[#0C21A4]/40 shrink-0" />
       <p className="flex-1 text-slate-600 text-xs leading-relaxed">
-        <span className="font-semibold text-[#042C53]">Free plan:</span> {feature}.{" "}
+        <span className="font-semibold text-[#0C21A4]">Free plan:</span> {feature}.{" "}
         <span className="text-slate-500">{benefit}</span>{" "}
         <button
           type="button"
           onClick={handleCtaClick}
           disabled={manageSubscription.isPending}
-          className="text-[#1D9E75] font-medium hover:underline whitespace-nowrap disabled:opacity-60"
+          className="text-[#0C21A4] font-medium hover:underline whitespace-nowrap disabled:opacity-60"
         >
           {isSubscribed ? "Manage subscription" : "Upgrade your plan"} →
         </button>

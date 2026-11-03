@@ -188,12 +188,12 @@ export default function AdminUsers() {
       {isLoading ? (
         <div className="space-y-2">{Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-16 bg-surface rounded-[26px] animate-pulse" />)}</div>
       ) : filtered.length === 0 ? (
-        <div className="bg-surface rounded-[26px] p-16 text-center shadow-[0_2px_14px_rgba(20,52,42,0.06)]">
+        <div className="bg-surface rounded-[26px] p-16 text-center shadow-[0_2px_14px_rgba(12,33,164,0.06)]">
           <Users className="h-14 w-14 text-ink-20 mx-auto mb-4" />
           <h3 className="font-display text-[20px] font-semibold text-forest mb-2">No users found</h3>
         </div>
       ) : (
-        <div className="bg-surface rounded-[26px] overflow-hidden shadow-[0_2px_14px_rgba(20,52,42,0.06)]">
+        <div className="bg-surface rounded-[26px] overflow-hidden shadow-[0_2px_14px_rgba(12,33,164,0.06)]">
           <table className="w-full text-left">
             <thead>
               <tr>

@@ -79,7 +79,7 @@ function GoalCardInline({ goal, plans, holdings, allLinks, allGoals, solSuggesti
 
       {/* Note blocks */}
       {goal.notes ? (
-        <div className="mt-[16px] bg-[#F5FAF7] rounded-[16px] p-[12px_14px] text-[13.5px] text-[#3F6B58] leading-[1.45] flex gap-[9px]">
+        <div className="mt-[16px] bg-[#F1F4FE] rounded-[16px] p-[12px_14px] text-[13.5px] text-[#3A4785] leading-[1.45] flex gap-[9px]">
           <span className="text-green font-bold shrink-0">Sol</span> 
           <span>{goal.notes}</span>
         </div>
@@ -88,7 +88,7 @@ function GoalCardInline({ goal, plans, holdings, allLinks, allGoals, solSuggesti
           This goal is behind schedule. Run a scenario to test a higher monthly contribution.
         </div>
       ) : (
-        <div className="mt-[16px] bg-[#F5FAF7] rounded-[16px] p-[12px_14px] text-[13.5px] text-[#3F6B58] leading-[1.45] flex gap-[9px]">
+        <div className="mt-[16px] bg-[#F1F4FE] rounded-[16px] p-[12px_14px] text-[13.5px] text-[#3A4785] leading-[1.45] flex gap-[9px]">
           <span className="text-green font-bold shrink-0">Sol</span> 
           <span>On track. Keep it up!</span>
         </div>
@@ -308,7 +308,7 @@ export default function ClientGoals() {
 
             {/* Empty state */}
             {totalActive === 0 && completedGoals.length === 0 && (
-              <div className="bg-surface rounded-[28px] py-16 px-6 text-center shadow-[0_2px_14px_rgba(20,52,42,.06)]">
+              <div className="bg-surface rounded-[28px] py-16 px-6 text-center shadow-[0_2px_14px_rgba(12,33,164,.06)]">
                 <Target className="h-10 w-10 text-green mx-auto mb-3" />
                 <h2 className="text-[16px] font-semibold text-forest mb-2">No goals yet</h2>
                 <p className="text-[14px] text-ink-40 mb-5 max-w-xs mx-auto">
@@ -365,7 +365,7 @@ export default function ClientGoals() {
                       return (
                         <div
                           key={goal.id}
-                          className="bg-surface rounded-[24px] p-[16px_20px] flex items-center justify-between opacity-80 shadow-[0_2px_14px_rgba(20,52,42,.06)]"
+                          className="bg-surface rounded-[24px] p-[16px_20px] flex items-center justify-between opacity-80 shadow-[0_2px_14px_rgba(12,33,164,.06)]"
                         >
                           <div className="flex items-center gap-4 min-w-0">
                             <div className="w-7 h-7 flex-shrink-0 flex items-center justify-center">
