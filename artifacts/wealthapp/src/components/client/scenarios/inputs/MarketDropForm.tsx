@@ -47,12 +47,12 @@ export default function MarketDropForm({ currentValue, currentMonthly, sourceLab
           value={dropPct}
           onChange={(v) => setDropPct(v as number)}
         />
-        <p className="text-xs text-slate-400">Portfolio would drop to ${bottomValue.toLocaleString("en-US")}</p>
+        <p className="text-[12px] text-mint">Portfolio would drop to ${bottomValue.toLocaleString("en-US")}</p>
       </div>
       <ReturnSlider value={annualReturn} onChange={setAnnualReturn} />
-      <div className="rounded-xl bg-slate-50 border border-slate-200 px-3 py-2.5">
-        <p className="text-xs text-slate-500">Estimated recovery</p>
-        <p className="text-sm font-semibold text-[#0C21A4]">
+      <div className="rounded-[14px] bg-white/10 p-3">
+        <p className="tala-eyebrow text-mint mb-1">Estimated recovery</p>
+        <p className="text-[15px] font-semibold text-field">
           ~{recoveryMonths} month{recoveryMonths === 1 ? "" : "s"}, based on your {annualReturn}% expected return
         </p>
       </div>

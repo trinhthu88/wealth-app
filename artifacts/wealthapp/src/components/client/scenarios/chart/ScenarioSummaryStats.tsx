@@ -9,10 +9,10 @@ function fmtUsd(v: number, compact = false) {
 
 function StatCard({ label, value, sub, valueColor }: { label: string; value: string; sub?: string; valueColor?: string }) {
   return (
-    <div className="bg-surface border border-hairline rounded-[20px] p-[16px]">
-      <p className="text-[12.5px] font-semibold text-ink-40 mb-1">{label}</p>
-      <p className={cn("text-[19px] font-semibold font-display text-forest", valueColor)}>{value}</p>
-      {sub && <p className="text-[13px] text-ink-40 mt-1">{sub}</p>}
+    <div className="bg-surface rounded-[24px] p-4">
+      <p className="tala-eyebrow text-ink-40 mb-1.5">{label}</p>
+      <p className={cn("text-[17px] font-semibold tabular-nums text-forest", valueColor)}>{value}</p>
+      {sub && <p className="text-[13px] text-ink-40 mt-1 tabular-nums">{sub}</p>}
     </div>
   );
 }
@@ -25,7 +25,7 @@ interface Props {
 export default function ScenarioSummaryStats({ result, horizonYears }: Props) {
   const { params, baselineFinalValue, scenarioFinalValue, deltaValue, deltaPct } = result;
   const isDelta = deltaValue >= 0;
-  const deltaColor = isDelta ? "text-green" : "text-clay";
+  const deltaColor = isDelta ? "text-forest" : "text-clay-ink";
 
   function fourthCard() {
     switch (params.type) {
@@ -38,7 +38,7 @@ export default function ScenarioSummaryStats({ result, horizonYears }: Props) {
             label="Extra contribution"
             value={`+${fmtUsd(extraTotal, true)} total`}
             sub={`${fmtUsd(returnOnExtra, true)} growth on extra`}
-            valueColor={isDelta ? "text-green" : undefined}
+            valueColor={isDelta ? "text-forest" : undefined}
           />
         );
       }
@@ -57,7 +57,7 @@ export default function ScenarioSummaryStats({ result, horizonYears }: Props) {
             label="Saved per month"
             value={fmtUsd(savedPerMonth, true)}
             sub={`Long-term cost: ${fmtUsd(Math.abs(deltaValue), true)} less`}
-            valueColor="text-sun-deep"
+            valueColor="text-clay-ink"
           />
         );
       }
@@ -68,7 +68,7 @@ export default function ScenarioSummaryStats({ result, horizonYears }: Props) {
             label="Missed contributions"
             value={fmtUsd(missed, true)}
             sub={`Long-term cost: ${fmtUsd(Math.abs(deltaValue), true)} less`}
-            valueColor="text-sun-deep"
+            valueColor="text-clay-ink"
           />
         );
       }
@@ -79,16 +79,16 @@ export default function ScenarioSummaryStats({ result, horizonYears }: Props) {
             label="Value at bottom"
             value={fmtUsd(droppedVal, true)}
             sub={`Recovery: ${params.recoveryMonths} months`}
-            valueColor="text-clay"
+            valueColor="text-clay-ink"
           />
         );
       }
       case "retire_earlier":
         return (
-          <div className="bg-green-tint border border-green-300 rounded-[20px] p-[16px] col-span-2 sm:col-span-1">
-            <p className="text-[12.5px] font-semibold text-green mb-1">Required monthly</p>
-            <p className="text-[19px] font-semibold font-display text-forest">{fmtUsd(result.requiredMonthly ?? 0)}/mo</p>
-            <p className="text-[13px] text-ink-60 mt-1">
+          <div className="bg-field rounded-[24px] p-4 col-span-2 sm:col-span-1">
+            <p className="tala-eyebrow text-forest mb-1.5">Required monthly</p>
+            <p className="text-[17px] font-semibold tabular-nums text-forest">{fmtUsd(result.requiredMonthly ?? 0)}/mo</p>
+            <p className="text-[13px] text-forest mt-1 tabular-nums">
               +{fmtUsd(result.extraMonthly ?? 0)}/mo more ·{" "}
               {result.yearsSavedOrLost != null
                 ? `${result.yearsSavedOrLost > 0 ? result.yearsSavedOrLost.toFixed(1) + " yrs sooner" : "same timeframe"}`
@@ -120,7 +120,7 @@ export default function ScenarioSummaryStats({ result, horizonYears }: Props) {
         {fourthCard()}
       </div>
 
-      <p className="text-[11px] italic text-[#4A5590]">
+      <p className="text-[12px] text-ink-40">
         Projections are illustrative only. Actual returns will vary. Past performance does not guarantee future results.
       </p>
     </div>

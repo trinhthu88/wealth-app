@@ -101,15 +101,15 @@ export default function ClientScenarios() {
   return (
     <ClientAppShell>
       <div className="max-w-[1100px] mx-auto">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between gap-3 mb-4">
           <div>
-            <h1 className="font-display text-[30px] font-semibold text-forest tracking-[-0.02em] mb-1">What if</h1>
+            <h1 className="font-display text-[34px] leading-[1.05] text-forest mb-1.5">What if</h1>
             <div className="text-[14px] text-ink-40">Move a lever, watch your goals move</div>
           </div>
           {mode === "advised" && (selectedSource || selectedType || currentResult) && (
             <button
               onClick={handleReset}
-              className="text-sm text-ink-40 hover:text-forest transition-colors"
+              className="min-h-[44px] px-1 text-[14px] font-medium text-ink-40 hover:text-forest transition-colors shrink-0"
             >
               ← New scenario
             </button>
@@ -124,14 +124,14 @@ export default function ClientScenarios() {
           />
         )}
 
-        <div className="flex gap-1 bg-track rounded-xl p-1 w-fit mb-[22px]">
+        <div className="flex gap-1 bg-surface rounded-full p-1 w-fit max-w-full overflow-x-auto no-scrollbar mb-[22px]">
           {MODES.map(m => (
             <button
               key={m.id}
               onClick={() => setMode(m.id)}
               className={cn(
-                "px-4 py-1.5 rounded-lg text-sm font-semibold transition-all",
-                mode === m.id ? "bg-surface text-forest shadow-sm" : "text-ink-40 hover:text-ink-60"
+                "min-h-[40px] px-4 rounded-full text-[14px] font-semibold whitespace-nowrap transition-colors",
+                mode === m.id ? "bg-forest text-paper" : "text-forest hover:bg-breeze"
               )}
             >
               {m.label}
@@ -166,15 +166,17 @@ export default function ClientScenarios() {
           {/* Main panel */}
           <div className="flex-1 min-w-0 space-y-5">
             {!selectedSource || !selectedType ? (
-              <div className="flex flex-col items-center justify-center py-16 text-center bg-surface border border-hairline rounded-[26px] shadow-[0_2px_14px_rgba(12,33,164,.06)]">
-                <BarChart2 className="h-10 w-10 text-green/40 mb-3" />
-                <p className="text-sm font-semibold text-forest">Choose a source and scenario type</p>
-                <p className="text-xs text-ink-30 mt-1">to see your projection</p>
+              <div className="flex flex-col items-center justify-center py-16 px-5 text-center bg-surface rounded-[24px]">
+                <span className="w-11 h-11 rounded-[14px] bg-breeze flex items-center justify-center mb-3">
+                  <BarChart2 className="h-5 w-5 text-forest" />
+                </span>
+                <p className="text-[16px] font-semibold text-forest">Choose a source and scenario type</p>
+                <p className="text-[14px] text-ink-40 mt-1">to see your projection</p>
               </div>
             ) : (
               <>
                 {/* Input panel */}
-                <div className="bg-surface rounded-[26px] p-[20px_22px] shadow-[0_2px_14px_rgba(12,33,164,.06)]">
+                <div className="bg-forest text-paper rounded-[28px] p-5">
                   <ScenarioInputPanel
                     source={selectedSource}
                     scenarioType={selectedType}

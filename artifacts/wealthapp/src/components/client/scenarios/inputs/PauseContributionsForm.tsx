@@ -43,20 +43,20 @@ export default function PauseContributionsForm({ currentValue, currentMonthly, s
     <div className="space-y-5">
       <SourceDisplay label={sourceLabel} currentValue={currentValue} currentMonthly={currentMonthly} />
       <div className="space-y-1.5">
-        <label className="text-sm font-medium text-[#0C21A4]">Pause contributions for</label>
+        <label className="text-[14px] font-medium text-paper">Pause contributions for</label>
         <div className="flex flex-wrap gap-1.5">
           {PAUSE_OPTIONS.map(opt => (
             <button
               key={opt.value}
               onClick={() => { setPauseMonths(opt.value); setIsCustom(false); }}
-              className={cn("px-3 py-1.5 rounded-lg text-sm font-medium border transition-all", !isCustom && pauseMonths === opt.value ? "border-[#0C21A4] bg-[#0C21A4]/10 text-[#0C21A4]" : "border-slate-200 text-slate-600 hover:border-[#0C21A4]/40")}
+              className={cn("min-h-[44px] px-4 rounded-full text-[14px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-field", !isCustom && pauseMonths === opt.value ? "bg-field text-forest" : "bg-white/10 text-paper hover:bg-white/20")}
             >
               {opt.label}
             </button>
           ))}
           <button
             onClick={() => setIsCustom(v => !v)}
-            className={cn("px-3 py-1.5 rounded-lg text-sm font-medium border transition-all", isCustom ? "border-[#0C21A4] bg-[#0C21A4]/10 text-[#0C21A4]" : "border-slate-200 text-slate-600 hover:border-[#0C21A4]/40")}
+            className={cn("min-h-[44px] px-4 rounded-full text-[14px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-field", isCustom ? "bg-field text-forest" : "bg-white/10 text-paper hover:bg-white/20")}
           >
             Custom
           </button>
@@ -69,13 +69,13 @@ export default function PauseContributionsForm({ currentValue, currentMonthly, s
                 max={36}
                 onChange={e => setCustomPause(e.target.value)}
                 placeholder="6"
-                className="w-16 px-2 py-1.5 rounded-lg border border-[#0C21A4] text-sm text-center text-[#0C21A4] focus:outline-none"
+                className="w-16 h-11 px-2 rounded-[14px] bg-white/10 text-[15px] font-semibold tabular-nums text-center text-field placeholder:text-mint/60 focus:outline-none focus:ring-2 focus:ring-field"
               />
-              <span className="text-sm text-slate-500">months</span>
+              <span className="text-[14px] text-mint">months</span>
             </div>
           )}
         </div>
-        <p className="text-xs text-slate-400">Missed contributions: ${Math.round(missedTotal).toLocaleString()}</p>
+        <p className="text-[12px] text-mint">Missed contributions: ${Math.round(missedTotal).toLocaleString()}</p>
       </div>
       <HorizonSelector value={horizonYears} onChange={setHorizonYears} />
       <ReturnSlider value={annualReturn} onChange={setAnnualReturn} />

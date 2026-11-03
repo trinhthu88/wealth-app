@@ -40,31 +40,31 @@ export default function AdvisorScenarioCard({ run, onLoad, onViewed }: Props) {
   }
 
   return (
-    <div className="bg-green-tint border border-green-300 border-l-[3px] border-l-green rounded-[16px] overflow-hidden">
+    <div className="bg-breeze rounded-[24px] overflow-hidden">
       <button
-        className="w-full flex items-center justify-between px-3 py-3 text-left"
+        className="w-full min-h-[44px] flex items-center justify-between p-3 text-left"
         onClick={handleExpand}
       >
         <div className="flex items-center gap-2 min-w-0">
-          <Sparkles className="h-3.5 w-3.5 text-green shrink-0" />
-          <span className="text-[13px] font-semibold text-green truncate">
+          <Sparkles className="h-3.5 w-3.5 text-forest shrink-0" />
+          <span className="text-[14px] font-semibold text-forest truncate">
             {TYPE_LABELS[run.scenarioType] ?? run.scenarioType}
           </span>
           {run.alertStatus === "new" && (
-            <span className="h-1.5 w-1.5 rounded-full bg-green shrink-0" />
+            <span className="h-2 w-2 rounded-full bg-sun shrink-0" />
           )}
         </div>
-        {expanded ? <ChevronUp className="h-4 w-4 text-green shrink-0" /> : <ChevronDown className="h-4 w-4 text-green shrink-0" />}
+        {expanded ? <ChevronUp className="h-4 w-4 text-forest shrink-0" /> : <ChevronDown className="h-4 w-4 text-forest shrink-0" />}
       </button>
       {expanded && (
         <div className="px-3 pb-3 space-y-2">
           {run.scenarioName && (
             <p className="text-[14px] font-semibold text-forest">{run.scenarioName}</p>
           )}
-          <p className="text-[13px] text-ink-40">{describeScenario(run)}</p>
+          <p className="text-[13px] text-forest">{describeScenario(run)}</p>
           <button
             onClick={() => onLoad(run)}
-            className="text-[13px] font-semibold text-green hover:text-forest"
+            className="min-h-[44px] text-[13px] font-semibold text-forest underline-offset-2 hover:underline"
           >
             Load this →
           </button>

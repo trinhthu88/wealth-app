@@ -9,15 +9,15 @@ export function HorizonSelector({ value, onChange }: { value: number; onChange: 
 
   return (
     <div className="space-y-1.5">
-      <label className="text-sm font-medium text-[#0C21A4]">Project over</label>
+      <label className="text-[14px] font-medium text-paper">Project over</label>
       <div className="flex flex-wrap gap-1.5">
         {presets.map(y => (
           <button
             key={y}
             onClick={() => onChange(y)}
             className={cn(
-              "px-3 py-1.5 rounded-lg text-sm font-medium border transition-all",
-              value === y && !isCustom ? "border-[#0C21A4] bg-[#0C21A4]/10 text-[#0C21A4]" : "border-slate-200 text-slate-600 hover:border-[#0C21A4]/40"
+              "min-h-[44px] px-4 rounded-full text-[14px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-field",
+              value === y && !isCustom ? "bg-field text-forest" : "bg-white/10 text-paper hover:bg-white/20"
             )}
           >
             {y}yr
@@ -26,8 +26,8 @@ export function HorizonSelector({ value, onChange }: { value: number; onChange: 
         <button
           onClick={() => onChange(isCustom ? value : 12)}
           className={cn(
-            "px-3 py-1.5 rounded-lg text-sm font-medium border transition-all",
-            isCustom ? "border-[#0C21A4] bg-[#0C21A4]/10 text-[#0C21A4]" : "border-slate-200 text-slate-600 hover:border-[#0C21A4]/40"
+            "min-h-[44px] px-4 rounded-full text-[14px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-field",
+            isCustom ? "bg-field text-forest" : "bg-white/10 text-paper hover:bg-white/20"
           )}
         >
           Custom
@@ -40,9 +40,9 @@ export function HorizonSelector({ value, onChange }: { value: number; onChange: 
               min={1}
               max={40}
               onChange={e => onChange(parseInt(e.target.value) || 10)}
-              className="w-16 px-2 py-1.5 rounded-lg border border-[#0C21A4] text-sm text-center text-[#0C21A4] focus:outline-none"
+              className="w-16 h-11 px-2 rounded-[14px] bg-white/10 text-[15px] font-semibold tabular-nums text-center text-field focus:outline-none focus:ring-2 focus:ring-field"
             />
-            <span className="text-sm text-slate-500">yr</span>
+            <span className="text-[14px] text-mint">yr</span>
           </div>
         )}
       </div>
@@ -54,8 +54,8 @@ export function ReturnSlider({ value, onChange }: { value: number; onChange: (v:
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <label className="text-sm font-medium text-[#0C21A4]">Assumed annual return</label>
-        <span className="text-sm font-semibold text-[#0C21A4]">{value.toFixed(1)}%</span>
+        <label className="text-[14px] font-medium text-paper">Assumed annual return</label>
+        <span className="font-display tabular-nums text-[32px] leading-none text-field">{value.toFixed(1)}%</span>
       </div>
       <input
         type="range"
@@ -64,9 +64,9 @@ export function ReturnSlider({ value, onChange }: { value: number; onChange: (v:
         step={0.5}
         value={value}
         onChange={e => onChange(parseFloat(e.target.value))}
-        className="w-full accent-[#0C21A4]"
+        className="w-full h-8 accent-field cursor-pointer"
       />
-      <p className="text-xs text-slate-400">Adjust based on your investment strategy. Past performance ≠ future results.</p>
+      <p className="text-[12px] text-mint">Adjust based on your investment strategy. Past performance ≠ future results.</p>
     </div>
   );
 }
@@ -76,17 +76,17 @@ export function SourceDisplay({ label, currentValue, currentMonthly, currency = 
 }) {
   const fmt = (v: number) => `$${Math.round(v).toLocaleString("en-US")}`;
   return (
-    <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-1">
-      <p className="text-xs font-semibold text-[#4A5590] uppercase tracking-wide">{label}</p>
-      <div className="flex gap-4 text-sm">
+    <div className="bg-white/10 rounded-[14px] p-3 space-y-1">
+      <p className="tala-eyebrow text-mint">{label}</p>
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-[14px]">
         <div>
-          <span className="text-slate-400">Value: </span>
-          <span className="font-semibold text-[#0C21A4]">{fmt(currentValue)}</span>
+          <span className="text-mint">Value: </span>
+          <span className="font-semibold tabular-nums text-paper">{fmt(currentValue)}</span>
         </div>
         {currentMonthly > 0 && (
           <div>
-            <span className="text-slate-400">Monthly: </span>
-            <span className="font-semibold text-[#0C21A4]">{fmt(currentMonthly)}/mo</span>
+            <span className="text-mint">Monthly: </span>
+            <span className="font-semibold tabular-nums text-paper">{fmt(currentMonthly)}/mo</span>
           </div>
         )}
       </div>
@@ -99,7 +99,7 @@ export function RunButton({ disabled, onClick }: { disabled?: boolean; onClick: 
     <button
       onClick={onClick}
       disabled={disabled}
-      className="w-full py-3 rounded-xl bg-[#0C21A4] text-white font-semibold text-sm hover:bg-[#08167A] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+      className="w-full h-12 px-5 rounded-full bg-field text-forest font-semibold text-[15px] hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-paper"
     >
       Run scenario
     </button>
@@ -112,7 +112,7 @@ export function NumberInput({ value, onChange, label, placeholder, min, max, suf
 }) {
   return (
     <div className="space-y-1.5">
-      <label className="text-sm font-medium text-[#0C21A4]">{label}</label>
+      <label className="text-[14px] font-medium text-paper">{label}</label>
       <div className="flex gap-2 items-center">
         <input
           type="number"
@@ -122,11 +122,11 @@ export function NumberInput({ value, onChange, label, placeholder, min, max, suf
           min={min}
           max={max}
           style={{ MozAppearance: "textfield" } as React.CSSProperties}
-          className="flex-1 px-4 py-2.5 rounded-xl border border-[#E3E9FD] text-sm text-[#0C21A4] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0C21A4]/30 focus:border-[#0C21A4] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          className="flex-1 min-w-0 h-12 px-4 rounded-[14px] bg-white/10 text-[18px] font-semibold tabular-nums text-field placeholder:text-mint/60 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-field [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
         />
-        {suffix && <span className="text-sm text-slate-500 shrink-0">{suffix}</span>}
+        {suffix && <span className="text-[14px] text-mint shrink-0">{suffix}</span>}
       </div>
-      {helper && <p className="text-xs text-slate-400">{helper}</p>}
+      {helper && <p className="text-[12px] text-mint">{helper}</p>}
     </div>
   );
 }
@@ -139,15 +139,15 @@ export function SegmentedPicker<T extends string | number>({ options, value, onC
 }) {
   return (
     <div className="space-y-1.5">
-      {label && <label className="text-sm font-medium text-[#0C21A4]">{label}</label>}
+      {label && <label className="text-[14px] font-medium text-paper">{label}</label>}
       <div className="flex flex-wrap gap-1.5">
         {options.map(opt => (
           <button
             key={String(opt.value)}
             onClick={() => onChange(opt.value)}
             className={cn(
-              "px-3 py-1.5 rounded-lg text-sm font-medium border transition-all",
-              value === opt.value ? "border-[#0C21A4] bg-[#0C21A4]/10 text-[#0C21A4]" : "border-slate-200 text-slate-600 hover:border-[#0C21A4]/40"
+              "min-h-[44px] px-4 rounded-full text-[14px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-field",
+              value === opt.value ? "bg-field text-forest" : "bg-white/10 text-paper hover:bg-white/20"
             )}
           >
             {opt.label}

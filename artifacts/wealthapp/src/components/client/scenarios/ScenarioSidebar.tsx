@@ -16,12 +16,12 @@ export type ScenarioSource = {
 };
 
 const SCENARIO_TYPES = [
-  { type: "increase_monthly",    icon: <TrendingUp className="w-4 h-4 text-green" />, label: "Increase monthly contribution",  sub: "What if I contribute more?" },
-  { type: "add_lump_sum",        icon: <PiggyBank className="w-4 h-4 text-sun-deep" />, label: "Add a lump sum",                 sub: "What if I invest extra now?" },
-  { type: "reduce_monthly",      icon: <TrendingDown className="w-4 h-4 text-clay" />, label: "Reduce monthly contribution",    sub: "What if I contribute less?" },
-  { type: "pause_contributions", icon: <Pause className="w-4 h-4 text-ink-40" />,  label: "Pause contributions",            sub: "What if I stop for a while?" },
-  { type: "market_drop",         icon: <Zap className="w-4 h-4 text-clay" />, label: "Market drop stress test",        sub: "What if markets fall?" },
-  { type: "retire_earlier",      icon: <Target className="w-4 h-4 text-forest" />, label: "Reach goal sooner",              sub: "What monthly do I need?" },
+  { type: "increase_monthly",    tile: "bg-field",  icon: <TrendingUp className="w-[18px] h-[18px] text-forest" />, label: "Increase monthly contribution",  sub: "What if I contribute more?" },
+  { type: "add_lump_sum",        tile: "bg-field",  icon: <PiggyBank className="w-[18px] h-[18px] text-forest" />, label: "Add a lump sum",                 sub: "What if I invest extra now?" },
+  { type: "reduce_monthly",      tile: "bg-breeze", icon: <TrendingDown className="w-[18px] h-[18px] text-forest" />, label: "Reduce monthly contribution",    sub: "What if I contribute less?" },
+  { type: "pause_contributions", tile: "bg-breeze", icon: <Pause className="w-[18px] h-[18px] text-forest" />,  label: "Pause contributions",            sub: "What if I stop for a while?" },
+  { type: "market_drop",         tile: "bg-sun",    icon: <Zap className="w-[18px] h-[18px] text-forest" />, label: "Market drop stress test",        sub: "What if markets fall?" },
+  { type: "retire_earlier",      tile: "bg-forest", icon: <Target className="w-[18px] h-[18px] text-paper" />, label: "Reach goal sooner",              sub: "What monthly do I need?" },
 ];
 
 interface Props {
@@ -69,21 +69,21 @@ export default function ScenarioSidebar({
     <div className="space-y-5 w-full">
       {/* Source picker */}
       <div className="space-y-2">
-        <p className="text-xs font-semibold text-[#4A5590] uppercase tracking-wide">What to model</p>
-        <div className="space-y-1.5">
+        <p className="text-[16px] font-semibold text-forest">What to model</p>
+        <div className="bg-surface rounded-[24px] p-1 space-y-0.5">
           {sources.map(s => (
             <button
               key={s.id}
               onClick={() => onSelectSource(s)}
               className={cn(
-                "w-full text-left px-3 py-2.5 rounded-xl border transition-all text-sm",
+                "w-full min-h-[44px] text-left p-3 rounded-[20px] transition-colors text-[14px] text-forest",
                 selectedSource?.id === s.id
-                  ? "border-[#0C21A4] bg-[#0C21A4]/5 text-[#0C21A4]"
-                  : "border-slate-200 text-slate-600 hover:border-[#0C21A4]/30"
+                  ? "bg-breeze"
+                  : "hover:bg-paper/70"
               )}
             >
-              <p className="font-medium truncate">{s.label}</p>
-              <p className="text-xs text-slate-400">
+              <p className="font-semibold truncate">{s.label}</p>
+              <p className="text-[12px] text-ink-40 tabular-nums">
                 ${Math.round(s.currentValue).toLocaleString()}
                 {s.currentMonthly > 0 && ` · $${Math.round(s.currentMonthly).toLocaleString()}/mo`}
               </p>
@@ -92,7 +92,7 @@ export default function ScenarioSidebar({
 
           {goals.length > 0 && (
             <>
-              <p className="text-[11px] text-slate-400 font-medium uppercase tracking-wide pt-1 px-1">Or model a goal:</p>
+              <p className="tala-eyebrow text-ink-40 pt-3 pb-1 px-3">Or model a goal:</p>
               {goals.map(g => (
                 <button
                   key={g.id}
@@ -105,15 +105,15 @@ export default function ScenarioSidebar({
                     linkedGoal: g,
                   })}
                   className={cn(
-                    "w-full text-left px-3 py-2 rounded-xl border transition-all text-sm",
+                    "w-full min-h-[44px] text-left p-3 rounded-[20px] transition-colors text-[14px] text-forest",
                     selectedSource?.id === `goal-${g.id}`
-                      ? "border-[#0C21A4] bg-[#0C21A4]/5"
-                      : "border-slate-200 text-slate-600 hover:border-[#0C21A4]/30"
+                      ? "bg-field"
+                      : "hover:bg-paper/70"
                   )}
                 >
-                  <p className="font-medium truncate">{g.title}</p>
+                  <p className="font-semibold truncate">{g.title}</p>
                   {g.targetAmount && (
-                    <p className="text-xs text-slate-400">Target: ${parseFloat(g.targetAmount).toLocaleString()}</p>
+                    <p className="text-[12px] text-ink-40 tabular-nums">Target: ${parseFloat(g.targetAmount).toLocaleString()}</p>
                   )}
                 </button>
               ))}
@@ -125,8 +125,8 @@ export default function ScenarioSidebar({
       {/* Type picker */}
       {selectedSource && (
         <div className="space-y-2">
-          <p className="text-xs font-semibold text-[#4A5590] uppercase tracking-wide">Scenario type</p>
-          <div className="space-y-1.5">
+          <p className="text-[16px] font-semibold text-forest">Scenario type</p>
+          <div className="bg-surface rounded-[24px] p-1 space-y-0.5">
             {SCENARIO_TYPES.filter(t => {
               if (t.type === "retire_earlier") return goals.length > 0 || selectedSource.kind === "goal";
               return true;
@@ -135,15 +135,17 @@ export default function ScenarioSidebar({
                 key={st.type}
                 onClick={() => onSelectType(st.type)}
                 className={cn(
-                  "w-full text-left px-3 py-2.5 rounded-[16px] border-2 transition-all bg-surface",
-                  selectedType === st.type ? "border-green bg-green-tint text-forest" : "border-hairline hover:border-green-300 text-forest"
+                  "w-full min-h-[44px] text-left p-3 rounded-[20px] transition-colors flex items-center gap-3 text-forest",
+                  selectedType === st.type ? "bg-breeze" : "hover:bg-paper/70"
                 )}
               >
-                <div className="flex items-center gap-2 mb-1">
+                <span className={cn("w-10 h-10 shrink-0 rounded-[14px] flex items-center justify-center", st.tile)}>
                   {st.icon}
-                  <p className="text-[14.5px] font-semibold text-forest">{st.label}</p>
-                </div>
-                <p className="text-[13px] text-ink-40 pl-6">{st.sub}</p>
+                </span>
+                <span className="min-w-0">
+                  <p className="text-[14px] font-semibold text-forest">{st.label}</p>
+                  <p className="text-[13px] text-ink-40">{st.sub}</p>
+                </span>
               </button>
             ))}
           </div>
@@ -154,32 +156,32 @@ export default function ScenarioSidebar({
       <div>
         <button
           onClick={() => setSavedOpen(v => !v)}
-          className="flex items-center gap-2 text-xs font-semibold text-[#4A5590] uppercase tracking-wide w-full"
+          className="flex items-center gap-2 min-h-[44px] text-[16px] font-semibold text-forest w-full"
         >
-          {savedOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+          {savedOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           Saved scenarios ({savedScenarios.length})
         </button>
         {savedOpen && (
-          <div className="mt-2 space-y-1.5">
+          <div className="mt-1 bg-surface rounded-[24px] p-1">
             {savedScenarios.length === 0 ? (
-              <p className="text-xs text-slate-400 px-1">No saved scenarios yet.</p>
+              <p className="text-[13px] text-ink-40 p-3">No saved scenarios yet.</p>
             ) : (
               savedScenarios.map(run => (
-                <div key={run.id} className="flex items-center justify-between px-2 py-2 bg-slate-50 rounded-lg border border-slate-200">
+                <div key={run.id} className="flex items-center justify-between p-3 border-b border-hairline last:border-0">
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs font-medium text-[#0C21A4] truncate">{run.scenarioName ?? "Scenario"}</p>
-                    <p className="text-[11px] text-slate-400">{run.scenarioType.replace(/_/g, " ")}</p>
+                    <p className="text-[14px] font-semibold text-forest truncate">{run.scenarioName ?? "Scenario"}</p>
+                    <p className="text-[12px] text-ink-40">{run.scenarioType.replace(/_/g, " ")}</p>
                   </div>
                   <div className="flex items-center gap-1 shrink-0 ml-2">
-                    <button onClick={() => onLoadSaved(run)} className="text-[11px] text-[#0C21A4] font-medium hover:text-[#08167A]">Load</button>
+                    <button onClick={() => onLoadSaved(run)} className="min-h-[44px] px-2 text-[13px] text-forest font-semibold hover:underline">Load</button>
                     {deleteConfirm === run.id ? (
                       <div className="flex gap-1">
-                        <button onClick={() => { onDeleteSaved(run.id); setDeleteConfirm(null); }} className="text-[11px] text-red-500 font-medium">Yes</button>
-                        <button onClick={() => setDeleteConfirm(null)} className="text-[11px] text-slate-400">No</button>
+                        <button onClick={() => { onDeleteSaved(run.id); setDeleteConfirm(null); }} className="min-h-[44px] px-2 text-[13px] text-red-600 font-semibold">Yes</button>
+                        <button onClick={() => setDeleteConfirm(null)} className="min-h-[44px] px-2 text-[13px] text-ink-40 font-medium">No</button>
                       </div>
                     ) : (
-                      <button onClick={() => setDeleteConfirm(run.id)} aria-label="Delete scenario">
-                        <Trash2 className="h-3.5 w-3.5 text-slate-400 hover:text-red-400" />
+                      <button onClick={() => setDeleteConfirm(run.id)} aria-label="Delete scenario" className="w-11 h-11 flex items-center justify-center rounded-full">
+                        <Trash2 className="h-4 w-4 text-ink-40 hover:text-red-600" />
                       </button>
                     )}
                   </div>
@@ -193,8 +195,8 @@ export default function ScenarioSidebar({
       {/* Advisor scenarios */}
       {advisorScenarios.length > 0 && (
         <div className="space-y-2">
-          <p className="text-xs font-semibold text-[#4A5590] uppercase tracking-wide flex items-center gap-1.5">
-            <Sparkles className="h-3.5 w-3.5 text-[#0C21A4]" />
+          <p className="text-[16px] font-semibold text-forest flex items-center gap-1.5">
+            <Sparkles className="h-4 w-4 text-forest" />
             From your advisor
           </p>
           {advisorScenarios.map(run => (

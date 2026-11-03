@@ -35,10 +35,10 @@ export default function ScenarioInputPanel({ source, scenarioType, goals, onRun,
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div>
-        <p className="text-base font-semibold text-[#0C21A4]">{TYPE_LABELS[scenarioType] ?? scenarioType}</p>
-        <p className="text-xs text-slate-500">Source: {source.label}</p>
+        <p className="tala-eyebrow text-mint mb-1">Source: {source.label}</p>
+        <p className="text-[16px] font-semibold text-paper">{TYPE_LABELS[scenarioType] ?? scenarioType}</p>
       </div>
 
       {scenarioType === "increase_monthly" && <IncreaseMonthlyForm {...common} />}
