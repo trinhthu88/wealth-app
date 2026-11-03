@@ -26,19 +26,19 @@ export default function EmptyStateWithCTA({
   return (
     <div className={cn("flex flex-col items-center justify-center text-center py-12 px-6", className)}>
       {Icon && (
-        <div className="h-12 w-12 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
-          <Icon className="h-6 w-6 text-slate-400" />
+        <div className="h-12 w-12 rounded-[14px] bg-breeze flex items-center justify-center mb-4">
+          <Icon className="h-6 w-6 text-forest" aria-hidden="true" />
         </div>
       )}
-      <h3 className="text-sm font-semibold text-[#0C21A4] mb-1">{title}</h3>
+      <h3 className="text-[16px] font-semibold text-forest mb-1">{title}</h3>
       {description && (
-        <p className="text-sm text-slate-500 max-w-xs leading-relaxed mb-5">{description}</p>
+        <p className="text-[14px] text-ink-40 max-w-xs leading-relaxed mb-5">{description}</p>
       )}
       <div className="flex flex-col sm:flex-row items-center gap-2">
         {action && (
           <button
             onClick={action.onClick}
-            className="px-4 py-2 rounded-lg bg-[#0C21A4] text-white text-sm font-medium hover:bg-[#08167A] transition-colors"
+            className="h-11 px-5 rounded-full bg-forest text-paper text-[14px] font-semibold hover:opacity-90 transition-opacity"
           >
             {action.label}
           </button>
@@ -46,7 +46,7 @@ export default function EmptyStateWithCTA({
         {secondaryAction && (
           <button
             onClick={secondaryAction.onClick}
-            className="px-4 py-2 rounded-lg border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 transition-colors"
+            className="h-11 px-5 rounded-full border-[1.5px] border-forest bg-transparent text-forest text-[14px] font-semibold hover:bg-forest/5 transition-colors"
           >
             {secondaryAction.label}
           </button>

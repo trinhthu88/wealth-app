@@ -63,34 +63,34 @@ export default function ClientRiskCheckSheet({ isOpen, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-end justify-center bg-forest/45 p-0 sm:items-center sm:p-5" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }}>
-      <section role="dialog" aria-modal="true" aria-labelledby="risk-check-title" className="max-h-[92dvh] w-full max-w-[560px] overflow-y-auto rounded-t-[28px] bg-paper p-5 shadow-xl sm:rounded-[28px] sm:p-7" data-testid="sheet-risk-check">
+      <section role="dialog" aria-modal="true" aria-labelledby="risk-check-title" className="max-h-[92dvh] w-full max-w-[560px] overflow-y-auto rounded-t-[28px] bg-paper p-5 sm:rounded-[28px] sm:p-7" data-testid="sheet-risk-check">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-green">A short self-check</p>
-            <h2 id="risk-check-title" className="mt-1 font-display text-2xl font-semibold text-forest">How do you feel about uncertainty?</h2>
-            <p className="mt-2 text-sm leading-relaxed text-ink-60">There are no right answers. This records your own comfort level for your advisor to discuss with you.</p>
+            <p className="tala-eyebrow text-ink-40">A short self-check</p>
+            <h2 id="risk-check-title" className="mt-2 font-display text-[28px] leading-[1.1] text-forest">How do you feel about uncertainty?</h2>
+            <p className="mt-2 text-[14px] leading-relaxed text-ink-40">There are no right answers. This records your own comfort level for your advisor to discuss with you.</p>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close risk check" data-testid="button-close-risk-check" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink-40 hover:bg-forest/5 hover:text-forest"><X className="h-5 w-5" /></button>
+          <button type="button" onClick={onClose} aria-label="Close risk check" data-testid="button-close-risk-check" className="-mr-2 -mt-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-40 hover:bg-surface hover:text-forest"><X className="h-5 w-5" /></button>
         </div>
         <div className="mt-5 space-y-5">
           {QUESTIONS.map((question, questionIndex) => (
             <fieldset key={question.prompt}>
-              <legend className="mb-2 text-sm font-semibold leading-snug text-forest">{questionIndex + 1}. {question.prompt}</legend>
+              <legend className="mb-2 text-[14px] font-semibold leading-snug text-forest">{questionIndex + 1}. {question.prompt}</legend>
               <div className="space-y-2">
                 {question.choices.map((choice, choiceIndex) => (
-                  <label key={choice} className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 text-sm leading-snug ${answers[questionIndex] === choiceIndex ? "border-green bg-green/5" : "border-hairline bg-surface"}`}>
-                    <input type="radio" name={`risk-question-${questionIndex}`} value={choiceIndex} checked={answers[questionIndex] === choiceIndex} onChange={() => setAnswers(current => current.map((answer, index) => index === questionIndex ? choiceIndex : answer))} data-testid={`input-risk-answer-${questionIndex}-${choiceIndex}`} className="mt-0.5 h-4 w-4 accent-[var(--green)]" />
-                    <span className="text-ink-60">{choice}</span>
+                  <label key={choice} className={`flex min-h-11 cursor-pointer items-start gap-3 rounded-[14px] border-[1.5px] p-3 text-[14px] leading-snug ${answers[questionIndex] === choiceIndex ? "border-forest bg-breeze" : "border-transparent bg-surface"}`}>
+                    <input type="radio" name={`risk-question-${questionIndex}`} value={choiceIndex} checked={answers[questionIndex] === choiceIndex} onChange={() => setAnswers(current => current.map((answer, index) => index === questionIndex ? choiceIndex : answer))} data-testid={`input-risk-answer-${questionIndex}-${choiceIndex}`} className="mt-0.5 h-4 w-4 accent-[var(--forest)]" />
+                    <span className="text-forest">{choice}</span>
                   </label>
                 ))}
               </div>
             </fieldset>
           ))}
         </div>
-        <p className="mt-4 text-xs leading-relaxed text-ink-40">Your answers are a starting point for a conversation, not a recommendation.</p>
+        <p className="mt-4 text-[13px] leading-relaxed text-ink-40">Your answers are a starting point for a conversation, not a recommendation.</p>
         <div className="mt-5 flex gap-3">
-          <button type="button" onClick={onClose} data-testid="button-cancel-risk-check" className="min-h-12 flex-1 rounded-xl border border-hairline bg-surface text-sm font-semibold text-forest">Not now</button>
-          <button type="button" onClick={submit} disabled={answers.some(answer => answer < 0) || saving} data-testid="button-save-risk-check" className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-green text-sm font-semibold text-paper disabled:cursor-not-allowed disabled:opacity-50">
+          <button type="button" onClick={onClose} data-testid="button-cancel-risk-check" className="min-h-12 flex-1 rounded-full border-[1.5px] border-forest bg-transparent px-5 text-[14px] font-semibold text-forest">Not now</button>
+          <button type="button" onClick={submit} disabled={answers.some(answer => answer < 0) || saving} data-testid="button-save-risk-check" className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-full bg-forest px-5 text-[14px] font-semibold text-paper disabled:cursor-not-allowed disabled:opacity-50">
             {saving ? "Saving…" : <><Check className="h-4 w-4" /> Save my answers</>}
           </button>
         </div>

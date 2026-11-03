@@ -38,14 +38,14 @@ export default function WealthScoreRing({ score, size = 72 }: Props) {
   return (
     <div className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
       <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }} aria-hidden="true">
-        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="var(--hairline)" strokeWidth={STROKE} />
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="var(--forest)" strokeOpacity={0.15} strokeWidth={STROKE} />
         <circle
           ref={circleRef}
           cx={size / 2}
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke="var(--green)"
+          stroke="var(--forest)"
           strokeWidth={STROKE}
           strokeLinecap="round"
           strokeDasharray={circ}
@@ -53,8 +53,8 @@ export default function WealthScoreRing({ score, size = 72 }: Props) {
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="font-display font-bold leading-none text-green" style={{ fontSize: numSize }}>{Math.round(clamped)}</span>
-        <span className="text-[10px] font-semibold text-ink-30 mt-0.5">/100</span>
+        <span className="font-display tabular-nums leading-none text-forest" style={{ fontSize: numSize }}>{Math.round(clamped)}</span>
+        <span className="text-[10px] font-medium text-ink-40 mt-0.5">/100</span>
       </div>
     </div>
   );

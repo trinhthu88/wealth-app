@@ -4,7 +4,7 @@ import Sol from "@/components/Sol";
 import { cn } from "@/lib/utils";
 
 interface Props {
-  /** Bricolage 19.5px headline — one observation, in Sol's voice. Real numbers only. */
+  /** One-line headline — one observation, in Sol's voice. Real numbers only. */
   line: string;
   /** Longer explanation shown when tapped open — the "why this matters", never a directive. */
   detail?: string;
@@ -31,34 +31,34 @@ export default function SolNarration({ line, detail, advisorFirstName, tone = "l
         <Sol size="sm" animate="breathe" />
       </div>
       <div className="pt-0.5 min-w-0">
-        <div className="text-[11.5px] font-bold tracking-[0.09em] uppercase text-[#C98A2E]">Sol</div>
+        <div className={cn("tala-eyebrow", dark ? "text-mint" : "text-ink-40")}>Sol</div>
         <div className={cn(
-          "font-display text-[19.5px] font-medium leading-[1.28] tracking-[-0.01em] text-pretty",
+          "text-[16px] font-medium leading-[1.4] mt-1 text-pretty",
           dark ? "text-paper" : "text-forest"
         )}>
           {line}
         </div>
         {open && detail ? (
           <div className="animate-rise-up">
-            <div className={cn("text-[14px] leading-[1.55] mt-[9px] text-pretty", dark ? "text-mint" : "text-ink-60")}>{detail}</div>
-            <div className="flex items-center gap-2 mt-3 flex-wrap">
+            <div className={cn("text-[14px] leading-[1.55] mt-2 text-pretty", dark ? "text-mint" : "text-ink-40")}>{detail}</div>
+            <div className="flex items-center gap-3 mt-3 flex-wrap">
               {advisorFirstName && (
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); navigate("/client/advisor/messages"); }}
                   className={cn(
-                    "text-[13px] font-semibold rounded-full px-[13px] py-[7px] transition-colors",
-                    dark ? "bg-sun text-sun-ink hover:bg-sun/90" : "text-forest bg-sun-tint hover:bg-sun-tint/70"
+                    "min-h-11 text-[14px] font-semibold rounded-full px-5 transition-opacity hover:opacity-90",
+                    dark ? "bg-field text-forest" : "bg-forest text-paper"
                   )}
                 >
                   Ask {advisorFirstName} about this
                 </button>
               )}
-              <span className={cn("text-[13px] font-semibold", dark ? "text-mint-dim" : "text-ink-20")}>Tap to close</span>
+              <span className={cn("text-[13px] font-medium", dark ? "text-mint" : "text-ink-40")}>Tap to close</span>
             </div>
           </div>
         ) : (
-          detail && <div className="text-[12.5px] font-semibold text-[#C98A2E] mt-1.5">Why this matters →</div>
+          detail && <div className={cn("text-[13px] font-semibold underline underline-offset-4 mt-1.5", dark ? "text-mint" : "text-forest")}>Why this matters →</div>
         )}
       </div>
     </div>

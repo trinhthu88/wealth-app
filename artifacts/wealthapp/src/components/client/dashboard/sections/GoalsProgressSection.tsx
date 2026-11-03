@@ -5,11 +5,11 @@ import type { DashboardGoal } from "@/hooks/useDashboardData";
 function n(v: string | null | undefined) { return parseFloat(v ?? "0") || 0; }
 
 const BADGE_BY_STATUS: Record<GoalStatus, { label: string; bg: string; text: string; msg: string }> = {
-  on_track:  { label: "On track",  bg: "#E3E9FD", text: "#08167A", msg: "Tracking ahead of your plan." },
-  at_risk:   { label: "Behind",    bg: "#FEF3D6", text: "#8A5B12", msg: "Behind by a few months." },
-  off_track: { label: "Off track", bg: "#FCE8E5", text: "#A63D2F", msg: "Needs attention." },
-  completed: { label: "Achieved",  bg: "#E3E9FD", text: "#08167A", msg: "Goal reached." },
-  no_target: { label: "Active",    bg: "#E3E9FD", text: "#08167A", msg: "On track" },
+  on_track:  { label: "On track",  bg: "var(--forest)", text: "var(--paper)", msg: "Tracking ahead of your plan." },
+  at_risk:   { label: "Behind",    bg: "var(--sun)", text: "var(--forest)", msg: "Behind by a few months." },
+  off_track: { label: "Off track", bg: "var(--sun)", text: "var(--forest)", msg: "Needs attention." },
+  completed: { label: "Achieved",  bg: "var(--forest)", text: "var(--paper)", msg: "Goal reached." },
+  no_target: { label: "Active",    bg: "var(--breeze)", text: "var(--forest)", msg: "On track" },
 };
 
 // Reuses the canonical investment-client pacing model (@workspace/goal-math) so this
@@ -37,38 +37,38 @@ function PrimaryGoalCard({ goal }: { goal: DashboardGoal }) {
 
   return (
     <Link href="/client/goals/goals">
-      <div className="bg-white border border-[#E3E9FD] rounded-[24px] p-5 sm:p-6 shadow-[0_4px_14px_rgba(12,33,164,.06)] cursor-pointer hover:border-[#0C21A4] transition-colors">
+      <div className="bg-surface rounded-[24px] p-5 sm:p-6 cursor-pointer hover:ring-1 hover:ring-green transition-shadow">
         <div className="flex items-center justify-between mb-1">
-          <div className="font-mono text-[10px] tracking-[0.14em] uppercase text-[#4A5590]">Your biggest goal</div>
+          <div className="tala-eyebrow text-ink-40">Your biggest goal</div>
           <div className="text-[11px] font-semibold px-2.5 py-1.25 rounded-full" style={{ backgroundColor: badge.bg, color: badge.text }}>
             {badge.label}
           </div>
         </div>
-        <div className="font-display text-[19px] font-bold text-[#0C21A4] mb-4.5">{goal.title}</div>
+        <div className="text-[16px] font-semibold text-forest mb-4.5">{goal.title}</div>
 
         <div className="flex items-center gap-5.5">
           <div className="relative w-[132px] h-[132px] shrink-0">
             <svg width="132" height="132" viewBox="0 0 132 132" className="-rotate-90">
-              <circle cx="66" cy="66" r="54" fill="none" stroke="#F1F4FE" strokeWidth="14" />
-              <circle cx="66" cy="66" r="54" fill="none" stroke="#0C21A4" strokeWidth="14" strokeLinecap="round"
+              <circle cx="66" cy="66" r="54" fill="none" stroke="var(--forest)" strokeOpacity={0.15} strokeWidth="14" />
+              <circle cx="66" cy="66" r="54" fill="none" stroke="var(--forest)" strokeWidth="14" strokeLinecap="round"
                 strokeDasharray={circumference} strokeDashoffset={offset} />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <div className="font-display text-[30px] font-bold text-[#0C21A4] tracking-[-0.03em] leading-none">
+              <div className="font-display tabular-nums text-[30px] text-forest tracking-[-0.03em] leading-none">
                 {pct.toFixed(0)}%
               </div>
-              <div className="text-[11px] text-[#4A5590] mt-0.5">funded</div>
+              <div className="text-[11px] text-ink-40 mt-0.5">funded</div>
             </div>
           </div>
           <div className="min-w-0">
-            <div className="font-display text-xl font-bold text-[#0C21A4] tracking-[-0.02em]">
+            <div className="text-[18px] font-semibold tabular-nums text-forest tracking-[-0.02em]">
               ${current.toLocaleString("en-US", { maximumFractionDigits: 0 })}
             </div>
-            <div className="text-xs text-[#4A5590] mt-1">
+            <div className="text-xs text-ink-40 mt-1">
               of ${target >= 1e6 ? (target/1e6).toFixed(1) + "m" : target.toLocaleString()} by {targetYear}
             </div>
-            <div className="h-px bg-[#E3E9FD] my-3.5" />
-            <div className="text-[13px] leading-[1.45] text-[#2D2A24] text-pretty">
+            <div className="h-px bg-field my-3.5" />
+            <div className="text-[13px] leading-[1.45] text-forest text-pretty">
               {badge.msg}
             </div>
           </div>
@@ -78,7 +78,7 @@ function PrimaryGoalCard({ goal }: { goal: DashboardGoal }) {
   );
 }
 
-function SmallGoalCard({ goal, color = "#0C21A4" }: { goal: DashboardGoal, color?: string }) {
+function SmallGoalCard({ goal, color = "var(--forest)" }: { goal: DashboardGoal, color?: string }) {
   const current = n(goal.currentAmount);
   const target = n(goal.targetAmount);
   const pct = target > 0 ? Math.min(100, (current / target) * 100) : 0;
@@ -90,19 +90,19 @@ function SmallGoalCard({ goal, color = "#0C21A4" }: { goal: DashboardGoal, color
 
   return (
     <Link href="/client/goals/goals">
-      <div className="flex-1 bg-white border border-[#E3E9FD] rounded-[20px] p-4 cursor-pointer hover:border-[#0C21A4] transition-colors">
+      <div className="flex-1 bg-surface rounded-[24px] p-4 cursor-pointer hover:ring-1 hover:ring-green transition-shadow">
         <div className="flex items-center gap-2.5 mb-2.5">
           <svg width="34" height="34" viewBox="0 0 34 34" className="-rotate-90 shrink-0">
-            <circle cx="17" cy="17" r="14" fill="none" stroke="#F1F4FE" strokeWidth="5" />
+            <circle cx="17" cy="17" r="14" fill="none" stroke="var(--forest)" strokeOpacity={0.15} strokeWidth="5" />
             <circle cx="17" cy="17" r="14" fill="none" stroke={color} strokeWidth="5" strokeLinecap="round"
               strokeDasharray={circumference} strokeDashoffset={offset} />
           </svg>
-          <div className="text-xs font-semibold text-[#0C21A4] leading-tight">
+          <div className="text-xs font-semibold text-forest leading-tight">
             {goal.title}<br />
-            <span className="font-medium text-[#4A5590]">{pct.toFixed(0)}% funded</span>
+            <span className="font-medium text-ink-40">{pct.toFixed(0)}% funded</span>
           </div>
         </div>
-        <div className="text-[11px] text-[#4A5590]">{badge.label === "On track" ? `On track for ${goal.targetDate ? new Date(goal.targetDate).getFullYear() : "future"}` : badge.msg}</div>
+        <div className="text-[11px] text-ink-40">{badge.label === "On track" ? `On track for ${goal.targetDate ? new Date(goal.targetDate).getFullYear() : "future"}` : badge.msg}</div>
       </div>
     </Link>
   );
@@ -116,10 +116,10 @@ interface Props {
 export default function GoalsProgressSection({ goals, totalGoals }: Props) {
   if (goals.length === 0) {
     return (
-      <div className="bg-white border border-[#E3E9FD] rounded-xl p-6 text-center">
-        <p className="text-sm text-[#4A5590] mb-2">No goals set yet.</p>
+      <div className="bg-surface rounded-[24px] p-6 text-center">
+        <p className="text-sm text-ink-40 mb-2">No goals set yet.</p>
         <Link href="/client/goals/goals">
-          <span className="text-sm font-semibold text-[#0C21A4] hover:text-[#08167A]">Set your first goal →</span>
+          <span className="text-sm font-semibold text-forest underline underline-offset-4">Set your first goal →</span>
         </Link>
       </div>
     );
@@ -134,7 +134,7 @@ export default function GoalsProgressSection({ goals, totalGoals }: Props) {
       {others.length > 0 && (
         <div className="flex gap-3">
           {others.map((g, i) => (
-            <SmallGoalCard key={g.id} goal={g} color={i === 0 ? "#F5B947" : "#0C21A4"} />
+            <SmallGoalCard key={g.id} goal={g} color={i === 0 ? "var(--sun)" : "var(--forest)"} />
           ))}
         </div>
       )}

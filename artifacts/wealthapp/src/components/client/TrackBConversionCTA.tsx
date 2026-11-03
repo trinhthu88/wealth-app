@@ -71,24 +71,24 @@ export default function TrackBConversionCTA({ context, relevantValue, relevantGo
 
   return (
     <div className={cn(
-      "flex items-start gap-3 p-3 rounded-xl bg-teal-50 border-l-4 border-[#0C21A4]",
+      "relative flex items-start gap-3 p-4 pr-12 rounded-[24px] bg-breeze",
       className
     )}>
-      <Sparkles className="h-4 w-4 text-[#0C21A4] shrink-0 mt-0.5" />
+      <Sparkles className="h-4 w-4 text-forest shrink-0 mt-0.5" aria-hidden="true" />
       <div className="flex-1 min-w-0">
-        <p className="text-[13px] text-slate-700 leading-snug">
+        <p className="text-[14px] text-forest leading-snug">
           {body}{" "}
-          <Link href="/client/advisor/messages" className="text-[#0C21A4] font-medium hover:underline">
+          <Link href="/client/advisor/messages" className="text-forest font-semibold underline underline-offset-4">
             {cta}
           </Link>
         </p>
       </div>
       <button
         onClick={dismiss}
-        className="shrink-0 h-5 w-5 flex items-center justify-center text-slate-400 hover:text-slate-600 rounded transition-colors"
+        className="absolute right-1 top-1 h-11 w-11 flex items-center justify-center text-forest rounded-full hover:bg-forest/10 transition-colors"
         aria-label="Dismiss"
       >
-        <X className="h-3 w-3" />
+        <X className="h-4 w-4" aria-hidden="true" />
       </button>
     </div>
   );
