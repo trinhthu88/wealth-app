@@ -10,9 +10,31 @@ interface Props {
   noBorder?: boolean;
 }
 
+// Leading tile colour by holding family.
+const TILE_BY_TYPE: Record<string, string> = {
+  stock_etf: "bg-forest text-paper",
+  etf: "bg-forest text-paper",
+  mutual_fund: "bg-forest text-paper",
+  bond: "bg-field text-forest",
+  commodity: "bg-field text-forest",
+  crypto: "bg-breeze text-forest",
+  property: "bg-breeze text-forest",
+  cash: "bg-field text-forest",
+  pension: "bg-breeze text-forest",
+  other: "bg-paper text-forest",
+};
+
+function initialsFor(holding: ClientHolding) {
+  const code = holding.ticker || holding.coinSymbol;
+  if (code) return code.slice(0, 3).toUpperCase();
+  const words = holding.label.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return "•";
+  return (words.length === 1 ? words[0].slice(0, 2) : words[0][0] + words[1][0]).toUpperCase();
+}
+
 export default function HoldingRow({ holding, onClick, onViewTx, noBorder }: Props) {
   const isGain = holding.gainLossPct >= 0;
-  
+
   let subtitle = holding.holdingType.replace("_", " ");
   if (holding.ticker) {
     subtitle = holding.brokerPlatform ? `${holding.brokerPlatform} · ${holding.ticker}` : holding.ticker;
@@ -26,36 +48,50 @@ export default function HoldingRow({ holding, onClick, onViewTx, noBorder }: Pro
 
   return (
     <div className={cn(
-      "flex justify-between items-center py-[15px]",
+      "flex justify-between items-center gap-3 p-3",
       !noBorder && "border-b border-hairline"
     )}>
       <button
         type="button"
         onClick={onClick}
-        className="flex-1 text-left min-w-0 pr-4 group"
+        className="flex flex-1 items-center gap-3 text-left min-w-0 group rounded-[14px]"
       >
-        <div className="text-[15px] font-semibold text-forest truncate group-hover:text-green transition-colors">{holding.label}</div>
-        <div className="text-[13px] text-ink-30 truncate capitalize">{subtitle}</div>
+        <span
+          aria-hidden="true"
+          className={cn(
+            "flex h-11 w-11 flex-none items-center justify-center rounded-[14px] text-[12px] font-semibold",
+            TILE_BY_TYPE[holding.holdingType] ?? "bg-paper text-forest",
+          )}
+        >
+          {initialsFor(holding)}
+        </span>
+        <span className="flex min-w-0 flex-col gap-0.5">
+          <span className="text-[15px] font-semibold text-forest truncate group-hover:underline">{holding.label}</span>
+          <span className="text-[13px] text-ink-40 truncate capitalize">{subtitle}</span>
+        </span>
       </button>
-      
-      <div className="flex items-center gap-3 shrink-0">
+
+      <div className="flex items-center gap-2 shrink-0">
         {onViewTx && (
           <button
             type="button"
             onClick={onViewTx}
-            className="w-8 h-8 rounded-full flex items-center justify-center text-ink-30 hover:bg-hairline hover:text-forest transition-colors"
+            className="w-11 h-11 rounded-full flex items-center justify-center text-ink-40 hover:bg-paper hover:text-forest transition-colors"
             aria-label="View transactions"
           >
             <Clock className="w-4 h-4" aria-hidden="true" />
           </button>
         )}
-        <div className="text-right">
+        <div className="flex flex-col items-end gap-1">
           <div className="text-[15px] font-semibold text-forest tabular-nums">
             <CurrencyField amountUsd={holding.currentValue} />
           </div>
-          <div className={cn("text-[13px] font-semibold", isGain ? "text-green" : "text-clay")}>
+          <span className={cn(
+            "rounded-full px-2 py-0.5 text-[12px] font-semibold tabular-nums text-forest",
+            isGain ? "bg-field" : "bg-sun",
+          )}>
             {isGain ? "+" : ""}{holding.gainLossPct.toFixed(1)}%
-          </div>
+          </span>
         </div>
       </div>
     </div>

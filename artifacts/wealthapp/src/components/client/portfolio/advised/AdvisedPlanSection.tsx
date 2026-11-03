@@ -9,7 +9,7 @@ interface Props {
 export default function AdvisedPlanSection({ plans }: Props) {
   const [, navigate] = useLocation();
   return (
-    <div className="space-y-3">
+    <div className="bg-surface rounded-[24px] p-1 flex flex-col">
       {plans.map((plan) => (
         <AdvisedPlanCardFull
           key={plan.id}

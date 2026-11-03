@@ -54,19 +54,19 @@ export default function EditHoldingSheet({ isOpen, onClose, holding, onUpdate, o
       {holding.holdingType === "pension" && <PensionForm {...formProps} />}
       {holding.holdingType === "other" && <OtherForm {...formProps} />}
 
-      <div className="mt-4 pt-4 border-t border-slate-100">
+      <div className="mt-4 pt-4 border-t border-hairline">
         {!confirming ? (
-          <button onClick={() => setConfirming(true)} className="text-sm text-red-500 hover:text-red-700 font-medium">
+          <button onClick={() => setConfirming(true)} className="min-h-11 text-[14px] text-red-600 hover:text-red-700 font-semibold">
             Delete investment
           </button>
         ) : (
           <div className="space-y-2">
-            <p className="text-sm text-slate-600">Remove this holding? This cannot be undone.</p>
+            <p className="text-[14px] text-ink-60">Remove this holding? This cannot be undone.</p>
             <div className="flex gap-2">
-              <button onClick={() => setConfirming(false)} className="flex-1 py-2 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50">
+              <button onClick={() => setConfirming(false)} className="flex-1 h-11 rounded-full border-[1.5px] border-forest bg-transparent text-[14px] font-semibold text-forest hover:bg-surface">
                 Cancel
               </button>
-              <button onClick={handleDelete} disabled={deleting} className="flex-1 py-2 rounded-lg bg-red-500 text-white text-sm font-medium hover:bg-red-600 disabled:opacity-60">
+              <button onClick={handleDelete} disabled={deleting} className="flex-1 h-11 rounded-full bg-red-600 text-white text-[14px] font-semibold hover:bg-red-700 disabled:opacity-60">
                 {deleting ? "Removing…" : "Yes, remove"}
               </button>
             </div>

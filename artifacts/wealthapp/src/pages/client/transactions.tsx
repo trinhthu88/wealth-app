@@ -80,22 +80,22 @@ export default function TransactionsPage() {
 
   return (
     <ClientAppShell>
-      <div className="max-w-[860px] mx-auto space-y-5">
-        <div>
-          <h1 className="text-xl font-bold text-[#0C21A4]">Transactions</h1>
-          <p className="text-sm text-slate-400 mt-0.5">{transactions.length} total transactions</p>
+      <div className="max-w-[860px] mx-auto space-y-4 pb-8">
+        <div className="px-1">
+          <h1 className="font-display text-[34px] leading-[1.05] text-forest">Transactions</h1>
+          <p className="text-[14px] text-ink-40 mt-1 tabular-nums">{transactions.length} total transactions</p>
         </div>
 
         {/* Summary bar */}
         {transactions.length > 0 && (
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-white border border-[#E3E9FD] rounded-xl p-4">
-              <p className="text-xs text-slate-400 mb-1">Total contributed</p>
-              <p className="text-lg font-bold text-emerald-600">{fmtCurrency(totalIn)}</p>
+            <div className="bg-field rounded-[24px] p-4">
+              <p className="tala-eyebrow text-forest mb-1.5">Total contributed</p>
+              <p className="text-[18px] font-semibold text-forest tabular-nums">{fmtCurrency(totalIn)}</p>
             </div>
-            <div className="bg-white border border-[#E3E9FD] rounded-xl p-4">
-              <p className="text-xs text-slate-400 mb-1">Total withdrawn</p>
-              <p className="text-lg font-bold text-red-500">{fmtCurrency(totalOut)}</p>
+            <div className="bg-surface rounded-[24px] p-4">
+              <p className="tala-eyebrow text-ink-40 mb-1.5">Total withdrawn</p>
+              <p className="text-[18px] font-semibold text-forest tabular-nums">{fmtCurrency(totalOut)}</p>
             </div>
           </div>
         )}
@@ -108,10 +108,10 @@ export default function TransactionsPage() {
                 key={opt.value}
                 onClick={() => setFilter(opt.value)}
                 className={cn(
-                  "px-3 py-1.5 rounded-lg border text-sm font-medium transition-all",
+                  "min-h-11 px-4 rounded-full text-[13px] font-semibold transition-colors",
                   filter === opt.value
-                    ? "border-[#0C21A4] bg-[#0C21A4]/10 text-[#0C21A4]"
-                    : "border-slate-200 text-slate-600 hover:border-[#0C21A4]/30"
+                    ? "bg-forest text-paper"
+                    : "bg-surface text-forest hover:bg-green-tint"
                 )}
               >
                 {opt.label}
@@ -122,52 +122,52 @@ export default function TransactionsPage() {
 
         {isLoading ? (
           <div className="space-y-3">
-            {[1, 2, 3, 4, 5].map((i) => <div key={i} className="h-16 bg-slate-100 rounded-xl animate-pulse" />)}
+            {[1, 2, 3, 4, 5].map((i) => <div key={i} className="h-16 bg-surface rounded-[24px] animate-pulse" />)}
           </div>
         ) : isError ? (
-          <div className="bg-white border border-[#E3E9FD] rounded-xl p-8 flex flex-col items-center gap-3 text-center">
-            <AlertCircle className="h-8 w-8 text-slate-300" />
-            <p className="text-sm font-medium text-slate-500">Couldn't load transactions</p>
-            <p className="text-xs text-slate-400">Try refreshing the page.</p>
+          <div className="bg-surface rounded-[24px] p-8 flex flex-col items-center gap-3 text-center">
+            <AlertCircle className="h-8 w-8 text-red-600" aria-hidden="true" />
+            <p className="text-[15px] font-semibold text-forest">Couldn't load transactions</p>
+            <p className="text-[13px] text-ink-40">Try refreshing the page.</p>
           </div>
         ) : transactions.length === 0 ? (
-          <div className="bg-white border border-[#E3E9FD] rounded-xl p-12 text-center">
-            <p className="text-sm text-slate-400">No transactions yet. Your advisor will record transactions as they happen.</p>
+          <div className="bg-surface rounded-[24px] p-8 text-center">
+            <p className="text-[14px] text-ink-40">No transactions yet. Your advisor will record transactions as they happen.</p>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="bg-white border border-[#E3E9FD] rounded-xl p-8 text-center">
-            <p className="text-sm text-slate-400">No transactions match this filter.</p>
+          <div className="bg-surface rounded-[24px] p-8 text-center">
+            <p className="text-[14px] text-ink-40">No transactions match this filter.</p>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-5">
             {months.map((month) => (
               <div key={month}>
-                <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 px-1">
+                <h2 className="text-[16px] font-semibold text-forest mb-3 px-1">
                   {fmtMonth(month)}
-                </div>
-                <div className="bg-white border border-[#E3E9FD] rounded-xl overflow-hidden">
+                </h2>
+                <div className="bg-surface rounded-[24px] p-1">
                   {grouped[month].map((tx, i) => {
                     const isOut = TX_OUTFLOWS.includes(tx.transactionType);
                     return (
                       <div key={tx.id} className={cn(
-                        "flex items-center gap-3 px-4 py-3.5",
-                        i < grouped[month].length - 1 && "border-b border-[#E3E9FD]"
+                        "flex items-center gap-3 p-3",
+                        i < grouped[month].length - 1 && "border-b border-hairline"
                       )}>
                         <div className={cn(
-                          "w-9 h-9 rounded-full flex items-center justify-center shrink-0",
-                          isOut ? "bg-red-50" : "bg-emerald-50"
+                          "w-10 h-10 rounded-[14px] flex items-center justify-center shrink-0 text-forest",
+                          isOut ? "bg-breeze" : "bg-field"
                         )}>
                           {isOut
-                            ? <TrendingDown className="h-4 w-4 text-red-500" />
-                            : <TrendingUp className="h-4 w-4 text-emerald-600" />}
+                            ? <TrendingDown className="h-4 w-4" aria-hidden="true" />
+                            : <TrendingUp className="h-4 w-4" aria-hidden="true" />}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium text-[#0C21A4]">
+                          <div className="text-[14px] font-medium text-forest">
                             {TX_TYPE_LABELS[tx.transactionType] ?? tx.transactionType}
                           </div>
-                          <div className="text-xs text-slate-400 flex items-center gap-1.5 flex-wrap mt-0.5">
+                          <div className="text-[13px] text-ink-40 flex items-center gap-1.5 flex-wrap mt-0.5">
                             {tx.package?.nickname && (
-                              <span className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-500">
+                              <span className="bg-paper px-2 py-0.5 rounded-full text-[12px] font-medium text-forest">
                                 {tx.package.nickname}
                               </span>
                             )}
@@ -175,18 +175,18 @@ export default function TransactionsPage() {
                             <span>{fmtDate(tx.transactionDate)}</span>
                           </div>
                           {tx.units && (
-                            <div className="text-xs text-slate-400 mt-0.5">
+                            <div className="text-[12px] text-ink-40 mt-0.5 tabular-nums">
                               {parseFloat(tx.units).toFixed(4)} units
                               {tx.pricePerUnitUsd ? ` @ ${fmtCurrency(parseFloat(tx.pricePerUnitUsd))}` : ""}
                             </div>
                           )}
                           {tx.notes && (
-                            <div className="text-xs text-slate-400 italic mt-0.5">{tx.notes}</div>
+                            <div className="text-[12px] text-ink-40 italic mt-0.5">{tx.notes}</div>
                           )}
                         </div>
                         <div className={cn(
-                          "text-sm font-bold shrink-0",
-                          isOut ? "text-red-500" : "text-emerald-600"
+                          "text-[14px] font-semibold tabular-nums shrink-0",
+                          isOut ? "text-clay-ink" : "text-forest"
                         )}>
                           {isOut ? "-" : "+"}{fmtCurrency(parseFloat(tx.amountUsd))}
                         </div>

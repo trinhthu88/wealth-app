@@ -62,7 +62,7 @@ export default function HoldingDetail() {
       <ClientAppShell>
         <div className="space-y-3">
           <div className="h-8 w-40 bg-surface animate-pulse rounded-lg" />
-          <div className="h-32 bg-surface animate-pulse rounded-[26px]" />
+          <div className="h-32 bg-surface animate-pulse rounded-[28px]" />
         </div>
       </ClientAppShell>
     );
@@ -72,7 +72,7 @@ export default function HoldingDetail() {
     return (
       <ClientAppShell>
         <div className="text-center py-16">
-          <p className="text-[15px] text-ink-40 mb-4">This holding could not be found.</p>
+          <p className="text-[14px] text-ink-40 mb-4">This holding could not be found.</p>
           <Link href="/client/wealth/investments" className="text-[14px] font-semibold text-green">Back to Investments</Link>
         </div>
       </ClientAppShell>
@@ -93,49 +93,45 @@ export default function HoldingDetail() {
         <div>
           <Link
             href="/client/wealth/investments"
-            className="inline-flex items-center gap-1 text-[13.5px] font-semibold text-ink-40 hover:text-forest mb-3"
+            className="inline-flex min-h-11 items-center gap-1 text-[14px] font-medium text-ink-40 hover:text-forest mb-1"
           >
             <ChevronLeft className="h-4 w-4" aria-hidden="true" />
             Portfolio
           </Link>
           <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="font-display text-[26px] font-semibold text-forest tracking-[-0.02em]">
+            <h1 className="font-display text-[34px] leading-[1.05] text-forest">
               {holding.label}
             </h1>
             <HoldingTypeBadge type={holding.holdingType} size="sm" />
           </div>
         </div>
 
-        <div className="bg-surface rounded-[26px] p-[22px] shadow-[0_2px_14px_rgba(12,33,164,.06)] space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-[13px] text-ink-40 mb-1">Current value</p>
-              <p className="font-display text-[24px] font-semibold text-forest tabular-nums leading-none">
-                <CurrencyField amountUsd={holding.currentValue} currency={holding.currency} compact />
-              </p>
-            </div>
-            <div>
-              <p className="text-[13px] text-ink-40 mb-1">Cost basis</p>
-              <p className="font-display text-[24px] font-semibold text-forest tabular-nums leading-none">
-                <CurrencyField amountUsd={holding.costBasis} currency={holding.currency} compact />
-              </p>
-            </div>
-          </div>
-          <div className="pt-3 border-t border-hairline">
-            <p className="text-[13px] text-ink-40 mb-1">Gain / loss</p>
-            <p className={cn("text-[16px] font-semibold tabular-nums", isGain ? "text-green" : "text-clay")}>
+        <section aria-label="Current value" className="bg-forest text-paper rounded-[28px] p-5 flex flex-col gap-3">
+          <p className="tala-eyebrow text-mint">Current value</p>
+          <p className="font-display tabular-nums text-[52px] leading-none tracking-[-0.04em] text-paper">
+            <CurrencyField amountUsd={holding.currentValue} currency={holding.currency} compact />
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="sr-only">Gain / loss</span>
+            <span className={cn("inline-flex rounded-full px-3 py-1.5 text-[13px] font-semibold tabular-nums text-forest", isGain ? "bg-field" : "bg-sun")}>
               {isGain ? "+" : ""}<CurrencyField amountUsd={holding.gainLoss} currency={holding.currency} compact /> ({isGain ? "+" : ""}{holding.gainLossPct.toFixed(1)}%)
+            </span>
+          </div>
+          <div className="pt-3 border-t border-white/20">
+            <p className="tala-eyebrow text-mint mb-1">Cost basis</p>
+            <p className="text-[18px] font-semibold text-paper tabular-nums leading-none">
+              <CurrencyField amountUsd={holding.costBasis} currency={holding.currency} compact />
             </p>
           </div>
-        </div>
+        </section>
 
-        <div className="bg-surface rounded-[26px] p-[22px] shadow-[0_2px_14px_rgba(12,33,164,.06)]">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-[15px] font-semibold text-forest">Transaction history</p>
+        <section aria-label="Transaction history" className="space-y-3">
+          <div className="flex items-center justify-between px-1">
+            <h2 className="text-[16px] font-semibold text-forest">Transaction history</h2>
             <button
               type="button"
               onClick={() => setAddOpen(true)}
-              className="inline-flex items-center gap-1 text-[13px] font-semibold text-green hover:text-forest"
+              className="inline-flex min-h-11 items-center gap-1 text-[14px] font-semibold text-green underline-offset-2 hover:underline"
             >
               <Plus className="h-4 w-4" aria-hidden="true" />
               Add transaction
@@ -144,43 +140,43 @@ export default function HoldingDetail() {
 
           {txLoading ? (
             <div className="space-y-2">
-              {[0, 1, 2].map(i => <div key={i} className="h-12 bg-hairline/60 animate-pulse rounded-lg" />)}
+              {[0, 1, 2].map(i => <div key={i} className="h-14 bg-surface animate-pulse rounded-[14px]" />)}
             </div>
           ) : transactions.length === 0 ? (
-            <p className="text-[13.5px] text-ink-40 py-4 text-center">No transactions yet.</p>
+            <p className="bg-surface rounded-[24px] text-[14px] text-ink-40 p-6 text-center">No transactions yet.</p>
           ) : (
-            <div className="space-y-2">
+            <div className="bg-surface rounded-[24px] p-1">
               {transactions.map(tx => {
                 const amt = parseFloat(tx.amount) || 0;
                 const sign = signFor(tx.type);
                 const isAuto = tx.source !== "manual";
                 return (
-                  <div key={tx.id} className="flex items-center justify-between py-2.5 px-3 border border-hairline rounded-[14px]">
+                  <div key={tx.id} className="flex items-center justify-between p-3 border-b border-hairline last:border-0">
                     <div className="min-w-0 flex items-center gap-2">
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5">
-                          <p className="text-[13.5px] font-medium text-forest">{TYPE_LABEL[tx.type]}</p>
+                          <p className="text-[14px] font-medium text-forest">{TYPE_LABEL[tx.type]}</p>
                           {isAuto && (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-ink-30 bg-hairline rounded-full px-1.5 py-0.5">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-forest bg-paper rounded-full px-2 py-0.5">
                               <Lock className="h-2.5 w-2.5" aria-hidden="true" /> Auto
                             </span>
                           )}
                         </div>
-                        <p className="text-[12px] text-ink-40 truncate">
+                        <p className="text-[13px] text-ink-40 truncate">
                           {fmtDate(tx.transactionDate)}
                           {tx.description ? ` · ${tx.description}` : ""}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0 ml-2">
-                      <span className={cn("text-[13.5px] font-semibold tabular-nums", sign > 0 ? "text-green" : sign < 0 ? "text-clay" : "text-forest")}>
+                      <span className={cn("text-[14px] font-semibold tabular-nums", sign < 0 ? "text-clay-ink" : "text-forest")}>
                         {sign > 0 ? "+" : sign < 0 ? "-" : ""}
                         <CurrencyField amountUsd={amt} currency={holding.currency} compact />
                       </span>
                       {!isAuto && (
                         <button
                           onClick={() => handleDelete(tx.id)}
-                          className="h-7 w-7 flex items-center justify-center rounded-full text-ink-30 hover:bg-clay-tint hover:text-clay transition-colors"
+                          className="h-11 w-11 flex items-center justify-center rounded-full text-ink-40 hover:bg-red-50 hover:text-red-600 transition-colors"
                           aria-label="Delete transaction"
                         >
                           <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
@@ -192,7 +188,7 @@ export default function HoldingDetail() {
               })}
             </div>
           )}
-        </div>
+        </section>
       </div>
 
       <AddHoldingTransactionSheet

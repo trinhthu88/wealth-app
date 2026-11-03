@@ -3,7 +3,7 @@
 // ✓ ALLOWED: BottomSheet spring animation
 // ✗ BANNED:  Page-load stagger on sections
 // ✗ BANNED:  JetBrains Mono font
-// ✗ BANNED:  Cream/warm palette (#F1F4FE, #F1F4FE, #8F98C8)
+// ✗ BANNED:  Off-palette colours — use the theme tokens (see index.css)
 // ✗ BANNED:  Inline style={{ color: '#hexcode' }} — use Tailwind tokens only
 // ✗ BANNED:  Double bottom nav — AppShell is the ONLY nav
 

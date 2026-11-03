@@ -52,10 +52,10 @@ export default function PensionForm({ initial, onSubmit, submitLabel }: Props) {
       </Field>
       <Field label="Current balance" required error={errors.balance}>
         <AmountWithCurrency amount={balance} onAmountChange={setBalance} currency={currency} onCurrencyChange={setCurrency} />
-        <p className="text-xs text-slate-400">Enter the current USD-equivalent value. We don't yet convert other currencies automatically.</p>
+        <p className="text-xs text-ink-40">Enter the current USD-equivalent value. We don't yet convert other currencies automatically.</p>
       </Field>
       <Field label="Country">
-        <select value={country} onChange={e => setCountry(e.target.value)} className="w-full px-4 py-2.5 rounded-xl border border-[#E3E9FD] text-sm text-[#0C21A4] bg-white focus:outline-none focus:ring-2 focus:ring-[#0C21A4]/30">
+        <select value={country} onChange={e => setCountry(e.target.value)} className="w-full px-4 py-2.5 rounded-[14px] border border-hairline text-[14px] text-forest bg-surface focus:outline-none focus:ring-2 focus:ring-green/30">
           <option value="">Select country…</option>
           {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
         </select>

@@ -56,21 +56,21 @@ export default function AddHoldingTransactionSheet({ isOpen, onClose, holdingId,
             type="date"
             value={date}
             onChange={e => setDate(e.target.value)}
-            className="w-full min-h-11 px-3 rounded-xl border border-hairline text-[14px] focus:outline-none focus:ring-2 focus:ring-green"
+            className="w-full min-h-11 px-4 rounded-[14px] border border-hairline bg-surface text-[14px] text-forest focus:outline-none focus:ring-2 focus:ring-green"
           />
         </div>
 
         <div>
           <label className="text-[12.5px] font-medium text-ink-40 mb-1.5 block">Type</label>
-          <div className="grid grid-cols-4 gap-1 rounded-xl border border-hairline bg-paper p-1">
+          <div className="grid grid-cols-4 gap-1 rounded-full bg-surface p-1">
             {TYPE_OPTIONS.map(o => (
               <button
                 key={o.value}
                 type="button"
                 onClick={() => setType(o.value)}
                 className={cn(
-                  "min-h-9 rounded-lg text-[11.5px] font-semibold px-1 transition-colors",
-                  type === o.value ? "bg-green text-white" : "text-ink-40 hover:text-forest",
+                  "min-h-10 rounded-full text-[12px] font-semibold px-1 transition-colors",
+                  type === o.value ? "bg-forest text-paper" : "text-ink-40 hover:text-forest",
                 )}
               >
                 {o.label}
@@ -89,7 +89,7 @@ export default function AddHoldingTransactionSheet({ isOpen, onClose, holdingId,
             value={amount}
             onChange={e => setAmount(e.target.value)}
             placeholder="0"
-            className="w-full min-h-11 px-3 rounded-xl border border-hairline text-[14px] focus:outline-none focus:ring-2 focus:ring-green"
+            className="w-full min-h-11 px-4 rounded-[14px] border border-hairline bg-surface text-[14px] text-forest focus:outline-none focus:ring-2 focus:ring-green"
           />
         </div>
 
@@ -102,7 +102,7 @@ export default function AddHoldingTransactionSheet({ isOpen, onClose, holdingId,
               value={units}
               onChange={e => setUnits(e.target.value)}
               placeholder="0"
-              className="w-full min-h-11 px-3 rounded-xl border border-hairline text-[14px] focus:outline-none focus:ring-2 focus:ring-green"
+              className="w-full min-h-11 px-4 rounded-[14px] border border-hairline bg-surface text-[14px] text-forest focus:outline-none focus:ring-2 focus:ring-green"
             />
           </div>
         )}
@@ -114,14 +114,14 @@ export default function AddHoldingTransactionSheet({ isOpen, onClose, holdingId,
             value={note}
             onChange={e => setNote(e.target.value)}
             placeholder="Note"
-            className="w-full min-h-11 px-3 rounded-xl border border-hairline text-[14px] focus:outline-none focus:ring-2 focus:ring-green"
+            className="w-full min-h-11 px-4 rounded-[14px] border border-hairline bg-surface text-[14px] text-forest focus:outline-none focus:ring-2 focus:ring-green"
           />
         </div>
 
         <button
           onClick={handleSave}
           disabled={adding || !(parseFloat(amount) > 0)}
-          className="w-full min-h-11 rounded-xl bg-green text-white text-[14px] font-semibold disabled:opacity-50"
+          className="w-full h-12 rounded-full bg-forest text-paper text-[14px] font-semibold hover:bg-forest-700 disabled:opacity-50"
         >
           {adding ? "Saving…" : "Save"}
         </button>

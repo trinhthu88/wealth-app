@@ -88,16 +88,16 @@ export default function TickerHoldingForm({
           placeholder={tickerPlaceholder}
         />
         {priceFetching && (
-          <p className="text-xs text-slate-400 mt-1 animate-pulse">Fetching live price…</p>
+          <p className="text-xs text-ink-40 mt-1 animate-pulse">Fetching live price…</p>
         )}
         {pricePreview && (
-          <div className="mt-1.5 flex items-center gap-2 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2">
-            <span className="text-xs font-semibold text-[#0C21A4]">${pricePreview.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</span>
-            <span className={`text-xs font-medium ${pricePreview.change >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+          <div className="mt-1.5 flex items-center gap-2 bg-surface rounded-[14px] px-3 py-2">
+            <span className="text-xs font-semibold text-forest">${pricePreview.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</span>
+            <span className={`text-xs font-medium ${pricePreview.change >= 0 ? "text-forest" : "text-clay-ink"}`}>
               {pricePreview.change >= 0 ? "▲" : "▼"} {Math.abs(pricePreview.change).toFixed(2)}%
             </span>
             {currentValue !== null && (
-              <span className="text-xs text-slate-500 ml-auto">Est. value: ${currentValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+              <span className="text-xs text-ink-40 ml-auto">Est. value: ${currentValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
             )}
           </div>
         )}
@@ -114,7 +114,7 @@ export default function TickerHoldingForm({
 
       <Field label="Average cost price per unit" required error={errors.avgCost}>
         <AmountWithCurrency amount={avgCost} onAmountChange={setAvgCost} currency={currency} onCurrencyChange={setCurrency} />
-        <p className="text-xs text-slate-400">The average price you paid per unit.</p>
+        <p className="text-xs text-ink-40">The average price you paid per unit.</p>
       </Field>
 
       {platformLabel !== undefined && (

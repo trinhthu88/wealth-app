@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
 import ClientAppShell from "@/components/client/AppShell";
 import { apiFetch } from "@/lib/api";
-import { fmtCurrency, ASSET_CLASS_COLORS } from "@/lib/portfolioCalculations";
+import { fmtCurrency } from "@/lib/portfolioCalculations";
 import { ArrowLeft, TrendingUp, TrendingDown, FileText, ExternalLink } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -58,6 +58,18 @@ const TX_TYPE_LABELS: Record<string, string> = {
 
 const TYPE_LABELS: Record<string, string> = { rsp: "RSP", lump_sum: "Lump Sum", combination: "Both" };
 
+// Palette colours per asset class (Cobalt / Spring Field / Blue Breeze family).
+const ASSET_CLASS_PALETTE: Record<string, string> = {
+  equity: "var(--forest)",
+  bond: "var(--field)",
+  cash: "var(--breeze)",
+  real_estate: "var(--forest-700)",
+  commodity: "var(--mint-dim)",
+  alternative: "var(--ink-30)",
+};
+const ASSET_CLASS_FALLBACK = "var(--ink-20)";
+const DARK_ASSET_CLASSES = new Set(["equity", "real_estate"]);
+
 export default function PackageDetailPage() {
   const { id } = useParams<{ id: string }>();
 
@@ -71,9 +83,9 @@ export default function PackageDetailPage() {
     return (
       <ClientAppShell>
         <div className="max-w-[860px] mx-auto animate-pulse space-y-4">
-          <div className="h-8 bg-slate-100 rounded w-1/3" />
-          <div className="h-32 bg-slate-100 rounded-xl" />
-          <div className="h-64 bg-slate-100 rounded-xl" />
+          <div className="h-8 bg-surface rounded-full w-1/3" />
+          <div className="h-32 bg-surface rounded-[28px]" />
+          <div className="h-64 bg-surface rounded-[24px]" />
         </div>
       </ClientAppShell>
     );
@@ -107,123 +119,131 @@ export default function PackageDetailPage() {
 
   return (
     <ClientAppShell>
-      <div className="max-w-[860px] mx-auto">
-      <div className="mb-4">
-        <Link href="/client/wealth/investments" className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-[#0C21A4] transition-colors">
-          <ArrowLeft className="h-4 w-4" /> Investment accounts
+      <div className="max-w-[860px] mx-auto space-y-4 pb-8">
+      <div>
+        <Link href="/client/wealth/investments" className="inline-flex min-h-11 items-center gap-1.5 text-[14px] font-medium text-ink-40 hover:text-forest transition-colors">
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Investment accounts
         </Link>
-      </div>
-
-      <div className="bg-white border border-[#E3E9FD] rounded-xl p-5 mb-5">
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            <div className="text-xs text-slate-400 mb-1">{TYPE_LABELS[pkg.type] ?? pkg.type}</div>
-            <h1 className="text-2xl font-bold text-[#0C21A4]">{pkg.nickname}</h1>
+        <div className="flex items-start justify-between gap-3 px-1">
+          <div className="min-w-0">
+            <div className="tala-eyebrow text-ink-40 mb-1">{TYPE_LABELS[pkg.type] ?? pkg.type}</div>
+            <h1 className="font-display text-[34px] leading-[1.05] text-forest">{pkg.nickname}</h1>
           </div>
-          <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${pkg.status === "active" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+          <span className={`mt-1 shrink-0 text-[12px] px-2.5 py-1 rounded-full font-semibold capitalize ${pkg.status === "active" ? "bg-forest text-paper" : "bg-sun text-forest"}`}>
             {pkg.status === "pending_setup" ? "Setting up" : pkg.status}
           </span>
         </div>
-        <div className="text-3xl font-bold text-[#0C21A4] mb-1">{fmtCurrency(value)}</div>
-        <div className={`flex items-center gap-1 text-sm ${ret >= 0 ? "text-emerald-600" : "text-red-500"}`}>
-          {ret >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+      </div>
+
+      <section aria-label="Package value" className="bg-forest text-paper rounded-[28px] p-5 flex flex-col gap-3">
+        <span className="tala-eyebrow text-mint">Current value</span>
+        <div className="font-display tabular-nums text-[52px] leading-none tracking-[-0.04em] text-paper">{fmtCurrency(value)}</div>
+        <div className={`self-start inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[13px] font-semibold tabular-nums text-forest ${ret >= 0 ? "bg-field" : "bg-sun"}`}>
+          {ret >= 0 ? <TrendingUp className="h-4 w-4" aria-hidden="true" /> : <TrendingDown className="h-4 w-4" aria-hidden="true" />}
           {ret >= 0 ? "+" : ""}{fmtCurrency(Math.abs(ret))} ({ret >= 0 ? "+" : ""}{retPct.toFixed(2)}%) since inception
         </div>
-        <div className="flex gap-4 mt-3 text-xs text-slate-400">
+        <div className="flex flex-wrap gap-x-4 gap-y-1 pt-3 border-t border-white/20 text-[13px] text-mint tabular-nums">
           <span>Invested: {fmtCurrency(invested)}</span>
           {pkg.monthlyAmount && <span>{fmtCurrency(parseFloat(pkg.monthlyAmount))}/month</span>}
           {pkg.startDate && <span>Since {pkg.startDate}</span>}
         </div>
-      </div>
+      </section>
 
       <Tabs defaultValue="performance">
-        <TabsList className="mb-4 w-full">
-          <TabsTrigger value="performance" className="flex-1">Performance</TabsTrigger>
-          <TabsTrigger value="holdings" className="flex-1">Holdings</TabsTrigger>
-          <TabsTrigger value="activity" className="flex-1">Activity</TabsTrigger>
+        <TabsList className="mb-4 w-full h-auto rounded-full bg-surface p-1">
+          <TabsTrigger value="performance" className="flex-1 min-h-10 rounded-full text-[13px] font-semibold text-ink-40 data-[state=active]:bg-forest data-[state=active]:text-paper data-[state=active]:shadow-none">Performance</TabsTrigger>
+          <TabsTrigger value="holdings" className="flex-1 min-h-10 rounded-full text-[13px] font-semibold text-ink-40 data-[state=active]:bg-forest data-[state=active]:text-paper data-[state=active]:shadow-none">Holdings</TabsTrigger>
+          <TabsTrigger value="activity" className="flex-1 min-h-10 rounded-full text-[13px] font-semibold text-ink-40 data-[state=active]:bg-forest data-[state=active]:text-paper data-[state=active]:shadow-none">Activity</TabsTrigger>
         </TabsList>
 
         <TabsContent value="performance">
-          <div className="bg-card border border-card-border rounded-2xl p-4">
-            <h3 className="font-semibold mb-4 text-sm">Value vs. Invested Over Time</h3>
+          <div className="bg-surface rounded-[24px] p-5">
+            <h3 className="font-semibold mb-4 text-[16px] text-forest">Value vs. Invested Over Time</h3>
             {chartData.length > 1 ? (
               <div role="img" aria-label={`Package performance chart: current value ${fmtCurrency(value)}, return ${retPct.toFixed(2)}% since inception`}>
                 <ResponsiveContainer width="100%" height={200}>
                   <ComposedChart data={chartData}>
-                    <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={(v) => v.slice(5)} />
-                    <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} width={55} />
+                    <XAxis dataKey="date" tick={{ fontSize: 11, fill: "var(--ink-40)" }} tickFormatter={(v) => v.slice(5)} axisLine={{ stroke: "var(--hairline)" }} tickLine={false} />
+                    <YAxis tick={{ fontSize: 11, fill: "var(--ink-40)" }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} width={55} axisLine={false} tickLine={false} />
                     <Tooltip formatter={(v: any) => fmtCurrency(v)} />
-                    <Area type="monotone" dataKey="value" fill="#1D9E7520" stroke="#0C21A4" strokeWidth={2} name="Portfolio value" />
-                    <Line type="monotone" dataKey="invested" stroke="#8F98C8" strokeWidth={1.5} strokeDasharray="4 4" dot={false} name="Total invested" />
+                    <Area type="monotone" dataKey="value" fill="var(--forest)" fillOpacity={0.12} stroke="var(--forest)" strokeWidth={2.5} name="Portfolio value" />
+                    <Line type="monotone" dataKey="invested" stroke="var(--breeze)" strokeWidth={2} strokeDasharray="4 4" dot={false} name="Total invested" />
                   </ComposedChart>
                 </ResponsiveContainer>
               </div>
             ) : (
-              <div className="h-40 flex items-center justify-center text-sm text-muted-foreground">
+              <div className="h-40 flex items-center justify-center text-[14px] text-ink-40 text-center">
                 Performance chart will appear once your package has history.
               </div>
             )}
           </div>
 
           {pkg.advisorNotes && (
-            <div className="mt-4 bg-primary/5 border border-primary/20 rounded-xl p-4">
-              <div className="text-xs font-medium text-primary mb-1">Advisor note</div>
-              <p className="text-sm">{pkg.advisorNotes}</p>
+            <div className="mt-4 bg-breeze rounded-[24px] p-4">
+              <div className="tala-eyebrow text-forest mb-1">Advisor note</div>
+              <p className="text-[14px] text-forest">{pkg.advisorNotes}</p>
             </div>
           )}
 
           <div className="mt-4 grid grid-cols-2 gap-3">
-            <div className="bg-card border border-card-border rounded-xl p-4 text-center">
-              <div className="text-xs text-muted-foreground mb-1">Expected annual return</div>
-              <div className="text-xl font-bold text-primary">{parseFloat(pkg.expectedAnnualReturn).toFixed(1)}%</div>
+            <div className="bg-surface rounded-[24px] p-4">
+              <div className="tala-eyebrow text-ink-40 mb-1.5">Expected annual return</div>
+              <div className="text-[18px] font-semibold text-forest tabular-nums">{parseFloat(pkg.expectedAnnualReturn).toFixed(1)}%</div>
             </div>
-            <div className="bg-card border border-card-border rounded-xl p-4 text-center">
-              <div className="text-xs text-muted-foreground mb-1">Package type</div>
-              <div className="text-xl font-bold">{TYPE_LABELS[pkg.type] ?? pkg.type}</div>
+            <div className="bg-surface rounded-[24px] p-4">
+              <div className="tala-eyebrow text-ink-40 mb-1.5">Package type</div>
+              <div className="text-[18px] font-semibold text-forest">{TYPE_LABELS[pkg.type] ?? pkg.type}</div>
             </div>
           </div>
         </TabsContent>
 
         <TabsContent value="holdings">
           {activeAllocs.length === 0 ? (
-            <div className="text-center py-10 text-sm text-muted-foreground">
+            <div className="bg-surface rounded-[24px] text-center p-8 text-[14px] text-ink-40">
               Fund allocation will appear once your advisor sets it up.
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="bg-card border border-card-border rounded-2xl p-4">
-                <h3 className="font-semibold mb-3 text-sm">Asset Class Breakdown</h3>
-                <div className="h-2.5 rounded-full overflow-hidden flex mb-3">
+              <div className="bg-surface rounded-[24px] p-5">
+                <h3 className="font-semibold mb-3 text-[16px] text-forest">Asset Class Breakdown</h3>
+                <div className="h-2 rounded-full overflow-hidden flex gap-px mb-3 bg-forest/15">
                   {Object.entries(assetClassAgg).map(([cls, pct]) => (
-                    <div key={cls} style={{ width: `${pct}%`, backgroundColor: ASSET_CLASS_COLORS[cls] ?? "#8F98C8" }} className="h-full" />
+                    <div key={cls} style={{ width: `${pct}%`, backgroundColor: ASSET_CLASS_PALETTE[cls] ?? ASSET_CLASS_FALLBACK }} className="h-full" />
                   ))}
                 </div>
                 <div className="flex flex-wrap gap-x-4 gap-y-1.5">
                   {Object.entries(assetClassAgg).map(([cls, pct]) => (
-                    <span key={cls} className="text-xs flex items-center gap-1.5">
-                      <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: ASSET_CLASS_COLORS[cls] ?? "#8F98C8" }} />
+                    <span key={cls} className="text-[13px] text-forest flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ background: ASSET_CLASS_PALETTE[cls] ?? ASSET_CLASS_FALLBACK }} />
                       <span className="capitalize">{cls.replace("_", " ")}</span>
-                      <span className="font-medium">{pct.toFixed(1)}%</span>
+                      <span className="font-semibold tabular-nums">{pct.toFixed(1)}%</span>
                     </span>
                   ))}
                 </div>
               </div>
 
-              <div className="space-y-3">
+              <div className="bg-surface rounded-[24px] p-1">
                 {activeAllocs.map((a, i) => (
-                  <div key={a.id} className="bg-card border border-card-border rounded-xl p-4">
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <div className="font-semibold text-sm">{a.fund?.name ?? "Unknown fund"}</div>
-                        <div className="text-xs text-muted-foreground">{a.fund?.ticker ?? ""} · {a.fund?.assetClass ?? ""} · {a.fund?.fundManager ?? ""}</div>
+                  <div key={a.id} className="p-3 border-b border-hairline last:border-0">
+                    <div className="flex items-center gap-3">
+                      <span
+                        aria-hidden="true"
+                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] text-[11px] font-semibold"
+                        style={{ background: ASSET_CLASS_PALETTE[a.fund?.assetClass ?? "equity"] ?? ASSET_CLASS_FALLBACK, color: DARK_ASSET_CLASSES.has(a.fund?.assetClass ?? "equity") ? "var(--paper)" : "var(--forest)" }}
+                      >
+                        {(a.fund?.ticker || a.fund?.name || "?").slice(0, 4).toUpperCase()}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-[15px] text-forest truncate">{a.fund?.name ?? "Unknown fund"}</div>
+                        <div className="text-[13px] text-ink-40 truncate">{a.fund?.ticker ?? ""} · {a.fund?.assetClass ?? ""} · {a.fund?.fundManager ?? ""}</div>
                       </div>
-                      <div className="text-right">
-                        <div className="font-bold text-base">{parseFloat(a.weightPercent).toFixed(1)}%</div>
-                        <div className="text-xs text-muted-foreground">{parseFloat(a.unitsHeld).toFixed(4)} units</div>
+                      <div className="text-right shrink-0">
+                        <div className="font-semibold text-[15px] text-forest tabular-nums">{parseFloat(a.weightPercent).toFixed(1)}%</div>
+                        <div className="text-[12px] text-ink-40 tabular-nums">{parseFloat(a.unitsHeld).toFixed(4)} units</div>
                       </div>
                     </div>
                     {a.fund?.factsheetUrl && (
-                      <a href={a.fund.factsheetUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-primary flex items-center gap-1 hover:underline">
+                      <a href={a.fund.factsheetUrl} target="_blank" rel="noopener noreferrer" className="ml-14 mt-1 inline-flex min-h-8 items-center gap-1 text-[13px] font-semibold text-green underline-offset-2 hover:underline">
                         <FileText className="h-3 w-3" /> Fund factsheet <ExternalLink className="h-3 w-3" />
                       </a>
                     )}
@@ -236,25 +256,25 @@ export default function PackageDetailPage() {
 
         <TabsContent value="activity">
           {pkg.transactions.length === 0 ? (
-            <div className="text-center py-10 text-sm text-muted-foreground">No transactions yet.</div>
+            <div className="bg-surface rounded-[24px] text-center p-8 text-[14px] text-ink-40">No transactions yet.</div>
           ) : (
-            <div className="space-y-2">
+            <div className="bg-surface rounded-[24px] p-1">
               {pkg.transactions.map((tx) => {
                 const isOutflow = ["withdrawal", "fee_charged"].includes(tx.transactionType);
                 return (
-                  <div key={tx.id} className="bg-card border border-card-border rounded-xl p-4 flex items-center gap-3">
-                    <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${isOutflow ? "bg-red-50" : "bg-emerald-50"}`}>
-                      {isOutflow ? <TrendingDown className="h-4 w-4 text-red-500" /> : <TrendingUp className="h-4 w-4 text-emerald-600" />}
+                  <div key={tx.id} className="p-3 border-b border-hairline last:border-0 flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-[14px] flex items-center justify-center shrink-0 text-forest ${isOutflow ? "bg-breeze" : "bg-field"}`}>
+                      {isOutflow ? <TrendingDown className="h-4 w-4" aria-hidden="true" /> : <TrendingUp className="h-4 w-4" aria-hidden="true" />}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium">{TX_TYPE_LABELS[tx.transactionType] ?? tx.transactionType}</div>
-                      <div className="text-xs text-muted-foreground">
+                      <div className="text-[14px] font-medium text-forest">{TX_TYPE_LABELS[tx.transactionType] ?? tx.transactionType}</div>
+                      <div className="text-[13px] text-ink-40 truncate">
                         {tx.fund?.name && <span>{tx.fund.name} · </span>}
                         {tx.transactionDate}
                         {tx.notes && <span> · {tx.notes}</span>}
                       </div>
                     </div>
-                    <div className={`text-sm font-bold ${isOutflow ? "text-red-500" : "text-emerald-600"}`}>
+                    <div className={`text-[14px] font-semibold tabular-nums shrink-0 ${isOutflow ? "text-clay-ink" : "text-forest"}`}>
                       {isOutflow ? "-" : "+"}{fmtCurrency(parseFloat(tx.amountUsd))}
                     </div>
                   </div>

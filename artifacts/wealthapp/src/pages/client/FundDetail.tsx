@@ -6,7 +6,7 @@ import SolNarration from "@/components/client/SolNarration";
 import { useAdvisedPlans } from "@/hooks/useAdvisedPlans";
 import { usePlan } from "@/hooks/usePlan";
 
-const FUND_COLORS = ["var(--green)", "var(--forest)", "var(--green-300)", "var(--sun)", "var(--sand)"];
+const FUND_COLORS = ["var(--forest)", "var(--field)", "var(--breeze)", "var(--forest-700)", "var(--mint-dim)"];
 
 function n(v: string | number | null | undefined) { return parseFloat(String(v ?? "0")) || 0; }
 
@@ -27,7 +27,7 @@ export default function FundDetail() {
       <ClientAppShell>
         <div className="space-y-3">
           <div className="h-8 w-40 bg-surface animate-pulse rounded-lg" />
-          <div className="h-40 bg-surface animate-pulse rounded-[26px]" />
+          <div className="h-40 bg-surface animate-pulse rounded-[28px]" />
         </div>
       </ClientAppShell>
     );
@@ -37,7 +37,7 @@ export default function FundDetail() {
     return (
       <ClientAppShell>
         <div className="text-center py-16">
-          <p className="text-[15px] text-ink-40 mb-4">This fund could not be found.</p>
+          <p className="text-[14px] text-ink-40 mb-4">This fund could not be found.</p>
           <Link href={planId ? `/client/wealth/investments/${planId}` : "/client/wealth/investments"} className="text-[14px] font-semibold text-green">Back to plan</Link>
         </div>
       </ClientAppShell>
@@ -60,13 +60,13 @@ export default function FundDetail() {
         <div>
           <Link
             href={`/client/wealth/investments/${plan.id}`}
-            className="inline-flex items-center gap-1 text-[13.5px] font-semibold text-ink-40 hover:text-forest mb-3"
+            className="inline-flex min-h-11 items-center gap-1 text-[14px] font-medium text-ink-40 hover:text-forest mb-1"
           >
             <ChevronLeft className="h-4 w-4" aria-hidden="true" />
             {plan.nickname ?? plan.productName}
           </Link>
-          <h1 className="font-display text-[26px] font-semibold text-forest tracking-[-0.02em]">{fund.fundName}</h1>
-          <p className="text-[13.5px] text-ink-40 mt-0.5">Inside {plan.nickname ?? plan.productName}</p>
+          <h1 className="font-display text-[34px] leading-[1.05] text-forest">{fund.fundName}</h1>
+          <p className="text-[14px] text-ink-40 mt-1">Inside {plan.nickname ?? plan.productName}</p>
         </div>
 
         <SolNarration
@@ -75,35 +75,35 @@ export default function FundDetail() {
           advisorFirstName={advisorFirstName}
         />
 
-        <div className="bg-surface rounded-[26px] p-[22px] shadow-[0_2px_14px_rgba(12,33,164,.06)]">
-          <p className="text-[12.5px] font-semibold text-ink-40">Holding value</p>
-          <p className="font-display text-[40px] font-semibold text-forest tracking-[-0.03em] tabular-nums">
+        <section aria-label="Holding value" className="bg-forest text-paper rounded-[28px] p-5 flex flex-col gap-3">
+          <p className="tala-eyebrow text-mint">Holding value</p>
+          <p className="font-display tabular-nums text-[52px] leading-none tracking-[-0.04em] text-paper">
             <CurrencyField amountUsd={value} currency={plan.currency} compact />
           </p>
-          <p className="text-[13.5px] text-ink-40 mb-3.5">{sharePct}% of plan</p>
-          <div className="grid grid-cols-2 gap-3">
+          <span className="self-start rounded-full bg-field px-3 py-1.5 text-[13px] font-semibold text-forest tabular-nums">{sharePct}% of plan</span>
+          <div className="grid grid-cols-2 gap-2 pt-1">
             {stats.map(s => (
-              <div key={s.k} className="bg-paper rounded-[16px] p-[13px_14px]">
-                <div className="text-[12px] text-ink-40">{s.k}</div>
-                <div className="font-display text-[19px] font-semibold text-forest tracking-[-0.01em]">{s.v}</div>
+              <div key={s.k} className="bg-white/10 rounded-[14px] p-3">
+                <div className="tala-eyebrow text-mint">{s.k}</div>
+                <div className="mt-1 text-[16px] font-semibold text-paper tabular-nums">{s.v}</div>
               </div>
             ))}
           </div>
-        </div>
+        </section>
 
-        <div className="bg-surface rounded-[26px] p-[22px] shadow-[0_2px_14px_rgba(12,33,164,.06)]">
-          <p className="text-[16px] font-semibold text-forest mb-1">Where new money goes</p>
-          <p className="text-[13.5px] text-ink-60 leading-relaxed mb-3.5 text-pretty">
+        <div className="bg-surface rounded-[24px] p-5">
+          <h2 className="text-[16px] font-semibold text-forest mb-1">Where new money goes</h2>
+          <p className="text-[14px] text-ink-60 leading-relaxed mb-3.5 text-pretty">
             Future contributions split by the allocation your advisor set at outset. Changing it is an advised decision.
           </p>
           <div className="space-y-3">
             {holdings.map((h, i) => (
               <div key={h.id}>
-                <div className="flex justify-between text-[13.5px] mb-1">
-                  <span className="text-forest font-semibold truncate pr-2">{h.fundName}</span>
-                  <span className="text-ink-40 shrink-0">{Math.round(n(h.futureAllocationPct))}%</span>
+                <div className="flex justify-between text-[14px] mb-1">
+                  <span className="text-forest font-medium truncate pr-2">{h.fundName}</span>
+                  <span className="text-ink-40 shrink-0 tabular-nums">{Math.round(n(h.futureAllocationPct))}%</span>
                 </div>
-                <div className="h-2 rounded-full bg-hairline-2 overflow-hidden">
+                <div className="h-2 rounded-full bg-forest/15 overflow-hidden">
                   <div
                     className="h-full rounded-full"
                     style={{ width: `${Math.round(n(h.futureAllocationPct))}%`, background: FUND_COLORS[i % FUND_COLORS.length] }}
@@ -115,7 +115,7 @@ export default function FundDetail() {
           <button
             type="button"
             onClick={() => navigate("/client/advisor/messages")}
-            className="mt-4 w-full text-center bg-forest text-paper rounded-[16px] py-[13px] text-[14.5px] font-semibold hover:bg-forest-700 transition-colors"
+            className="mt-5 w-full h-12 px-5 text-center bg-forest text-paper rounded-full text-[14px] font-semibold hover:bg-forest-700 transition-colors"
           >
             Message {advisorFirstName ?? "your advisor"} about allocation
           </button>

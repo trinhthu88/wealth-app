@@ -12,8 +12,8 @@ export default function SourceBadge({ kind, className }: Props) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium",
-        isAdvised ? "bg-[#0C21A4]/10 text-[#0C21A4]" : "bg-slate-100 text-slate-600",
+        "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[12px] font-semibold",
+        isAdvised ? "bg-forest text-paper" : "bg-surface text-forest",
         className
       )}
     >

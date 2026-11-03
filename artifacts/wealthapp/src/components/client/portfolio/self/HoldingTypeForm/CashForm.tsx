@@ -51,7 +51,7 @@ export default function CashForm({ initial, onSubmit, submitLabel }: Props) {
       </Field>
       <Field label="Annual interest rate (%)">
         <NumberInput value={rate} onChange={setRate} placeholder="e.g. 4.5" step="0.01" />
-        <p className="text-xs text-slate-400">Annual interest rate, if known.</p>
+        <p className="text-xs text-ink-40">Annual interest rate, if known.</p>
       </Field>
       <SubmitButton label={submitLabel} disabled={!label || !bankName || !balance} loading={loading} onClick={handleSubmit} />
     </div>
