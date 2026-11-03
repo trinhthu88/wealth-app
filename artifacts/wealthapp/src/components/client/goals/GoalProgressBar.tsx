@@ -13,7 +13,7 @@ export default function GoalProgressBar({ progressPct, currentAmount, targetAmou
     return (
       <button
         onClick={onSetTarget}
-        className="text-xs text-[#0C21A4] font-medium hover:underline text-left"
+        className="text-[13px] text-green font-semibold hover:underline text-left"
       >
         Set a target amount to track progress →
       </button>
@@ -25,21 +25,21 @@ export default function GoalProgressBar({ progressPct, currentAmount, targetAmou
   return (
     <div className="space-y-1.5">
       {/* Bar */}
-      <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+      <div className="h-2 bg-forest/15 rounded-full overflow-hidden">
         <div
-          className="h-full bg-[#0C21A4] rounded-full transition-none"
+          className="h-full bg-forest rounded-full transition-none"
           style={{ width: `${pct}%` }}
         />
       </div>
       {/* Labels */}
-      <div className="flex items-center justify-between text-xs">
-        <span className="text-slate-500">
+      <div className="flex items-center justify-between text-[13px]">
+        <span className="text-ink-40 tabular-nums">
           <CurrencyField amountUsd={currentAmount} compact /> / <CurrencyField amountUsd={targetAmount} compact />
         </span>
-        <span className="font-semibold text-[#0C21A4]">{Math.round(pct)}%</span>
+        <span className="font-semibold text-forest tabular-nums">{Math.round(pct)}%</span>
       </div>
       {hasLinks && (
-        <p className="text-[11px] text-slate-400">Auto-updated from linked investments.</p>
+        <p className="text-[12px] text-ink-40">Auto-updated from linked investments.</p>
       )}
     </div>
   );

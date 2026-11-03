@@ -93,26 +93,26 @@ export default function GoalHoldingLinks({ goalId, links, allLinks, goals, plans
   }
 
   return (
-    <div className="mt-3 border border-[#E3E9FD] rounded-xl overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-3 bg-[#F8FAFB] border-b border-[#E3E9FD]">
+    <div className="mt-3 bg-paper rounded-[24px] overflow-hidden text-forest">
+      <div className="flex items-start justify-between gap-2 px-4 pt-4 pb-3">
         <div>
-          <p className="text-sm font-semibold text-[#0C21A4]">Link investments to this goal</p>
-          <p className="text-xs text-slate-400 mt-0.5">Progress updates automatically from linked investments.</p>
+          <p className="text-[16px] font-semibold text-forest">Link investments to this goal</p>
+          <p className="text-[13px] text-ink-40 mt-0.5">Progress updates automatically from linked investments.</p>
         </div>
-        <button type="button" onClick={onClose} aria-label="Close investment links" data-testid={`button-close-goal-links-${goalId}`} className="h-7 w-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
+        <button type="button" onClick={onClose} aria-label="Close investment links" data-testid={`button-close-goal-links-${goalId}`} className="-mt-2 -mr-2 h-11 w-11 shrink-0 flex items-center justify-center rounded-full text-ink-40 hover:text-forest hover:bg-surface transition-colors">
           <X className="h-4 w-4" />
         </button>
       </div>
 
-      <div className="p-4 space-y-4 max-h-80 overflow-y-auto">
+      <div className="px-4 pb-4 space-y-4 max-h-80 overflow-y-auto">
         {activePlans.length === 0 && investableHoldings.length === 0 && (
-          <p className="text-sm text-slate-400 text-center py-4">No investments available to link.</p>
+          <p className="text-[14px] text-ink-40 text-center py-4">No investments available to link.</p>
         )}
 
         {/* Advised plans */}
         {activePlans.length > 0 && (
           <div className="space-y-2">
-            <p className="text-[11px] font-semibold text-[#4A5590] uppercase tracking-wide">Advised plans</p>
+            <p className="tala-eyebrow text-ink-40">Advised plans</p>
             {activePlans.map(plan => {
               const key = `advised_plan:${plan.id}`;
               const isLinked = linkedIds.has(key);
@@ -123,18 +123,18 @@ export default function GoalHoldingLinks({ goalId, links, allLinks, goals, plans
               const isFullyAllocated = !isLinked && remainingPct <= 0;
 
               return (
-                <div key={plan.id} className="flex items-center justify-between py-2 px-3 bg-white border border-slate-100 rounded-xl">
+                <div key={plan.id} className="flex items-center justify-between p-3 bg-surface rounded-[14px]">
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-[#0C21A4] truncate">{plan.nickname ?? plan.productName}</p>
-                    <p className="text-xs text-slate-400">
+                    <p className="text-[14px] font-semibold text-forest truncate">{plan.nickname ?? plan.productName}</p>
+                    <p className="text-[12px] text-ink-40 tabular-nums">
                       <CurrencyField amountUsd={value} compact />
                       {link && ` · ${link.allocationPct}% allocated`}
                       {!isLinked && !isFullyAllocated && remainingPct < 100 && ` · ${remainingPct}% unallocated`}
                       {isFullyAllocated && " · fully allocated to other goals"}
                     </p>
                     {isLinking && (
-                      <div className="mt-2 flex items-center gap-2">
-                        <label className="text-xs text-slate-500 shrink-0">Allocation %:</label>
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <label className="text-[12px] text-ink-40 shrink-0">Allocation %:</label>
                         <input
                           type="number"
                           aria-label={`Allocation percentage for ${plan.nickname ?? plan.productName}`}
@@ -142,18 +142,18 @@ export default function GoalHoldingLinks({ goalId, links, allLinks, goals, plans
                           value={allocationPct}
                           onChange={e => setAllocationPct(Math.min(remainingPct, Math.max(1, parseInt(e.target.value) || 1)))}
                           min={1} max={remainingPct}
-                          className="w-16 px-2 py-1 rounded-lg border border-[#0C21A4] text-sm text-center"
+                          className="w-16 h-9 px-2 rounded-[10px] bg-paper border-[1.5px] border-forest text-[14px] text-forest text-center tabular-nums focus:outline-none focus:ring-2 focus:ring-forest/30"
                         />
-                        <span className="text-xs text-slate-400">of {remainingPct}% available</span>
+                        <span className="text-[12px] text-ink-40">of {remainingPct}% available</span>
                         <button
                           type="button"
                           onClick={() => handleLink("advised_plan", plan.id, plan.nickname ?? plan.productName)}
                           data-testid={`button-confirm-link-plan-${plan.id}`}
-                          className="px-3 py-1 bg-[#0C21A4] text-white text-xs rounded-lg font-medium"
+                          className="h-9 px-4 bg-forest text-paper text-[13px] rounded-full font-semibold hover:bg-forest-700 transition-colors"
                         >
                           Confirm
                         </button>
-                        <button type="button" onClick={() => { setLinkingId(null); setSolError(null); }} data-testid={`button-cancel-link-plan-${plan.id}`} className="text-xs text-slate-400">Cancel</button>
+                        <button type="button" onClick={() => { setLinkingId(null); setSolError(null); }} data-testid={`button-cancel-link-plan-${plan.id}`} className="h-9 px-2 text-[13px] font-medium text-ink-40 hover:text-forest">Cancel</button>
                       </div>
                     )}
                     {isLinking && solError?.key === key && (
@@ -168,24 +168,24 @@ export default function GoalHoldingLinks({ goalId, links, allLinks, goals, plans
                     isLinked && link ? (
                       confirmRemove === link.id ? (
                         <div className="flex items-center gap-1 shrink-0 ml-2">
-                          <button type="button" onClick={() => onRemoveLink(link.id).then(() => setConfirmRemove(null))} data-testid={`button-remove-plan-link-${link.id}`} className="text-xs text-red-500 font-medium">Remove</button>
-                          <button type="button" onClick={() => setConfirmRemove(null)} data-testid={`button-cancel-remove-plan-link-${link.id}`} className="text-xs text-slate-400">No</button>
+                          <button type="button" onClick={() => onRemoveLink(link.id).then(() => setConfirmRemove(null))} data-testid={`button-remove-plan-link-${link.id}`} className="h-9 px-2 text-[13px] text-red-600 font-semibold">Remove</button>
+                          <button type="button" onClick={() => setConfirmRemove(null)} data-testid={`button-cancel-remove-plan-link-${link.id}`} className="h-9 px-2 text-[13px] text-ink-40 hover:text-forest">No</button>
                         </div>
                       ) : (
-                        <button type="button" onClick={() => setConfirmRemove(link.id)} aria-label={`Remove ${plan.nickname ?? plan.productName} link`} data-testid={`button-prepare-remove-plan-link-${link.id}`} className="ml-2 h-6 w-6 flex items-center justify-center rounded-full text-slate-300 hover:text-red-400 transition-colors shrink-0">
+                        <button type="button" onClick={() => setConfirmRemove(link.id)} aria-label={`Remove ${plan.nickname ?? plan.productName} link`} data-testid={`button-prepare-remove-plan-link-${link.id}`} className="ml-2 h-9 w-9 flex items-center justify-center rounded-full text-ink-40 hover:text-red-600 hover:bg-paper transition-colors shrink-0">
                           <X className="h-3.5 w-3.5" />
                         </button>
                       )
                     ) : isFullyAllocated ? (
-                      <span className="ml-2 px-2.5 py-1 bg-slate-100 text-slate-400 text-xs rounded-lg font-medium shrink-0">Unavailable</span>
+                      <span className="ml-2 px-2.5 py-1 bg-paper text-ink-40 text-[12px] rounded-full font-semibold shrink-0">Unavailable</span>
                     ) : (
                       <button
                         type="button"
                         onClick={() => startLinking(key, remainingPct)}
                         data-testid={`button-link-plan-${plan.id}`}
-                        className="ml-2 flex items-center gap-1 px-2.5 py-1 bg-[#0C21A4]/10 text-[#0C21A4] text-xs rounded-lg font-medium hover:bg-[#0C21A4]/20 transition-colors shrink-0"
+                        className="ml-2 flex items-center gap-1.5 h-9 px-3.5 bg-forest text-paper text-[13px] rounded-full font-semibold hover:bg-forest-700 transition-colors shrink-0"
                       >
-                        <LinkIcon className="h-3 w-3" />
+                        <LinkIcon className="h-3.5 w-3.5" />
                         Link
                       </button>
                     )
@@ -199,7 +199,7 @@ export default function GoalHoldingLinks({ goalId, links, allLinks, goals, plans
         {/* Self-holdings */}
         {investableHoldings.length > 0 && (
           <div className="space-y-2">
-            <p className="text-[11px] font-semibold text-[#4A5590] uppercase tracking-wide">Self-held investments</p>
+            <p className="tala-eyebrow text-ink-40">Self-held investments</p>
             {investableHoldings.map(holding => {
               const key = `self_holding:${holding.id}`;
               const isLinked = linkedIds.has(key);
@@ -209,12 +209,12 @@ export default function GoalHoldingLinks({ goalId, links, allLinks, goals, plans
               const isFullyAllocated = !isLinked && remainingPct <= 0;
 
               return (
-                <div key={holding.id} className="flex items-center justify-between py-2 px-3 bg-white border border-slate-100 rounded-xl">
+                <div key={holding.id} className="flex items-center justify-between p-3 bg-surface rounded-[14px]">
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-[#0C21A4] truncate">
+                    <p className="text-[14px] font-semibold text-forest truncate">
                       {holding.label}{holding.ticker ? ` · ${holding.ticker}` : ""}
                     </p>
-                    <p className="text-xs text-slate-400">
+                    <p className="text-[12px] text-ink-40 tabular-nums">
                       <CurrencyField amountUsd={holding.currentValue} compact />
                       {" · "}{holding.holdingType.replace(/_/g, " ")}
                       {link && ` · ${link.allocationPct}% allocated`}
@@ -222,8 +222,8 @@ export default function GoalHoldingLinks({ goalId, links, allLinks, goals, plans
                       {isFullyAllocated && " · fully allocated to other goals"}
                     </p>
                     {isLinking && (
-                      <div className="mt-2 flex items-center gap-2">
-                        <label className="text-xs text-slate-500 shrink-0">Allocation %:</label>
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <label className="text-[12px] text-ink-40 shrink-0">Allocation %:</label>
                         <input
                           type="number"
                           aria-label={`Allocation percentage for ${holding.label}`}
@@ -231,18 +231,18 @@ export default function GoalHoldingLinks({ goalId, links, allLinks, goals, plans
                           value={allocationPct}
                           onChange={e => setAllocationPct(Math.min(remainingPct, Math.max(1, parseInt(e.target.value) || 1)))}
                           min={1} max={remainingPct}
-                          className="w-16 px-2 py-1 rounded-lg border border-[#0C21A4] text-sm text-center"
+                          className="w-16 h-9 px-2 rounded-[10px] bg-paper border-[1.5px] border-forest text-[14px] text-forest text-center tabular-nums focus:outline-none focus:ring-2 focus:ring-forest/30"
                         />
-                        <span className="text-xs text-slate-400">of {remainingPct}% available</span>
+                        <span className="text-[12px] text-ink-40">of {remainingPct}% available</span>
                         <button
                           type="button"
                           onClick={() => handleLink("self_holding", holding.id, holding.ticker ? `${holding.label} · ${holding.ticker}` : holding.label)}
                           data-testid={`button-confirm-link-holding-${holding.id}`}
-                          className="px-3 py-1 bg-[#0C21A4] text-white text-xs rounded-lg font-medium"
+                          className="h-9 px-4 bg-forest text-paper text-[13px] rounded-full font-semibold hover:bg-forest-700 transition-colors"
                         >
                           Confirm
                         </button>
-                        <button type="button" onClick={() => { setLinkingId(null); setSolError(null); }} data-testid={`button-cancel-link-holding-${holding.id}`} className="text-xs text-slate-400">Cancel</button>
+                        <button type="button" onClick={() => { setLinkingId(null); setSolError(null); }} data-testid={`button-cancel-link-holding-${holding.id}`} className="h-9 px-2 text-[13px] font-medium text-ink-40 hover:text-forest">Cancel</button>
                       </div>
                     )}
                     {isLinking && solError?.key === key && (
@@ -257,24 +257,24 @@ export default function GoalHoldingLinks({ goalId, links, allLinks, goals, plans
                     isLinked && link ? (
                       confirmRemove === link.id ? (
                         <div className="flex items-center gap-1 shrink-0 ml-2">
-                          <button type="button" onClick={() => onRemoveLink(link.id).then(() => setConfirmRemove(null))} data-testid={`button-remove-holding-link-${link.id}`} className="text-xs text-red-500 font-medium">Remove</button>
-                          <button type="button" onClick={() => setConfirmRemove(null)} data-testid={`button-cancel-remove-holding-link-${link.id}`} className="text-xs text-slate-400">No</button>
+                          <button type="button" onClick={() => onRemoveLink(link.id).then(() => setConfirmRemove(null))} data-testid={`button-remove-holding-link-${link.id}`} className="h-9 px-2 text-[13px] text-red-600 font-semibold">Remove</button>
+                          <button type="button" onClick={() => setConfirmRemove(null)} data-testid={`button-cancel-remove-holding-link-${link.id}`} className="h-9 px-2 text-[13px] text-ink-40 hover:text-forest">No</button>
                         </div>
                       ) : (
-                        <button type="button" onClick={() => setConfirmRemove(link.id)} aria-label={`Remove ${holding.label} link`} data-testid={`button-prepare-remove-holding-link-${link.id}`} className="ml-2 h-6 w-6 flex items-center justify-center rounded-full text-slate-300 hover:text-red-400 transition-colors shrink-0">
+                        <button type="button" onClick={() => setConfirmRemove(link.id)} aria-label={`Remove ${holding.label} link`} data-testid={`button-prepare-remove-holding-link-${link.id}`} className="ml-2 h-9 w-9 flex items-center justify-center rounded-full text-ink-40 hover:text-red-600 hover:bg-paper transition-colors shrink-0">
                           <X className="h-3.5 w-3.5" />
                         </button>
                       )
                     ) : isFullyAllocated ? (
-                      <span className="ml-2 px-2.5 py-1 bg-slate-100 text-slate-400 text-xs rounded-lg font-medium shrink-0">Unavailable</span>
+                      <span className="ml-2 px-2.5 py-1 bg-paper text-ink-40 text-[12px] rounded-full font-semibold shrink-0">Unavailable</span>
                     ) : (
                       <button
                         type="button"
                         onClick={() => startLinking(key, remainingPct)}
                         data-testid={`button-link-holding-${holding.id}`}
-                        className="ml-2 flex items-center gap-1 px-2.5 py-1 bg-[#0C21A4]/10 text-[#0C21A4] text-xs rounded-lg font-medium hover:bg-[#0C21A4]/20 transition-colors shrink-0"
+                        className="ml-2 flex items-center gap-1.5 h-9 px-3.5 bg-forest text-paper text-[13px] rounded-full font-semibold hover:bg-forest-700 transition-colors shrink-0"
                       >
-                        <LinkIcon className="h-3 w-3" />
+                        <LinkIcon className="h-3.5 w-3.5" />
                         Link
                       </button>
                     )

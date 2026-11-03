@@ -39,18 +39,18 @@ export default function AddCommentForm({ milestoneId, onAdd, error }: Props) {
           placeholder="Add a note or question about this milestone..."
           rows={2}
           maxLength={MAX}
-          className="w-full px-3 py-2 rounded-xl border border-[#E3E9FD] text-sm text-[#0C21A4] placeholder:text-slate-400 resize-none focus:outline-none focus:ring-2 focus:ring-[#0C21A4]/30 focus:border-[#0C21A4]"
+          className="w-full px-4 py-3 pb-6 rounded-[14px] bg-surface border-0 text-[14px] text-forest placeholder:text-ink-40 resize-none focus:outline-none focus:ring-2 focus:ring-forest/30"
         />
-        <span className="absolute bottom-2 right-3 text-[10px] text-slate-300">
+        <span className="absolute bottom-2 right-3 text-[11px] text-ink-40 tabular-nums">
           {text.length}/{MAX}
         </span>
       </div>
-      {err && <p className="text-xs text-red-500">{err}</p>}
+      {err && <p className="text-[12px] text-red-600">{err}</p>}
       <div className="flex justify-end">
         <button
           onClick={handleSend}
           disabled={!text.trim() || text.length > MAX || sending}
-          className="px-4 py-1.5 rounded-lg bg-[#0C21A4] text-white text-xs font-medium hover:bg-[#08167A] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="h-10 px-5 rounded-full bg-forest text-paper text-[13px] font-semibold hover:bg-forest-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {sending ? "Sending…" : "Send"}
         </button>

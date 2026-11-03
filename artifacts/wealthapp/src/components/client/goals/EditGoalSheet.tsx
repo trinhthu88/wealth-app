@@ -78,29 +78,29 @@ export default function EditGoalSheet({ goal, isOpen, onClose, onSave, onDelete 
       <div className="space-y-4 pb-4">
         {/* Current progress (read-only) */}
         {hasLinks ? (
-          <div className="bg-[#0C21A4]/5 border border-[#0C21A4]/20 rounded-xl p-3 text-xs text-slate-600">
-            <span className="font-semibold text-[#0C21A4]">Auto-tracked:</span> progress updates from your linked investments.
+          <div className="bg-breeze rounded-[16px] p-4 text-[13px] text-forest leading-[1.45]">
+            <span className="font-semibold">Auto-tracked:</span> progress updates from your linked investments.
           </div>
         ) : goal.targetAmountNum && goal.computedCurrentAmount > 0 ? (
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-600">
+          <div className="bg-surface rounded-[16px] p-4 text-[13px] text-forest tabular-nums">
             Current progress: ${Math.round(goal.computedCurrentAmount).toLocaleString()} / ${Math.round(goal.targetAmountNum).toLocaleString()} ({Math.round(goal.progressPct ?? 0)}%)
           </div>
         ) : null}
 
         {/* Title */}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-[#0C21A4]">Goal name</label>
+          <label className="text-[13px] font-semibold text-forest">Goal name</label>
           <input
             type="text"
             value={title}
             onChange={e => setTitle(e.target.value)}
-            className="w-full px-4 py-2.5 rounded-xl border border-[#E3E9FD] text-sm text-[#0C21A4] focus:outline-none focus:ring-2 focus:ring-[#0C21A4]/30"
+            className="w-full h-12 px-4 rounded-[14px] bg-surface border-0 text-[14px] text-forest placeholder:text-ink-40 focus:outline-none focus:ring-2 focus:ring-forest/30"
           />
         </div>
 
         {/* Target amount */}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-[#0C21A4]">Target amount <span className="text-slate-400 font-normal">(optional)</span></label>
+          <label className="text-[13px] font-semibold text-forest">Target amount <span className="text-ink-40 font-normal">(optional)</span></label>
           <div className="flex gap-2">
             <input
               type="number"
@@ -109,11 +109,11 @@ export default function EditGoalSheet({ goal, isOpen, onClose, onSave, onDelete 
               placeholder="0"
               min={0}
               style={{ MozAppearance: "textfield" } as React.CSSProperties}
-              className="flex-1 px-4 py-2.5 rounded-xl border border-[#E3E9FD] text-sm text-[#0C21A4] focus:outline-none focus:ring-2 focus:ring-[#0C21A4]/30 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              className="flex-1 min-w-0 h-12 px-4 rounded-[14px] bg-surface border-0 text-[14px] text-forest tabular-nums placeholder:text-ink-40 focus:outline-none focus:ring-2 focus:ring-forest/30 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
-            <div className="inline-flex items-center bg-slate-100 rounded-xl p-0.5">
+            <div className="inline-flex items-center bg-surface rounded-full p-1 shrink-0">
               {CURRENCIES.map(c => (
-                <button key={c} onClick={() => setCurrency(c)} className={cn("px-2.5 py-1.5 rounded-lg text-xs font-medium", currency === c ? "bg-white text-[#0C21A4] shadow-sm" : "text-slate-500")}>
+                <button key={c} onClick={() => setCurrency(c)} className={cn("h-10 px-3 rounded-full text-[12px] font-semibold transition-colors", currency === c ? "bg-forest text-paper" : "text-forest hover:bg-forest/10")}>
                   {c}
                 </button>
               ))}
@@ -124,8 +124,8 @@ export default function EditGoalSheet({ goal, isOpen, onClose, onSave, onDelete 
         {/* Manual current amount (only if no links) */}
         {!hasLinks && (
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-[#0C21A4]">
-              Current amount saved <span className="text-slate-400 font-normal">(optional)</span>
+            <label className="text-[13px] font-semibold text-forest">
+              Current amount saved <span className="text-ink-40 font-normal">(optional)</span>
             </label>
             <input
               type="number"
@@ -134,31 +134,31 @@ export default function EditGoalSheet({ goal, isOpen, onClose, onSave, onDelete 
               placeholder="0"
               min={0}
               style={{ MozAppearance: "textfield" } as React.CSSProperties}
-              className="w-full px-4 py-2.5 rounded-xl border border-[#E3E9FD] text-sm text-[#0C21A4] focus:outline-none focus:ring-2 focus:ring-[#0C21A4]/30 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              className="w-full h-12 px-4 rounded-[14px] bg-surface border-0 text-[14px] text-forest tabular-nums placeholder:text-ink-40 focus:outline-none focus:ring-2 focus:ring-forest/30 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
-            <p className="text-xs text-slate-400">Link investments above to auto-track this.</p>
+            <p className="text-[12px] text-ink-40">Link investments above to auto-track this.</p>
           </div>
         )}
 
         {/* Target date */}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-[#0C21A4]">Target date <span className="text-slate-400 font-normal">(optional)</span></label>
+          <label className="text-[13px] font-semibold text-forest">Target date <span className="text-ink-40 font-normal">(optional)</span></label>
           <input
             type="month"
             value={targetDate}
             onChange={e => setTargetDate(e.target.value)}
-            className="w-full px-4 py-2.5 rounded-xl border border-[#E3E9FD] text-sm text-[#0C21A4] focus:outline-none focus:ring-2 focus:ring-[#0C21A4]/30"
+            className="w-full h-12 px-4 rounded-[14px] bg-surface border-0 text-[14px] text-forest placeholder:text-ink-40 focus:outline-none focus:ring-2 focus:ring-forest/30"
           />
         </div>
 
         {/* Priority */}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-[#0C21A4]">Priority</label>
+          <label className="text-[13px] font-semibold text-forest">Priority</label>
           <div className="flex gap-2">
             {PRIORITIES.map(p => (
               <button key={p.value} onClick={() => setPriority(p.value)}
-                className={cn("flex-1 py-2 rounded-xl border text-sm font-medium transition-all",
-                  priority === p.value ? "border-[#0C21A4] bg-[#0C21A4]/10 text-[#0C21A4]" : "border-slate-200 text-slate-500")}>
+                className={cn("flex-1 h-11 rounded-full text-[14px] font-semibold transition-colors",
+                  priority === p.value ? "bg-forest text-paper" : "bg-surface text-forest hover:bg-breeze")}>
                 {p.label}
               </button>
             ))}
@@ -167,32 +167,32 @@ export default function EditGoalSheet({ goal, isOpen, onClose, onSave, onDelete 
 
         {/* Notes */}
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-[#0C21A4]">Notes <span className="text-slate-400 font-normal">(optional)</span></label>
+          <label className="text-[13px] font-semibold text-forest">Notes <span className="text-ink-40 font-normal">(optional)</span></label>
           <textarea
             value={notes}
             onChange={e => setNotes(e.target.value)}
             rows={2}
-            className="w-full px-4 py-2.5 rounded-xl border border-[#E3E9FD] text-sm text-[#0C21A4] resize-none focus:outline-none focus:ring-2 focus:ring-[#0C21A4]/30"
+            className="w-full px-4 py-3 rounded-[14px] bg-surface border-0 text-[14px] text-forest placeholder:text-ink-40 resize-none focus:outline-none focus:ring-2 focus:ring-forest/30"
           />
         </div>
 
         <button
           onClick={handleSave}
           disabled={!title.trim() || saving}
-          className="w-full py-3 rounded-xl bg-[#0C21A4] text-white font-semibold text-sm disabled:opacity-50 transition-colors"
+          className="w-full h-12 px-5 rounded-full bg-forest text-paper font-semibold text-[15px] hover:bg-forest-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {saving ? "Saving…" : "Save changes"}
         </button>
 
-        <div className="border-t border-slate-100 pt-3">
+        <div className="border-t border-hairline pt-4">
           {confirmDelete ? (
             <div className="space-y-2">
-              <p className="text-xs text-slate-500 text-center">Remove "{goal.title}"? This cannot be undone.</p>
+              <p className="text-[13px] text-ink-40 text-center">Remove "{goal.title}"? This cannot be undone.</p>
               <div className="flex gap-2">
-                <button onClick={() => { onDelete(goal.id); onClose(); }} className="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-sm font-medium">
+                <button onClick={() => { onDelete(goal.id); onClose(); }} className="flex-1 h-11 rounded-full bg-red-600 text-white text-[14px] font-semibold hover:bg-red-700 transition-colors">
                   Yes, remove
                 </button>
-                <button onClick={() => setConfirmDelete(false)} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm">
+                <button onClick={() => setConfirmDelete(false)} className="flex-1 h-11 rounded-full border-[1.5px] border-forest bg-transparent text-forest text-[14px] font-semibold">
                   Cancel
                 </button>
               </div>
@@ -200,7 +200,7 @@ export default function EditGoalSheet({ goal, isOpen, onClose, onSave, onDelete 
           ) : (
             <button
               onClick={() => setConfirmDelete(true)}
-              className="w-full py-2.5 rounded-xl border border-red-200 text-red-500 text-sm font-medium hover:bg-red-50 transition-colors"
+              className="w-full h-11 rounded-full border-[1.5px] border-red-300 bg-transparent text-red-600 text-[14px] font-semibold hover:bg-red-50 transition-colors"
             >
               Delete goal
             </button>

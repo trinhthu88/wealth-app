@@ -7,6 +7,8 @@ interface Props {
   offTrack: number;
 }
 
+const PILL = "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold";
+
 export default function GoalsSummaryBar({ totalActive, onTrack, atRisk, offTrack }: Props) {
   const allOnTrack = totalActive > 0 && onTrack === totalActive;
 
@@ -14,32 +16,32 @@ export default function GoalsSummaryBar({ totalActive, onTrack, atRisk, offTrack
 
   return (
     <div className="flex flex-wrap gap-2">
-      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-[#0C21A4]/10 text-[#0C21A4]">
+      <span className={`${PILL} bg-surface text-forest`}>
         <Target className="h-3.5 w-3.5" />
         {totalActive} active {totalActive === 1 ? "goal" : "goals"}
       </span>
 
       {allOnTrack ? (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">
+        <span className={`${PILL} bg-forest text-paper`}>
           <CheckCircle2 className="h-3.5 w-3.5" />
           All on track
         </span>
       ) : (
         <>
           {onTrack > 0 && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">
+            <span className={`${PILL} bg-forest text-paper`}>
               <CheckCircle2 className="h-3.5 w-3.5" />
               {onTrack} on track
             </span>
           )}
           {atRisk > 0 && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700">
+            <span className={`${PILL} bg-sun text-forest`}>
               <AlertTriangle className="h-3.5 w-3.5" />
               {atRisk} at risk
             </span>
           )}
           {offTrack > 0 && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-red-50 text-red-600">
+            <span className={`${PILL} bg-sun text-forest`}>
               <XCircle className="h-3.5 w-3.5" />
               {offTrack} off track
             </span>
