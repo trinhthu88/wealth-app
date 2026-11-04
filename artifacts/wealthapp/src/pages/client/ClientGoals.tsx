@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "wouter";
-import { Plus, Target, ChevronDown, ChevronRight, Link as LinkIcon, TrendingUp, CheckCircle2, Palmtree, Home, GraduationCap, Rocket, Briefcase, Globe, Coins, Shield, MoreHorizontal, Pencil, Pause, Trash2, Umbrella, CreditCard, Plane, Car } from "lucide-react";
+import { Plus, Target, ChevronDown, ChevronRight, Link as LinkIcon, TrendingUp, CheckCircle2, Palmtree, Home, GraduationCap, Rocket, Briefcase, Globe, Coins, Shield, MoreHorizontal, Pencil, Pause, Trash2, Umbrella, CreditCard, Plane, Car, ChartLine, List } from "lucide-react";
 import ClientAppShell from "@/components/client/AppShell";
 import SolNarration from "@/components/client/SolNarration";
 import GoalsSummaryBar from "@/components/client/goals/GoalsSummaryBar";
@@ -548,6 +548,33 @@ export default function ClientGoals() {
                 )}
               </div>
             )}
+
+            {/* Plan ahead */}
+            <section aria-label="Plan ahead" className="space-y-3 pt-1.5">
+              <h2 className="px-1 text-[16px] font-semibold text-forest">Plan ahead</h2>
+              <div className="grid grid-cols-2 gap-3">
+                <Link
+                  href="/client/goals/what-if"
+                  className="bg-breeze text-forest rounded-[24px] p-4 min-h-[140px] flex flex-col justify-between gap-5 transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-forest/40"
+                >
+                  <ChartLine className="h-8 w-8" strokeWidth={1.8} aria-hidden="true" />
+                  <span className="flex flex-col gap-1">
+                    <span className="text-[16px] font-semibold">What-if</span>
+                    <span className="text-[13px]">Try changes first</span>
+                  </span>
+                </Link>
+                <Link
+                  href="/client/goals/my-plan"
+                  className="bg-surface text-forest rounded-[24px] p-4 min-h-[140px] flex flex-col justify-between gap-5 transition-colors hover:bg-breeze/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-forest/40"
+                >
+                  <List className="h-8 w-8" strokeWidth={1.8} aria-hidden="true" />
+                  <span className="flex flex-col gap-1">
+                    <span className="text-[16px] font-semibold">My plan</span>
+                    <span className="text-[13px] text-ink-40">Milestones with your advisor</span>
+                  </span>
+                </Link>
+              </div>
+            </section>
         </>
       </div>
 

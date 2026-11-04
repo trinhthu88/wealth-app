@@ -84,8 +84,10 @@ function ClientPlanContent() {
   if (loading) {
     return (
       <ClientAppShell>
-        <div className="animate-pulse space-y-6 max-w-[860px] mx-auto">
-          <div className="h-[200px] w-[200px] bg-sun opacity-10 rounded-full ml-auto" />
+        <div className="animate-pulse space-y-4 max-w-[860px] mx-auto">
+          <div className="h-9 w-48 bg-surface rounded-full" />
+          <div className="h-[180px] bg-surface rounded-[28px]" />
+          <div className="h-[96px] bg-surface rounded-[24px]" />
         </div>
       </ClientAppShell>
     );
@@ -94,43 +96,51 @@ function ClientPlanContent() {
   if (milestones.length === 0) {
     return (
       <ClientAppShell>
-        <div className="relative h-[60vh] flex flex-col items-center justify-center text-center px-4 max-w-[860px] mx-auto">
-          <div className="absolute -top-10 -right-[50px] w-[200px] h-[200px] rounded-full bg-sun opacity-[0.14] animate-sol-glow mix-blend-screen pointer-events-none" />
-          <div className="w-11 h-11 rounded-[14px] bg-field text-forest flex items-center justify-center mx-auto mb-4">
-            <Map className="h-5 w-5" aria-hidden="true" />
+        <div className="max-w-[860px] mx-auto">
+          <div className="bg-surface rounded-[28px] py-14 px-6 flex flex-col items-center text-center">
+            <div className="w-11 h-11 rounded-[14px] bg-field text-forest flex items-center justify-center mx-auto mb-4">
+              <Map className="h-5 w-5" aria-hidden="true" />
+            </div>
+            <h2 className="font-display text-[28px] leading-[1.1] text-forest mb-2">
+              Your pathway hasn't been mapped yet
+            </h2>
+            <p className="text-[14px] text-ink-40 mb-6 max-w-[280px]">
+              Your pathway is built from your goals — add one to see it here.
+            </p>
+            <Link
+              href="/client/goals/goals"
+              className="inline-flex items-center justify-center h-11 px-6 rounded-full bg-forest text-paper text-[14px] font-semibold hover:bg-forest-700 transition-colors"
+            >
+              Add a goal
+            </Link>
           </div>
-          <h2 className="font-display text-[28px] leading-[1.1] text-paper mb-2">
-            Your pathway hasn't been mapped yet
-          </h2>
-          <p className="text-[14px] text-mint mb-6 max-w-[280px]">
-            Your pathway is built from your goals — add one to see it here.
-          </p>
-          <Link
-            href="/client/goals/goals"
-            className="inline-flex items-center justify-center h-11 px-6 rounded-full bg-field text-forest text-[14px] font-semibold hover:bg-field/90 transition-colors"
-          >
-            Add a goal
-          </Link>
         </div>
       </ClientAppShell>
     );
   }
 
+  const progressBar = (pct: number, label: string) => (
+    <div className="rounded-full bg-forest/15 h-2 max-w-[420px] overflow-hidden" aria-label={label}>
+      <div
+        className="h-full rounded-full bg-forest transition-[width] duration-500"
+        style={{ width: `${Math.min(100, Math.max(0, pct))}%` }}
+      />
+    </div>
+  );
+
   return (
     <ClientAppShell>
-      <div className="relative max-w-[860px] mx-auto">
-        <div className="absolute -top-10 -right-[50px] w-[200px] h-[200px] rounded-full bg-sun opacity-[0.14] animate-sol-glow mix-blend-screen pointer-events-none" />
-        
+      <div className="max-w-[860px] mx-auto space-y-[14px]">
         {/* Header Section */}
-        <div className="mb-6 relative z-10">
-          <h1 className="font-display text-[34px] leading-[1.05] text-paper mb-2">
+        <div className="pt-1 mb-[4px]">
+          <h1 className="font-display text-[34px] leading-[1.05] text-forest mb-2">
             Your pathway
           </h1>
-          <div className="text-[14px] text-mint flex items-center gap-2">
+          <div className="text-[14px] text-ink-40 flex items-center gap-2">
             <span>{milestones.length} milestone{milestones.length !== 1 ? "s" : ""} ahead</span>
             {advisorName && (
               <>
-                <span className="opacity-50">·</span>
+                <span aria-hidden="true">·</span>
                 <span>Led by {advisorName}</span>
               </>
             )}
@@ -138,8 +148,6 @@ function ClientPlanContent() {
         </div>
 
         <SolNarration
-          tone="dark"
-          className="relative z-10"
           line={`${completionPct}% through your pathway's ${totalCount} milestone${totalCount !== 1 ? "s" : ""}.${nextMilestone ? ` Next up: ${nextMilestone.title}.` : ""}`}
           detail={
             isReviewOverdue
@@ -151,8 +159,53 @@ function ClientPlanContent() {
           advisorFirstName={advisorName?.split(" ")[0] ?? null}
         />
 
+        {/* Hero: overall progress + stats */}
+        {totalCount > 0 && (
+          <div className="space-y-3">
+            <div className="bg-forest text-paper rounded-[28px] p-5">
+              <div className="tala-eyebrow text-mint">Plan progress</div>
+              <div className="mt-3 flex items-end gap-3">
+                <div className="font-display tabular-nums text-[56px] leading-none tracking-[-0.04em]">
+                  {completionPct}%
+                </div>
+                <div className="text-[14px] text-mint pb-1.5 tabular-nums">
+                  of {totalCount} milestone{totalCount !== 1 ? "s" : ""}
+                </div>
+              </div>
+              <div className="mt-4 h-2 rounded-full bg-white/20 overflow-hidden" aria-label={`${completionPct}% of plan milestones complete`}>
+                <div className="h-full rounded-full bg-field transition-[width] duration-500" style={{ width: `${completionPct}%` }} />
+              </div>
+              {nextMilestone && (
+                <div className="mt-4 text-[14px] text-mint">
+                  Next up · <span className="font-semibold text-paper">{nextMilestone.title}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div className="bg-field text-forest rounded-[24px] p-4">
+                <div className="tala-eyebrow mb-3">Done</div>
+                <div className="font-display tabular-nums text-[32px] leading-none">{completedCount}</div>
+              </div>
+              <div className="bg-breeze text-forest rounded-[24px] p-4">
+                <div className="tala-eyebrow mb-3">Active</div>
+                <div className="font-display tabular-nums text-[32px] leading-none">{inProgressCount}</div>
+              </div>
+              <div className="bg-surface text-forest rounded-[24px] p-4">
+                <div className="tala-eyebrow text-ink-40 mb-3">Upcoming</div>
+                <div className="font-display tabular-nums text-[32px] leading-none">{upcomingCount}</div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Review Countdown */}
-        <div className="mb-6 bg-white/10 rounded-[24px] p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
+        <div
+          className={cn(
+            "rounded-[24px] p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4",
+            isReviewOverdue ? "bg-sun-tint" : "bg-surface"
+          )}
+        >
           <div className="flex items-start gap-3">
             {isReviewOverdue ? (
               <div className="w-10 h-10 rounded-[14px] bg-sun text-forest flex items-center justify-center shrink-0">
@@ -164,157 +217,125 @@ function ClientPlanContent() {
               </div>
             )}
             <div>
-              <div className="text-[16px] font-semibold text-paper">Next review</div>
+              <div className="text-[16px] font-semibold text-forest">Next review</div>
               {nextReviewDate ? (
-                <div className={`text-[13.5px] mt-0.5 tabular-nums ${isReviewOverdue ? "text-sun-tint font-semibold" : "text-mint"}`}>
+                <div className={`text-[13.5px] mt-0.5 tabular-nums ${isReviewOverdue ? "text-clay-ink font-semibold" : "text-ink-40"}`}>
                   {formatDate(nextReviewDate)} · {isReviewOverdue ? `Overdue by ${Math.abs(daysUntilReview!)} days` : `${daysUntilReview} days away`}
                 </div>
               ) : (
-                <div className="text-[13.5px] mt-0.5 text-mint">No review date set.</div>
+                <div className="text-[13.5px] mt-0.5 text-ink-40">No review date set.</div>
               )}
             </div>
           </div>
-          <button 
+          <button
             onClick={() => setShowReviewSheet(true)}
-            className="flex-shrink-0 h-11 px-5 rounded-full bg-field text-forest text-[14px] font-semibold hover:bg-field/90 transition-colors"
+            className="flex-shrink-0 h-11 px-5 rounded-full bg-forest text-paper text-[14px] font-semibold hover:bg-forest-700 transition-colors"
           >
             Request a review
           </button>
         </div>
 
-        {/* Stats Summary */}
-        {totalCount > 0 && (
-          <div className="mb-10 space-y-4 relative z-10">
-            <div className="grid grid-cols-3 gap-3">
-              <div className="bg-field text-forest rounded-[24px] p-4">
-                <div className="tala-eyebrow mb-3">Done</div>
-                <div className="font-display tabular-nums text-[32px] leading-none">{completedCount}</div>
-              </div>
-              <div className="bg-breeze text-forest rounded-[24px] p-4">
-                <div className="tala-eyebrow mb-3">Active</div>
-                <div className="font-display tabular-nums text-[32px] leading-none">{inProgressCount}</div>
-              </div>
-              <div className="bg-white/10 text-paper rounded-[24px] p-4">
-                <div className="tala-eyebrow text-mint mb-3">Upcoming</div>
-                <div className="font-display tabular-nums text-[32px] leading-none">{upcomingCount}</div>
-              </div>
-            </div>
-            <div className="h-2 rounded-full bg-white/20 overflow-hidden" aria-label={`${completionPct}% of plan milestones complete`}>
-              <div className="h-full rounded-full bg-field transition-[width] duration-500" style={{ width: `${completionPct}%` }} />
-            </div>
-          </div>
-        )}
-
         {/* Timeline */}
-        <div className="relative pl-[34px] pb-6">
-          <div className="absolute left-[11px] top-[10px] bottom-[14px] w-[2px] rounded-full bg-white/20" />
+        <section aria-label="Milestones" className="pt-3">
+          <h2 className="px-1 mb-3 text-[16px] font-semibold text-forest">Milestones</h2>
+          <div className="relative pl-[34px]">
+            <div className="absolute left-[11px] top-[22px] bottom-[22px] w-[2px] rounded-full bg-forest/20" aria-hidden="true" />
 
-          {milestones.map((m, index) => {
-              const status = statusGroup(m.status);
-              const year = m.targetDate ? new Date(m.targetDate).getFullYear() : "";
-              const isNext = m.id === nextMilestone?.id;
-              
-              if (status === "completed") {
-                const gp = m.goalProgress;
-                return (
-                  <div key={m.id} className="mb-[28px] relative">
-                    <div className="absolute -left-[34px] top-[0px] w-[24px] h-[24px] rounded-full bg-field flex items-center justify-center z-10">
-                      <span className="h-2 w-2 rounded-full bg-forest" aria-hidden="true" />
-                    </div>
-                    <div className="tala-eyebrow text-field">
-                      {year} · DONE
-                    </div>
-                    <h2 className="text-[17px] font-semibold text-paper mt-1.5 mb-1">
-                      {m.title}
-                    </h2>
-                    {m.notes && <div className="text-[14px] text-mint mb-2 max-w-[500px] leading-relaxed">{m.notes}</div>}
-                    {gp && (
-                      <>
-                        <div className="text-[14px] text-mint tabular-nums mb-2">
-                          ${Math.round(gp.currentAmount).toLocaleString()} of ${Math.round(gp.targetAmount).toLocaleString()}
-                        </div>
-                        <div className="rounded-full bg-white/20 h-2 max-w-[420px] overflow-hidden" aria-label={`${Math.round(gp.progressPct)}% of ${m.title} funded`}>
-                          <div
-                            className="h-full rounded-full bg-field transition-[width] duration-500"
-                            style={{ width: `${Math.min(100, Math.max(0, gp.progressPct))}%` }}
-                          />
-                        </div>
-                      </>
-                    )}
-                  </div>
-                );
-              }
+            {milestones.map((m, index) => {
+                const status = statusGroup(m.status);
+                const year = m.targetDate ? new Date(m.targetDate).getFullYear() : "";
+                const isNext = m.id === nextMilestone?.id;
 
-              if (status === "in_progress") {
-                const gp = m.goalProgress;
-                return (
-                  <div key={m.id} className={cn("mb-[28px] relative", isNext && "animate-rise-up")}>
-                    <div className="absolute -left-[34px] top-[0px] w-[24px] h-[24px] rounded-full bg-forest border-[3px] border-field z-10 ring-4 ring-field/20" />
-                    <div className="tala-eyebrow text-field">
-                      {year} · IN PROGRESS {isNext && "· NEXT UP"}
+                if (status === "completed") {
+                  const gp = m.goalProgress;
+                  return (
+                    <div key={m.id} className="mb-3 relative bg-surface rounded-[24px] p-4">
+                      <div className="absolute -left-[34px] top-[18px] w-[24px] h-[24px] rounded-full bg-field flex items-center justify-center z-10">
+                        <span className="h-2 w-2 rounded-full bg-forest" aria-hidden="true" />
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {year !== "" && <span className="tala-eyebrow text-ink-40">{year}</span>}
+                        <span className="rounded-full bg-field px-2.5 py-1 text-[12px] font-semibold text-forest">Done</span>
+                      </div>
+                      <h3 className="text-[17px] font-semibold text-forest mt-2 mb-1">
+                        {m.title}
+                      </h3>
+                      {m.notes && <div className="text-[14px] text-ink-40 mb-2 max-w-[500px] leading-relaxed">{m.notes}</div>}
+                      {gp && (
+                        <>
+                          <div className="text-[14px] text-ink-40 tabular-nums mb-2">
+                            ${Math.round(gp.currentAmount).toLocaleString()} of ${Math.round(gp.targetAmount).toLocaleString()}
+                          </div>
+                          {progressBar(gp.progressPct, `${Math.round(gp.progressPct)}% of ${m.title} funded`)}
+                        </>
+                      )}
                     </div>
-                    <h2 className="text-[17px] font-semibold text-paper mt-1.5 mb-1">
-                      {m.title}
-                    </h2>
-                    {gp ? (
-                      <>
-                        <div className="text-[14px] text-mint tabular-nums mb-2">
-                          ${Math.round(gp.currentAmount).toLocaleString()} of ${Math.round(gp.targetAmount).toLocaleString()}
-                        </div>
-                        <div className="rounded-full bg-white/20 h-2 max-w-[420px] overflow-hidden" aria-label={`${Math.round(gp.progressPct)}% of ${m.title} funded`}>
-                          <div
-                            className="h-full rounded-full bg-field transition-[width] duration-500"
-                            style={{ width: `${Math.min(100, Math.max(0, gp.progressPct))}%` }}
-                          />
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        {m.notes && <div className="text-[14px] text-mint mb-2 max-w-[500px] leading-relaxed">{m.notes}</div>}
-                        <div className="mt-3 inline-flex rounded-full bg-field px-2.5 py-1 text-[12px] font-semibold text-forest">
-                          Active milestone
-                        </div>
-                      </>
-                    )}
-                  </div>
-                );
-              }
-              
-              // Future (upcoming)
-              {
-                const gp = m.goalProgress;
-                return (
-                  <div key={m.id} className="mb-[26px] relative">
-                    <div className="absolute -left-[34px] top-[0px] w-[24px] h-[24px] rounded-full border-[2px] border-white/40 z-10 bg-forest" />
-                    <div className="tala-eyebrow text-mint">
-                      {year}
+                  );
+                }
+
+                if (status === "in_progress") {
+                  const gp = m.goalProgress;
+                  return (
+                    <div key={m.id} className={cn("mb-3 relative bg-surface rounded-[24px] p-4", isNext && "animate-rise-up")}>
+                      <div className="absolute -left-[34px] top-[18px] w-[24px] h-[24px] rounded-full bg-forest border-[3px] border-field z-10 ring-4 ring-field/40" />
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {year !== "" && <span className="tala-eyebrow text-ink-40">{year}</span>}
+                        <span className="rounded-full bg-forest px-2.5 py-1 text-[12px] font-semibold text-paper">In progress</span>
+                        {isNext && (
+                          <span className="rounded-full bg-field px-2.5 py-1 text-[12px] font-semibold text-forest">Next up</span>
+                        )}
+                      </div>
+                      <h3 className="text-[17px] font-semibold text-forest mt-2 mb-1">
+                        {m.title}
+                      </h3>
+                      {gp ? (
+                        <>
+                          <div className="text-[14px] text-ink-40 tabular-nums mb-2">
+                            ${Math.round(gp.currentAmount).toLocaleString()} of ${Math.round(gp.targetAmount).toLocaleString()}
+                          </div>
+                          {progressBar(gp.progressPct, `${Math.round(gp.progressPct)}% of ${m.title} funded`)}
+                        </>
+                      ) : (
+                        <>
+                          {m.notes && <div className="text-[14px] text-ink-40 mb-2 max-w-[500px] leading-relaxed">{m.notes}</div>}
+                          <div className="mt-3 inline-flex rounded-full bg-field px-2.5 py-1 text-[12px] font-semibold text-forest">
+                            Active milestone
+                          </div>
+                        </>
+                      )}
                     </div>
-                    <h2 className="text-[17px] font-semibold text-paper/85 mt-1.5 mb-1">
-                      {m.title}
-                    </h2>
-                    {m.notes && <div className="text-[14px] text-mint mb-2 max-w-[500px] leading-relaxed">{m.notes}</div>}
-                    {gp && (
-                      <>
-                        <div className="text-[14px] text-mint tabular-nums mb-2">
-                          ${Math.round(gp.currentAmount).toLocaleString()} of ${Math.round(gp.targetAmount).toLocaleString()}
-                        </div>
-                        <div className="rounded-full bg-white/20 h-2 max-w-[420px] overflow-hidden" aria-label={`${Math.round(gp.progressPct)}% of ${m.title} funded`}>
-                          <div
-                            className="h-full rounded-full bg-field transition-[width] duration-500"
-                            style={{ width: `${Math.min(100, Math.max(0, gp.progressPct))}%` }}
-                          />
-                        </div>
-                      </>
-                    )}
-                  </div>
-                );
-              }
-          })}
-        </div>
+                  );
+                }
+
+                // Future (upcoming)
+                {
+                  const gp = m.goalProgress;
+                  return (
+                    <div key={m.id} className="mb-3 relative bg-surface rounded-[24px] p-4">
+                      <div className="absolute -left-[34px] top-[18px] w-[24px] h-[24px] rounded-full border-[2px] border-forest/40 z-10 bg-paper" />
+                      {year !== "" && <div className="tala-eyebrow text-ink-40">{year}</div>}
+                      <h3 className="text-[17px] font-semibold text-forest mt-1.5 mb-1">
+                        {m.title}
+                      </h3>
+                      {m.notes && <div className="text-[14px] text-ink-40 mb-2 max-w-[500px] leading-relaxed">{m.notes}</div>}
+                      {gp && (
+                        <>
+                          <div className="text-[14px] text-ink-40 tabular-nums mb-2">
+                            ${Math.round(gp.currentAmount).toLocaleString()} of ${Math.round(gp.targetAmount).toLocaleString()}
+                          </div>
+                          {progressBar(gp.progressPct, `${Math.round(gp.progressPct)}% of ${m.title} funded`)}
+                        </>
+                      )}
+                    </div>
+                  );
+                }
+            })}
+          </div>
+        </section>
 
         {coastObservation && (
           <SolCard
-            className="mt-6 relative z-10"
+            className="mt-6"
             message={generateSolCopy(coastObservation)}
             onAccept={modeling ? undefined : handleModelCoastPoint}
             onDismiss={() => setDismissedCoastCard(true)}
