@@ -168,6 +168,31 @@ describe("LemonSqueezyProvider", () => {
   });
   const verify = (body: string) => lemonSqueezyProvider.verifyWebhook(Buffer.from(body), { "x-signature": lsSign(body) });
 
+  describe("configuration", () => {
+    it("requires a non-empty API key and a digits-only store id", () => {
+      expect(lemonSqueezyProvider.isConfigured()).toBe(true);
+      vi.stubEnv("LEMONSQUEEZY_STORE_ID", "");
+      expect(lemonSqueezyProvider.isConfigured()).toBe(false);
+      vi.stubEnv("LEMONSQUEEZY_STORE_ID", "99x");
+      expect(lemonSqueezyProvider.isConfigured()).toBe(false);
+      vi.stubEnv("LEMONSQUEEZY_STORE_ID", " 99");
+      expect(lemonSqueezyProvider.isConfigured()).toBe(false);
+      vi.stubEnv("LEMONSQUEEZY_STORE_ID", "99");
+      vi.stubEnv("LEMONSQUEEZY_API_KEY", "");
+      expect(lemonSqueezyProvider.isConfigured()).toBe(false);
+    });
+
+    it("fails clearly when the store lookup does not return one matching store", async () => {
+      vi.stubEnv("LEMONSQUEEZY_STORE_ID", "98");
+      lsRoutes["GET /stores/98"] = { data: [{ id: "98", attributes: { currency: "USD" } }] };
+      lsRoutes["GET /products?filter[store_id]=98&page[size]=100&page[number]=1"] = {
+        data: [], meta: { page: { lastPage: 1 } },
+      };
+      await expect(lemonSqueezyProvider.listPrices())
+        .rejects.toThrow("Lemon Squeezy store lookup did not return the requested single store.");
+    });
+  });
+
   describe("signature", () => {
     it("refuses a signature made with another secret, and one of a different length", () => {
       const body = payload();

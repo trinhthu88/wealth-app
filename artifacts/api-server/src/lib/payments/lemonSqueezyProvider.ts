@@ -51,15 +51,24 @@ async function requestAll(path: string): Promise<any[]> {
   }
 }
 
-const storeId = () => process.env.LEMONSQUEEZY_STORE_ID!;
+const storeId = () => process.env.LEMONSQUEEZY_STORE_ID ?? "";
 const toDate = (value: string | null | undefined) => (value ? new Date(value) : null);
 
 // Variants have no currency of their own, and a store's currency is set once, so one read is enough.
 let cachedCurrency: { store: string; currency: string } | null = null;
 async function storeCurrency(): Promise<string> {
-  if (cachedCurrency?.store === storeId()) return cachedCurrency.currency;
-  const body = await request(`/stores/${encodeURIComponent(storeId())}`);
-  cachedCurrency = { store: storeId(), currency: String(body.data.attributes.currency).toLowerCase() };
+  const id = storeId();
+  if (cachedCurrency?.store === id) return cachedCurrency.currency;
+  const body = await request(`/stores/${encodeURIComponent(id)}`);
+  const store = body?.data;
+  if (!store || Array.isArray(store) || typeof store !== "object" || String(store.id) !== id) {
+    throw new Error("Lemon Squeezy store lookup did not return the requested single store.");
+  }
+  const currency = store.attributes?.currency;
+  if (typeof currency !== "string" || !currency.trim()) {
+    throw new Error("Lemon Squeezy store lookup did not include a currency.");
+  }
+  cachedCurrency = { store: id, currency: currency.toLowerCase() };
   return cachedCurrency.currency;
 }
 
@@ -130,7 +139,7 @@ export const lemonSqueezyProvider: PaymentProvider = {
   name: "lemonsqueezy",
 
   isConfigured() {
-    return !!process.env.LEMONSQUEEZY_API_KEY && !!process.env.LEMONSQUEEZY_STORE_ID;
+    return !!process.env.LEMONSQUEEZY_API_KEY && /^\d+$/.test(storeId());
   },
 
   async listPrices() {
