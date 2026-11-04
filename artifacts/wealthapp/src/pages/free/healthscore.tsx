@@ -301,7 +301,7 @@ export default function HealthScorePage() {
         : "Not started yet",
       tip: invTip,
       actionLabel: "Talk to an advisor about investing",
-      actionRoute: "/book",
+      actionRoute: "/client/dashboard",
     },
   ];
 

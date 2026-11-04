@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import CurrencyField from "@/components/shared/CurrencyField";
 import { apiFetch } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
-import { track } from "@/lib/analytics";
+import TalkToAdvisorButton from "@/components/TalkToAdvisorButton";
 import { Plus, Trash2, X, ChevronDown, Lock, LineChart as LineChartIcon, Bitcoin, Landmark, Home, PiggyBank, HelpCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useProfile } from "@/hooks/useProfile";
@@ -201,9 +201,11 @@ export default function FreePortfolioPage() {
                     Live prices, performance tracking, and more asset types unlock when you become a client.
                   </p>
                   <p className="text-[11px] text-ink-40 mt-1">Property, pensions, and multi-currency accounts included.</p>
-                  <Button variant="outline" size="sm" className="mt-3 text-xs border-primary text-primary hover:bg-primary/5" asChild>
-                    <a href="/book" onClick={() => track("upgrade_cta_clicked", { location: "portfolio_locked_card" })}>See what's included →</a>
-                  </Button>
+                  <TalkToAdvisorButton
+                      source="C5_investable"
+                      location="portfolio_locked_card"
+                      className="mt-3 inline-flex items-center rounded-md border border-primary px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/5 disabled:opacity-60"
+                    />
                 </div>
               </div>
             </div>

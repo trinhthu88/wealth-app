@@ -1,5 +1,6 @@
 import { TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
+import TalkToAdvisorButton from "@/components/TalkToAdvisorButton";
 
 interface Props {
   surplus: number;
@@ -34,12 +35,13 @@ export default function InvestableSurplusCard({ surplus, currency = "USD", class
             <p className="text-[20px] font-bold text-green mt-1">{fmt(projectedValue, currency)}</p>
             <p className="text-[11px] text-ink-40 mt-1">Compound growth projection · assumes a consistent monthly contribution</p>
           </div>
-          <a
-            href="/book"
+          <TalkToAdvisorButton
+            source="C4_surplus"
+            location="investable_surplus_card"
             className="mt-4 flex items-center justify-center w-full rounded-xl bg-green text-white text-[13px] font-semibold py-3 hover:bg-forest-700 transition-colors"
           >
-            Start a regular savings plan with an advisor →
-          </a>
+            Talk to an advisor about a savings plan →
+          </TalkToAdvisorButton>
         </>
       ) : (
         <div className="text-center py-2">

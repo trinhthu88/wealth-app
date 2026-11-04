@@ -1,15 +1,17 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type { CheckpointCode } from "@workspace/tier-policy";
 import { apiFetch } from "@/lib/api";
+import { invalidateEntitlements } from "@/hooks/useEntitlements";
 
-// Fires POST /leads/from-interest for the currently-authenticated user — the
-// server pulls email/name from their own profile and dedupes against any
-// existing non-churned lead, so this is safe to call every time an interest
-// CTA is clicked, not just the first time.
+// The one interest action. The server takes the person from their own profile and
+// keeps one live lead per user, so this is safe to call from every control.
 export function useCreateLeadFromInterest() {
+  const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (source: string) => apiFetch("/leads/from-interest", {
+    mutationFn: (source: CheckpointCode) => apiFetch("/leads/from-interest", {
       method: "POST",
       body: JSON.stringify({ source }),
     }),
+    onSuccess: () => invalidateEntitlements(queryClient),
   });
 }

@@ -25,7 +25,7 @@ export default function GoalScenarioCTA({ goalId, goalTitle, status }: Props) {
   // These are in-app routes (wouter Link) — no page unload, so firing this
   // without awaiting it doesn't risk the request being aborted.
   function markInterest() {
-    createLead.mutate("goal_scenario_cta");
+    createLead.mutate("C3_off_track");
   }
 
   function dismiss() {

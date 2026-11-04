@@ -7,6 +7,7 @@ export const ENTITLEMENTS_QUERY_KEY = ["entitlements"] as const;
 
 export type EntitlementsResponse = Entitlements & {
   advisor: { id: string; name: string | null } | null;
+  leadSource: string | null;
 };
 
 /** The server's answer for every gate. Screens render from this and never decide a gate. */

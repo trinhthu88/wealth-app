@@ -307,7 +307,7 @@ function GoalCardInline({ goal, index, plans, holdings, allLinks, allGoals, solS
             actionLabel: isTrackA ? "Run a scenario" : "See how an advisor can help",
           }}
           onAccept={() => {
-            createLead.mutate("goal_scenario_cta"); // same CTA slot GoalScenarioCTA owns for at_risk
+            createLead.mutate("C3_off_track"); // same CTA slot GoalScenarioCTA owns for at_risk
             setLocation(isTrackA ? `/client/goals/what-if?goalId=${goal.id}&type=retire_earlier` : "/client/advisor/messages");
           }}
           onDismiss={() => { localStorage.setItem(`sol_offtrack_dismissed_${goal.id}`, "1"); setOffTrackDismissed(true); }}

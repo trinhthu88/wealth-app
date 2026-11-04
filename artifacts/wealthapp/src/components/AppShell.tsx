@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useRoute } from "wouter";
 import { UserButton } from "@clerk/react";
 import { useProfile } from "@/hooks/useProfile";
+import TalkToAdvisorButton from "@/components/TalkToAdvisorButton";
 import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { track } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
@@ -111,13 +112,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             <p className="text-[14px] text-mint leading-relaxed mb-4 text-pretty">
               Get a financial advisor, portfolio tracking, and scenario planning.
             </p>
-            <a
-              href="mailto:hello@tala.app?subject=Upgrade"
-              onClick={() => track("upgrade_cta_clicked", { location: "app_shell_sidebar" })}
-              className="flex items-center justify-center w-full h-12 rounded-xl bg-green text-white text-[15px] font-semibold hover:bg-forest-700 transition-colors"
-            >
-              Talk to an advisor
-            </a>
+            <TalkToAdvisorButton source="C7_direct" location="app_shell_sidebar" className="flex items-center justify-center w-full h-12 rounded-xl bg-green text-white text-[15px] font-semibold hover:bg-forest-700 transition-colors" />
           </div>
         </div>
       )}

@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { X, Lock } from "lucide-react";
-import PlanPicker from "@/components/PlanPicker";
-import BottomSheet from "@/components/client/BottomSheet";
+import TalkToAdvisorButton from "@/components/TalkToAdvisorButton";
 import { useProfile } from "@/hooks/useProfile";
 import { useManageSubscription } from "@/hooks/useManageSubscription";
 import { track } from "@/lib/analytics";
@@ -16,7 +15,6 @@ export default function FreeTierBanner({ feature, benefit, storageKey }: Props) 
   const [dismissed, setDismissed] = useState(
     () => localStorage.getItem(`free_banner_${storageKey}`) === "1"
   );
-  const [sheetOpen, setSheetOpen] = useState(false);
   const { profile } = useProfile();
   const isSubscribed = profile?.role === "investment_client";
   const manageSubscription = useManageSubscription();
@@ -25,29 +23,33 @@ export default function FreeTierBanner({ feature, benefit, storageKey }: Props) 
 
   const location = `free_tier_banner_${storageKey}`;
 
-  function handleCtaClick() {
-    track("upgrade_cta_clicked", { location, action: isSubscribed ? "manage_subscription" : "open_plan_picker" });
-    if (isSubscribed) {
-      manageSubscription.mutate();
-      return;
-    }
-    setSheetOpen(true);
-  }
-
   return (
     <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-[#0C21A4]/5 border border-[#0C21A4]/10 text-sm">
       <Lock className="h-3.5 w-3.5 text-[#0C21A4]/40 shrink-0" />
       <p className="flex-1 text-slate-600 text-xs leading-relaxed">
         <span className="font-semibold text-[#0C21A4]">Free plan:</span> {feature}.{" "}
         <span className="text-slate-500">{benefit}</span>{" "}
-        <button
-          type="button"
-          onClick={handleCtaClick}
-          disabled={manageSubscription.isPending}
-          className="text-[#0C21A4] font-medium hover:underline whitespace-nowrap disabled:opacity-60"
-        >
-          {isSubscribed ? "Manage subscription" : "Upgrade your plan"} →
-        </button>
+        {isSubscribed ? (
+          <button
+            type="button"
+            onClick={() => {
+              track("upgrade_cta_clicked", { location, action: "manage_subscription" });
+              manageSubscription.mutate();
+            }}
+            disabled={manageSubscription.isPending}
+            className="text-[#0C21A4] font-medium hover:underline whitespace-nowrap disabled:opacity-60"
+          >
+            Manage subscription →
+          </button>
+        ) : (
+          <TalkToAdvisorButton
+            source="C7_direct"
+            location={location}
+            className="text-[#0C21A4] font-medium hover:underline whitespace-nowrap disabled:opacity-60"
+          >
+            Talk to an advisor →
+          </TalkToAdvisorButton>
+        )}
       </p>
       <button
         onClick={() => {
@@ -59,10 +61,6 @@ export default function FreeTierBanner({ feature, benefit, storageKey }: Props) 
       >
         <X className="h-3.5 w-3.5" />
       </button>
-
-      <BottomSheet isOpen={sheetOpen} onClose={() => setSheetOpen(false)} title="Choose your plan">
-        <PlanPicker />
-      </BottomSheet>
     </div>
   );
 }

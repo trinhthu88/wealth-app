@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import TalkToAdvisorButton from "@/components/TalkToAdvisorButton";
 import { Button } from "@/components/ui/button";
 import CurrencyField from "@/components/shared/CurrencyField";
 import GoalStatusBadge from "@/components/client/goals/GoalStatusBadge";
@@ -150,14 +151,14 @@ function AdvisorCTA({ offTrack, shortfall }: { offTrack: boolean; shortfall: num
       </p>
       {offTrack && shortfall > 0 ? (
         <p className="text-green-tint text-xs mb-3">
-          A {fmtCompact(shortfall)} shortfall is solvable with the right investment plan. Let's talk.
+          An advisor can look at this {fmtCompact(shortfall)} shortfall with you.
         </p>
       ) : (
         <p className="text-green-tint text-xs mb-3">An advisor can identify small adjustments to get you fully on track.</p>
       )}
-      <a href="/book" className="inline-flex items-center gap-1.5 bg-paper text-forest text-xs font-semibold px-4 py-2 rounded-lg transition-colors hover:bg-paper/90">
-        Book a free call
-      </a>
+      <TalkToAdvisorButton source="C3_off_track" location="goal_card" className="inline-flex items-center gap-1.5 bg-paper text-forest text-xs font-semibold px-4 py-2 rounded-lg transition-colors hover:bg-paper/90">
+        Talk to an advisor
+      </TalkToAdvisorButton>
     </div>
   );
 }

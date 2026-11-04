@@ -1,6 +1,6 @@
 import { Lock } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { track } from "@/lib/analytics";
+import TalkToAdvisorButton from "@/components/TalkToAdvisorButton";
 
 interface Props {
   icon: LucideIcon;
@@ -16,7 +16,7 @@ interface Props {
  */
 export default function GhostGoalCard({ icon: Icon, title, description, targetLabel }: Props) {
   return (
-    <a href="/book" onClick={() => track("upgrade_cta_clicked", { location: "ghost_goal_card" })} className="relative block rounded-2xl border border-hairline bg-surface p-5 overflow-hidden">
+    <TalkToAdvisorButton source="C2_goal_slot" location="ghost_goal_card" className="w-full text-left relative block rounded-2xl border border-hairline bg-surface p-5 overflow-hidden">
       <div className="absolute inset-0 z-10 flex items-center justify-center backdrop-blur-[2px] bg-surface/50">
         <span className="flex items-center gap-1.5 rounded-full bg-green text-white text-[11px] font-semibold px-3 py-1.5">
           <Lock className="h-3 w-3" />Unlock as a client
@@ -30,6 +30,6 @@ export default function GhostGoalCard({ icon: Icon, title, description, targetLa
           <p className="text-[15px] font-bold text-green mt-1">{targetLabel}</p>
         </div>
       </div>
-    </a>
+    </TalkToAdvisorButton>
   );
 }

@@ -297,6 +297,7 @@ describe("GET /me/entitlements", () => {
       },
       atCap: { goals: true, holdings: false, sol: false },
       leadStatus: null,
+      leadSource: null,
       advisor: null,
       openCheckpoint: null,
     });

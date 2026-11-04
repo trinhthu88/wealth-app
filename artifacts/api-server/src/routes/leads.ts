@@ -1,9 +1,12 @@
 import { Router, type IRouter } from "express";
-import { and, asc, eq, ne } from "drizzle-orm";
+import { eq } from "drizzle-orm";
+import { z } from "zod/v4";
+import { CHECKPOINT_CODES } from "@workspace/tier-policy";
 import { db, leadsTable, profilesTable, leadStatusSchema, normalizeRiskProfile } from "@workspace/db";
 import { requireAuth, requireRole, requireAdvisorOwnsLeadById } from "../middlewares/requireAuth";
 import { createUserWithProfile } from "../lib/createUserWithProfile";
 import { promoteLeadToClient } from "../lib/promoteLead";
+import { registerInterest, withLinkedPerson } from "../lib/leadInterest";
 
 const router: IRouter = Router();
 const leadGuard = [requireAuth, requireRole("advisor", "super_admin")];
@@ -18,10 +21,10 @@ router.get("/leads", ...leadGuard, async (req, res): Promise<void> => {
   const userRole = (req as any).userRole;
   const userId = (req as any).userId;
   if (userRole === "super_admin") {
-    res.json(await db.select().from(leadsTable));
+    res.json(await withLinkedPerson(await db.select().from(leadsTable)));
     return;
   }
-  res.json(await db.select().from(leadsTable).where(eq(leadsTable.assignedAdvisorId, userId)));
+  res.json(await withLinkedPerson(await db.select().from(leadsTable).where(eq(leadsTable.assignedAdvisorId, userId))));
 });
 
 // Same scoping as the list above, via requireAdvisorOwnsLeadById: super_admin
@@ -30,7 +33,8 @@ router.get("/leads/:id", ...leadGuard, requireAdvisorOwnsLeadById(), async (req,
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const [lead] = await db.select().from(leadsTable).where(eq(leadsTable.id, rawId));
   if (!lead) { res.status(404).json({ error: "Not found" }); return; }
-  res.json(lead);
+  const [withPerson] = await withLinkedPerson([lead]);
+  res.json(withPerson);
 });
 
 // Called by an interest CTA (SmartUpgradeCard, GoalScenarioCTA, the off-track
@@ -39,33 +43,19 @@ router.get("/leads/:id", ...leadGuard, requireAdvisorOwnsLeadById(), async (req,
 // from their own profile. A user clicking multiple CTAs over time stays one
 // lead record: any existing non-churned lead for this userId just gets its
 // source/updatedAt touched instead of a new row being created.
+const interestBody = z.object({ source: z.enum(CHECKPOINT_CODES) });
+
 router.post("/leads/from-interest", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
-  const { source } = req.body;
-  if (!source) { res.status(400).json({ error: "source required" }); return; }
+  const body = interestBody.safeParse(req.body);
+  if (!body.success) { res.status(400).json({ error: "source must be a checkpoint code" }); return; }
 
-  const [profile] = await db.select().from(profilesTable).where(eq(profilesTable.id, userId));
+  const [profile] = await db.select({ email: profilesTable.email }).from(profilesTable).where(eq(profilesTable.id, userId));
   if (!profile) { res.status(404).json({ error: "Profile not found" }); return; }
 
-  const [existing] = await db.select().from(leadsTable)
-    .where(and(eq(leadsTable.userId, userId), ne(leadsTable.status, "churned")))
-    .orderBy(asc(leadsTable.createdAt));
-
-  if (existing) {
-    const [updated] = await db.update(leadsTable).set({ source, updatedAt: new Date() })
-      .where(eq(leadsTable.id, existing.id)).returning();
-    res.json(updated);
-    return;
-  }
-
-  const [lead] = await db.insert(leadsTable).values({
-    email: profile.email,
-    firstName: profile.fullName ?? null,
-    userId,
-    source,
-    status: "unassigned",
-  }).returning();
-  res.status(201).json(lead);
+  const { lead, created } = await registerInterest(userId, profile.email, body.data.source);
+  const [withPerson] = await withLinkedPerson([lead]);
+  res.status(created ? 201 : 200).json(withPerson);
 });
 
 router.post("/leads", async (req, res): Promise<void> => {

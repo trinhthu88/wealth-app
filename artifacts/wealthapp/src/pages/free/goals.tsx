@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
 import { track } from "@/lib/analytics";
+import TalkToAdvisorButton from "@/components/TalkToAdvisorButton";
 import { toast } from "sonner";
 import { Lock, X, TrendingUp, Plus, Trash2, ChevronDown, Home, Palmtree, ShieldAlert, Rocket, CreditCard, GraduationCap, Plane, Car, Briefcase, Landmark, Target } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
@@ -540,9 +541,11 @@ export default function GoalsPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[13px] font-semibold text-forest leading-[1.4]">{insight}</p>
-                  <Button variant="outline" size="sm" className="mt-3 text-xs border-primary text-primary hover:bg-primary/5">
-                    Book a free discovery call →
-                  </Button>
+                  <TalkToAdvisorButton
+                    source="C2_goal_slot"
+                    location="free_goals_insight"
+                    className="mt-3 inline-flex items-center rounded-md border border-primary px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/5 disabled:opacity-60"
+                  />
                 </div>
               </div>
             </div>

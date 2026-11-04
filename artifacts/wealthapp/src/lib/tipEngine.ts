@@ -71,8 +71,8 @@ export function generateWeeklyTip(data: TipData): Tip {
       type: "expat_tip",
       title: "Are your investments expat-optimised?",
       body: "As an expat, local investment accounts may offer better returns than home country accounts. An advisor can review your options.",
-      actionLabel: "Book a free review",
-      actionRoute: "/book",
+      actionLabel: "Talk to an advisor",
+      actionRoute: "/client/dashboard",
     };
   }
 
@@ -82,7 +82,7 @@ export function generateWeeklyTip(data: TipData): Tip {
       title: "Your net worth grew this month",
       body: `Net worth is up ${sym}${Math.round(netWorthDelta).toLocaleString()} since last month — momentum is building. Keep your savings rate consistent and consider whether your surplus could be working harder.`,
       actionLabel: "Talk to an advisor",
-      actionRoute: "/book",
+      actionRoute: "/client/dashboard",
     };
   }
 

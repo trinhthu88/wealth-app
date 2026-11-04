@@ -37,13 +37,13 @@ describe("POST /leads/from-interest", () => {
     const res = await request(app)
       .post("/api/leads/from-interest")
       .set(asUser(userId))
-      .send({ source: "smart_upgrade_card" })
+      .send({ source: "C7_direct" })
       .expect(201);
 
     expect(res.body.userId).toBe(userId);
     expect(res.body.email).toBe(`interest-${RUN_ID}@test.local`);
     expect(res.body.firstName).toBe("Interest Test User");
-    expect(res.body.source).toBe("smart_upgrade_card");
+    expect(res.body.source).toBe("C7_direct");
     expect(res.body.status).toBe("unassigned");
   });
 
@@ -54,11 +54,11 @@ describe("POST /leads/from-interest", () => {
     const res = await request(app)
       .post("/api/leads/from-interest")
       .set(asUser(userId))
-      .send({ source: "goal_scenario_cta" })
+      .send({ source: "C3_off_track" })
       .expect(200);
 
     expect(res.body.id).toBe(before[0].id);
-    expect(res.body.source).toBe("goal_scenario_cta");
+    expect(res.body.source).toBe("C3_off_track");
 
     const after = await db.select().from(leadsTable).where(eq(leadsTable.userId, userId));
     expect(after).toHaveLength(1);
@@ -70,7 +70,7 @@ describe("POST /leads/from-interest", () => {
     const res = await request(app)
       .post("/api/leads/from-interest")
       .set(asUser(userId))
-      .send({ source: "smart_upgrade_card" })
+      .send({ source: "C7_direct" })
       .expect(201);
 
     expect(res.body.status).toBe("unassigned");

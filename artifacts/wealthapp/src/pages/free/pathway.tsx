@@ -11,6 +11,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import AppShell from "@/components/AppShell";
+import TalkToAdvisorButton from "@/components/TalkToAdvisorButton";
 import BottomNav from "@/components/BottomNav";
 import { apiFetch } from "@/lib/api";
 import { useProfile } from "@/hooks/useProfile";
@@ -128,13 +129,9 @@ export default function PathwayPage() {
             <p className="text-[14px] text-mint leading-relaxed mb-4 text-pretty">
               An advisor can turn this pathway into a full financial plan with portfolio tracking and scenario modelling.
             </p>
-            <a
-              href="mailto:hello@tala.app?subject=Upgrade"
-              onClick={() => track("upgrade_cta_clicked", { location: "pathway_recap" })}
-              className="flex items-center justify-center gap-2 w-full h-12 rounded-xl bg-green text-white text-[15px] font-semibold hover:bg-forest-700 transition-colors"
-            >
+            <TalkToAdvisorButton source="C7_direct" location="pathway_recap" className="flex items-center justify-center gap-2 w-full h-12 rounded-xl bg-green text-white text-[15px] font-semibold hover:bg-forest-700 transition-colors">
               <Phone className="h-4 w-4" />Talk to an advisor
-            </a>
+            </TalkToAdvisorButton>
           </div>
         )}
       </div>

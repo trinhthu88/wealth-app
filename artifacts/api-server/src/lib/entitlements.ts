@@ -12,7 +12,7 @@ export interface EntitlementContext {
   usage: Usage;
   leadStatus: string | null;
   advisor: { id: string; name: string | null } | null;
-  entitlements: Entitlements & { advisor: { id: string; name: string | null } | null };
+  entitlements: Entitlements & { advisor: { id: string; name: string | null } | null; leadSource: string | null };
 }
 
 /** The user's one lead: the oldest live row, else their most recent churned row. */
@@ -69,7 +69,7 @@ async function loadContext(userId: string): Promise<EntitlementContext> {
 
   return {
     role, tier, usage, leadStatus, advisor,
-    entitlements: { ...entitlementsFor(tier, usage, leadStatus, null), advisor },
+    entitlements: { ...entitlementsFor(tier, usage, leadStatus, null), advisor, leadSource: lead?.source ?? null },
   };
 }
 

@@ -7,6 +7,8 @@ import SolNarration from "@/components/client/SolNarration";
 import CurrencyField from "@/components/shared/CurrencyField";
 import WealthScoreCard from "@/components/client/dashboard/WealthScoreCard";
 import ClientSetupChecklistCard from "@/components/client/ClientSetupChecklistCard";
+import AdvisorCard from "@/components/client/dashboard/AdvisorCard";
+import { useEntitlements } from "@/hooks/useEntitlements";
 import ClientRiskCheckSheet from "@/components/client/ClientRiskCheckSheet";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useProfile } from "@/hooks/useProfile";
@@ -29,6 +31,7 @@ function daysSince(dateStr: string) { return (Date.now() - new Date(dateStr).get
 
 export default function ClientDashboard() {
   const data = useDashboardData();
+  const { entitlements } = useEntitlements();
   const { profile } = useProfile();
   const { nextMilestone, advisorName } = usePlan();
   const netWorthSummary = useNetWorthSummary();
@@ -325,7 +328,7 @@ export default function ClientDashboard() {
         )}
 
         {/* Track B Conversion CTA */}
-        {data.isTrackB && (
+        {data.isTrackB && entitlements?.tier !== "free" && (
           <div className="bg-breeze rounded-[24px] p-5">
             <div className="flex items-start gap-3 mb-4">
               <Sol size="sm" animate="breathe" />
@@ -346,25 +349,8 @@ export default function ClientDashboard() {
           </div>
         )}
 
-        {/* Advisor card */}
-        {data.isTrackA && data.advisorName && (
-          <Link href="/client/advisor/messages" className="block">
-            <div className="bg-surface rounded-[24px] p-5 cursor-pointer">
-              <div className="flex justify-between items-baseline mb-3">
-                <h2 className="text-[16px] font-semibold text-forest">Your advisor</h2>
-                <span className="text-[14px] font-semibold text-green underline underline-offset-4">Message</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-[14px] bg-field flex-none flex items-center justify-center text-[14px] font-semibold text-forest">
-                  {data.advisorName.split(" ").map(p => p[0]).join("")}
-                </div>
-                <div className={cn("text-[14px] text-ink-40 leading-[1.45] text-pretty")}>
-                  {advisorFirstName}: "Need an adjustment to your plan? Send a message directly."
-                </div>
-              </div>
-            </div>
-          </Link>
-        )}
+        {/* Advisor card: conversion state for free users, the advisor for clients */}
+        <AdvisorCard />
       </div>
       <ClientRiskCheckSheet isOpen={showRiskCheck} onClose={() => setShowRiskCheck(false)} />
     </ClientAppShell>

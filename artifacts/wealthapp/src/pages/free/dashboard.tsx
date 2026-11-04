@@ -14,7 +14,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import AppShell from "@/components/AppShell";
 import Sol from "@/components/Sol";
 import SmartUpgradeCard from "@/components/SmartUpgradeCard";
-import PlanPicker from "@/components/PlanPicker";
+import TalkToAdvisorButton from "@/components/TalkToAdvisorButton";
 import BottomSheet from "@/components/client/BottomSheet";
 import GoalCard, { toGoalCardData } from "@/components/shared/GoalCard";
 import HealthScoreRing from "@/components/shared/HealthScoreRing";
@@ -83,16 +83,6 @@ export default function FreeDashboard() {
   const { profile } = useProfile();
   const isSubscribed = profile?.role === "investment_client";
   const manageSubscription = useManageSubscription();
-  const [planPickerOpen, setPlanPickerOpen] = useState(false);
-
-  function handleConversionCtaClick(location: string) {
-    track("upgrade_cta_clicked", { location, action: isSubscribed ? "manage_subscription" : "open_plan_picker" });
-    if (isSubscribed) {
-      manageSubscription.mutate();
-      return;
-    }
-    setPlanPickerOpen(true);
-  }
   const [pathwayDismissed, setPathwayDismissed] = useState(false);
   const [streakWeeks, setStreakWeeks] = useState(0);
   const [earnedMilestones, setEarnedMilestones] = useState<string[]>([]);
@@ -510,14 +500,20 @@ export default function FreeDashboard() {
                   </p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => handleConversionCtaClick("dashboard_advisor_tip")}
-                disabled={manageSubscription.isPending}
-                className="mt-3 inline-flex items-center justify-center w-full rounded-full bg-green text-white text-[12px] font-semibold py-2.5 hover:bg-forest-700 transition-colors disabled:opacity-60"
-              >
-                {isSubscribed ? "Manage subscription →" : "Get an investment plan →"}
-              </button>
+              {isSubscribed ? (
+                <button
+                  type="button"
+                  onClick={() => { track("upgrade_cta_clicked", { location: "dashboard_advisor_tip", action: "manage_subscription" }); manageSubscription.mutate(); }}
+                  disabled={manageSubscription.isPending}
+                  className="mt-3 inline-flex items-center justify-center w-full rounded-full bg-green text-white text-[12px] font-semibold py-2.5 hover:bg-forest-700 transition-colors disabled:opacity-60"
+                >
+                  Manage subscription →
+                </button>
+              ) : (
+                <TalkToAdvisorButton source="C7_direct" location="dashboard_advisor_tip" className="mt-3 inline-flex items-center justify-center w-full rounded-full bg-green text-white text-[12px] font-semibold py-2.5 hover:bg-forest-700 transition-colors disabled:opacity-60">
+                  Talk to an advisor →
+                </TalkToAdvisorButton>
+              )}
             </div>
           </div>
 
@@ -571,22 +567,24 @@ export default function FreeDashboard() {
                 </div>
               </Link>
             ))}
-            <button
-              type="button"
-              onClick={() => handleConversionCtaClick("dashboard_quick_actions")}
-              disabled={manageSubscription.isPending}
-              className="flex items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2 transition-colors bg-hairline border border-hairline text-[13px] font-medium text-forest disabled:opacity-60"
-            >
-              <Phone className="h-3.5 w-3.5" /><span>{isSubscribed ? "Manage plan" : "Get a plan"}</span>
-            </button>
+            {isSubscribed ? (
+              <button
+                type="button"
+                onClick={() => { track("upgrade_cta_clicked", { location: "dashboard_quick_actions", action: "manage_subscription" }); manageSubscription.mutate(); }}
+                disabled={manageSubscription.isPending}
+                className="flex items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2 transition-colors bg-hairline border border-hairline text-[13px] font-medium text-forest disabled:opacity-60"
+              >
+                <Phone className="h-3.5 w-3.5" /><span>Manage plan</span>
+              </button>
+            ) : (
+              <TalkToAdvisorButton source="C7_direct" location="dashboard_quick_actions" className="flex items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2 transition-colors bg-hairline border border-hairline text-[13px] font-medium text-forest disabled:opacity-60">
+                <Phone className="h-3.5 w-3.5" /><span>Talk to an advisor</span>
+              </TalkToAdvisorButton>
+            )}
           </div>
 
         </div>
       </div>
-
-      <BottomSheet isOpen={planPickerOpen} onClose={() => setPlanPickerOpen(false)} title="Choose your plan">
-        <PlanPicker />
-      </BottomSheet>
 
       <BottomNav />
     </AppShell>
