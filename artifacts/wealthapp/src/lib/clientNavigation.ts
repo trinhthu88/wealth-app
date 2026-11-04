@@ -1,8 +1,9 @@
-// Four places plus Sol (rendered between Portfolio and Goals by the app
-// shell, not a route). The monthly budget lives under Home: it opens from the
-// dashboard's budget card, so /client/money highlights Home.
+// Five places plus Sol (rendered by the app shell between Portfolio and
+// Goals, not a route). Budget has its own place because clients use it every
+// month.
 export const CLIENT_PRIMARY_NAV = [
   { id: "home", label: "Home", href: "/client/dashboard" },
+  { id: "budget", label: "Budget", href: "/client/money" },
   { id: "wealth", label: "Portfolio", href: "/client/wealth/investments" },
   { id: "goals", label: "Goals", href: "/client/goals/goals" },
   { id: "advisor", label: "Advisor", href: "/client/advisor/messages" },
@@ -50,7 +51,7 @@ export function getClientNavigationState(location: string): ClientNavigationStat
   if (pathname === "/client/dashboard") {
     primaryId = "home";
   } else if (pathname === "/client/money") {
-    primaryId = "home";
+    primaryId = "budget";
   } else if (pathname.startsWith("/client/wealth/")) {
     primaryId = "wealth";
     sectionLabel = "Wealth";
