@@ -179,6 +179,12 @@ describe("F-6: the authenticated route the advisor page uses", () => {
     await request(app).put(`/api/leads/${res.body.id}`).set(asUser(advisorA)).send({ notes: "ok" }).expect(200);
   });
 
+  it("stores a form's blank optional fields as null, as the leads page expects", async () => {
+    const res = await request(app).post("/api/advisor/leads").set(asUser(advisorA))
+      .send({ email: email("blank"), firstName: "", source: "  ", notes: "" }).expect(201);
+    expect(res.body).toMatchObject({ firstName: null, source: null, notes: null });
+  });
+
   it("a lead a super admin adds goes to the assignment queue", async () => {
     const res = await request(app).post("/api/advisor/leads").set(asUser(adminId)).send({ email: email("queue") }).expect(201);
     expect(res.body).toMatchObject({ assignedAdvisorId: null, status: "unassigned" });

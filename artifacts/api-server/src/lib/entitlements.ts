@@ -5,7 +5,7 @@ import {
   leadsTable, membershipsTable, profilesTable, solConversationsTable, solMessagesTable, conversionCheckpointsTable,
 } from "@workspace/db";
 import {
-  entitlementsFor, isMembershipActive, membershipGraceUntil, resolveTier,
+  entitlementsFor, isMembershipActive, isTrialEligible, membershipGraceUntil, resolveTier,
   type Checkpoint, type CheckpointCode, type Entitlements, type MembershipPlan, type MembershipStatus,
   type MembershipSummary, type Tier, type Usage,
 } from "@workspace/tier-policy";
@@ -90,6 +90,7 @@ async function loadContext(userId: string): Promise<EntitlementContext> {
     manageUrl: membership?.providerCustomerId ? "/membership/portal" : null,
     isActive: isMembershipActive(membershipStatus, graceUntil),
     pendingPayment: role === "investment_client" && clientProfile?.status === "pending_payment",
+    trialEligible: isTrialEligible(membershipStatus),
   };
   let advisor: EntitlementContext["advisor"] = null;
   if (advisorId) {

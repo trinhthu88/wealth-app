@@ -142,7 +142,7 @@ export default function AdvisorLeads() {
               <div key={l.id} className="bg-surface rounded-[26px] px-6 py-5 flex items-center justify-between gap-4 shadow-[0_2px_14px_rgba(12,33,164,0.06)]">
                 <div className="flex items-center gap-4">
                   <div className="h-12 w-12 rounded-[16px] bg-sun-tint flex items-center justify-center text-[16px] font-semibold text-amber-ink shrink-0">
-                    {(l.firstName ?? l.email)[0].toUpperCase()}
+                    {(l.firstName || l.email)[0].toUpperCase()}
                   </div>
                   <div>
                     <div className="font-medium text-[16px] text-forest">{l.firstName ? `${l.firstName} — ` : ""}{l.email}</div>

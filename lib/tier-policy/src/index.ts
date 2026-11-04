@@ -157,11 +157,21 @@ export interface MembershipSummary {
   isActive: boolean;
   /** Promoted by an advisor and waiting on the first payment. */
   pendingPayment: boolean;
+  /** Whether Checkout will give this user a free trial. Screens must not promise one otherwise. */
+  trialEligible: boolean;
 }
 
 export type AllowanceResult =
   | { allowed: true; gate: Gate }
   | { allowed: false; gate: Gate; limit: number | null; checkpoint: CheckpointCode | null };
+
+/**
+ * The trial is for a first membership. The addendum sets its length, not whether it repeats, and
+ * repeating would let someone cancel and rejoin for free indefinitely.
+ */
+export function isTrialEligible(status: MembershipStatus | null): boolean {
+  return status === null || status === "none";
+}
 
 /** The last moment a past_due membership still counts as active. */
 export function membershipGraceUntil(currentPeriodEnd: Date | null): Date | null {

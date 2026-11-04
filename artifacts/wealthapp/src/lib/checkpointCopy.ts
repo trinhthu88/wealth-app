@@ -70,7 +70,7 @@ export function checkpointCopy(code: CheckpointCode, snapshot: Record<string, an
       };
     case "C12_lapsed":
       return {
-        body: "Your membership has ended. All your goals and holdings are still here, and your advisor stays with you. You're back on the free plan's limits, so you can't add more until you reactivate.",
+        body: "All your goals and holdings are still here, and your advisor stays with you. You're back on the free plan's limits, so you can't add more until you reactivate.",
         action: "Reactivate",
       };
     case "C10_coast_point":

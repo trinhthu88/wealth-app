@@ -63,7 +63,7 @@ export default function AdminDashboard() {
                 <div key={a.id} className="flex items-center justify-between px-3 py-2 -mx-3 rounded-[16px] hover:bg-paper transition-colors">
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-[14px] bg-sun-tint flex items-center justify-center text-[15px] font-bold text-amber-ink shrink-0">
-                      {(a.fullName ?? a.email)[0].toUpperCase()}
+                      {(a.fullName || a.email)[0].toUpperCase()}
                     </div>
                     <div>
                       <div className="font-medium text-forest text-[15px]">{a.fullName ?? a.email}</div>

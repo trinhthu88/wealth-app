@@ -436,6 +436,17 @@ describe("POST /api/membership/checkout", () => {
     expect(params.subscription_data.trial_period_days).toBeUndefined();
     expect(params.customer).toBe(sub.customer);
   });
+
+  it("tells the screens the same thing about the trial that checkout will do", async () => {
+    const u = await makeUser();
+    expect((await entitlements(u)).membership.trialEligible).toBe(true);
+    const sub = setSubscription(u);
+    await completed(sub).expect(200);
+    expect((await entitlements(u)).membership.trialEligible).toBe(false);
+    setSubscription(u, { status: "canceled" });
+    await sendEvent("customer.subscription.deleted", sub).expect(200);
+    expect((await entitlements(u)).membership.trialEligible).toBe(false);
+  });
 });
 
 describe("POST /api/membership/portal", () => {

@@ -62,10 +62,14 @@ router.post("/leads/from-interest", requireAuth, async (req, res): Promise<void>
 
 // The public quiz funnel. Anyone can call this, so it takes only what a visitor can know about
 // themselves: status is always unassigned and notes are staff's. Unknown fields are dropped.
+// A form's untouched optional field arrives as "". It is stored as null, because the screens
+// fall back on null, and a blank name used to crash the leads page.
+const optionalText = (max: number) => z.string().trim().max(max).nullish().transform((v) => v || null);
+
 const publicLeadBody = z.object({
   email: z.email().max(254),
-  firstName: z.string().trim().max(200).nullish(),
-  source: z.string().trim().max(200).nullish(),
+  firstName: optionalText(200),
+  source: optionalText(200),
   quizResult: z.string().max(5000).nullish(),
   healthScore: z.number().int().min(0).max(100).nullish(),
 });
@@ -93,10 +97,10 @@ router.post("/leads", publicLeadLimit, async (req, res): Promise<void> => {
 // The advisor leads page's "Add lead", with the fields the public route refuses.
 const staffLeadBody = z.object({
   email: z.email().max(254),
-  firstName: z.string().trim().max(200).nullish(),
-  source: z.string().trim().max(200).nullish(),
+  firstName: optionalText(200),
+  source: optionalText(200),
   status: leadStatusSchema.optional(),
-  notes: z.string().max(5000).nullish(),
+  notes: optionalText(5000),
 });
 
 router.post("/advisor/leads", ...leadGuard, async (req, res): Promise<void> => {

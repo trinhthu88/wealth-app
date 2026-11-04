@@ -24,7 +24,7 @@ function formatDollars(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`;
 }
 
-export default function PlanPicker() {
+export default function PlanPicker({ hasTrial }: { hasTrial: boolean }) {
   const [selectedPlan, setSelectedPlan] = useState<PlanKey>("annual");
   const [loading, setLoading] = useState(false);
 
@@ -112,7 +112,7 @@ export default function PlanPicker() {
         disabled={loading || !prices}
         className="flex items-center justify-center w-full h-12 rounded-xl bg-green text-white text-[15px] font-semibold hover:bg-forest-700 transition-colors disabled:opacity-60"
       >
-        {loading ? "Redirecting…" : `Start my ${TRIAL_DAYS}-day free trial →`}
+        {loading ? "Redirecting…" : hasTrial ? `Start my ${TRIAL_DAYS}-day free trial →` : "Continue to payment →"}
       </button>
     </div>
   );

@@ -304,7 +304,7 @@ describe("GET /me/entitlements", () => {
       openCheckpoint: null,
       membership: {
         status: "none", plan: null, currentPeriodEnd: null, trialEndsAt: null, source: null,
-        manageUrl: null, isActive: false, pendingPayment: false,
+        manageUrl: null, isActive: false, pendingPayment: false, trialEligible: true,
       },
     });
   });

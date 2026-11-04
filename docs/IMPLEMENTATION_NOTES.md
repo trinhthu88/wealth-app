@@ -2,7 +2,9 @@
 
 Implements `docs/prompts/implement-free-tier-conversion.md` and, as Phase 5, `docs/prompts/subscription-addendum.md` on branch `feat/free-tier-conversion`. Typecheck and both test suites pass after every phase.
 
-**Not tested in a browser, and not tested against Stripe.** The server is covered through its routes, with the Stripe client mocked, and the frontend through typecheck, a production build and unit tests of its pure logic. Nobody has yet clicked through a free user's journey or completed a real Checkout, even in Stripe test mode.
+**Not tested against Stripe.** Webhook and checkout tests use a mocked Stripe client, and no real Checkout has been completed, even in test mode, because this environment has no Stripe keys. The screens after payment were checked by setting membership rows by hand.
+
+**Browser tested on 2026-11-04,** on a production build with test Clerk users, at phone width. Covered: sign-in, onboarding, return visit, locked screens and membership copy, goal cap and C2, "Talk to an advisor", the Activate and Reactivate screens, the pending, member, trial-ending and lapsed states, the advisor allow-list, and Add lead. Not covered: real payment, the super-admin screens, and desktop width.
 
 ## Before this goes live
 
@@ -74,6 +76,11 @@ Settled: paid sign-up stays (the addendum), `/client/*` screens keep advisors ou
 - F-9: `GET /blog/:slug` serves published posts only.
 - `PATCH /goals/:id/status` already passed the goals cap on reopening; this phase adds a test.
 
+Found by the browser test and fixed:
+- **No new user could finish onboarding.** Saving step 2 sent them back to step 1, forever. `component={() => ...}` on each route made a new component type on every render, so a profile change remounted the page. `main` has the same code. Routes now take children, and a test refuses inline route components.
+- **A returning member was promised a free trial they wouldn't get,** so their card would be charged at once. `membership.trialEligible` now comes from the server, using the same rule as Checkout.
+- **A lead with no first name crashed the leads page to blank.** The server stores blanks as null, and the staff lists handle rows already saved.
+
 ### Metrics
 - `pnpm --filter @workspace/scripts run funnel-report` (add `--weeks=<n>`, default 12). "Promoted within 30 days" uses the lead's `updatedAt` as the promotion date, so a later edit to a promoted lead can drop it from that count.
 
@@ -97,6 +104,8 @@ Settled: paid sign-up stays (the addendum), `/client/*` screens keep advisors ou
 | `PUT /client-profile/me` | Still creates a row for any role. The toggle on the messages page depends on it. |
 | Other localStorage keys | Track A's own CTAs and the off-track Sol card still store dismissals locally. They are not checkpoints. |
 | Rate limit across instances | The `POST /leads` count is held in memory and the deployment is autoscale, so each instance counts separately and the real limit is 10 × instances. A shared store would make it exact. It also assumes one proxy hop (`trust proxy` in `app.ts`), which needs checking on the deployed app: too few hops would put every visitor in one bucket. |
+| C2 after a lead exists | A user who already asked for an advisor still sees C2's "Talk to an advisor" until they dismiss it. Accepting is harmless, since it touches the same lead. |
+| Temporary Vite proxy | `artifacts/wealthapp/vite.config.ts` has a proxy to port 8082 marked "TEMPORARY ... will be reverted". It came from an earlier commit on `main`, and affects the dev server only. |
 | OpenAPI spec | New routes are not in `lib/api-spec`. They use `apiFetch`, like most client routes. |
 
 ## Where Phase 5 departs from the addendum

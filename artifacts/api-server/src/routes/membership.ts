@@ -3,7 +3,7 @@ import type Stripe from "stripe";
 import { eq } from "drizzle-orm";
 import { z } from "zod/v4";
 import { db, membershipCheckoutSessionsTable, membershipsTable, profilesTable } from "@workspace/db";
-import { ANNUAL_MONTHS_FREE, MEMBERSHIP_PLANS, TRIAL_DAYS, type MembershipPlan } from "@workspace/tier-policy";
+import { ANNUAL_MONTHS_FREE, MEMBERSHIP_PLANS, TRIAL_DAYS, isTrialEligible, type MembershipPlan, type MembershipStatus } from "@workspace/tier-policy";
 import { requireAuth } from "../middlewares/requireAuth";
 import { logger } from "../lib/logger";
 import { handleStripeEvent, isRowActive } from "../lib/membershipStore";
@@ -74,9 +74,8 @@ router.post("/membership/checkout", requireAuth, async (req, res): Promise<void>
     }
   }
 
-  // DECISION: the trial is for a first membership. The addendum sets its length, not whether it
-  // repeats, and repeating would let someone cancel and rejoin for free indefinitely.
-  const firstMembership = !membership || membership.status === "none";
+  // DECISION: see isTrialEligible. The screens read the same rule through entitlements.
+  const trial = isTrialEligible((membership?.status ?? null) as MembershipStatus | null);
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
     line_items: [{ price, quantity: 1 }],
@@ -85,7 +84,7 @@ router.post("/membership/checkout", requireAuth, async (req, res): Promise<void>
     payment_method_collection: "always",
     subscription_data: {
       metadata: { userId },
-      ...(firstMembership ? { trial_period_days: TRIAL_DAYS } : {}),
+      ...(trial ? { trial_period_days: TRIAL_DAYS } : {}),
     },
     success_url: `${process.env.APP_URL}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${process.env.APP_URL}/billing/cancel`,

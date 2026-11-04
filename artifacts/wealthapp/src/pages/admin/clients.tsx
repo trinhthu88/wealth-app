@@ -142,7 +142,7 @@ export default function AdminClients() {
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-3">
                       <div className="h-10 w-10 rounded-[14px] bg-sun-tint flex items-center justify-center text-[15px] font-bold text-amber-ink shrink-0">
-                        {(c.fullName ?? c.email)[0].toUpperCase()}
+                        {(c.fullName || c.email)[0].toUpperCase()}
                       </div>
                       <div>
                         <div className="font-medium text-[15px] text-forest">{c.fullName ?? "—"}</div>

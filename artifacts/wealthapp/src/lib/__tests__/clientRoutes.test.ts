@@ -15,4 +15,9 @@ describe("client route allow-list", () => {
     expect(screens.length).toBeGreaterThan(15);
     for (const line of screens) expect(line).toContain("role={CLIENT_SCREEN_ROLES}");
   });
+
+  it("has no inline route components, which would remount the page on every re-render", () => {
+    const app = readFileSync(path.join(__dirname, "../../App.tsx"), "utf8");
+    expect(app).not.toMatch(/component=\{\s*\(/);
+  });
 });
