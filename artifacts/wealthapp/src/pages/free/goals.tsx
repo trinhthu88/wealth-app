@@ -538,7 +538,7 @@ export default function GoalsPage() {
         })}
 
         {/* Locked 2nd goal slot — free users at the 1-goal cap */}
-        {isFreeAtCap && <LockedGoalSlotCard />}
+        {isFreeAtCap && <LockedGoalSlotCard isFree />}
 
         {/* Cash cushion — Sunset "worth a look" tile */}
         {cushionMonths > 0 && (

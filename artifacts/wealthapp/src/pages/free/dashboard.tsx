@@ -306,6 +306,25 @@ export default function FreeDashboard() {
     ? `${getGreeting()}, ${firstName}. You kept ${savingsRate.toFixed(0)}% of your income this month.`
     : `${getGreeting()}, ${firstName}. Here's where things stand today.`;
 
+  const upgradeNudges = [
+    {
+      condition: income > 0 && effectiveSavingsRate < 15,
+      insightText: `You're saving ${effectiveSavingsRate.toFixed(0)}% — reaching 20% could move your retirement forward by 2+ years`,
+      ctaType: "savings_rate",
+    },
+    {
+      condition: goals.length > 0 && assets.filter(a => a.category === "investment").length === 0 && income > 0 && savingsRate >= 15,
+      insightText: "Your goal needs an investment strategy — an advisor can build your personalised roadmap",
+      ctaType: "no_investments",
+    },
+    {
+      condition: (profile?.isExpat ?? false) && income > 0,
+      insightText: "As an expat, you may be missing tax and pension optimisations worth thousands per year",
+      ctaType: "expat",
+    },
+  ];
+  const activeNudge = upgradeNudges.find(n => n.condition && localStorage.getItem(`upgrade_dismissed_${n.ctaType}`) !== "1");
+
   // ── Net worth change for the Month / Year / All pills (from the stored snapshots) ──
   const trend = useMemo(
     () => nwSnapshots
@@ -630,8 +649,13 @@ export default function FreeDashboard() {
           </Link>
         </section>
 
-        {/* The server chooses whether a checkpoint nudge is currently available. */}
-        <SmartUpgradeCard />
+        {/* One personalised Sol nudge plus any server-owned checkpoint. */}
+        <SmartUpgradeCard
+          condition={Boolean(activeNudge)}
+          insightText={activeNudge?.insightText}
+          ctaText="Book a free discovery call"
+          ctaType={activeNudge?.ctaType}
+        />
       </div>
     </AppShell>
   );
