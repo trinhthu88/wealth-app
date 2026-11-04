@@ -8,17 +8,17 @@ import { BarChart3, Briefcase, HeartPulse, LayoutDashboard, Map, MoreHorizontal,
 // Mirrors the investment client's 5-slot mobile bottom nav (Home, Portfolio,
 // Goals, Budget, More) — Pathway/Net Worth/Health Score/Settings live in More.
 const TABS = [
-  { label: "Home",      href: "/free/dashboard", icon: LayoutDashboard },
-  { label: "Portfolio", href: "/free/portfolio", icon: Briefcase },
-  { label: "Goals",     href: "/free/goals",     icon: Target },
-  { label: "Budget",    href: "/free/budget",    icon: Wallet },
+  { label: "Home",      href: "/client/dashboard", icon: LayoutDashboard },
+  { label: "Portfolio", href: "/client/wealth/investments", icon: Briefcase },
+  { label: "Goals",     href: "/client/goals/goals",     icon: Target },
+  { label: "Budget",    href: "/client/money",    icon: Wallet },
 ];
 
 const MORE_ITEMS = [
-  { label: "Pathway",     href: "/free/pathway",      icon: Map },
-  { label: "Net worth",   href: "/free/networth",     icon: BarChart3 },
-  { label: "Health score", href: "/free/health-score", icon: HeartPulse },
-  { label: "Settings",    href: "/free/settings",     icon: Settings },
+  { label: "Pathway",     href: "/client/dashboard",      icon: Map },
+  { label: "Net worth",   href: "/client/wealth/overview",     icon: BarChart3 },
+  { label: "Health score", href: "/client/dashboard", icon: HeartPulse },
+  { label: "Settings",    href: "/client/dashboard",     icon: Settings },
 ];
 
 function Tab({ href, label, icon: Icon }: { href: string; label: string; icon: React.ElementType }) {

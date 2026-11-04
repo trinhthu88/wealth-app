@@ -21,7 +21,7 @@ export default function PublicNav() {
   const { isSignedIn } = useUser();
   const { profile } = useProfile();
 
-  const dashLink = !profile ? "/free/dashboard"
+  const dashLink = !profile ? "/client/dashboard"
     : profile.role === "super_admin" ? "/admin/dashboard"
     : profile.role === "advisor" ? "/advisor/dashboard"
     : "/dashboard";

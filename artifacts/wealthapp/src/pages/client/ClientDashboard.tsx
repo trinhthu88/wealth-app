@@ -8,6 +8,7 @@ import CurrencyField from "@/components/shared/CurrencyField";
 import WealthScoreCard from "@/components/client/dashboard/WealthScoreCard";
 import ClientSetupChecklistCard from "@/components/client/ClientSetupChecklistCard";
 import AdvisorCard from "@/components/client/dashboard/AdvisorCard";
+import EngagementStrip from "@/components/client/dashboard/EngagementStrip";
 import ConversionCTASection from "@/components/client/dashboard/sections/ConversionCTASection";
 import SmartUpgradeCard from "@/components/SmartUpgradeCard";
 import ClientRiskCheckSheet from "@/components/client/ClientRiskCheckSheet";
@@ -332,6 +333,7 @@ export default function ClientDashboard() {
 
         {/* Advisor card: conversion state for free users, the advisor for clients */}
         <AdvisorCard />
+        <EngagementStrip />
       </div>
       <ClientRiskCheckSheet isOpen={showRiskCheck} onClose={() => setShowRiskCheck(false)} />
     </ClientAppShell>

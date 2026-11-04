@@ -19,14 +19,14 @@ interface NavItem { label: string; href: string; icon: React.ElementType }
 // Goals, Net Worth, Budget) — free swaps out Scenarios/Messages/Documents for
 // Health Score and Settings, since those tools aren't available on the free plan.
 const FREE_NAV: NavItem[] = [
-  { label: "Home",         href: "/free/dashboard",    icon: LayoutDashboard },
-  { label: "Portfolio",    href: "/free/portfolio",    icon: Briefcase },
-  { label: "Pathway",      href: "/free/pathway",      icon: Map },
-  { label: "Goals",        href: "/free/goals",        icon: Target },
-  { label: "Net Worth",    href: "/free/networth",     icon: TrendingUp },
-  { label: "Budget",       href: "/free/budget",       icon: DollarSign },
-  { label: "Health Score", href: "/free/health-score", icon: Heart },
-  { label: "Settings",     href: "/free/settings",     icon: Settings },
+  { label: "Home",         href: "/client/dashboard",    icon: LayoutDashboard },
+  { label: "Portfolio",    href: "/client/wealth/investments",    icon: Briefcase },
+  { label: "Pathway",      href: "/client/dashboard",      icon: Map },
+  { label: "Goals",        href: "/client/goals/goals",        icon: Target },
+  { label: "Net Worth",    href: "/client/wealth/overview",     icon: TrendingUp },
+  { label: "Budget",       href: "/client/money",       icon: DollarSign },
+  { label: "Health Score", href: "/client/dashboard", icon: Heart },
+  { label: "Settings",     href: "/client/dashboard",     icon: Settings },
 ];
 
 const ADVISOR_NAV: NavItem[] = [

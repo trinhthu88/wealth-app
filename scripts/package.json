@@ -25,6 +25,8 @@
     "p5-unassign-advisor": "tsx ./src/p5-unassign-advisor.ts",
     "p5-backfill-onboarding-stage": "tsx ./src/p5-backfill-onboarding-stage.ts",
     "migrate-free-budget-entries": "tsx ./src/migrate-free-budget-entries.ts",
+    "migrate-free-tier-to-client": "tsx ./src/migrate-free-tier-to-client.ts",
+    "funnel-report": "tsx ./src/funnel-report.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {

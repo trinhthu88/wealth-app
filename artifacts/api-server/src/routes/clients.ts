@@ -6,6 +6,7 @@ import {
 } from "@workspace/db";
 import { requireAuth, requireRole, requireAdvisorOwnsClient, requireAdvisorOwnsLead } from "../middlewares/requireAuth";
 import { computeNetWorth } from "../lib/netWorthService";
+import { getEngagement } from "../lib/engagement";
 
 const router: IRouter = Router();
 
@@ -124,6 +125,10 @@ router.get("/advisor/leads/:id/score", ...advisorOwnsLeadGuard, async (req, res)
     .orderBy(desc(healthScoresTable.scoreDate), desc(healthScoresTable.createdAt))
     .limit(12);
   res.json({ latest: history[0] ?? null, history });
+});
+
+router.get("/advisor/leads/:id/engagement", ...advisorOwnsLeadGuard, async (req, res): Promise<void> => {
+  res.json(await getEngagement(req.params.id as string));
 });
 
 router.get("/advisor/clients", ...advisorGuard, async (req, res): Promise<void> => {
