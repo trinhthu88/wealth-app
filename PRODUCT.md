@@ -24,7 +24,7 @@ product
 - **Palette** (2026 redesign): Soft Cloud #FFFEFD (background), Cobalt Pulse #0C21A4 (text, buttons, hero cards, menu bar), Spring Field #D4D67D (highlights, active tab), Blue Breeze #B8C7F8 (soft cards), Sunset Pop #FF891F (Sol and "needs attention" only). Tokens live in `artifacts/wealthapp/src/index.css`.
 - **Type**: Fraunces for page titles and key numbers (medium weight for titles, light for big numbers); Montserrat for everything else, including section subtitles. One focal number per screen; keep bold rare.
 - **Navigation (investment client)**: Home · Portfolio · Sol · Goals · Advisor in a floating Cobalt menu bar; the monthly budget opens from Home.
-- **Navigation (free plan)**: Home · Wealth · Sol · Goals · More in the same floating Cobalt menu bar. Home holds Overview, Budget and Health score; Wealth holds Net worth and Portfolio; Goals holds Goals, Pathway and Milestones. Screens: `docs/free-redesign/`.
+- **Navigation (free plan)**: Home · Budget · Wealth · Sol · Goals · Advisor, the same floating Cobalt menu bar as the client. Wealth has Net worth and Portfolio tabs; Goals has Goals, Pathway and Milestones tabs; Health score and Settings open from Home; Advisor is where free users meet an advisor. Screens: `docs/free-redesign/`.
 - **Brand tone**: Trusted, professional, calm. Not flashy; builds confidence.
 - **Logo**: Sol — a flat, scalloped sun with a calm closed-eye face, also tala's in-app money buddy (voice and behavior rules: `SOL_PERSONA.md`)
 
