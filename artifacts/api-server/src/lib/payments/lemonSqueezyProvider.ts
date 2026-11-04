@@ -96,11 +96,20 @@ async function loadVariant(id: string): Promise<{ variant: any; product: any }> 
 
 function toProviderPrice(variant: any, productName: string | null, currency: string): ProviderPrice {
   const a = variant.attributes;
+  const amount = a.pay_what_you_want ? null : a.price ?? null;
+  const fractionDigits = new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: currency.toUpperCase(),
+  }).resolvedOptions().maximumFractionDigits;
   return {
     id: String(variant.id),
     productName,
     name: a.name ?? null,
-    unitAmount: a.pay_what_you_want ? null : a.price ?? null,
+    unitAmount: amount == null
+      ? null
+      : fractionDigits === 0
+        ? Math.round(Number(amount) / 100)
+        : Number(amount),
     currency,
     interval: a.is_subscription ? a.interval ?? null : null,
   };

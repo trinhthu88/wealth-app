@@ -193,6 +193,32 @@ describe("LemonSqueezyProvider", () => {
     });
   });
 
+  it("converts zero-decimal Lemon Squeezy prices while preserving USD amounts", async () => {
+    const vndVariant = {
+      id: "13",
+      attributes: { ...lsVariant.attributes, product_id: 6, price: 6_990_000 },
+    };
+    lsRoutes["GET /stores/97"] = { data: { id: "97", attributes: { currency: "VND" } } };
+    lsRoutes["GET /variants/13"] = { data: vndVariant };
+    lsRoutes["GET /products/6"] = {
+      data: { id: "6", attributes: { store_id: 97, status: "published", name: "Tala membership" } },
+    };
+    vi.stubEnv("LEMONSQUEEZY_STORE_ID", "97");
+    expect((await lemonSqueezyProvider.getPrice("13")).unitAmount).toBe(69_900);
+
+    const usdVariant = {
+      id: "14",
+      attributes: { ...lsVariant.attributes, product_id: 7, price: 499 },
+    };
+    lsRoutes["GET /stores/96"] = { data: { id: "96", attributes: { currency: "USD" } } };
+    lsRoutes["GET /variants/14"] = { data: usdVariant };
+    lsRoutes["GET /products/7"] = {
+      data: { id: "7", attributes: { store_id: 96, status: "published", name: "Tala membership" } },
+    };
+    vi.stubEnv("LEMONSQUEEZY_STORE_ID", "96");
+    expect((await lemonSqueezyProvider.getPrice("14")).unitAmount).toBe(499);
+  });
+
   describe("signature", () => {
     it("refuses a signature made with another secret, and one of a different length", () => {
       const body = payload();
