@@ -11,6 +11,7 @@ import {
   useSaveClientProfileBasics,
 } from "@workspace/api-client-react";
 import { useProfile } from "@/hooks/useProfile";
+import { useEntitlements } from "@/hooks/useEntitlements";
 import OnboardingShell from "@/components/client/onboarding/OnboardingShell";
 import OnboardingNav from "@/components/client/onboarding/OnboardingNav";
 
@@ -37,6 +38,10 @@ const COUNTRIES = [
   ["AU", "Australia"], ["IN", "India"], ["JP", "Japan"], ["Other", "Other"],
 ];
 const CURRENCIES = ["USD", "SGD", "MYR", "IDR", "THB", "VND", "PHP", "EUR", "GBP", "AUD"];
+// DECISION: the brief lists free onboarding as screens 1, 2, 4, 6, 7, 8 with track fixed
+// to B. Onboarding is now these three screens with no track or holdings step (track is
+// derived), so free users take all three with advisor-specific copy removed, and add
+// holdings and a goal from the client screens under the same caps.
 const FOCI: { value: Focus; title: string; description: string }[] = [
   { value: "know_my_money", title: "Know where my money goes", description: "Get a clearer picture of what I have and where it goes." },
   { value: "start_investing", title: "Start investing", description: "Understand my starting point and next steps." },
@@ -66,7 +71,12 @@ export default function ClientOnboarding() {
   const { user } = useUser();
   const { profile } = useProfile();
   const queryClient = useQueryClient();
-  const checklist = useGetClientSetupChecklist();
+  const { entitlements } = useEntitlements();
+  const isFree = entitlements?.tier === "free";
+  // The setup summary describes what an advisor prepared; a free user has neither.
+  const checklist = useGetClientSetupChecklist({
+    query: { enabled: !!entitlements && !isFree, queryKey: getGetClientSetupChecklistQueryKey() },
+  });
   const saveBasics = useSaveClientProfileBasics();
   const complete = useCompleteClientOnboarding();
   const [screen, setScreen] = useState<1 | 2 | 3>(1);
@@ -168,9 +178,13 @@ export default function ClientOnboarding() {
               Welcome{clientName ? `, ${clientName.split(" ")[0]}` : ""}.
             </h1>
             <p className="mt-3 max-w-md text-[15px] leading-relaxed text-ink-40">
-              Your advisor has brought your starting picture together. We’ll help you get oriented, then move at your pace.
+              {isFree
+                ? "We’ll help you get oriented, then move at your pace."
+                : "Your advisor has brought your starting picture together. We’ll help you get oriented, then move at your pace."}
             </p>
           </div>
+          {!isFree && (
+            <>
           <div className="rounded-[24px] bg-surface p-5">
             <p className="tala-eyebrow text-ink-40">Guided by your advisor</p>
             <p className="mt-1.5 text-[18px] font-semibold text-forest" data-testid="text-onboarding-advisor">
@@ -191,6 +205,8 @@ export default function ClientOnboarding() {
             </div>
           </div>
           <p className="text-[13px] text-ink-40">Your advisor’s view is a starting point. You can add or update details any time.</p>
+            </>
+          )}
         </section>
       )}
       {screen === 2 && (
@@ -242,7 +258,9 @@ export default function ClientOnboarding() {
           <div>
             <p className="tala-eyebrow text-ink-40">Your first step</p>
             <h1 className="mt-2 font-display text-[34px] leading-[1.05] text-forest">What do you want to sort out first?</h1>
-            <p className="mt-2 text-sm leading-relaxed text-ink-40">There’s no wrong answer. This simply helps your advisor focus the conversation.</p>
+            <p className="mt-2 text-sm leading-relaxed text-ink-40">{isFree
+                ? "There’s no wrong answer. This helps us show you the right things first."
+                : "There’s no wrong answer. This simply helps your advisor focus the conversation."}</p>
           </div>
           <div className="space-y-2.5" role="radiogroup" aria-label="Choose your first focus">
             {FOCI.map(option => (

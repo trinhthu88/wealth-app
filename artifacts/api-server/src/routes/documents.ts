@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
 import { db, documentsTable } from "@workspace/db";
-import { requireAuth, requireRole, requireAdvisorOwnsClient, requireAdvisorOwnsLead } from "../middlewares/requireAuth";
+import { requireAuth, requireRole, requireAdvisorOwnsClient, requireAdvisorOwnsLead, requireAllowance } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
 
@@ -23,12 +23,12 @@ function insertDocument(input: UploadDocumentInput) {
   }).returning();
 }
 
-router.get("/documents", requireAuth, async (req, res): Promise<void> => {
+router.get("/documents", requireAuth, requireAllowance("documents"), async (req, res): Promise<void> => {
   const userId = (req as any).userId;
   res.json(await getDocumentsForUser(userId));
 });
 
-router.post("/documents", requireAuth, async (req, res): Promise<void> => {
+router.post("/documents", requireAuth, requireAllowance("documents"), async (req, res): Promise<void> => {
   const userId = (req as any).userId;
   const { title, category, fileUrl, fileName, fileSizeBytes } = req.body;
   if (!title || !category || !fileUrl) { res.status(400).json({ error: "Missing required fields" }); return; }

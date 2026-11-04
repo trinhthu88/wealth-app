@@ -12,8 +12,7 @@ export function resolveRoleRedirectPath(
 ): string {
   if (role === "super_admin") return "/admin/dashboard";
   if (role === "advisor") return "/advisor/dashboard";
-  if (role === "investment_client") {
-    return onboardingStage === "complete" ? "/client/dashboard" : "/client/onboarding";
-  }
-  return "/free/dashboard";
+  // DECISION: the brief says onboardingTrackComplete, but that column is deprecated;
+  // client_profiles.onboarding_stage owns onboarding state, so both tiers read it.
+  return onboardingStage === "complete" ? "/client/dashboard" : "/client/onboarding";
 }

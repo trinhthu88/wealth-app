@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useUser } from "@clerk/react";
 import { apiFetch } from "@/lib/api";
+import { invalidateEntitlements } from "@/hooks/useEntitlements";
 import { calcHoldingGainLoss } from "@/lib/investmentCalculations";
 import { usePriceCache } from "./usePriceCache";
 
@@ -155,19 +156,28 @@ export function useClientHoldings() {
   const addHolding = useMutation({
     mutationFn: (data: Partial<ClientHolding>) =>
       apiFetch("/client/holdings", { method: "POST", body: JSON.stringify(data) }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["client-holdings-raw"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["client-holdings-raw"] });
+      invalidateEntitlements(qc);
+    },
   });
 
   const updateHolding = useMutation({
     mutationFn: ({ id, updates }: { id: string; updates: Partial<ClientHolding> }) =>
       apiFetch(`/client/holdings/${id}`, { method: "PUT", body: JSON.stringify(updates) }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["client-holdings-raw"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["client-holdings-raw"] });
+      invalidateEntitlements(qc);
+    },
   });
 
   const deleteHolding = useMutation({
     mutationFn: (id: string) =>
       apiFetch(`/client/holdings/${id}`, { method: "DELETE" }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["client-holdings-raw"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["client-holdings-raw"] });
+      invalidateEntitlements(qc);
+    },
   });
 
   return {

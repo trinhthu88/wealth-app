@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import ClientAppShell from "@/components/client/AppShell";
+import Gated from "@/components/client/Gated";
 import BottomSheet from "@/components/client/BottomSheet";
 import SolNarration from "@/components/client/SolNarration";
 import { apiFetch } from "@/lib/api";
@@ -48,7 +49,7 @@ const REQUEST_TYPES = [
   "Other",
 ];
 
-export default function ClientDocuments() {
+function ClientDocumentsContent() {
   const { advisorName } = usePlan();
 
   const [requestOpen, setRequestOpen] = useState(false);
@@ -240,5 +241,13 @@ export default function ClientDocuments() {
         </div>
       </BottomSheet>
     </ClientAppShell>
+  );
+}
+
+export default function ClientDocuments() {
+  return (
+    <Gated capability="documents" page>
+      <ClientDocumentsContent />
+    </Gated>
   );
 }

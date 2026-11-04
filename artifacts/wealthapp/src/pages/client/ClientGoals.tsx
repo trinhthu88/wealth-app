@@ -5,6 +5,9 @@ import ClientAppShell from "@/components/client/AppShell";
 import SolNarration from "@/components/client/SolNarration";
 import GoalsSummaryBar from "@/components/client/goals/GoalsSummaryBar";
 import AddGoalSheet from "@/components/client/goals/AddGoalSheet";
+import { gateMessage } from "@workspace/tier-policy";
+import { useCapability } from "@/hooks/useEntitlements";
+import { CapNotice } from "@/components/client/Gated";
 import EditGoalSheet from "@/components/client/goals/EditGoalSheet";
 import GoalHoldingLinks from "@/components/client/goals/GoalHoldingLinks";
 import GoalScenarioCTA from "@/components/client/goals/GoalScenarioCTA";
@@ -357,6 +360,8 @@ export default function ClientGoals() {
     const params = new URLSearchParams(window.location.search);
     if (params.get("newGoal") === "true") setShowAdd(true);
   }, []);
+  const goalCap = useCapability("goals");
+  const goalCapMessage = goalCap.atCap ? gateMessage("goals", goalCap.limits?.goals ?? null) : null;
 
   const totalActive = activeGoals.length;
   const totalValue = activeGoals.reduce((sum, g) => sum + g.computedCurrentAmount, 0);
@@ -413,12 +418,15 @@ export default function ClientGoals() {
           <h1 className="font-display text-[34px] leading-[1.05] text-forest">Goals</h1>
           <button
             onClick={() => setShowAdd(true)}
-            className="w-11 h-11 shrink-0 rounded-full bg-forest text-paper flex items-center justify-center cursor-pointer hover:bg-forest-700 transition-colors"
+            disabled={goalCap.atCap}
+            title={goalCapMessage ?? undefined}
+            className="w-11 h-11 shrink-0 rounded-full bg-forest text-paper flex items-center justify-center cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 hover:bg-forest-700 transition-colors"
             aria-label="Add goal"
           >
             <Plus className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
+        {goalCapMessage && <CapNotice message={goalCapMessage} />}
 
         <>
             {targetGoal && targetGoal.progressPct != null && (

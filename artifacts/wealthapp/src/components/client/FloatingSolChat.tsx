@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { LoaderCircle, Send } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
+import { invalidateEntitlements } from "@/hooks/useEntitlements";
 import BottomSheet from "./BottomSheet";
 import Sol from "@/components/Sol";
 import { cn } from "@/lib/utils";
@@ -77,6 +78,7 @@ export default function FloatingSolChat({ isOnboarding = false }: { isOnboarding
       setMessages(updatedMessages);
       setConversationId(reply.conversationId);
       setDraft("");
+      invalidateEntitlements(queryClient);
       queryClient.setQueryData<SolConversation>(["sol-conversation"], {
         conversationId: reply.conversationId,
         messages: updatedMessages,

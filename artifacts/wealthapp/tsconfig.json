@@ -19,6 +19,9 @@
       "path": "../../lib/api-client-react"
     },
     {
+      "path": "../../lib/tier-policy"
+    },
+    {
       "path": "../../lib/goal-math"
     }
   ]

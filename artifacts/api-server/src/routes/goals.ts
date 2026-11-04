@@ -1,12 +1,22 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Request, type Response } from "express";
 import { eq, and } from "drizzle-orm";
 import { db, financialGoalsTable, profilesTable, goalHoldingLinksTable, goalLifecycleSchema } from "@workspace/db";
-import { requireAuth, requireRole, requireAdvisorOwnsClient, requireAdvisorOwnsLead } from "../middlewares/requireAuth";
+import { requireAuth, requireRole, requireAdvisorOwnsClient, requireAdvisorOwnsLead, requireAllowance, checkAllowanceFor } from "../middlewares/requireAuth";
 import { getRemainingPct } from "../lib/goalAllocation";
 import { computeGoalFundingSummary, getProgressMovement } from "../lib/goalProgressSnapshot";
 import { ensureOffTrackTask } from "../lib/offTrackTasks";
 
 const router: IRouter = Router();
+
+// A finished goal does not use a slot, so turning one back to active has to pass the
+// same cap as creating one; otherwise completing and reopening would bypass it.
+async function reactivationAllowed(req: Request, res: Response, goalId: string, userId: string, nextStatus: unknown): Promise<boolean> {
+  if (nextStatus !== "active") return true;
+  const [current] = await db.select({ status: financialGoalsTable.status }).from(financialGoalsTable)
+    .where(and(eq(financialGoalsTable.id, goalId), eq(financialGoalsTable.userId, userId)));
+  if (!current || current.status === "active") return true;
+  return checkAllowanceFor(req, res, "goals");
+}
 
 // Shared by the client's own route, the advisor-owns-client route, and the
 // advisor-owns-lead route below — goals exist on a userId regardless of the
@@ -21,7 +31,7 @@ router.get("/goals", requireAuth, async (req, res): Promise<void> => {
   res.json(await getGoalsForUser(userId));
 });
 
-router.post("/goals", requireAuth, async (req, res): Promise<void> => {
+router.post("/goals", requireAuth, requireAllowance("goals"), async (req, res): Promise<void> => {
   const userId = (req as any).userId;
   const { title, goalType, targetAmount, currentAmount, monthlyContribution, targetDate, currency, priority, status, notes } = req.body;
   if (!title || !goalType) {
@@ -30,16 +40,6 @@ router.post("/goals", requireAuth, async (req, res): Promise<void> => {
   }
   const parsedStatus = status === undefined ? undefined : goalLifecycleSchema.safeParse(status);
   if (parsedStatus && !parsedStatus.success) { res.status(400).json({ error: "Invalid goal lifecycle status" }); return; }
-
-  // Enforce 1-goal limit for free users
-  const [[profile], existing] = await Promise.all([
-    db.select({ role: profilesTable.role }).from(profilesTable).where(eq(profilesTable.id, userId)),
-    db.select({ id: financialGoalsTable.id }).from(financialGoalsTable).where(eq(financialGoalsTable.userId, userId)),
-  ]);
-  if (profile?.role === "free_user" && existing.length >= 1) {
-    res.status(403).json({ error: "Free users can only have 1 goal. Upgrade to Investment Client to unlock unlimited goals." });
-    return;
-  }
 
   const [goal] = await db.insert(financialGoalsTable).values({
     userId, title, goalType,
@@ -58,6 +58,7 @@ router.put("/goals/:id", requireAuth, async (req, res): Promise<void> => {
   const { title, goalType, targetAmount, currentAmount, monthlyContribution, targetDate, currency, priority, status, notes } = req.body;
   const parsedStatus = status === undefined ? undefined : goalLifecycleSchema.safeParse(status);
   if (parsedStatus && !parsedStatus.success) { res.status(400).json({ error: "Invalid goal lifecycle status" }); return; }
+  if (!(await reactivationAllowed(req, res, rawId, userId, status))) return;
   const hasField = (field: string) => Object.prototype.hasOwnProperty.call(req.body, field);
   const updates: Partial<typeof financialGoalsTable.$inferInsert> = { updatedAt: new Date() };
   if (hasField("title")) updates.title = title;
@@ -280,6 +281,7 @@ router.patch("/goals/:id/status", requireAuth, async (req, res): Promise<void> =
   const { status } = req.body;
   const parsedStatus = goalLifecycleSchema.safeParse(status);
   if (!parsedStatus.success) { res.status(400).json({ error: "Invalid goal lifecycle status" }); return; }
+  if (!(await reactivationAllowed(req, res, rawId, userId, parsedStatus.data))) return;
   const [updated] = await db.update(financialGoalsTable).set({ status: parsedStatus.data, updatedAt: new Date() })
     .where(and(eq(financialGoalsTable.id, rawId), eq(financialGoalsTable.userId, userId)))
     .returning();

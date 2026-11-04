@@ -193,6 +193,9 @@ importers:
       '@workspace/net-worth':
         specifier: workspace:*
         version: link:../../lib/net-worth
+      '@workspace/tier-policy':
+        specifier: workspace:*
+        version: link:../../lib/tier-policy
       cookie-parser:
         specifier: ^1.4.7
         version: 1.4.7
@@ -588,6 +591,9 @@ importers:
       '@workspace/goal-math':
         specifier: workspace:*
         version: link:../../lib/goal-math
+      '@workspace/tier-policy':
+        specifier: workspace:*
+        version: link:../../lib/tier-policy
       class-variance-authority:
         specifier: 'catalog:'
         version: 0.7.1
@@ -733,6 +739,8 @@ importers:
       drizzle-orm:
         specifier: 'catalog:'
         version: 0.45.2(@types/pg@8.18.0)(pg@8.20.0)(postgres@3.4.9)
+
+  lib/tier-policy: {}
 
   scripts:
     dependencies:

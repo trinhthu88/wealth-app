@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq, inArray, or, and } from "drizzle-orm";
 import { db, conversationsTable, messagesTable, profilesTable } from "@workspace/db";
-import { requireAuth, isSuperAdmin } from "../middlewares/requireAuth";
+import { requireAuth, isSuperAdmin, requireAllowance } from "../middlewares/requireAuth";
 import { getClientUserIdsForAdvisor, getCurrentAdvisorIdForClient } from "../lib/currentAdvisor";
 
 const router: IRouter = Router();
@@ -13,7 +13,7 @@ async function canAccessConversation(conversation: typeof conversationsTable.$in
   return (await getCurrentAdvisorIdForClient(conversation.clientId)) === userId;
 }
 
-router.get("/conversations", requireAuth, async (req, res): Promise<void> => {
+router.get("/conversations", requireAuth, requireAllowance("messages"), async (req, res): Promise<void> => {
   const userId = (req as any).userId;
   const clientId = typeof req.query.clientId === "string" ? req.query.clientId : undefined;
 
@@ -53,7 +53,7 @@ router.get("/conversations", requireAuth, async (req, res): Promise<void> => {
   res.json(convs);
 });
 
-router.post("/conversations", requireAuth, async (req, res): Promise<void> => {
+router.post("/conversations", requireAuth, requireAllowance("messages"), async (req, res): Promise<void> => {
   const userId = (req as any).userId;
   const clientId = typeof req.body?.clientId === "string" ? req.body.clientId : userId;
   const currentAdvisorId = await getCurrentAdvisorIdForClient(clientId);
@@ -77,7 +77,7 @@ router.post("/conversations", requireAuth, async (req, res): Promise<void> => {
   res.status(201).json(conv);
 });
 
-router.get("/conversations/:id/messages", requireAuth, async (req, res): Promise<void> => {
+router.get("/conversations/:id/messages", requireAuth, requireAllowance("messages"), async (req, res): Promise<void> => {
   const userId = (req as any).userId;
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const [conv] = await db.select().from(conversationsTable).where(eq(conversationsTable.id, rawId));
@@ -90,7 +90,7 @@ router.get("/conversations/:id/messages", requireAuth, async (req, res): Promise
   res.json(msgs);
 });
 
-router.post("/conversations/:id/messages", requireAuth, async (req, res): Promise<void> => {
+router.post("/conversations/:id/messages", requireAuth, requireAllowance("messages"), async (req, res): Promise<void> => {
   const senderId = (req as any).userId;
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const [conv] = await db.select().from(conversationsTable).where(eq(conversationsTable.id, rawId));

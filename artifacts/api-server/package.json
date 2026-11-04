@@ -20,6 +20,7 @@
     "@workspace/goal-math": "workspace:*",
     "@workspace/integrations-anthropic-ai": "workspace:*",
     "@workspace/net-worth": "workspace:*",
+    "@workspace/tier-policy": "workspace:*",
     "cookie-parser": "^1.4.7",
     "cors": "^2",
     "drizzle-orm": "catalog:",

@@ -14,7 +14,7 @@ import {
   profilesTable,
   normalizeRiskProfile,
 } from "@workspace/db";
-import { requireAuth, requireRole, requireAdvisorOwnsClient, requirePackageReadAccess, requireAdvisorOwnsPackage } from "../middlewares/requireAuth";
+import { requireAuth, requireRole, requireAdvisorOwnsClient, requirePackageReadAccess, requireAdvisorOwnsPackage, requireAllowance } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
 
@@ -445,7 +445,7 @@ router.get("/scenarios", requireAuth, async (req, res): Promise<void> => {
   res.json(rows);
 });
 
-router.post("/scenarios", requireAuth, async (req, res): Promise<void> => {
+router.post("/scenarios", requireAuth, requireAllowance("scenarios"), async (req, res): Promise<void> => {
   const userId = (req as any).userId;
   const { scenarioType, linkedGoalId, linkedPackageId, inputData, outputData, isAdvisorPushed, advisorNote } = req.body;
   if (!scenarioType || !inputData || !outputData) { res.status(400).json({ error: "scenarioType, inputData, outputData required" }); return; }

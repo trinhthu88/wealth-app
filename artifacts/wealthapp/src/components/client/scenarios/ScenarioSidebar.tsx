@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { ChevronDown, ChevronRight, Trash2, Sparkles, TrendingUp, PiggyBank, TrendingDown, Pause, Zap, Target } from "lucide-react";
+import { gateMessage } from "@workspace/tier-policy";
 import { cn } from "@/lib/utils";
+import { useCapability } from "@/hooks/useEntitlements";
 import AdvisorScenarioCard from "./AdvisorScenarioCard";
 import type { ScenarioRun } from "@/hooks/useScenarios";
 import type { AdvisedPlan } from "@/hooks/useAdvisedPlans";
@@ -46,6 +48,7 @@ export default function ScenarioSidebar({
   selectedSource, onSelectSource, selectedType, onSelectType,
   savedScenarios, advisorScenarios, onLoadSaved, onDeleteSaved, onLoadAdvisor, onAdvisorViewed,
 }: Props) {
+  const allowedTypes = useCapability("scenarios").limits?.scenarioTypes ?? null;
   const [savedOpen, setSavedOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
@@ -130,12 +133,16 @@ export default function ScenarioSidebar({
             {SCENARIO_TYPES.filter(t => {
               if (t.type === "retire_earlier") return goals.length > 0 || selectedSource.kind === "goal";
               return true;
-            }).map(st => (
+            }).map(st => {
+              const scenarioLocked = !!allowedTypes && !allowedTypes.includes(st.type);
+              return (
               <button
                 key={st.type}
                 onClick={() => onSelectType(st.type)}
+                disabled={scenarioLocked}
+                title={scenarioLocked ? gateMessage("scenarios", null) : undefined}
                 className={cn(
-                  "w-full min-h-[44px] text-left p-3 rounded-[20px] transition-colors flex items-center gap-3 text-forest",
+                  "w-full min-h-[44px] text-left p-3 rounded-[20px] transition-colors flex items-center gap-3 text-forest disabled:cursor-not-allowed disabled:opacity-50",
                   selectedType === st.type ? "bg-breeze" : "hover:bg-paper/70"
                 )}
               >
@@ -147,8 +154,12 @@ export default function ScenarioSidebar({
                   <p className="text-[13px] text-ink-40">{st.sub}</p>
                 </span>
               </button>
-            ))}
+              );
+            })}
           </div>
+          {allowedTypes && allowedTypes.length < SCENARIO_TYPES.length && (
+            <p className="px-1 text-[13px] leading-relaxed text-ink-40">{gateMessage("scenarios", null)}</p>
+          )}
         </div>
       )}
 

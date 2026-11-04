@@ -24,8 +24,7 @@ export default function PublicNav() {
   const dashLink = !profile ? "/free/dashboard"
     : profile.role === "super_admin" ? "/admin/dashboard"
     : profile.role === "advisor" ? "/advisor/dashboard"
-    : profile.role === "investment_client" ? "/client/dashboard"
-    : "/free/dashboard";
+    : "/dashboard";
 
   return (
     <nav className="sticky top-0 z-50 bg-paper/90 backdrop-blur-sm border-b border-hairline" aria-label="Public navigation">
