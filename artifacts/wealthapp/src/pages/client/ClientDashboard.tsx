@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { Hourglass, TrendingUp, Target, MessageSquare, Sparkles, X, Wallet, ArrowUpRight, Check } from "lucide-react";
+import { Hourglass, TrendingUp, Target, MessageSquare, Sparkles, X, Wallet, ArrowUpRight, ArrowDownRight, Check } from "lucide-react";
 import ClientAppShell from "@/components/client/AppShell";
 import Sol from "@/components/Sol";
-import SolNarration from "@/components/client/SolNarration";
 import CurrencyField from "@/components/shared/CurrencyField";
 import WealthScoreCard from "@/components/client/dashboard/WealthScoreCard";
 import ClientSetupChecklistCard from "@/components/client/ClientSetupChecklistCard";
@@ -15,6 +14,10 @@ import { useNetWorthSummary } from "@/hooks/useNetWorthSummary";
 import { useNetWorthTrend } from "@/hooks/useNetWorthTrend";
 import { track } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
+import { openSolChat } from "@/lib/solChat";
+
+type WealthPeriod = "month" | "year" | "all";
+const WEALTH_PERIOD_LABELS: Record<WealthPeriod, string> = { month: "this month", year: "past 12 months", all: "since you started tracking" };
 
 function getGreeting(): string {
   const h = new Date().getHours();
@@ -35,6 +38,7 @@ export default function ClientDashboard() {
   const { trendData, hasHistory } = useNetWorthTrend();
   const [showScenarioAlert, setShowScenarioAlert] = useState(true);
   const [showRiskCheck, setShowRiskCheck] = useState(false);
+  const [wealthPeriod, setWealthPeriod] = useState<WealthPeriod>("month");
 
   const topPlan = data.plans.find(p => p.status === "inforce" && p.isVisibleToClient) ?? null;
   const recentStatementPlan = data.plans.find(
@@ -131,11 +135,115 @@ export default function ClientDashboard() {
     ? `You've paid in ${fmtUsd(netContributed)} and the account sits at ${fmtUsd(n(topPlan.latestAccountValue))}. Contributions do most of the heavy lifting early in a plan; compounding takes over later. That's the normal shape of a regular savings plan.`
     : undefined;
 
+  // ── Total wealth change for the Month / Year / All pills (from net worth snapshots) ──
+  const latestPoint = trendData[trendData.length - 1] ?? null;
+  const changeFor = (period: WealthPeriod): number | null => {
+    if (!hasHistory || !latestPoint) return null;
+    if (period === "all") return latestPoint.netWorth - trendData[0].netWorth;
+    const cutoff = new Date(latestPoint.date);
+    if (period === "month") cutoff.setMonth(cutoff.getMonth() - 1);
+    else cutoff.setFullYear(cutoff.getFullYear() - 1);
+    const base = [...trendData].reverse().find(p => new Date(p.date) <= cutoff) ?? trendData[0];
+    return latestPoint.netWorth - base.netWorth;
+  };
+  const wealthChange = changeFor(wealthPeriod);
+  const wealthChangeBase = wealthChange != null && latestPoint ? latestPoint.netWorth - wealthChange : 0;
+  const wealthChangePct = wealthChange != null && wealthChangeBase !== 0 ? (wealthChange / Math.abs(wealthChangeBase)) * 100 : null;
+
+  // ── Where the wealth sits ──
+  const cashTotal = netWorthSummary.manualAssets.filter(a => a.category === "cash").reduce((sum, a) => sum + a.valueUsd, 0);
+  const propertyTotal = netWorthSummary.manualAssets.filter(a => a.category === "property").reduce((sum, a) => sum + a.valueUsd, 0);
+
+  const GOAL_TINTS = ["bg-field", "bg-breeze", "bg-surface"];
+
   return (
     <ClientAppShell>
       <div className="space-y-4 pb-8">
         <ClientSetupChecklistCard onRiskCheck={() => setShowRiskCheck(true)} />
-        <SolNarration line={solLine} detail={solDetail} advisorFirstName={advisorFirstName} className="mb-0 px-1" />
+
+        {/* Total wealth — the one key number on Home */}
+        <section aria-label="Total wealth" className="px-1 pt-1">
+          <p className="text-[15px] font-medium text-ink-40">{getGreeting()}, {firstName} — your total wealth</p>
+          <Link href="/client/wealth/overview" className="block mt-2.5 rounded-2xl">
+            <span className="font-display tabular-nums text-[60px] leading-[0.95] tracking-[-0.045em] text-forest">
+              <CurrencyField amountUsd={netWorthSummary.netWorth} compact={Math.abs(netWorthSummary.netWorth) > 1_000_000} />
+            </span>
+          </Link>
+          {wealthChange != null ? (
+            <>
+              <div className="flex items-center gap-2 mt-3 flex-wrap">
+                <span className={cn(
+                  "inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[13px] font-semibold text-forest tabular-nums",
+                  wealthChange >= 0 ? "bg-field" : "bg-sun",
+                )}>
+                  {wealthChange >= 0 ? <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" /> : <ArrowDownRight className="h-3.5 w-3.5" aria-hidden="true" />}
+                  <CurrencyField amountUsd={Math.abs(wealthChange)} compact />
+                  {wealthChangePct != null && <> · {Math.abs(wealthChangePct).toFixed(1)}%</>}
+                </span>
+                <span className="text-[14px] text-ink-40">{WEALTH_PERIOD_LABELS[wealthPeriod]}</span>
+              </div>
+              <div role="group" aria-label="Time range" className="flex gap-1.5 mt-3">
+                {(["month", "year", "all"] as const).map(period => (
+                  <button
+                    key={period}
+                    type="button"
+                    aria-pressed={wealthPeriod === period}
+                    onClick={() => setWealthPeriod(period)}
+                    className={cn(
+                      "h-10 rounded-full px-[18px] text-[14px] font-semibold transition-colors",
+                      wealthPeriod === period ? "bg-forest text-paper" : "border-[1.5px] border-hairline-2 text-forest hover:border-forest",
+                    )}
+                  >
+                    {period === "month" ? "Month" : period === "year" ? "Year" : "All"}
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : (
+            <p className="text-[13px] text-ink-40 mt-3">Your trend will appear as you update your values over time.</p>
+          )}
+        </section>
+
+        {/* Where it is: investments (the Cobalt card), cash, property */}
+        <section aria-label="Where your wealth is" className="grid grid-cols-2 gap-3">
+          <Link
+            href="/client/wealth/investments"
+            className="row-span-2 bg-forest text-paper rounded-[28px] p-[18px] flex flex-col justify-between min-h-[250px]"
+          >
+            <div className="flex justify-between items-start gap-2">
+              <span className="tala-eyebrow text-mint">Investments</span>
+              <span className="w-9 h-9 rounded-full bg-field text-forest flex-none flex items-center justify-center">
+                <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+              </span>
+            </div>
+            {topPlan && (
+              <div className="text-[12.5px] text-mint leading-snug">
+                {topPlan.nickname ?? topPlan.productName} · {topPlan.providerName}
+                <span className="ml-1.5 inline-block rounded-full bg-field text-forest px-2 py-0.5 text-[11px] font-semibold align-middle">In force</span>
+              </div>
+            )}
+            <div>
+              <div className="font-display tabular-nums text-[38px] leading-none tracking-[-0.04em]">
+                <CurrencyField amountUsd={data.portfolio.totalValue} compact />
+              </div>
+              <div className="text-[12.5px] text-mint mt-2 tabular-nums">
+                {topPlan ? (
+                  <><CurrencyField amountUsd={netContributed} currency={topPlan.currency} compact /> paid in · <CurrencyField amountUsd={planGain} currency={topPlan.currency} compact showSign /> growth</>
+                ) : (
+                  <><CurrencyField amountUsd={data.portfolio.gainLoss} compact showSign /> overall</>
+                )}
+              </div>
+            </div>
+          </Link>
+          <Link href="/client/wealth/overview" className="bg-sun rounded-[28px] p-4 flex flex-col gap-4">
+            <span className="tala-eyebrow text-forest">Cash</span>
+            <span className="font-display tabular-nums text-[28px] leading-none tracking-[-0.04em] text-forest"><CurrencyField amountUsd={cashTotal} compact /></span>
+          </Link>
+          <Link href="/client/wealth/property-debts" className="bg-field rounded-[28px] p-4 flex flex-col gap-4">
+            <span className="tala-eyebrow text-forest">Property</span>
+            <span className="font-display tabular-nums text-[28px] leading-none tracking-[-0.04em] text-forest"><CurrencyField amountUsd={propertyTotal} compact /></span>
+          </Link>
+        </section>
 
         {recentStatementPlan && !dismissedCelebration && (
           <div className="relative bg-breeze rounded-[24px] p-[16px_56px_16px_16px] flex items-center gap-3">
@@ -182,77 +290,37 @@ export default function ClientDashboard() {
           </div>
         )}
 
-        {/* Net worth — the one key number on Home */}
-        <Link
-          href="/client/wealth/overview"
-          className="block rounded-[24px] px-1 pt-2 pb-1 transition-colors hover:bg-surface/60"
-        >
-          <span className="tala-eyebrow text-ink-40">Net worth</span>
-          <div className="font-display tabular-nums text-[56px] leading-none tracking-[-0.04em] text-forest mt-2.5">
-            <CurrencyField amountUsd={netWorthSummary.netWorth} compact={Math.abs(netWorthSummary.netWorth) > 1_000_000} />
+        {/* Sol noticed */}
+        <section aria-label="Sol noticed" className="bg-forest text-paper rounded-[28px] p-5 space-y-3.5">
+          <div className="flex items-center gap-2.5">
+            <Sol size="sm" animate="breathe" />
+            <span className="tala-eyebrow text-field">Sol noticed</span>
           </div>
-          <div className="text-[14px] text-ink-40 mt-2.5 mb-3 tabular-nums">
-            <CurrencyField amountUsd={data.portfolio.totalValue} compact /> invested · <CurrencyField amountUsd={netWorthSummary.totalAssets - data.portfolio.totalValue} compact /> other
-          </div>
-          <div className="h-[56px] w-full" role="img" aria-label={hasHistory ? "Net worth trend over time" : "Net worth trend will appear after more updates"}>
-            {hasHistory ? (
-              <svg viewBox="0 0 300 56" preserveAspectRatio="none" className="w-full h-full overflow-visible">
-                {(() => {
-                  const w = 300, h = 56;
-                  const vals = trendData.map(d => d.netWorth);
-                  const min = Math.min(...vals), max = Math.max(...vals);
-                  const range = max - min || 1;
-                  const pts = vals.map((v, i) => [
-                    (i / (vals.length - 1 || 1)) * w,
-                    h - 6 - ((v - min) / range) * (h - 12),
-                  ]);
-                  const line = pts.map((p, i) => `${i ? "L" : "M"}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(" ");
-                  const area = `${line} L${w} ${h} L0 ${h} Z`;
-                  const last = pts[pts.length - 1];
-                  return (
-                    <>
-                      <path d={area} fill="var(--forest)" fillOpacity="0.06" />
-                      <path d={line} fill="none" stroke="var(--forest)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-                      <circle cx={last[0]} cy={last[1]} r="4" fill="var(--forest)" />
-                    </>
-                  );
-                })()}
-              </svg>
-            ) : (
-              <div className="flex h-full items-center text-[13px] text-ink-40">
-                Your trend will appear as you update your values over time.
-              </div>
+          {topGoal && goalPct != null ? (
+            <div className="flex items-baseline gap-3">
+              <span className="font-display tabular-nums text-[48px] leading-[0.9] tracking-[-0.04em] text-sun">{goalPct}%</span>
+              <span className="text-[15px] leading-snug text-mint">of the way to {topGoal.title}</span>
+            </div>
+          ) : (
+            <p className="text-[16px] leading-snug">{solLine}</p>
+          )}
+          {solDetail && <p className="text-[13.5px] leading-[1.55] text-mint text-pretty">{solDetail}</p>}
+          <div className="flex gap-2 flex-wrap">
+            <Link href="/client/goals/what-if" className="bg-field text-forest h-11 px-[18px] rounded-full text-[14px] font-semibold inline-flex items-center">
+              See what helps
+            </Link>
+            <button type="button" onClick={openSolChat} className="h-11 px-[18px] rounded-full text-[14px] font-semibold border-[1.5px] border-paper/80 text-paper">
+              Ask Sol
+            </button>
+            {advisorFirstName && (
+              <Link href="/client/advisor/messages" className="h-11 px-[18px] rounded-full text-[14px] font-semibold text-mint inline-flex items-center underline underline-offset-4">
+                Ask {advisorFirstName}
+              </Link>
             )}
           </div>
-        </Link>
+        </section>
 
-        {/* Advised plan card — the one Cobalt hero card */}
-        {topPlan && (
-          <Link
-            href={`/client/wealth/investments/${topPlan.id}`}
-            className="block bg-forest rounded-[28px] p-5 cursor-pointer"
-          >
-            <div className="flex justify-between items-start gap-3">
-              <span className="text-[13px] font-medium text-mint min-w-0">{topPlan.nickname ?? topPlan.productName} · {topPlan.providerName}</span>
-              <span className="flex-none rounded-full px-2.5 py-1 text-[12px] font-semibold text-forest bg-field">In force</span>
-            </div>
-            <div className="flex items-end justify-between gap-3 mt-6">
-              <div className="min-w-0">
-                <div className="font-display tabular-nums text-[40px] leading-none tracking-[-0.04em] text-paper">
-                  <CurrencyField amountUsd={n(topPlan.latestAccountValue)} currency={topPlan.currency} compact />
-                </div>
-                <div className="text-[13px] text-mint mt-2 tabular-nums">
-                  <CurrencyField amountUsd={netContributed} currency={topPlan.currency} compact /> paid in · <CurrencyField amountUsd={planGain} currency={topPlan.currency} compact showSign /> growth
-                </div>
-              </div>
-              <div className="w-9 h-9 rounded-full bg-field text-forest flex-none flex items-center justify-center">
-                <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
-              </div>
-            </div>
-          </Link>
-        )}
-
-        {/* Monthly budget — the budget lives under Home, so this card is its entry point */}
+        {/* Monthly budget */}
         <Link
           href="/client/money"
           className="bg-surface rounded-[24px] p-3 flex items-center gap-3.5 transition-colors hover:ring-1 hover:ring-green"
@@ -278,51 +346,90 @@ export default function ClientDashboard() {
           </div>
         </Link>
 
-        {/* Wealth Score */}
-        <WealthScoreCard />
+        {/* Goals */}
+        <section aria-label="Goals" className="space-y-3 pt-1">
+          <div className="flex justify-between items-baseline px-1">
+            <h2 className="font-sans text-[16px] font-semibold tracking-normal text-forest">Goals</h2>
+            <Link href="/client/goals/goals" className="text-[14px] font-semibold text-forest underline underline-offset-4">See all</Link>
+          </div>
+          {data.topGoals.length > 0 ? (
+            <div className="flex gap-3 overflow-x-auto -mx-[22px] px-[22px] md:mx-0 md:px-0 pb-1 [scrollbar-width:none]">
+              {data.topGoals.map((goal, i) => {
+                const pct = goal.targetAmount ? Math.min(100, Math.round((n(goal.currentAmount) / n(goal.targetAmount)) * 100)) : null;
+                return (
+                  <Link key={goal.id} href="/client/goals/goals" className={cn("flex-none w-[168px] rounded-[28px] p-4 flex flex-col gap-2.5", GOAL_TINTS[i % GOAL_TINTS.length])}>
+                    <span className="text-[14px] font-semibold text-forest truncate">{goal.title}</span>
+                    {pct != null ? (
+                      <>
+                        <span className="font-display tabular-nums text-[40px] leading-[0.9] tracking-[-0.04em] text-forest">{pct}%</span>
+                        <span className="h-1.5 rounded-full bg-forest/20 overflow-hidden"><span className="block h-full rounded-full bg-forest" style={{ width: `${pct}%` }} /></span>
+                      </>
+                    ) : (
+                      <span className="text-[14px] text-forest tabular-nums"><CurrencyField amountUsd={n(goal.currentAmount)} compact /> saved</span>
+                    )}
+                    {goal.targetDate && (
+                      <span className="text-[12.5px] text-forest/80">by {new Date(goal.targetDate).toLocaleDateString("en-US", { month: "short", year: "numeric" })}</span>
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          ) : (
+            <Link href="/client/goals/goals" className="bg-surface rounded-[24px] p-4 flex items-center gap-3">
+              <div className="w-11 h-11 rounded-[14px] bg-field flex items-center justify-center text-forest">
+                <Target className="h-5 w-5" aria-hidden="true" />
+              </div>
+              <div className="text-[15px] font-semibold text-forest">Set a goal</div>
+            </Link>
+          )}
+        </section>
 
-        {/* Two-up: top goal + next milestone */}
-        {(topGoal || nextMilestone) && (
-          <section aria-label="Goals" className="space-y-3 pt-1">
-            <h2 className="text-[16px] font-semibold text-forest px-1">Goals</h2>
-            <div className="grid grid-cols-2 gap-3">
-              {topGoal ? (
-                <Link href="/client/goals/goals" className="bg-field rounded-[24px] p-4 cursor-pointer flex flex-col gap-2.5">
-                  <div className="text-[14px] font-semibold text-forest truncate">{topGoal.title}</div>
-                  {goalPct != null ? (
+        {/* Coming up */}
+        {(nextMilestone || (data.isTrackA && data.advisorName)) && (
+          <section aria-label="Coming up" className="space-y-3 pt-1">
+            <h2 className="font-sans text-[16px] font-semibold tracking-normal text-forest px-1">Coming up</h2>
+            {nextMilestone && (
+              <Link href="/client/goals/my-plan" className="bg-surface rounded-[24px] p-3 flex items-center gap-3.5">
+                <div className="w-[68px] h-[68px] rounded-[20px] bg-field flex-none flex flex-col items-center justify-center text-forest">
+                  {nextMilestone.targetDate ? (
                     <>
-                      <div className="font-display tabular-nums text-[32px] leading-none tracking-[-0.04em] text-forest">
-                        {goalPct}<span className="text-[16px]">%</span>
-                      </div>
-                      <div className="h-2 rounded-full bg-forest/15 overflow-hidden">
-                        <div className="h-full rounded-full bg-forest" style={{ width: `${goalPct}%` }} />
-                      </div>
+                      <span className="font-display tabular-nums text-[30px] leading-none">{new Date(nextMilestone.targetDate).getDate()}</span>
+                      <span className="text-[11px] font-semibold tracking-[0.1em] uppercase">{new Date(nextMilestone.targetDate).toLocaleDateString("en-US", { month: "short" })}</span>
                     </>
                   ) : (
-                    <div className="text-[14px] text-forest">In progress</div>
+                    <Target className="h-6 w-6" aria-hidden="true" />
                   )}
-                </Link>
-              ) : (
-                <Link href="/client/goals/goals" className="bg-surface rounded-[24px] p-4 cursor-pointer flex flex-col items-center justify-center text-center gap-2">
-                  <div className="w-10 h-10 rounded-[14px] bg-field flex items-center justify-center text-forest">
-                    <Target className="h-5 w-5" aria-hidden="true" />
-                  </div>
-                  <div className="text-[14px] font-semibold text-forest">Set a goal</div>
-                </Link>
-              )}
-
-              <Link href="/client/goals/my-plan" className="bg-breeze rounded-[24px] p-4 cursor-pointer flex flex-col gap-1.5 min-w-0">
-                <div className="tala-eyebrow text-forest">Next milestone</div>
-                <div className="text-[16px] font-semibold text-forest leading-[1.25] truncate">
-                  {nextMilestone?.title ?? "Create a plan"}
                 </div>
-                <div className="text-[13px] text-forest tabular-nums">
-                  {nextMilestone?.targetDate ? new Date(nextMilestone.targetDate).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" }) : "—"}
+                <div className="min-w-0 flex-1">
+                  <div className="tala-eyebrow text-ink-40">Next milestone</div>
+                  <div className="text-[15px] font-semibold text-forest mt-1 truncate">{nextMilestone.title}</div>
+                </div>
+                <div className="w-9 h-9 rounded-full bg-forest text-paper flex-none flex items-center justify-center">
+                  <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
                 </div>
               </Link>
-            </div>
+            )}
+            {data.isTrackA && data.advisorName && (
+              <Link href="/client/advisor/messages" className="bg-surface rounded-[24px] p-3 flex items-center gap-3.5">
+                <div className="w-[68px] h-[68px] rounded-[20px] bg-breeze flex-none flex items-center justify-center font-display text-[24px] text-forest">
+                  {data.advisorName.split(" ").map(p => p[0]).join("")}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="tala-eyebrow text-ink-40">Your advisor</div>
+                  <div className="text-[14px] text-forest mt-1 leading-snug text-pretty">
+                    {advisorFirstName}: “Need an adjustment to your plan? Send a message directly.”
+                  </div>
+                </div>
+                <div className="w-9 h-9 rounded-full bg-forest text-paper flex-none flex items-center justify-center">
+                  <MessageSquare className="h-4 w-4" aria-hidden="true" />
+                </div>
+              </Link>
+            )}
           </section>
         )}
+
+        {/* Wealth Score */}
+        <WealthScoreCard />
 
         {/* Track B Conversion CTA */}
         {data.isTrackB && (
@@ -344,26 +451,6 @@ export default function ClientDashboard() {
               Talk to an advisor
             </Link>
           </div>
-        )}
-
-        {/* Advisor card */}
-        {data.isTrackA && data.advisorName && (
-          <Link href="/client/advisor/messages" className="block">
-            <div className="bg-surface rounded-[24px] p-5 cursor-pointer">
-              <div className="flex justify-between items-baseline mb-3">
-                <h2 className="text-[16px] font-semibold text-forest">Your advisor</h2>
-                <span className="text-[14px] font-semibold text-green underline underline-offset-4">Message</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-[14px] bg-field flex-none flex items-center justify-center text-[14px] font-semibold text-forest">
-                  {data.advisorName.split(" ").map(p => p[0]).join("")}
-                </div>
-                <div className={cn("text-[14px] text-ink-40 leading-[1.45] text-pretty")}>
-                  {advisorFirstName}: "Need an adjustment to your plan? Send a message directly."
-                </div>
-              </div>
-            </div>
-          </Link>
         )}
       </div>
       <ClientRiskCheckSheet isOpen={showRiskCheck} onClose={() => setShowRiskCheck(false)} />
