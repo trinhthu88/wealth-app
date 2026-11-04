@@ -1,6 +1,6 @@
 // ANIMATION RULES FOR THIS PAGE:
 // ✓ ALLOWED: Step slide transition + expense row expand (framer-motion)
-// ✓ ALLOWED: Confetti on completion, RewardReveal fade-in
+// ✓ ALLOWED: Confetti on completion, RewardReveal fade-in, Sol breathe on the completion hero
 // ✗ BANNED:  Page-load stagger on sections
 // ✗ BANNED:  JetBrains Mono font
 // ✗ BANNED:  Cream/warm palette (#F1F4FE, #F1F4FE, #8F98C8)
@@ -17,8 +17,7 @@ import { useProfile } from "@/hooks/useProfile";
 import { queryClient } from "@/lib/queryClient";
 import RewardReveal from "@/components/RewardReveal";
 import Sol from "@/components/Sol";
-import SolNarration from "@/components/client/SolNarration";
-import { ArrowLeft, ArrowRight, Check, ChevronDown, Minus, Plus, ShieldAlert, Briefcase, Home, Palmtree, Rocket, Target, Utensils, Bus, Zap, Ticket, MoreHorizontal, CreditCard, Building, TrendingUp } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, ChevronDown, ChevronLeft, Minus, Plus, ShieldAlert, Briefcase, Home, Palmtree, Rocket, Target, Utensils, Bus, Zap, Ticket, MoreHorizontal, CreditCard, Building, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { saveRatesToStorage } from "@/lib/milestones";
 import { track } from "@/lib/analytics";
@@ -87,13 +86,14 @@ function getRiskProfile(answers: (number | null)[]) {
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const YEARS = Array.from({ length: 30 }, (_, i) => String(new Date().getFullYear() + 1 + i));
 
+// Tile colours follow the approved expenses screen (field / breeze / paper / sun).
 const EXPENSE_CATS = [
-  { key: "housing" as const, icon: Home, label: "Housing" },
-  { key: "food" as const, icon: Utensils, label: "Food" },
-  { key: "transport" as const, icon: Bus, label: "Transport" },
-  { key: "utilities" as const, icon: Zap, label: "Utilities" },
-  { key: "entertainment" as const, icon: Ticket, label: "Entertainment" },
-  { key: "other" as const, icon: MoreHorizontal, label: "Other" },
+  { key: "housing" as const, icon: Home, label: "Housing", tile: "bg-field" },
+  { key: "food" as const, icon: Utensils, label: "Food", tile: "bg-breeze" },
+  { key: "transport" as const, icon: Bus, label: "Transport", tile: "bg-breeze" },
+  { key: "utilities" as const, icon: Zap, label: "Utilities", tile: "bg-paper" },
+  { key: "entertainment" as const, icon: Ticket, label: "Entertainment", tile: "bg-sun" },
+  { key: "other" as const, icon: MoreHorizontal, label: "Other", tile: "bg-paper" },
 ];
 
 const slideVariants = {
@@ -103,28 +103,60 @@ const slideVariants = {
 };
 
 
-// Shared control styles — large, rounded, flat surfaces (see FREE_DESIGN_BRIEF.md).
+// Shared control styles — flat surfaces, explicit radii (rounded-2xl is pill-ish in this theme).
 const INPUT_CLASS =
-  "h-12 w-full rounded-2xl border border-hairline-2 bg-surface px-4 text-[15px] text-forest outline-none transition-colors placeholder:text-ink-30 focus:border-green focus:ring-2 focus:ring-forest/15";
+  "h-12 w-full rounded-[16px] border-0 bg-surface px-4 text-[15px] text-forest outline-none transition-shadow placeholder:text-ink-30 focus-visible:ring-2 focus-visible:ring-forest/30";
 const SELECT_CLASS = cn(INPUT_CLASS, "appearance-none pr-10 cursor-pointer");
-const FIELD_LABEL = "block text-[13px] font-semibold text-forest mb-2";
+const FIELD_LABEL = "block px-1 mb-2.5 font-sans text-[16px] font-semibold text-forest";
 
-/** Choice tile: bg-surface, Cobalt when selected. */
+/** Outlined choice: 1.5px Cobalt outline, fills Cobalt when selected. */
 function choiceClass(selected: boolean, extra?: string) {
   return cn(
-    "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/30 active:scale-[0.98]",
-    selected ? "bg-forest text-paper" : "bg-surface text-forest hover:bg-green-tint",
+    "border-[1.5px] border-forest transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-forest/30 active:scale-[0.98]",
+    selected ? "bg-forest text-paper" : "bg-transparent text-forest hover:bg-surface",
     extra,
   );
 }
 
+/** Pill choice used for life stage, expat, currency and income sources. */
+const PILL = "h-11 rounded-full px-[18px] text-[14px] font-semibold";
+
 function StepHeading({ title, sub }: { title: string; sub: string }) {
   return (
-    <div className="mb-6">
-      <h1 className="font-display text-[30px] leading-[1.1] text-forest text-balance">{title}</h1>
+    <div className="mb-5 px-1">
+      <h1 className="font-display text-[36px] leading-[1.05] text-forest text-balance">{title}</h1>
       <p className="mt-2 text-[14px] leading-[1.5] text-ink-40 text-pretty">{sub}</p>
     </div>
   );
+}
+
+/** Sol tip card (Blue Breeze) — one calm observation per step. */
+function SolTip({ line }: { line: string }) {
+  return (
+    <div className="mt-5 flex items-start gap-3 rounded-[24px] bg-breeze p-4 text-forest">
+      <Sol size="sm" animate="breathe" />
+      <div className="min-w-0 pt-0.5">
+        <p className="tala-eyebrow text-forest/70">Sol</p>
+        <p className="mt-1 text-[14px] font-semibold leading-[1.45] text-pretty">{line}</p>
+      </div>
+    </div>
+  );
+}
+
+/** Compact money label for result tiles, e.g. $43.7k. */
+function compactMoney(n: number, sym: string) {
+  const abs = Math.abs(n);
+  const sign = n < 0 ? "−" : "";
+  const fmt = (v: number, suffix: string) => `${sign}${sym}${v.toFixed(v >= 100 ? 0 : 1).replace(/\.0$/, "")}${suffix}`;
+  if (abs >= 1e9) return fmt(abs / 1e9, "B");
+  if (abs >= 1e6) return fmt(abs / 1e6, "M");
+  if (abs >= 1e3) return fmt(abs / 1e3, "k");
+  return `${sign}${sym}${abs.toLocaleString()}`;
+}
+
+/** Row amount label: full grouping while it fits, compact for large (e.g. VND) values. */
+function compactOrFull(n: number) {
+  return n >= 100000 ? compactMoney(n, "") : n.toLocaleString();
 }
 
 function SelectField({ value, onChange, options, ariaLabel }: { value: string; onChange: (v: string) => void; options: string[]; ariaLabel: string }) {
@@ -143,7 +175,7 @@ function SelectField({ value, onChange, options, ariaLabel }: { value: string; o
  * mode (raw number in `currency`, no conversion, grouping shown when blurred),
  * restyled to the large rounded tala input.
  */
-function AmountField({ value, onChange, currency, label }: { value: number; onChange: (v: number) => void; currency: string; label?: string }) {
+function AmountField({ value, onChange, currency, label, tone = "surface" }: { value: number; onChange: (v: number) => void; currency: string; label?: string; tone?: "surface" | "paper" }) {
   const [focused, setFocused] = useState(false);
   const inputId = useId();
   const symbol = currency === "VND" ? "₫" : currency === "EUR" ? "€" : "$";
@@ -151,7 +183,7 @@ function AmountField({ value, onChange, currency, label }: { value: number; onCh
   return (
     <div>
       {label && <label htmlFor={inputId} className={FIELD_LABEL}>{label}</label>}
-      <div className="flex h-16 items-center gap-2 rounded-[20px] border border-hairline-2 bg-surface px-5 transition-colors focus-within:border-green focus-within:ring-2 focus-within:ring-forest/15">
+      <div className={cn("flex h-16 items-center gap-2 rounded-[24px] px-5", tone === "paper" ? "bg-paper" : "bg-surface", "transition-shadow focus-within:ring-2 focus-within:ring-forest/30")}>
         <span className="text-[18px] font-medium text-ink-30 select-none" aria-hidden="true">{symbol}</span>
         <input
           id={inputId}
@@ -205,6 +237,7 @@ export default function FreeOnboardingPage() {
   const [riskAnswered, setRiskAnswered] = useState(false);
   const [expandedCat, setExpandedCat] = useState<string | null>(null);
   const [goalPanel, setGoalPanel] = useState(false);
+  const [healthScore, setHealthScore] = useState<number | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [form, setForm] = useState<FormData>({
@@ -364,7 +397,10 @@ export default function FreeOnboardingPage() {
         await saveStep.mutateAsync({ stepNumber: 6, formData: { riskProfile: rp }, status: "completed" });
         track("onboarding_step_completed", { step: 6, stepName: STEP_NAMES[6] });
         await apiFetch("/health-score", { method: "POST" })
-          .then((data: any) => track("health_score_calculated", { score: data?.overallScore }))
+          .then((data: any) => {
+            track("health_score_calculated", { score: data?.overallScore });
+            if (typeof data?.overallScore === "number") setHealthScore(Math.round(data.overallScore));
+          })
           .catch(() => {});
         update.mutate({ riskProfile: RISK_PROFILE_STORED_VALUE[rp], onboardingComplete: true } as any);
         confetti({ particleCount: 160, spread: 90, origin: { y: 0.6 } });
@@ -414,50 +450,60 @@ export default function FreeOnboardingPage() {
 
   const STEPS = [
     /* Step 1 */
-    <div className="space-y-7">
-      <StepHeading title="Let's get to know you" sub="Helps us personalise your plan — you can update this anytime in Settings." />
-      <div className="rounded-[24px] bg-surface p-5">
-        <p className="tala-eyebrow text-ink-40 text-center">Your age</p>
-        <div className="mt-3 flex items-center justify-center gap-6">
-          <button type="button" aria-label="Decrease age" onClick={() => setField("age", Math.max(18, form.age - 1))} className="flex h-11 w-11 items-center justify-center rounded-full bg-paper text-forest transition-colors hover:bg-green-tint">
-            <Minus className="h-4 w-4" />
+    <div className="space-y-4">
+      <section className="flex flex-col gap-3 rounded-[28px] bg-field p-5 text-forest">
+        <Sol size="md" animate="breathe" />
+        <h1 className="font-display text-[34px] leading-[1.05] text-balance">Hi, I’m Sol. Tell me a little about you.</h1>
+        <p className="text-[13px] font-semibold">Six short steps, about three minutes. You can change any of this later in Settings.</p>
+      </section>
+
+      <section aria-label="Age" className="flex items-center justify-between gap-3 rounded-[24px] bg-surface py-4 pl-5 pr-4">
+        <div className="flex flex-col gap-1">
+          <span className="tala-eyebrow text-ink-40">Age</span>
+          <span className="font-display tabular-nums text-[52px] leading-[0.9] tracking-[-0.05em] text-forest" aria-live="polite">{form.age}</span>
+        </div>
+        <div className="flex gap-2">
+          <button type="button" aria-label="Decrease age" onClick={() => setField("age", Math.max(18, form.age - 1))} className="flex h-12 w-12 items-center justify-center rounded-full border-[1.5px] border-forest text-forest transition-colors hover:bg-paper">
+            <Minus className="h-5 w-5" />
           </button>
-          <span className="w-24 text-center font-display tabular-nums text-[56px] leading-none tracking-[-0.04em] text-forest">{form.age}</span>
-          <button type="button" aria-label="Increase age" onClick={() => setField("age", Math.min(80, form.age + 1))} className="flex h-11 w-11 items-center justify-center rounded-full bg-paper text-forest transition-colors hover:bg-green-tint">
-            <Plus className="h-4 w-4" />
+          <button type="button" aria-label="Increase age" onClick={() => setField("age", Math.min(80, form.age + 1))} className="flex h-12 w-12 items-center justify-center rounded-full bg-forest text-paper transition-opacity hover:opacity-90">
+            <Plus className="h-5 w-5" />
           </button>
         </div>
-      </div>
-      <div>
-        <p className={FIELD_LABEL}>Life stage</p>
+      </section>
+
+      <section aria-label="Life stage">
+        <h2 className={FIELD_LABEL}>Life stage</h2>
         <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Life stage">
           {LIFE_STAGES.map(s => (
-            <button key={s} type="button" role="radio" aria-checked={form.lifeStage === s} onClick={() => setField("lifeStage", s)} className={choiceClass(form.lifeStage === s, "h-11 rounded-full px-4 text-[14px] font-medium")}>
+            <button key={s} type="button" role="radio" aria-checked={form.lifeStage === s} onClick={() => setField("lifeStage", s)} className={choiceClass(form.lifeStage === s, PILL)}>
               {s}
             </button>
           ))}
         </div>
-      </div>
-      <div>
-        <p className={FIELD_LABEL}>Living outside your home country?</p>
-        <div className="grid grid-cols-2 gap-3" role="radiogroup" aria-label="Living outside your home country">
-          {[{ label: "Yes", val: true }, { label: "No", val: false }].map(o => (
-            <button key={String(o.val)} type="button" role="radio" aria-checked={form.isExpat === o.val} onClick={() => setField("isExpat", o.val)} className={choiceClass(form.isExpat === o.val, "h-14 rounded-[20px] text-[15px] font-semibold")}>
+      </section>
+
+      <section aria-label="Living outside your home country">
+        <h2 className={FIELD_LABEL}>Living outside your home country?</h2>
+        <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Living outside your home country">
+          {[{ label: "Yes, I’m an expat", val: true }, { label: "No", val: false }].map(o => (
+            <button key={String(o.val)} type="button" role="radio" aria-checked={form.isExpat === o.val} onClick={() => setField("isExpat", o.val)} className={choiceClass(form.isExpat === o.val, PILL)}>
               {o.label}
             </button>
           ))}
         </div>
-      </div>
-      <div>
-        <p className={FIELD_LABEL}>Preferred currency</p>
-        <div className="flex gap-1 rounded-full bg-surface p-1" role="radiogroup" aria-label="Preferred currency">
+      </section>
+
+      <section aria-label="Preferred currency">
+        <h2 className={FIELD_LABEL}>Preferred currency</h2>
+        <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Preferred currency">
           {["USD", "VND"].map(c => (
-            <button key={c} type="button" role="radio" aria-checked={form.currency === c} onClick={() => setField("currency", c)} className={cn("h-11 flex-1 rounded-full text-[14px] font-semibold transition-colors", form.currency === c ? "bg-forest text-paper" : "text-ink-40 hover:text-forest")}>
-              {c === "USD" ? "USD ($)" : "VND (₫)"}
+            <button key={c} type="button" role="radio" aria-checked={form.currency === c} onClick={() => setField("currency", c)} className={choiceClass(form.currency === c, PILL)}>
+              {c === "USD" ? "USD $" : "VND ₫"}
             </button>
           ))}
         </div>
-      </div>
+      </section>
     </div>,
 
     /* Step 2 */
@@ -471,7 +517,7 @@ export default function FreeOnboardingPage() {
             const on = form.incomeTypes.includes(t);
             return (
               <button key={t} type="button" aria-pressed={on} onClick={() => setField("incomeTypes", on ? form.incomeTypes.filter(x => x !== t) : [...form.incomeTypes, t])}
-                className={cn("inline-flex h-11 items-center gap-1.5 rounded-full px-4 text-[14px] font-medium transition-colors", on ? "bg-field text-forest" : "bg-surface text-forest hover:bg-green-tint")}>
+                className={choiceClass(on, cn(PILL, "inline-flex items-center gap-1.5"))}>
                 {on && <Check className="h-3.5 w-3.5" />}{t}
               </button>
             );
@@ -484,8 +530,8 @@ export default function FreeOnboardingPage() {
           {STABILITY.map(s => {
             const on = form.stability === s.label;
             return (
-              <button key={s.label} type="button" role="radio" aria-checked={on} onClick={() => setField("stability", s.label)} className={choiceClass(on, "flex flex-col items-center gap-2 rounded-[20px] px-2 py-4 text-[13px] font-medium")}>
-                <span className={cn("flex h-10 w-10 items-center justify-center rounded-[14px]", on ? "bg-field text-forest" : "bg-paper text-forest")}><s.icon className="h-5 w-5" /></span>
+              <button key={s.label} type="button" role="radio" aria-checked={on} onClick={() => setField("stability", s.label)} className={choiceClass(on, "flex flex-col items-center gap-2 rounded-[24px] px-2 py-4 text-[13px] font-semibold")}>
+                <span className={cn("flex h-10 w-10 items-center justify-center rounded-[12px] text-forest", on ? "bg-field" : "bg-surface")}><s.icon className="h-5 w-5" /></span>
                 {s.label}
               </button>
             );
@@ -495,45 +541,56 @@ export default function FreeOnboardingPage() {
     </div>,
 
     /* Step 3 */
-    <div className="space-y-4">
-      <StepHeading title="Where does your money go?" sub="Tap a category to enter your monthly spend — editable anytime in Budget." />
-      <div className="overflow-hidden rounded-[24px] bg-surface">
-        {EXPENSE_CATS.map(cat => (
-          <div key={cat.key} className="border-b border-hairline-2 last:border-0">
-            <button type="button" aria-expanded={expandedCat === cat.key} onClick={() => setExpandedCat(expandedCat === cat.key ? null : cat.key)} className="flex min-h-[60px] w-full items-center justify-between gap-3 px-4 py-3 text-left">
-              <span className="flex items-center gap-3">
-                <span className={cn("flex h-10 w-10 items-center justify-center rounded-[14px] text-forest", form[cat.key] > 0 ? "bg-field" : "bg-paper")}><cat.icon className="h-[18px] w-[18px]" /></span>
-                <span className="text-[15px] font-medium text-forest">{cat.label}</span>
-              </span>
-              <span className={cn("text-[14px] tabular-nums", form[cat.key] > 0 ? "font-semibold text-forest" : "text-ink-30")}>{form[cat.key] > 0 ? `${sym}${form[cat.key].toLocaleString()}` : "Tap to enter"}</span>
-            </button>
-            <AnimatePresence>
-              {expandedCat === cat.key && (
-                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                  <div className="px-4 pb-4">
-                    <AmountField value={form[cat.key]} onChange={v => setField(cat.key, v)} currency={form.currency} />
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        ))}
+    <div className="space-y-3.5">
+      <StepHeading title="Where does your money go?" sub="Monthly estimates are fine — tap an amount to type it, and change it anytime in Budget." />
+      <div className="flex flex-col rounded-[24px] bg-surface p-1">
+        {EXPENSE_CATS.map(cat => {
+          const value = form[cat.key];
+          const stepBy = form.currency === "VND" ? 500000 : 50;
+          const open = expandedCat === cat.key;
+          return (
+            <div key={cat.key} className="border-b border-hairline last:border-0">
+              <div className="flex items-center gap-3 px-3 py-2.5">
+                <span className={cn("flex h-10 w-10 flex-none items-center justify-center rounded-[12px] text-forest", cat.tile)}><cat.icon className="h-[18px] w-[18px]" /></span>
+                <span className="min-w-0 flex-1 truncate text-[15px] font-medium text-forest">{cat.label}</span>
+                <div className="flex flex-none items-center gap-1">
+                  <button type="button" aria-label={`Less ${cat.label.toLowerCase()}`} onClick={() => setField(cat.key, Math.max(0, value - stepBy))} className="flex h-11 w-11 items-center justify-center rounded-full border-[1.5px] border-forest text-forest transition-colors hover:bg-paper">
+                    <Minus className="h-4 w-4" />
+                  </button>
+                  <button type="button" aria-expanded={open} aria-label={`${cat.label}: ${value > 0 ? `${sym}${value.toLocaleString()}` : "not set"}. Tap to type an amount`} onClick={() => setExpandedCat(open ? null : cat.key)} className={cn("h-11 min-w-[68px] rounded-full px-1 text-center text-[15px] tabular-nums transition-colors hover:bg-paper", value > 0 ? "font-semibold text-forest" : "font-medium text-ink-30")}>
+                    {sym}{compactOrFull(value)}
+                  </button>
+                  <button type="button" aria-label={`More ${cat.label.toLowerCase()}`} onClick={() => setField(cat.key, value + stepBy)} className="flex h-11 w-11 items-center justify-center rounded-full bg-forest text-paper transition-opacity hover:opacity-90">
+                    <Plus className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+              <AnimatePresence>
+                {open && (
+                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                    <div className="px-3 pb-3">
+                      <AmountField value={value} onChange={v => setField(cat.key, v)} currency={form.currency} tone="paper" />
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          );
+        })}
       </div>
       {income > 0 && (
-        <div className="rounded-[24px] bg-surface p-5">
-          <div className="flex items-end justify-between gap-3">
-            <div>
-              <p className="tala-eyebrow text-ink-40">Savings rate</p>
-              <p className={cn("mt-1.5 text-[13px] font-medium", savingsRate > 10 ? "text-ink-40" : "text-clay-ink")}>
-                {savingsRate > 20 ? "You're on track" : savingsRate > 10 ? "Getting there" : "Below recommended"}
-              </p>
-            </div>
-            <span className="font-display tabular-nums text-[32px] leading-none text-forest">{savingsRate.toFixed(0)}%</span>
+        <section aria-label="Savings rate" className="flex flex-col gap-3 rounded-[28px] bg-forest p-5 text-paper">
+          <div className="flex items-center justify-between gap-3">
+            <span className="tala-eyebrow text-mint">Left each month</span>
+            <span className={cn("rounded-full px-3 py-1.5 text-[12px] font-semibold text-forest tabular-nums", savingsRate >= 10 ? "bg-field" : "bg-sun")}>
+              {savingsRate.toFixed(0)}% savings rate
+            </span>
           </div>
-          <div className="mt-4 h-2 overflow-hidden rounded-full bg-track">
-            <div className={cn("h-full rounded-full transition-all", savingsRate > 10 ? "bg-forest" : "bg-sun")} style={{ width: `${Math.max(0, Math.min(100, savingsRate))}%` }} />
-          </div>
-        </div>
+          <span className="font-display tabular-nums text-[52px] leading-[0.9] tracking-[-0.05em]">
+            {income - totalExpenses < 0 ? "−" : ""}{sym}{Math.abs(income - totalExpenses).toLocaleString()}
+          </span>
+          <span className="text-[13px] text-mint">From {sym}{income.toLocaleString()} income · step 2</span>
+        </section>
       )}
     </div>,
 
@@ -548,7 +605,7 @@ export default function FreeOnboardingPage() {
               return (
                 <button key={g.type} type="button" role="radio" aria-checked={on} onClick={() => { setField("goalType", g.type); setField("goalTitle", g.name); setGoalPanel(true); }}
                   className={choiceClass(on, "flex min-h-[132px] flex-col items-start rounded-[24px] p-4 text-left")}>
-                  <span className={cn("mb-3 flex h-10 w-10 items-center justify-center rounded-[14px] text-forest", on ? "bg-field" : "bg-paper")}><g.icon className="h-5 w-5" /></span>
+                  <span className={cn("mb-3 flex h-10 w-10 items-center justify-center rounded-[12px] text-forest", on ? "bg-field" : "bg-surface")}><g.icon className="h-5 w-5" /></span>
                   <span className="text-[14px] font-semibold leading-tight">{g.name}</span>
                   <span className={cn("mt-1 text-[12px] leading-snug", on ? "text-mint" : "text-ink-40")}>{g.desc}</span>
                 </button>
@@ -557,14 +614,14 @@ export default function FreeOnboardingPage() {
           </motion.div>
         ) : (
           <motion.div key="detail" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} className="space-y-5">
-            <button type="button" onClick={() => setGoalPanel(false)} className="inline-flex min-h-11 items-center gap-1.5 text-[14px] font-semibold text-green">
-              <ArrowLeft className="h-4 w-4" />Choose different goal
+            <button type="button" onClick={() => setGoalPanel(false)} className="inline-flex h-11 items-center gap-1.5 rounded-full border-[1.5px] border-forest px-4 text-[14px] font-semibold text-forest transition-colors hover:bg-surface">
+              <ArrowLeft className="h-4 w-4" />Choose a different goal
             </button>
             {(() => {
               const G = GOAL_OPTIONS.find(g => g.type === form.goalType);
               return G ? (
                 <div className="flex items-center gap-3 rounded-[24px] bg-surface p-4">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-field text-forest"><G.icon className="h-5 w-5" /></span>
+                  <span className="flex h-11 w-11 flex-none items-center justify-center rounded-[14px] bg-field text-forest"><G.icon className="h-5 w-5" /></span>
                   <div>
                     <p className="text-[15px] font-semibold text-forest">{G.name}</p>
                     <p className="text-[13px] text-ink-40">{G.desc}</p>
@@ -583,7 +640,7 @@ export default function FreeOnboardingPage() {
                 <SelectField ariaLabel="Target month" value={form.goalMonth} onChange={v => setField("goalMonth", v)} options={MONTHS} />
                 <SelectField ariaLabel="Target year" value={form.goalYear} onChange={v => setField("goalYear", v)} options={YEARS} />
               </div>
-              <p className="mt-2 text-[13px] text-ink-40">in {goalYearsAway} years</p>
+              <p className="mt-2 px-1 text-[13px] text-ink-40">in {goalYearsAway} {goalYearsAway === 1 ? "year" : "years"}</p>
             </div>
           </motion.div>
         )}
@@ -597,10 +654,10 @@ export default function FreeOnboardingPage() {
       <div className="rounded-[28px] bg-forest p-5">
         <p className="tala-eyebrow text-mint">Your net worth</p>
         <div className="mt-3 flex items-baseline gap-3 flex-wrap">
-          <p className="font-display tabular-nums text-[44px] leading-none tracking-[-0.04em] text-paper">
+          <p className="font-display tabular-nums text-[52px] leading-[0.9] tracking-[-0.05em] text-paper">
             {netWorth < 0 ? "−" : ""}{sym}{Math.abs(netWorth).toLocaleString()}
           </p>
-          {netWorth < 0 && <span className="rounded-full bg-sun-tint px-2.5 py-1 text-[12px] font-semibold text-amber-ink">Negative</span>}
+          {netWorth < 0 && <span className="rounded-full bg-sun px-3 py-1.5 text-[12px] font-semibold text-forest">Negative</span>}
         </div>
         {(form.savings + form.investments + form.debts) > 0 && (
           <>
@@ -619,14 +676,14 @@ export default function FreeOnboardingPage() {
       <AmountField value={form.savings} onChange={v => setField("savings", v)} currency={form.currency} label="Total current savings" />
       <div>
         <div className="flex items-center justify-between gap-3">
-          <span className="text-[13px] font-semibold text-forest">Investments</span>
+          <span className="px-1 font-sans text-[16px] font-semibold text-forest">Investments</span>
           <CheckToggle checked={form.noInvestments} onChange={c => { setField("noInvestments", c); if (c) setField("investments", 0); }} label="I don't have investments yet" />
         </div>
         {!form.noInvestments && <AmountField value={form.investments} onChange={v => setField("investments", v)} currency={form.currency} />}
       </div>
       <div>
         <div className="flex items-center justify-between gap-3">
-          <span className="text-[13px] font-semibold text-forest">Total debts</span>
+          <span className="px-1 font-sans text-[16px] font-semibold text-forest">Total debts</span>
           <CheckToggle checked={form.debtFree} onChange={c => { setField("debtFree", c); if (c) setField("debts", 0); }} label="I'm debt-free" />
         </div>
         {!form.debtFree && <AmountField value={form.debts} onChange={v => setField("debts", v)} currency={form.currency} />}
@@ -634,7 +691,7 @@ export default function FreeOnboardingPage() {
 
       {/* Interest rate inputs */}
       <div className="space-y-4 rounded-[24px] bg-surface p-5">
-        <h3 className="text-[15px] font-semibold text-forest">Your money growth rates</h3>
+        <h2 className="font-sans text-[16px] font-semibold text-forest">Your money growth rates</h2>
         <div>
           <label htmlFor="savings-rate" className="mb-2 block text-[13px] text-ink-40">Annual savings interest rate (%)</label>
           <input
@@ -658,7 +715,7 @@ export default function FreeOnboardingPage() {
           <p className="mt-1.5 text-[12px] text-ink-30">e.g. global equity ETF average: 7–9%</p>
         </div>
         {monthlyReturnsPreview > 0 && (
-          <div className="flex items-center gap-3 rounded-2xl bg-field px-4 py-3">
+          <div className="flex items-center gap-3 rounded-[16px] bg-field px-4 py-3">
             <TrendingUp className="h-4 w-4 shrink-0 text-forest" />
             <p className="text-[13px] font-medium leading-snug text-forest">
               Your money will grow approx. <span className="tabular-nums font-semibold">${monthlyReturnsPreview.toFixed(0)}/month</span> from returns alone
@@ -674,7 +731,7 @@ export default function FreeOnboardingPage() {
       {!allAnswered && (
         <div className="flex items-center gap-1.5" aria-label={`Question ${riskSubStep + 1} of ${RISK_QUESTIONS.length}`}>
           {RISK_QUESTIONS.map((_, i) => (
-            <div key={i} className={cn("h-1.5 rounded-full transition-all", i < riskSubStep ? "w-4 bg-forest" : i === riskSubStep ? "w-6 bg-forest/50" : "w-4 bg-track")} />
+            <div key={i} className={cn("h-1.5 rounded-full transition-all", i < riskSubStep ? "w-4 bg-forest" : i === riskSubStep ? "w-6 bg-forest/50" : "w-4 bg-breeze")} />
           ))}
           <span className="ml-2 tala-eyebrow text-ink-30">{riskSubStep + 1} / {RISK_QUESTIONS.length}</span>
         </div>
@@ -682,7 +739,7 @@ export default function FreeOnboardingPage() {
       <AnimatePresence mode="wait">
         {!allAnswered ? (
           <motion.div key={`q${riskSubStep}`} custom={dir} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.2 }} className="space-y-2.5">
-            <p className="mb-4 text-[17px] font-semibold leading-snug text-forest">{RISK_QUESTIONS[riskSubStep]?.q}</p>
+            <p className="mb-4 px-1 text-[17px] font-semibold leading-snug text-forest">{RISK_QUESTIONS[riskSubStep]?.q}</p>
             {RISK_QUESTIONS[riskSubStep]?.options.map((opt, i) => {
               const on = form.riskAnswers[riskSubStep] === i + 1;
               return (
@@ -697,7 +754,7 @@ export default function FreeOnboardingPage() {
                     setTimeout(() => setRiskAnswered(true), 200);
                   }
                 }}
-                  className={choiceClass(on, "flex min-h-14 w-full items-center justify-between gap-3 rounded-[20px] px-5 py-3.5 text-left text-[15px] font-medium")}>
+                  className={choiceClass(on, "flex min-h-14 w-full items-center justify-between gap-3 rounded-[24px] px-5 py-3.5 text-left text-[15px] font-semibold")}>
                   {opt}
                   {on && <Check className="h-4 w-4 shrink-0" />}
                 </button>
@@ -712,12 +769,12 @@ export default function FreeOnboardingPage() {
         ) : (
           <motion.div key="result" initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} className="space-y-4">
             <div className="rounded-[28px] bg-forest p-5">
-              <span className="inline-flex rounded-full bg-field px-3 py-1 tala-eyebrow text-forest">Your risk profile</span>
-              <p className="mt-4 font-display text-[40px] leading-none text-paper">{riskProfile}</p>
+              <span className="inline-flex rounded-full bg-field px-3 py-1.5 text-[12px] font-semibold text-forest">Your risk profile</span>
+              <p className="mt-4 font-display text-[52px] leading-[0.9] tracking-[-0.045em] text-paper">{riskProfile}</p>
               <p className="mt-3 text-[14px] leading-[1.5] text-mint text-pretty">{RISK_PROFILES[riskProfile]?.desc}</p>
             </div>
             <div className="rounded-[24px] bg-surface p-5">
-              <h3 className="text-[15px] font-semibold text-forest mb-4">Suggested allocation</h3>
+              <h2 className="mb-4 font-sans text-[16px] font-semibold text-forest">Suggested allocation</h2>
               <div className="space-y-3">
                 {[
                   { label: "Equities", pct: RISK_PROFILES[riskProfile]?.eq ?? 0, color: "bg-forest" },
@@ -749,45 +806,55 @@ export default function FreeOnboardingPage() {
 
   // Completion screen — shown after step 6 is saved
   if (showCompletion) {
+    const firstName = (profile?.fullName ?? "").trim().split(/\s+/)[0];
+    const goalLabel = form.goalType ? (form.goalTitle || GOAL_OPTIONS.find(g => g.type === form.goalType)?.name || "") : "";
+    // Only tiles we have real values for; the 2×2 grid reflows when one is missing.
+    const tiles: { label: string; value: string; className: string; text?: boolean }[] = [
+      ...(healthScore !== null ? [{ label: "Health score", value: String(healthScore), className: "bg-field" }] : []),
+      ...(income > 0 ? [{ label: "Kept monthly", value: `${savingsRate.toFixed(0)}%`, className: "bg-sun" }] : []),
+      ...((form.savings + form.investments + form.debts) > 0 ? [{ label: "Net worth", value: compactMoney(netWorth, sym), className: "bg-breeze" }] : []),
+      ...(goalLabel ? [{ label: "Goal", value: goalLabel, className: "bg-surface", text: true }] : []),
+    ];
     return (
-      <div className="min-h-[100dvh] bg-forest flex flex-col items-center justify-center px-5 py-10">
-        <div className="max-w-sm w-full animate-rise-up">
-          <div className="rounded-[28px] bg-forest-700 p-6 text-center">
-            <div className="flex justify-center">
-              <Sol size="lg" animate="breathe" showFace />
-            </div>
-            <span className="mt-5 inline-flex rounded-full bg-field px-3 py-1 tala-eyebrow text-forest">Setup complete</span>
-            <h1 className="mt-4 font-display text-[30px] leading-[1.1] text-paper">
-              Your plan is ready.
-            </h1>
-            <p className="mt-3 text-[14px] leading-[1.5] text-mint text-pretty">
-              Your financial pathway is complete — your personalised plan is waiting on your dashboard.
-            </p>
-          </div>
+      <div className="h-[100dvh] bg-paper flex flex-col overflow-hidden">
+        <main className="flex-1 overflow-y-auto">
+          <div className="max-w-lg mx-auto flex flex-col gap-3 px-4 pt-6 pb-5 animate-rise-up">
+            <section className="flex flex-col gap-3.5 rounded-[28px] bg-forest px-5 py-6 text-paper">
+              <Sol size="md" animate="breathe" showFace />
+              <span className="self-start rounded-full bg-field px-3 py-1.5 text-[12px] font-semibold text-forest">Setup complete</span>
+              <h1 className="font-display text-[36px] leading-[1.05] text-balance">
+                {firstName ? `Your plan is ready, ${firstName}.` : "Your plan is ready."}
+              </h1>
+              <p className="text-[14px] leading-[1.45] text-mint text-pretty">
+                Here’s what I worked out from your answers. Your personalised plan is waiting on your dashboard.
+              </p>
+            </section>
 
-          <div className="mt-4 space-y-3 rounded-[24px] bg-forest-700 p-5">
-            {[
-              "Profile & goals saved",
-              "Risk profile set",
-              "Financial snapshot complete",
-            ].map((item) => (
-              <div key={item} className="flex items-center gap-3">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-field">
-                  <Check className="h-3.5 w-3.5 text-forest" />
-                </span>
-                <span className="text-[14px] font-medium text-paper">{item}</span>
+            {tiles.length > 0 && (
+              <div className="grid grid-cols-2 gap-3">
+                {tiles.map(t => (
+                  <div key={t.label} className={cn("flex flex-col gap-1.5 rounded-[24px] p-4 text-forest", t.className)}>
+                    <span className={cn("tala-eyebrow", t.className === "bg-surface" ? "text-ink-40" : "text-forest")}>{t.label}</span>
+                    {t.text
+                      ? <span className="text-[15px] font-semibold leading-[1.3] break-words">{t.value}</span>
+                      : <span className="font-display tabular-nums text-[40px] leading-none tracking-[-0.05em]">{t.value}</span>}
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
-
-          <button
-            type="button"
-            className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-field px-5 text-[15px] font-semibold text-forest transition-opacity hover:opacity-90"
-            onClick={() => navigate("/free/dashboard")}
-          >
-            Take me to my dashboard <ArrowRight className="h-4 w-4" />
-          </button>
-        </div>
+        </main>
+        <footer className="shrink-0 bg-paper">
+          <div className="max-w-lg mx-auto px-4 pt-2.5 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+            <button
+              type="button"
+              className="flex h-[52px] w-full items-center justify-center gap-2 rounded-full bg-forest px-5 text-[15px] font-semibold text-paper transition-opacity hover:opacity-90"
+              onClick={() => navigate("/free/dashboard")}
+            >
+              Go to my dashboard <ArrowRight className="h-[18px] w-[18px]" />
+            </button>
+          </div>
+        </footer>
       </div>
     );
   }
@@ -820,31 +887,44 @@ export default function FreeOnboardingPage() {
     );
   }
 
+  const showSolTip = step > 0 && !(step === 2 && income > 0);
+
   return (
     <div className="h-[100dvh] bg-paper flex flex-col overflow-hidden">
       {/* Top progress */}
       <header className="shrink-0 bg-paper">
-        <div className="max-w-lg mx-auto px-4 pt-5 pb-3">
-          <div className="flex gap-1.5" aria-hidden="true">
+        <div className="max-w-lg mx-auto flex flex-col gap-2.5 px-4 pt-4 pb-2">
+          <div className="flex min-h-11 items-center justify-between gap-3">
+            {step > 0 ? (
+              <>
+                <button type="button" onClick={back} className="inline-flex h-11 items-center gap-1 rounded-full bg-surface pl-2.5 pr-4 text-[14px] font-semibold text-forest transition-opacity hover:opacity-80">
+                  <ChevronLeft className="h-5 w-5" aria-hidden="true" />Back
+                </button>
+                <p className="tala-eyebrow text-ink-40 text-right" aria-live="polite">Step {step + 1} of 6 · {STEP_NAMES[step + 1]}</p>
+              </>
+            ) : (
+              <>
+                <p className="tala-eyebrow text-ink-40" aria-live="polite">Step {step + 1} of 6 · {STEP_NAMES[step + 1]}</p>
+                <button type="button" onClick={skipStep} className="min-h-11 px-1 text-[14px] font-semibold text-forest underline underline-offset-4 transition-opacity hover:opacity-70">
+                  Skip
+                </button>
+              </>
+            )}
+          </div>
+          <div className="flex gap-1" aria-hidden="true">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className={cn("h-1.5 flex-1 rounded-full transition-colors", i <= step ? "bg-forest" : "bg-track")} />
+              <div key={i} className={cn("h-1.5 flex-1 rounded-[3px] transition-colors", i <= step ? "bg-forest" : "bg-breeze")} />
             ))}
           </div>
-          <div className="mt-3 flex items-center justify-between gap-3">
-            <p className="tala-eyebrow text-ink-40" aria-live="polite">
-              Step {step + 1} of 6 <span className="text-ink-30">· {STEP_NAMES[step + 1]}</span>
-            </p>
-            <span className="text-[12px] text-ink-30 flex items-center gap-1 tabular-nums">
-              {saveStatus === "saving" ? "Saving…" : saveStatus === "saved" ? <><Check className="h-3.5 w-3.5 text-green" />Saved</> : `${completedCount}/6 done`}
-            </span>
-          </div>
+          <p className="flex items-center justify-end gap-1 text-[12px] text-ink-30 tabular-nums" aria-live="polite">
+            {saveStatus === "saving" ? "Saving…" : saveStatus === "saved" ? <><Check className="h-3.5 w-3.5 text-forest" />Saved</> : `${completedCount}/6 done`}
+          </p>
         </div>
       </header>
 
       {/* Step content */}
       <main className="flex-1 overflow-y-auto overflow-x-hidden">
-        <div className="max-w-lg mx-auto px-4 pt-4 pb-8">
-          <SolNarration key={`sol-${step}`} line={solLines[step] ?? solLines[0]} />
+        <div className="max-w-lg mx-auto px-4 pt-1 pb-5">
           <AnimatePresence mode="wait" custom={dir}>
             <motion.div
               key={step}
@@ -856,23 +936,24 @@ export default function FreeOnboardingPage() {
               transition={{ duration: 0.25, ease: "easeInOut" }}
             >
               {STEPS[step]}
+              {showSolTip && <SolTip line={solLines[step] ?? solLines[0]} />}
             </motion.div>
           </AnimatePresence>
 
           {/* Save error */}
           {stepError && (
-            <div role="alert" className="mt-5 rounded-2xl bg-sun-tint px-4 py-3 text-center text-[14px] font-medium text-amber-ink">
+            <div role="alert" className="mt-5 rounded-[16px] bg-sun px-4 py-3 text-center text-[14px] font-semibold text-forest">
               {stepError}
             </div>
           )}
 
-          {/* Skip link — not shown on the final step */}
-          {step < 5 && (
-            <div className="mt-6 text-center">
+          {/* Skip link — step 1 has it in the header; not shown on the final step */}
+          {step > 0 && step < 5 && (
+            <div className="mt-5 text-center">
               <button
                 type="button"
                 onClick={skipStep}
-                className="min-h-11 px-2 text-[13px] font-medium text-ink-40 underline-offset-4 hover:text-forest hover:underline transition-colors"
+                className="min-h-11 px-2 text-[14px] font-semibold text-forest underline underline-offset-4 transition-opacity hover:opacity-70"
               >
                 Skip for now
               </button>
@@ -881,25 +962,20 @@ export default function FreeOnboardingPage() {
         </div>
       </main>
 
-      {/* Sticky actions */}
-      <footer className="shrink-0 bg-paper shadow-[0_-2px_14px_rgba(12,33,164,0.06)]">
-        <div className="max-w-lg mx-auto px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] flex items-center gap-3">
-          {step > 0 && (
-            <button type="button" onClick={back} className="h-12 px-3 text-[15px] font-semibold text-forest transition-opacity hover:opacity-70">
-              Back
-            </button>
-          )}
+      {/* Sticky action */}
+      <footer className="shrink-0 bg-paper">
+        <div className="max-w-lg mx-auto px-4 pt-2.5 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
           <button
             type="button"
             disabled={footer.disabled}
             onClick={footer.onClick}
             className={cn(
-              "h-12 flex-1 rounded-full px-5 text-[15px] font-semibold flex items-center justify-center gap-2 transition-opacity",
+              "flex h-[52px] w-full items-center justify-center gap-2 rounded-full px-5 text-[15px] font-semibold transition-opacity",
               footer.disabled ? "bg-surface text-ink-30 cursor-not-allowed" : "bg-forest text-paper hover:opacity-90",
             )}
           >
             {footer.label}
-            {!footer.disabled && <ArrowRight className="h-4 w-4" />}
+            {!footer.disabled && <ArrowRight className="h-[18px] w-[18px]" />}
           </button>
         </div>
       </footer>

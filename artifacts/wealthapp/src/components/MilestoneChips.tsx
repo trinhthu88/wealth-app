@@ -7,6 +7,8 @@ import type { LucideIcon } from "lucide-react";
 
 interface Props {
   earnedKeys: string[];
+  /** When set, the strip is shown as an "Achievement unlocked" celebration card.
+   *  Dismissing the celebration hides the whole card. */
   newlyEarned?: string | null;
 }
 
@@ -23,63 +25,75 @@ export const MILESTONE_ICON_MAP: Record<string, LucideIcon> = {
   budget_3months: BarChart3,
 };
 
+function ChipStrip({ earnedKeys, onTint = false }: { earnedKeys: string[]; onTint?: boolean }) {
+  return (
+    <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none]" role="list" aria-label="Milestones">
+      {MILESTONES.map((m) => {
+        const isEarned = earnedKeys.includes(m.key);
+        const Icon = MILESTONE_ICON_MAP[m.key] || Target;
+        return (
+          <div
+            key={m.key}
+            role="listitem"
+            aria-label={`${m.label}: ${m.desc} — ${isEarned ? "earned" : "not yet earned"}`}
+            className={cn(
+              "flex flex-shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-semibold transition-colors",
+              isEarned
+                ? "bg-field text-forest"
+                : onTint
+                ? "border-[1.5px] border-forest/20 text-forest/60"
+                : "border-[1.5px] border-hairline-2 text-ink-40",
+            )}
+          >
+            <Icon className="h-4 w-4" aria-hidden="true" />
+            {m.label}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function MilestoneChips({ earnedKeys, newlyEarned }: Props) {
   const [celebrationDismissed, setCelebrationDismissed] = useState(false);
   const newM = newlyEarned ? MILESTONES.find((m) => m.key === newlyEarned) : null;
-  const NewMIcon = newM ? MILESTONE_ICON_MAP[newM.key] : null;
+  const NewMIcon = newM ? MILESTONE_ICON_MAP[newM.key] ?? Target : null;
+
+  // Plain strip — no celebration requested.
+  if (!newM || !NewMIcon) return <ChipStrip earnedKeys={earnedKeys} />;
 
   return (
-    <div className="space-y-3">
-      <AnimatePresence>
-        {newM && NewMIcon && !celebrationDismissed && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: -8 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: -8 }}
-            className="bg-breeze rounded-[24px] p-4 flex items-start gap-3"
-            role="status"
-            aria-live="polite"
-          >
-            <div className="w-10 h-10 rounded-[14px] bg-field text-forest flex-none flex items-center justify-center" aria-hidden="true">
+    <AnimatePresence>
+      {!celebrationDismissed && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.97, y: -8 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.97, y: -8 }}
+          className="relative space-y-3 rounded-[24px] bg-breeze p-4"
+          role="status"
+          aria-live="polite"
+        >
+          <div className="flex items-start gap-3 pr-10">
+            <div className="flex h-11 w-11 flex-none items-center justify-center rounded-[14px] bg-field text-forest" aria-hidden="true">
               <NewMIcon className="h-5 w-5" />
             </div>
-            <div className="flex-1 min-w-0 pt-0.5">
+            <div className="min-w-0 flex-1">
               <div className="tala-eyebrow text-forest">Achievement unlocked</div>
-              <div className="text-[15px] font-semibold text-forest mt-1">{newM.label}</div>
-              <div className="text-[14px] text-ink-40 leading-[1.5] mt-0.5">{newM.desc}</div>
+              <div className="mt-1 text-[15px] font-semibold text-forest">{newM.label}</div>
+              <div className="mt-0.5 text-[13px] leading-[1.5] text-forest text-pretty">{newM.desc}</div>
             </div>
-            <button
-              type="button"
-              onClick={() => setCelebrationDismissed(true)}
-              className="-mr-2 -mt-2 h-11 w-11 rounded-full flex items-center justify-center text-forest hover:opacity-70"
-              aria-label="Dismiss achievement notification"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide" role="list" aria-label="Milestones">
-        {MILESTONES.map((m) => {
-          const isEarned = earnedKeys.includes(m.key);
-          const Icon = MILESTONE_ICON_MAP[m.key] || Target;
-          return (
-            <div
-              key={m.key}
-              role="listitem"
-              aria-label={`${m.label}: ${m.desc} — ${isEarned ? "earned" : "not yet earned"}`}
-              className={cn(
-                "flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold transition-colors",
-                isEarned ? "bg-field text-forest" : "bg-surface text-ink-30",
-              )}
-            >
-              <Icon className="h-4 w-4" aria-hidden="true" />
-              {m.label}
-            </div>
-          );
-        })}
-      </div>
-    </div>
+          </div>
+          <ChipStrip earnedKeys={earnedKeys} onTint />
+          <button
+            type="button"
+            onClick={() => setCelebrationDismissed(true)}
+            className="absolute right-1.5 top-1.5 inline-flex h-11 w-11 items-center justify-center rounded-full text-forest transition-colors hover:bg-forest/10"
+            aria-label="Dismiss achievement notification"
+          >
+            <X className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

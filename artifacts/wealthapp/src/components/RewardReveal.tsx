@@ -1,3 +1,7 @@
+// ANIMATION RULES FOR THIS COMPONENT:
+// ✓ ALLOWED: Overlay fade + card spring-in (framer-motion), Sol breathe
+// ✗ BANNED:  Inline style={{ color: '#hexcode' }} — use Tailwind tokens only
+
 import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles } from "lucide-react";
@@ -32,22 +36,20 @@ export default function RewardReveal({ title, description, onDismiss }: Props) {
         aria-live="polite"
       >
         <motion.div
-          className="w-full max-w-sm rounded-[28px] bg-forest p-7 text-center"
+          className="flex w-full max-w-sm flex-col items-center gap-3.5 rounded-[28px] bg-forest px-5 py-6 text-center text-paper"
           initial={{ scale: 0.94, opacity: 0, y: 16 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.94, opacity: 0, y: 16 }}
           transition={{ duration: 0.35, type: "spring", stiffness: 220, damping: 22 }}
         >
-          <div className="flex justify-center">
-            <Sol size="lg" animate="breathe" showFace />
-          </div>
-          <span className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-field px-3 py-1 tala-eyebrow text-forest">
-            <Sparkles className="h-3.5 w-3.5" />
+          <Sol size="lg" animate="breathe" showFace />
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-field px-3 py-1.5 text-[12px] font-semibold text-forest">
+            <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
             Milestone
           </span>
-          <h2 className="mt-4 font-display text-[30px] leading-[1.1] text-paper">{title}</h2>
-          <p className="mt-3 text-[14px] leading-[1.5] text-mint text-pretty">{description}</p>
-          <p className="mt-6 text-[12px] font-medium text-mint/80">Tap anywhere to continue</p>
+          <h2 className="font-display text-[36px] leading-[1.05] text-paper text-balance">{title}</h2>
+          <p className="text-[14px] leading-[1.45] text-mint text-pretty">{description}</p>
+          <p className="mt-2 text-[12px] font-semibold text-mint/80">Tap anywhere to continue</p>
         </motion.div>
       </motion.div>
     </AnimatePresence>
