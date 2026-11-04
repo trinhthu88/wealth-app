@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Free User Function Map</title>
+</head>
+<body>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column (max 1120px); diagrams and tables scroll sideways inside their own box. tala palette: green / navy / paper. */
+:root{
+  --bg:#FDF6EC; --surface:#FFFFFF; --fg:#14342A; --muted:#5E6F67; --hair:#E9DFCE;
+  --green:#1D9E75; --green-soft:#DDF2EA; --navy:#042C53; --navy-soft:#DCE6F0;
+  --amber:#B8741A; --amber-soft:#FBEBD0; --red:#C2452D; --red-soft:#F9E1DC;
+  --font-body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F1A16; --surface:#18251F; --fg:#EAF2EC; --muted:#9FB3A8; --hair:#2A3A32;
+  --green:#3DC79A; --green-soft:#153A2E; --navy:#9DC1E6; --navy-soft:#1B2C3E;
+  --amber:#E2A24C; --amber-soft:#3B2C14; --red:#F08A75; --red-soft:#3E1F1A; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#0F1A16; --surface:#18251F; --fg:#EAF2EC; --muted:#9FB3A8; --hair:#2A3A32;
+  --green:#3DC79A; --green-soft:#153A2E; --navy:#9DC1E6; --navy-soft:#1B2C3E;
+  --amber:#E2A24C; --amber-soft:#3B2C14; --red:#F08A75; --red-soft:#3E1F1A; color-scheme:dark }
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 64px}
+main{max-width:1120px;margin:0 auto}
+header.top{padding-block:40px 24px;border-bottom:1px solid var(--hair);margin-bottom:32px}
+.eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--green);font-weight:600}
+h1{font-size:34px;line-height:1.1;margin:6px 0 12px;font-weight:700;letter-spacing:-.02em;text-wrap:balance}
+h2{font-size:24px;margin:48px 0 8px;letter-spacing:-.01em;text-wrap:balance}
+h3{font-size:17px;margin:28px 0 8px}
+p{max-width:68ch;margin:0 0 12px}
+p.lede{font-size:17px;color:var(--muted);max-width:72ch}
+nav.toc{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+nav.toc a{font-size:13px;color:var(--navy);text-decoration:none;border:1px solid var(--hair);border-radius:999px;padding:4px 12px;background:var(--surface)}
+nav.toc a:hover,nav.toc a:focus-visible{border-color:var(--green);outline:none}
+figure{margin:16px 0 8px;background:var(--surface);border:1px solid var(--hair);border-radius:12px;padding:16px;overflow-x:auto}
+figure svg{display:block;max-width:100%;height:auto;min-width:720px}
+figcaption{font-size:13px;color:var(--muted);margin-top:10px;max-width:80ch}
+.legend{display:flex;flex-wrap:wrap;gap:14px 22px;font-size:13px;color:var(--muted);margin:8px 0 0}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+.tablewrap{overflow-x:auto;border:1px solid var(--hair);border-radius:12px;background:var(--surface);margin:12px 0 20px}
+table{border-collapse:collapse;width:100%;min-width:900px;font-size:13.5px}
+th,td{text-align:left;vertical-align:top;padding:10px 12px;border-bottom:1px solid var(--hair)}
+th{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;background:var(--bg)}
+tr:last-child td{border-bottom:0}
+td.fn{font-weight:600;min-width:150px}
+code{font-family:var(--font-mono);font-size:12px;background:var(--bg);padding:1px 5px;border-radius:4px;white-space:nowrap}
+td code{white-space:normal}
+.pill{display:inline-block;font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.pill.adv-w{background:var(--navy-soft);color:var(--navy)}
+.pill.adv-r{background:transparent;color:var(--navy);border:1px solid var(--navy)}
+.pill.sa{background:var(--amber-soft);color:var(--amber)}
+.pill.none{background:transparent;color:var(--muted);border:1px dashed var(--hair)}
+.pill.dup{background:var(--red-soft);color:var(--red)}
+.pill.one{background:var(--green-soft);color:var(--green)}
+.pill.local{background:var(--amber-soft);color:var(--amber)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:14px 0}
+.card{background:var(--surface);border:1px solid var(--hair);border-radius:12px;padding:16px 18px}
+.card h4{margin:0 0 6px;font-size:15px}
+.card p{font-size:13.5px;margin:0;color:var(--muted)}
+ol.steps{padding-left:22px;max-width:72ch}
+ol.steps li{margin-bottom:10px}
+.callout{border-left:4px solid var(--green);background:var(--surface);padding:12px 16px;border-radius:0 10px 10px 0;margin:16px 0;max-width:78ch}
+.callout.warn{border-left-color:var(--red)}
+@media (max-width:640px){h1{font-size:28px}h2{font-size:21px}}
+</style>
+
+<main>
+<header class="top">
+  <div class="eyebrow">tala wealth-app · role audit · companion to the investment-client map</div>
+  <h1>Free User Function Map</h1>
+  <p class="lede">The free user is tala's top of funnel: a self-service planner whose job is to build a habit, produce a health score, and hand a warm lead to an advisor. This page maps that journey, every function the free user can perform with its inputs and outputs, where the super admin and advisor touch it, and where the same fact is kept in more than one place. Built from the code at commit <code>249d6ff</code>.</p>
+  <nav class="toc" aria-label="Sections">
+    <a href="#journey">1 · Journey and handoffs</a>
+    <a href="#organigram">2 · Organigram</a>
+    <a href="#functions">3 · Functions, inputs, outputs, links</a>
+    <a href="#truth">4 · Source-of-truth map</a>
+    <a href="#recommend">5 · Recommendations</a>
+    <a href="#migration">6 · Migration order</a>
+  </nav>
+</header>
+
+<h2 id="journey">1 · Journey from visitor to client, with the handoffs</h2>
+<p>Unlike the investment client, the free user's data model is shaped by a lifecycle that crosses three roles. The super admin assigns the lead, the advisor promotes it, and at that moment some of what the free user built carries over and some is stranded. The diagram shows the seven stages, who acts at each, and what data crosses the promotion line.</p>
+
+<figure>
+<svg viewBox="0 0 1180 470" role="img" aria-label="Journey map in three lanes. Free user lane: visitor, sign-up, pathway wizard, weekly use, interest CTA. Super admin lane: assigns the lead to an advisor. Advisor lane: works the lead, sets status to client, which promotes the account. A box at the promotion line lists which data carries over and which is stranded.">
+  <defs><marker id="ja" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="currentColor"/></marker></defs>
+  <g font-family="Figtree, system-ui, sans-serif" font-size="12" fill="currentColor">
+    <!-- lanes -->
+    <g font-size="11.5" font-weight="700">
+      <rect x="10" y="30" width="1160" height="120" rx="8" fill="none" stroke="currentColor" stroke-opacity=".25"/><text x="22" y="48">FREE USER</text>
+      <rect x="10" y="160" width="1160" height="90" rx="8" fill="none" stroke="currentColor" stroke-opacity=".25"/><text x="22" y="178">SUPER ADMIN</text>
+      <rect x="10" y="260" width="1160" height="100" rx="8" fill="none" stroke="currentColor" stroke-opacity=".25"/><text x="22" y="278">ADVISOR</text>
+    </g>
+    <!-- free user stages -->
+    <g font-size="11.5">
+      <rect x="110" y="62" width="130" height="56" rx="7" fill="none" stroke="currentColor"/><text x="175" y="84" text-anchor="middle" font-weight="700">1 Visitor</text><text x="175" y="100" text-anchor="middle" font-size="10.5">landing · blog · /tools</text>
+      <rect x="290" y="62" width="130" height="56" rx="7" fill="none" stroke="currentColor"/><text x="355" y="84" text-anchor="middle" font-weight="700">2 Sign up</text><text x="355" y="100" text-anchor="middle" font-size="10.5">Clerk → role free_user</text>
+      <rect x="470" y="62" width="130" height="56" rx="7" fill="#DDF2EA" stroke="#1D9E75"/><text x="535" y="84" text-anchor="middle" font-weight="700" fill="#14342A">3 Pathway</text><text x="535" y="100" text-anchor="middle" font-size="10.5" fill="#14342A">6 steps → first score</text>
+      <rect x="650" y="62" width="130" height="56" rx="7" fill="none" stroke="currentColor"/><text x="715" y="84" text-anchor="middle" font-weight="700">4 Weekly use</text><text x="715" y="100" text-anchor="middle" font-size="10.5">budget · goal · net worth</text>
+      <rect x="830" y="62" width="130" height="56" rx="7" fill="none" stroke="currentColor"/><text x="895" y="84" text-anchor="middle" font-weight="700">5 Interest CTA</text><text x="895" y="100" text-anchor="middle" font-size="10.5">POST /leads/from-interest</text>
+    </g>
+    <g stroke="currentColor" stroke-width="1.2" fill="none" marker-end="url(#ja)">
+      <line x1="240" y1="90" x2="290" y2="90"/><line x1="420" y1="90" x2="470" y2="90"/><line x1="600" y1="90" x2="650" y2="90"/><line x1="780" y1="90" x2="830" y2="90"/>
+    </g>
+    <!-- to super admin -->
+    <path d="M895,118 L895,190" stroke="currentColor" stroke-width="1.2" fill="none" marker-end="url(#ja)"/>
+    <text x="905" y="140" font-size="10.5">lead row, status unassigned</text>
+    <rect x="830" y="190" width="130" height="48" rx="7" fill="#FBEBD0" stroke="#B8741A"/><text x="895" y="210" text-anchor="middle" font-weight="700" fill="#14342A">6 Assign</text><text x="895" y="226" text-anchor="middle" font-size="10.5" fill="#14342A">PUT /leads/:id/assign</text>
+    <!-- to advisor -->
+    <path d="M895,238 L895,292" stroke="currentColor" stroke-width="1.2" fill="none" marker-end="url(#ja)"/>
+    <text x="905" y="262" font-size="10.5">status active</text>
+    <rect x="830" y="292" width="130" height="56" rx="7" fill="#DCE6F0" stroke="#042C53"/><text x="895" y="312" text-anchor="middle" font-weight="700" fill="#14342A">7 Work the lead</text><text x="895" y="326" text-anchor="middle" font-size="10.5" fill="#14342A">reads goals, net worth,</text><text x="895" y="339" text-anchor="middle" font-size="10.5" fill="#14342A">holdings, docs, messages</text>
+    <!-- promotion -->
+    <path d="M960,320 L1010,320" stroke="currentColor" stroke-width="1.2" fill="none" marker-end="url(#ja)"/>
+    <rect x="1010" y="292" width="150" height="56" rx="7" fill="#042C53"/><text x="1085" y="312" text-anchor="middle" font-weight="700" fill="#ffffff">Promote</text><text x="1085" y="326" text-anchor="middle" font-size="10.5" fill="#ffffff">PUT /leads/:id {status:client}</text><text x="1085" y="339" text-anchor="middle" font-size="10.5" fill="#ffffff">role → investment_client</text>
+    <!-- promotion line up to free lane -->
+    <path d="M1085,292 L1085,118" stroke="#042C53" stroke-width="1.2" stroke-dasharray="4 3" fill="none" marker-end="url(#ja)"/>
+    <rect x="1010" y="62" width="150" height="56" rx="7" fill="none" stroke="#042C53" stroke-dasharray="4 3"/><text x="1085" y="84" text-anchor="middle" font-weight="700">8 Client onboarding</text><text x="1085" y="100" text-anchor="middle" font-size="10.5">bridges pathway steps 1–3</text>
+    <!-- carry-over box -->
+    <rect x="10" y="372" width="1160" height="88" rx="8" fill="none" stroke="currentColor" stroke-opacity=".25"/>
+    <text x="22" y="392" font-weight="700" font-size="11.5">WHAT CROSSES THE PROMOTION LINE</text>
+    <text x="22" y="412" font-size="11.5"><tspan fill="#1D9E75" font-weight="700">Carries over:</tspan> financial_goals (same table) · assets and liabilities (same table) · profiles (name, currency, risk, totals) · pathway formData, re-read by client onboarding as prefill</text>
+    <text x="22" y="430" font-size="11.5"><tspan fill="#C2452D" font-weight="700">Stranded:</tspan> budget_entries and budget_transactions (client budget uses client_budget_months) · health_scores history (different formula, same table) · milestones, streak, weekly tip, dismissals (browser localStorage only)</text>
+    <text x="22" y="448" font-size="11.5"><tspan fill="#B8741A" font-weight="700">Never produced:</tspan> the schema's anonymous quiz (quizResult, healthScore on leads) has no frontend caller; the public POST /leads is used only by the advisor's own form.</text>
+  </g>
+</svg>
+<figcaption>Stage 3 is the only step that produces a health score, so it is the real activation moment. Stage 5 is the only server-side funnel event; the other two upgrade prompts (a mailto link and a dead /book link) leave no record. Promotion is one transaction, but it copies nothing, so whatever lives in a free-tier-only table or in the browser is lost to the client experience.</figcaption>
+</figure>
+
+<h2 id="organigram">2 · Organigram of free-user functions</h2>
+<p>Six branches. Compared with the client map, two things stand out: a whole branch (habits and rewards) lives only in the browser, and the "upgrade" branch has three doors that lead to three different places.</p>
+
+<figure>
+<svg viewBox="0 0 1180 400" role="img" aria-label="Organigram: the free user at the top, six functional areas below, and under each area the functions available, with dots showing whether the data is server-side, browser-only, or reaches the advisor.">
+  <g font-family="Figtree, system-ui, sans-serif" font-size="12" fill="currentColor">
+    <rect x="490" y="14" width="200" height="44" rx="8" fill="#1D9E75"/>
+    <text x="590" y="35" text-anchor="middle" font-size="14" font-weight="700" fill="#ffffff">Free user</text>
+    <text x="590" y="50" text-anchor="middle" font-size="10.5" fill="#ffffff">role = free_user · no client_profiles row</text>
+    <line x1="590" y1="58" x2="590" y2="78" stroke="currentColor" stroke-width="1.2"/>
+    <line x1="100" y1="78" x2="1080" y2="78" stroke="currentColor" stroke-width="1.2"/>
+    <g stroke="currentColor" stroke-width="1.2">
+      <line x1="100" y1="78" x2="100" y2="96"/><line x1="296" y1="78" x2="296" y2="96"/><line x1="492" y1="78" x2="492" y2="96"/><line x1="688" y1="78" x2="688" y2="96"/><line x1="884" y1="78" x2="884" y2="96"/><line x1="1080" y1="78" x2="1080" y2="96"/>
+    </g>
+    <g font-weight="700" font-size="12.5">
+      <rect x="20" y="96" width="160" height="40" rx="7" fill="none" stroke="currentColor" stroke-width="1.2"/><text x="100" y="120" text-anchor="middle">Entry &amp; pathway</text>
+      <rect x="216" y="96" width="160" height="40" rx="7" fill="none" stroke="currentColor" stroke-width="1.2"/><text x="296" y="120" text-anchor="middle">Budget</text>
+      <rect x="412" y="96" width="160" height="40" rx="7" fill="none" stroke="currentColor" stroke-width="1.2"/><text x="492" y="120" text-anchor="middle">Goal (one slot)</text>
+      <rect x="608" y="96" width="160" height="40" rx="7" fill="none" stroke="currentColor" stroke-width="1.2"/><text x="688" y="120" text-anchor="middle">Net worth</text>
+      <rect x="804" y="96" width="160" height="40" rx="7" fill="none" stroke="currentColor" stroke-width="1.2"/><text x="884" y="120" text-anchor="middle">Score, habits, rewards</text>
+      <rect x="1000" y="96" width="160" height="40" rx="7" fill="none" stroke="currentColor" stroke-width="1.2"/><text x="1080" y="120" text-anchor="middle">Upgrade funnel</text>
+    </g>
+    <g stroke="currentColor" stroke-width="1" stroke-dasharray="2 3">
+      <line x1="32" y1="136" x2="32" y2="300"/><line x1="228" y1="136" x2="228" y2="258"/><line x1="424" y1="136" x2="424" y2="279"/><line x1="620" y1="136" x2="620" y2="237"/><line x1="816" y1="136" x2="816" y2="300"/><line x1="1012" y1="136" x2="1012" y2="258"/>
+    </g>
+    <g>
+      <circle cx="32" cy="154" r="4" fill="#1D9E75"/><text x="42" y="158">Sign up (open, Clerk)</text>
+      <circle cx="32" cy="175" r="4" fill="#1D9E75"/><text x="42" y="179">Profile sync on login</text>
+      <circle cx="32" cy="196" r="4" fill="#1D9E75"/><text x="42" y="200">Pathway step 1 basics</text>
+      <circle cx="32" cy="217" r="4" fill="#1D9E75"/><text x="42" y="221">Step 2 income · 3 expenses</text>
+      <circle cx="32" cy="238" r="4" fill="#1D9E75"/><text x="42" y="242">Step 4 goal · 5 balances</text>
+      <circle cx="32" cy="259" r="4" fill="#1D9E75"/><text x="42" y="263">Step 6 risk quiz → score</text>
+      <circle cx="32" cy="280" r="4" fill="#1D9E75"/><text x="42" y="284">Public /tools calculator</text>
+      <circle cx="32" cy="301" r="4" fill="#1D9E75"/><text x="42" y="305">Sol chat (mobile only)</text>
+    </g>
+    <g>
+      <circle cx="228" cy="154" r="4" fill="#1D9E75"/><text x="238" y="158">Monthly estimate (7 lines)</text>
+      <circle cx="228" cy="175" r="4" fill="#1D9E75"/><text x="238" y="179">Add transaction</text>
+      <circle cx="228" cy="196" r="4" fill="#C2452D"/><text x="238" y="200">Edit transaction (broken)</text>
+      <circle cx="228" cy="217" r="4" fill="#1D9E75"/><text x="238" y="221">Delete transaction</text>
+      <circle cx="228" cy="238" r="4" fill="#1D9E75"/><text x="238" y="242">Carry recurring forward</text>
+      <circle cx="228" cy="259" r="4" fill="#1D9E75"/><text x="238" y="263">Daily / monthly view</text>
+    </g>
+    <g>
+      <circle cx="424" cy="154" r="4" fill="none" stroke="#042C53" stroke-width="1.5"/><text x="434" y="158">Create goal (cap = 1)</text>
+      <circle cx="424" cy="175" r="4" fill="none" stroke="#042C53" stroke-width="1.5"/><text x="434" y="179">Edit goal</text>
+      <circle cx="424" cy="196" r="4" fill="#1D9E75"/><text x="434" y="200">Delete goal</text>
+      <circle cx="424" cy="217" r="4" fill="#B8741A"/><text x="434" y="221">Monthly auto-growth</text>
+      <circle cx="424" cy="238" r="4" fill="#1D9E75"/><text x="434" y="242">Projection &amp; status</text>
+      <circle cx="424" cy="259" r="4" fill="#B8741A"/><text x="434" y="263">Locked 2nd slot card</text>
+      <circle cx="424" cy="280" r="4" fill="#042C53"/><text x="434" y="284">Goal scenario CTA → lead</text>
+    </g>
+    <g>
+      <circle cx="620" cy="154" r="4" fill="none" stroke="#042C53" stroke-width="1.5"/><text x="630" y="158">Add asset (5 categories)</text>
+      <circle cx="620" cy="175" r="4" fill="none" stroke="#042C53" stroke-width="1.5"/><text x="630" y="179">Add liability (6 categories)</text>
+      <circle cx="620" cy="196" r="4" fill="#1D9E75"/><text x="630" y="200">Delete item (no edit UI)</text>
+      <circle cx="620" cy="217" r="4" fill="#1D9E75"/><text x="630" y="221">Net worth total (browser)</text>
+      <circle cx="620" cy="238" r="4" fill="#1D9E75"/><text x="630" y="242">Pathway balances as assets</text>
+    </g>
+    <g>
+      <circle cx="816" cy="154" r="4" fill="#1D9E75"/><text x="826" y="158">Health score 0–100 (5 parts)</text>
+      <circle cx="816" cy="175" r="4" fill="#1D9E75"/><text x="826" y="179">Recalculate · 12-row history</text>
+      <circle cx="816" cy="196" r="4" fill="#B8741A"/><text x="826" y="200">Weekly tip (browser)</text>
+      <circle cx="816" cy="217" r="4" fill="#B8741A"/><text x="826" y="221">Weekly streak (browser)</text>
+      <circle cx="816" cy="238" r="4" fill="#B8741A"/><text x="826" y="242">10 milestones (browser)</text>
+      <circle cx="816" cy="259" r="4" fill="#B8741A"/><text x="826" y="263">Reward reveal (browser)</text>
+      <circle cx="816" cy="280" r="4" fill="#B8741A"/><text x="826" y="284">Age benchmark savings rate</text>
+      <circle cx="816" cy="301" r="4" fill="#1D9E75"/><text x="826" y="305">Dashboard summary</text>
+    </g>
+    <g>
+      <circle cx="1012" cy="154" r="4" fill="#042C53"/><text x="1022" y="158">Smart upgrade card → lead</text>
+      <circle cx="1012" cy="175" r="4" fill="#C2452D"/><text x="1022" y="179">Free-tier banner → mailto</text>
+      <circle cx="1012" cy="196" r="4" fill="#C2452D"/><text x="1022" y="200">"Book a call" → /book (404)</text>
+      <circle cx="1012" cy="217" r="4" fill="#042C53"/><text x="1022" y="221">Lead visible to advisor</text>
+      <circle cx="1012" cy="238" r="4" fill="#B8741A"/><text x="1022" y="242">Assigned by super admin</text>
+      <circle cx="1012" cy="259" r="4" fill="#042C53"/><text x="1022" y="263">Promotion to client</text>
+    </g>
+    <rect x="20" y="336" width="1140" height="50" rx="7" fill="none" stroke="currentColor" stroke-width="1" stroke-dasharray="4 4"/>
+    <text x="36" y="356" font-weight="700" font-size="12.5">Reachable by direct API call, not in the free UI (audit finding F-5)</text>
+    <text x="36" y="375" font-size="11.5">the entire investment-client tier: /client/holdings, /client/budget, /client/scenarios, /client/plan, /packages, /portfolio, /tasks, /conversations, /documents, /kyc/documents; GET /client-profile/me even creates an active client_profiles row</text>
+  </g>
+</svg>
+<figcaption>Only the goal cap is enforced on the server. Everything else that distinguishes "free" from "client" is a matter of which pages are offered, so the dashed strip is the free user's real capability set today.</figcaption>
+</figure>
+<div class="legend">
+  <span><i class="dot" style="background:#1D9E75"></i> server-side, client-only data</span>
+  <span><i class="dot" style="border:1.5px solid #042C53"></i> advisor can read it once the user is a lead</span>
+  <span><i class="dot" style="background:#042C53"></i> creates or changes something the advisor or admin acts on</span>
+  <span><i class="dot" style="background:#B8741A"></i> browser-only state or UI-only rule</span>
+  <span><i class="dot" style="background:#C2452D"></i> broken or dead end</span>
+</div>
+
+<h2 id="functions">3 · Functions: input, output, and who else is in the loop</h2>
+<p>The advisor has no relationship with a free user until an interest CTA creates a lead and the super admin assigns it. From then on, four lead-scoped read routes open up. The tables below say "lead" where a link exists only after that point.</p>
+<div class="legend">
+  <span><span class="pill adv-w">writes</span> advisor creates or changes</span>
+  <span><span class="pill adv-r">reads (lead)</span> advisor can read once assigned the lead</span>
+  <span><span class="pill sa">admin</span> super-admin-specific dependency</span>
+  <span><span class="pill local">browser</span> state kept only in localStorage</span>
+  <span><span class="pill none">none</span> no path to the other role</span>
+</div>
+
+<h3>3.1 Entry and pathway</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>Function</th><th>Free-user input</th><th>Output</th><th>Advisor link</th><th>Super-admin link</th><th>Owning tables</th></tr></thead>
+<tbody>
+<tr><td class="fn">Visit</td><td>none</td><td>landing, blog, compound-interest calculator on /tools (principal, rate, years, monthly; computed in the browser, nothing saved)</td><td><span class="pill adv-w">writes</span> blog posts</td><td><span class="pill sa">admin</span> blog; draft posts are readable by slug (F-9)</td><td>blog_posts</td></tr>
+<tr><td class="fn">Sign up</td><td>Clerk form (email, password or social)</td><td>Clerk session; first API call creates the profile as free_user</td><td><span class="pill none">none</span></td><td><span class="pill sa">admin</span> the same upsert grants super_admin if the body email matches the env var (F-1)</td><td>Clerk · profiles</td></tr>
+<tr><td class="fn">Pathway step 1 basics</td><td>age, lifeStage, isExpat, currency</td><td>step saved; profile currency and isExpat updated</td><td><span class="pill none">none</span></td><td>—</td><td>pathway_progress.formData <em>and</em> profiles</td></tr>
+<tr><td class="fn">Step 2 income</td><td>income (&gt;0), incomeTypes[], stability</td><td>step saved</td><td><span class="pill none">none</span></td><td>—</td><td>pathway_progress.formData only (income is not written to budget_entries until step 3)</td></tr>
+<tr><td class="fn">Step 3 expenses</td><td>housing, food, transport, utilities, entertainment, other</td><td>step saved; a budget row is inserted (a new one every time the step is completed)</td><td><span class="pill none">none</span></td><td>—</td><td>pathway_progress.formData <em>and</em> budget_entries</td></tr>
+<tr><td class="fn">Step 4 goal</td><td>goalType (required), title, target, month, year</td><td>the single goal is created, or the existing first goal is overwritten and any others deleted</td><td><span class="pill adv-r">reads (lead)</span></td><td>—</td><td>pathway_progress.formData <em>and</em> financial_goals</td></tr>
+<tr><td class="fn">Step 5 balances</td><td>savings, investments (or none), debts (or debt-free), savingsRatePercent, investmentRatePercent</td><td>two assets ("Cash &amp; Savings", "Investments") and one liability ("Total Debts") upserted by name; profile totals and rates updated</td><td><span class="pill adv-r">reads (lead)</span> via net worth</td><td>—</td><td>pathway formData <em>and</em> assets/liabilities <em>and</em> profiles.totalSavings/totalInvestments/rates <em>and</em> localStorage rates</td></tr>
+<tr><td class="fn">Step 6 risk quiz</td><td>5 answers</td><td>riskProfile; onboardingComplete=true; first health score computed</td><td><span class="pill adv-r">reads (lead)</span> riskProfile is on profiles, not on the lead</td><td>—</td><td>pathway formData · profiles.riskProfile · health_scores</td></tr>
+<tr><td class="fn">Autosave</td><td>any field, 800 ms debounce</td><td>step status in_progress</td><td>—</td><td>—</td><td>pathway_progress</td></tr>
+<tr><td class="fn">Sol chat</td><td>free text (mobile bottom nav only)</td><td>reply with tool access to goals, budget_entries, assets, liabilities, health score</td><td><span class="pill none">none</span></td><td>—</td><td>sol_conversations · sol_messages (no rate limit, F-13)</td></tr>
+</tbody></table></div>
+
+<h3>3.2 Budget</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>Function</th><th>Free-user input</th><th>Output</th><th>Advisor link</th><th>Super-admin link</th><th>Owning tables</th></tr></thead>
+<tbody>
+<tr><td class="fn">Monthly estimate</td><td>income, housing, food, transport, utilities, entertainment, other</td><td>needs / wants / savings actuals and savings-rate %, computed server-side</td><td><span class="pill none">none</span> (no advisor budget route for leads or clients)</td><td>—</td><td>budget_entries (no uniqueness per month)</td></tr>
+<tr><td class="fn">Add transaction</td><td>description*, amount (&gt;0), income/expense, category, date, recurring</td><td>transaction row; daily and monthly views</td><td><span class="pill none">none</span></td><td>—</td><td>budget_transactions</td></tr>
+<tr><td class="fn">Edit transaction</td><td>same</td><td><strong>always fails</strong>: the page calls a route that does not exist (F-19)</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td class="fn">Delete transaction</td><td>id</td><td>204</td><td>—</td><td>—</td><td>budget_transactions</td></tr>
+<tr><td class="fn">Carry forward</td><td>targetMonth</td><td>copies of last month's recurring rows (not idempotent: repeat = duplicates)</td><td>—</td><td>—</td><td>budget_transactions</td></tr>
+<tr><td class="fn">Dashboard backfill</td><td>none (one-time effect)</td><td>expenses copied from pathway step 3 into the budget row if empty</td><td>—</td><td>—</td><td>pathway formData → budget_entries</td></tr>
+</tbody></table></div>
+
+<h3>3.3 Goal (one slot)</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>Function</th><th>Free-user input</th><th>Output</th><th>Advisor link</th><th>Super-admin link</th><th>Owning tables</th></tr></thead>
+<tbody>
+<tr><td class="fn">Create goal</td><td>title*, goalType (11), currency USD/VND, targetAmount (&gt; current), currentAmount, monthlyContribution, targetDate</td><td>goal with free-tier projection: months remaining, required monthly saving, projected amount, status on_track / almost / off_track; <strong>403 on the second goal</strong>, shown as a generic error because the Add button stays enabled</td><td><span class="pill adv-r">reads (lead)</span> GET /advisor/leads/:id/goals</td><td>—</td><td>financial_goals (the only server-side tier limit in the app)</td></tr>
+<tr><td class="fn">Edit goal</td><td>same fields</td><td>updated goal</td><td><span class="pill adv-r">reads (lead)</span></td><td>—</td><td>financial_goals</td></tr>
+<tr><td class="fn">Delete goal</td><td>confirm</td><td>204; cascades links and snapshots</td><td>—</td><td>—</td><td>financial_goals</td></tr>
+<tr><td class="fn">Monthly auto-growth</td><td>none (effect once per month per browser)</td><td>currentAmount overwritten with cash + savings interest + investment gain</td><td><span class="pill none">none</span></td><td>—</td><td>financial_goals.currentAmount; gate in localStorage, so a second device applies it again</td></tr>
+<tr><td class="fn">Locked second slot</td><td>click</td><td>link to /book, which is a 404</td><td>—</td><td>—</td><td>UI only</td></tr>
+<tr><td class="fn">Goal scenario CTA</td><td>click</td><td>lead created with source goal_scenario_cta</td><td><span class="pill adv-w">writes</span> lead appears in the pipeline once assigned</td><td><span class="pill sa">admin</span> assigns it</td><td>leads</td></tr>
+</tbody></table></div>
+
+<h3>3.4 Net worth</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>Function</th><th>Free-user input</th><th>Output</th><th>Advisor link</th><th>Super-admin link</th><th>Owning tables</th></tr></thead>
+<tbody>
+<tr><td class="fn">Add asset</td><td>name*, category (cash, savings, investment, property, other), value (&gt;0), currency</td><td>asset row</td><td><span class="pill adv-r">reads (lead)</span> GET /advisor/leads/:id/networth</td><td>—</td><td>assets (shared with clients)</td></tr>
+<tr><td class="fn">Add liability</td><td>name*, category (6), balance (&gt;0), interest rate</td><td>liability row</td><td><span class="pill adv-r">reads (lead)</span></td><td>—</td><td>liabilities</td></tr>
+<tr><td class="fn">Delete item</td><td>id</td><td>204 (there is no edit sheet on the free page)</td><td>—</td><td>—</td><td>assets · liabilities</td></tr>
+<tr><td class="fn">Net worth total</td><td>none</td><td>assets − liabilities, summed in the browser; the health score sums it again server-side with a fallback to profile totals</td><td>—</td><td>—</td><td>computed twice</td></tr>
+</tbody></table></div>
+
+<h3>3.5 Score, habits, rewards</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>Function</th><th>Free-user input</th><th>Output</th><th>Advisor link</th><th>Super-admin link</th><th>Owning tables</th></tr></thead>
+<tbody>
+<tr><td class="fn">Health score</td><td>none (reads budget, goal, pathway, assets, liabilities, profile)</td><td>overall 0–100 = savings rate 25 + goal 25 + net worth 20 + wealth growth 20 + pathway completion 10, plus insights; a new row on every call</td><td><span class="pill none">none</span> (the lead row carries its own healthScore column, never filled by the app)</td><td>—</td><td>health_scores (shared with the client formula)</td></tr>
+<tr><td class="fn">Weekly tip</td><td>none</td><td>one tip chosen in the browser from savings rate, score, goal status, age benchmark, streak, expat flag, investment rate</td><td><span class="pill none">none</span></td><td>—</td><td><span class="pill local">browser</span> week key only</td></tr>
+<tr><td class="fn">Streak</td><td>opening the dashboard</td><td>weeks in a row</td><td><span class="pill none">none</span></td><td>—</td><td><span class="pill local">browser</span> wealthapp_streak_v1</td></tr>
+<tr><td class="fn">Milestones</td><td>none</td><td>10 badges: goal setter, plan starter, 4-week and 3-month streak, net worth positive, 20% saver, on the money, score 70+, score 80+, budget habit; reward reveal animation</td><td><span class="pill none">none</span></td><td>—</td><td><span class="pill local">browser</span> wealthapp_milestones_v1</td></tr>
+<tr><td class="fn">Rates</td><td>savingsRatePercent, investmentRatePercent (pathway step 5)</td><td>used by projection and tip</td><td>—</td><td>—</td><td>profiles <em>and</em> <span class="pill local">browser</span> wealthapp_savings_rate / investment_rate</td></tr>
+<tr><td class="fn">Dismissals</td><td>close banner / CTA</td><td>hidden on this device only</td><td>—</td><td>—</td><td><span class="pill local">browser</span> 4 keys</td></tr>
+</tbody></table></div>
+
+<h3>3.6 Upgrade funnel</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>Function</th><th>Free-user input</th><th>Output</th><th>Advisor link</th><th>Super-admin link</th><th>Owning tables</th></tr></thead>
+<tbody>
+<tr><td class="fn">Smart upgrade card</td><td>click (shown when score or goal status warrants it)</td><td>lead created or re-touched with source smart_upgrade_card, then redirect</td><td><span class="pill adv-w">writes</span> visible in the pipeline after assignment; advisor edits status and notes</td><td><span class="pill sa">admin</span> PUT /leads/:id/assign sets the advisor and status active</td><td>leads (email, firstName copied from profile; userId linked)</td></tr>
+<tr><td class="fn">Free-tier banner</td><td>click</td><td>opens a mailto to hello@tala.app; no record</td><td><span class="pill none">none</span></td><td>—</td><td>—</td></tr>
+<tr><td class="fn">Book a call</td><td>click (locked slot, dashboard, goal card)</td><td>/book → not found; one button has no handler at all</td><td><span class="pill none">none</span></td><td>—</td><td>—</td></tr>
+<tr><td class="fn">Being worked as a lead</td><td>none</td><td>nothing visible to the free user: no notification, no "your advisor" card, no message thread until promoted</td><td><span class="pill adv-r">reads (lead)</span> goals, net worth, holdings, documents; <span class="pill adv-w">writes</span> documents for the lead, status, notes</td><td><span class="pill sa">admin</span> sees all leads</td><td>leads · documents</td></tr>
+<tr><td class="fn">Promotion</td><td>none</td><td>next login redirects to client onboarding, prefilled from pathway steps 1–3 and the existing goal</td><td><span class="pill adv-w">writes</span> PUT /leads/:id {status:"client"} runs the promotion transaction; any advisor can do this to any lead (F-7)</td><td>—</td><td>profiles.role · client_profiles · leads.convertedUserId</td></tr>
+</tbody></table></div>
+
+<h2 id="truth">4 · Source-of-truth map</h2>
+<p>For the investment client the central duplication was net worth. For the free user it is the pathway: the wizard stores a full copy of every answer in <code>pathway_progress.formData</code> and also writes the same answers into five owner tables, and later code reads from the copy. The before/after below shows that mechanism.</p>
+
+<figure>
+<svg viewBox="0 0 1160 400" role="img" aria-label="Before and after of the pathway wizard. Before: each step writes its answers both into pathway_progress formData and into owner tables (profiles, budget_entries, financial_goals, assets, liabilities), and the dashboard backfill and client onboarding later read from the formData copy. After: the wizard writes only the owner tables plus a step status, and every reader uses the owner tables.">
+  <defs><marker id="pa" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="currentColor"/></marker></defs>
+  <g font-family="Figtree, system-ui, sans-serif" font-size="12" fill="currentColor">
+    <text x="20" y="24" font-weight="700" font-size="14">Today: every answer is stored twice</text>
+    <rect x="20" y="50" width="120" height="150" rx="7" fill="none" stroke="currentColor"/>
+    <text x="80" y="72" text-anchor="middle" font-weight="700" font-size="11.5">Pathway wizard</text>
+    <text x="80" y="92" text-anchor="middle" font-size="10.5">step 1 basics</text><text x="80" y="108" text-anchor="middle" font-size="10.5">step 2 income</text><text x="80" y="124" text-anchor="middle" font-size="10.5">step 3 expenses</text><text x="80" y="140" text-anchor="middle" font-size="10.5">step 4 goal</text><text x="80" y="156" text-anchor="middle" font-size="10.5">step 5 balances</text><text x="80" y="172" text-anchor="middle" font-size="10.5">step 6 risk</text>
+    <!-- copy store -->
+    <rect x="220" y="50" width="150" height="40" rx="7" fill="#F9E1DC" stroke="#C2452D"/><text x="295" y="68" text-anchor="middle" font-weight="700" fill="#14342A">pathway_progress</text><text x="295" y="82" text-anchor="middle" font-size="10.5" fill="#14342A">formData = full copy</text>
+    <!-- owner tables -->
+    <g font-size="11">
+      <rect x="220" y="110" width="150" height="24" rx="6" fill="none" stroke="currentColor"/><text x="295" y="126" text-anchor="middle">profiles (currency, risk, totals, rates)</text>
+      <rect x="220" y="142" width="150" height="24" rx="6" fill="none" stroke="currentColor"/><text x="295" y="158" text-anchor="middle">budget_entries</text>
+      <rect x="220" y="174" width="150" height="24" rx="6" fill="none" stroke="currentColor"/><text x="295" y="190" text-anchor="middle">financial_goals</text>
+      <rect x="220" y="206" width="150" height="24" rx="6" fill="none" stroke="currentColor"/><text x="295" y="222" text-anchor="middle">assets / liabilities</text>
+      <rect x="220" y="238" width="150" height="24" rx="6" fill="none" stroke="currentColor"/><text x="295" y="254" text-anchor="middle">health_scores</text>
+    </g>
+    <g stroke="currentColor" stroke-width="1" fill="none" marker-end="url(#pa)">
+      <path d="M140,100 C180,100 180,70 220,70"/>
+      <path d="M140,110 C180,110 180,122 220,122"/><path d="M140,124 C180,124 180,154 220,154"/><path d="M140,140 C180,140 180,186 220,186"/><path d="M140,156 C180,156 180,218 220,218"/><path d="M140,172 C180,172 180,250 220,250"/>
+    </g>
+    <!-- readers of the copy -->
+    <g font-size="11">
+      <rect x="430" y="50" width="150" height="40" rx="7" fill="#DDF2EA" stroke="#1D9E75"/><text x="505" y="68" text-anchor="middle" fill="#14342A">Dashboard backfill</text><text x="505" y="82" text-anchor="middle" font-size="10.5" fill="#14342A">reads step 3 copy</text>
+      <rect x="430" y="100" width="150" height="40" rx="7" fill="#DDF2EA" stroke="#1D9E75"/><text x="505" y="118" text-anchor="middle" fill="#14342A">Client onboarding</text><text x="505" y="132" text-anchor="middle" font-size="10.5" fill="#14342A">prefills from steps 1–3 copy</text>
+      <rect x="430" y="150" width="150" height="40" rx="7" fill="#DDF2EA" stroke="#1D9E75"/><text x="505" y="168" text-anchor="middle" fill="#14342A">Health score</text><text x="505" y="182" text-anchor="middle" font-size="10.5" fill="#14342A">reads owner tables + profile fallback</text>
+      <rect x="430" y="200" width="150" height="40" rx="7" fill="#DDF2EA" stroke="#1D9E75"/><text x="505" y="218" text-anchor="middle" fill="#14342A">Free pages</text><text x="505" y="232" text-anchor="middle" font-size="10.5" fill="#14342A">read owner tables</text>
+    </g>
+    <g stroke="#C2452D" stroke-width="1.2" fill="none" stroke-dasharray="3 3" marker-end="url(#pa)">
+      <path d="M370,70 L430,70"/><path d="M370,76 C400,76 400,120 430,120"/>
+    </g>
+    <g stroke="currentColor" stroke-width="1" fill="none" marker-end="url(#pa)">
+      <path d="M370,154 C400,154 400,170 430,170"/><path d="M370,218 C400,218 400,176 430,176"/><path d="M370,122 C400,122 400,180 430,180"/>
+      <path d="M370,158 C400,158 400,220 430,220"/><path d="M370,186 C400,186 400,224 430,224"/><path d="M370,222 C400,222 400,228 430,228"/>
+    </g>
+    <text x="20" y="300" font-size="11.5">Edit a budget on /free/budget and the pathway copy keeps the old figure; the dashboard backfill and</text>
+    <text x="20" y="316" font-size="11.5">client onboarding then resurrect it. Step 3 also inserts a fresh budget row on every completion.</text>
+
+    <line x1="620" y1="40" x2="620" y2="380" stroke="currentColor" stroke-width="1" stroke-dasharray="4 4"/>
+
+    <text x="650" y="24" font-weight="700" font-size="14">Target: the wizard is a view over the owner tables</text>
+    <rect x="650" y="50" width="120" height="150" rx="7" fill="none" stroke="currentColor"/>
+    <text x="710" y="72" text-anchor="middle" font-weight="700" font-size="11.5">Pathway wizard</text>
+    <text x="710" y="92" text-anchor="middle" font-size="10.5">reads &amp; writes</text><text x="710" y="108" text-anchor="middle" font-size="10.5">owner tables only</text>
+    <text x="710" y="140" text-anchor="middle" font-size="10.5">unsaved draft:</text><text x="710" y="156" text-anchor="middle" font-size="10.5">browser only</text>
+    <rect x="850" y="50" width="150" height="40" rx="7" fill="none" stroke="currentColor" stroke-dasharray="4 3"/><text x="925" y="68" text-anchor="middle" font-weight="700">pathway_progress</text><text x="925" y="82" text-anchor="middle" font-size="10.5">step, status, completedAt only</text>
+    <g font-size="11">
+      <rect x="850" y="110" width="150" height="24" rx="6" fill="none" stroke="currentColor"/><text x="925" y="126" text-anchor="middle">profiles</text>
+      <rect x="850" y="142" width="150" height="24" rx="6" fill="none" stroke="currentColor"/><text x="925" y="158" text-anchor="middle">client_budget_months (both tiers)</text>
+      <rect x="850" y="174" width="150" height="24" rx="6" fill="none" stroke="currentColor"/><text x="925" y="190" text-anchor="middle">financial_goals</text>
+      <rect x="850" y="206" width="150" height="24" rx="6" fill="none" stroke="currentColor"/><text x="925" y="222" text-anchor="middle">assets / liabilities</text>
+    </g>
+    <g stroke="currentColor" stroke-width="1" fill="none" marker-end="url(#pa)">
+      <path d="M770,100 C810,100 810,70 850,70"/><path d="M770,110 C810,110 810,122 850,122"/><path d="M770,120 C810,120 810,154 850,154"/><path d="M770,130 C810,130 810,186 850,186"/><path d="M770,140 C810,140 810,218 850,218"/>
+    </g>
+    <rect x="1030" y="110" width="120" height="120" rx="7" fill="#DDF2EA" stroke="#1D9E75"/>
+    <text x="1090" y="132" text-anchor="middle" font-weight="700" font-size="11.5" fill="#14342A">All readers</text>
+    <text x="1090" y="152" text-anchor="middle" font-size="10.5" fill="#14342A">free pages</text><text x="1090" y="168" text-anchor="middle" font-size="10.5" fill="#14342A">health score</text><text x="1090" y="184" text-anchor="middle" font-size="10.5" fill="#14342A">client onboarding</text><text x="1090" y="200" text-anchor="middle" font-size="10.5" fill="#14342A">advisor lead view</text><text x="1090" y="216" text-anchor="middle" font-size="10.5" fill="#14342A">Sol</text>
+    <path d="M1000,170 L1030,170" stroke="currentColor" stroke-width="1" fill="none" marker-end="url(#pa)"/>
+    <text x="650" y="300" font-size="11.5">Resuming the wizard re-reads the owner tables, so it always shows what the rest of the app shows.</text>
+    <text x="650" y="316" font-size="11.5">Promotion needs no bridge: client onboarding reads the same rows the free user already filled.</text>
+  </g>
+</svg>
+<figcaption>Left: the pathway stores every answer twice and two later features read the copy rather than the owner. Right: the wizard becomes a guided editor over the owner tables, keeping only step status; the copy and the two bridges disappear.</figcaption>
+</figure>
+
+<h3>4.1 All free-user facts with more than one source today</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>Fact</th><th>Where it lives today</th><th>How it drifts</th><th>Proposed single owner</th><th>Everything else becomes</th></tr></thead>
+<tbody>
+<tr><td class="fn">Pathway answers</td><td><span class="pill dup">2 copies</span> pathway_progress.formData for every step · the owner table each step also writes</td><td>Later edits on budget, goals or net worth pages do not update the copy; dashboard backfill and client onboarding read the stale copy</td><td><span class="pill one">one</span> the owner tables</td><td>pathway_progress keeps step number, status and completedAt only; wizard resumes by reading owner tables.</td></tr>
+<tr><td class="fn">Savings and investment balances</td><td><span class="pill dup">3 copies</span> profiles.totalSavings / totalInvestments · assets rows named "Cash &amp; Savings" and "Investments" (upsert-by-name) · pathway step 5 copy</td><td>Health score prefers asset rows and falls back to profile totals; renaming or deleting the named asset silently switches the source</td><td><span class="pill one">one</span> assets rows (category cash/savings/investment)</td><td>Drop profiles.totalSavings / totalInvestments; upsert-by-name replaced by an id-based update of the row the wizard created.</td></tr>
+<tr><td class="fn">Expected rates</td><td><span class="pill dup">3 copies</span> profiles.savingsRatePercent / investmentRatePercent · localStorage wealthapp_savings_rate / investment_rate · pathway step 5 copy</td><td>Projection and tip can run on a different rate than the server's health score</td><td><span class="pill one">one</span> profiles (later: per asset row, as expectedAnnualReturnPct is for client holdings)</td><td>Browser reads from the profile query; localStorage keys removed.</td></tr>
+<tr><td class="fn">Monthly budget</td><td><span class="pill dup">3 sources</span> budget_entries (estimate, duplicates per month allowed) · budget_transactions (actuals) · pathway step 3 copy; separately client_budget_months for clients</td><td>Pathway inserts a new estimate row on each completion; the page picks the first match, the score picks the latest periodMonth; promoted clients lose the whole budget</td><td><span class="pill one">one</span> client_budget_months for both tiers (free fields as a subset) with a unique (user, month) index; transactions as a ledger beneath it</td><td>budget_entries migrated and dropped; estimate vs actual becomes two columns of one month row.</td></tr>
+<tr><td class="fn">Goal current amount</td><td><span class="pill dup">2 writers</span> manual currentAmount · monthly auto-growth that overwrites it (gated per browser)</td><td>Two devices apply growth twice; promotion then exposes the inflated figure to the advisor and to the client's pacing status</td><td><span class="pill one">one</span> currentAmount is manual; projected growth is computed on read, never written</td><td>Remove POST /goals/auto-update.</td></tr>
+<tr><td class="fn">Goal status</td><td><span class="pill dup">2 vocabularies</span> on_track / almost / off_track stored by the free projection · active / paused / completed / cancelled accepted by the status route</td><td>Stored status goes stale the moment inputs change; a reopened goal scores 5/25</td><td><span class="pill one">one</span> lifecycle enum stored; pacing derived on read by one goal-math function shared with the client tier</td><td>Drop status from POST/PUT goal bodies.</td></tr>
+<tr><td class="fn">Net worth</td><td><span class="pill dup">2 formulas</span> browser sum of assets − liabilities on the dashboard · server sum inside the health score with profile-total fallback</td><td>Dashboard ring and score insight can disagree when profile totals and asset rows differ</td><td><span class="pill one">one</span> the same net worth service proposed for clients, with holdings and plans contributing zero for a free user</td><td>Browser stops summing; the ring reads the service.</td></tr>
+<tr><td class="fn">Health score</td><td><span class="pill dup">2 formulas, 1 table</span> free formula (5 parts) and client formula (4 parts) in health_scores, told apart only by a null details column; a new row on every call</td><td>Repeated recalculation crowds the 12-row history; after promotion the history mixes scales</td><td><span class="pill one">one</span> scoring service with a tier column, one row per user per day</td><td>GET is a pure read; recalculation replaces today's row.</td></tr>
+<tr><td class="fn">Onboarding complete</td><td><span class="pill dup">3 signals</span> profiles.onboardingComplete (set at step 6) · six pathway_progress step statuses · onboarding_cta_dismissed in localStorage</td><td>A user who finished steps 1–5 is "incomplete" to the profile but "5 of 6" to the score; the dismissed banner hides the hint on one device only</td><td><span class="pill one">one</span> profiles.onboardingStage enum shared with the client stage proposal</td><td>Pathway completion % derived from the stage.</td></tr>
+<tr><td class="fn">Habits and rewards</td><td><span class="pill local">browser only</span> streak, milestones, weekly tip week, four dismissal flags</td><td>Lost on a new device or cleared storage; invisible to the advisor who is deciding whether this lead is engaged; "Score 70+" badge can be re-earned from a stale score</td><td><span class="pill one">one</span> a user_engagement table (streak weeks, last check-in, earned milestones with dates, tip shown)</td><td>Browser caches it for instant render; advisor lead view shows engagement; promotion carries it.</td></tr>
+<tr><td class="fn">Lead identity</td><td><span class="pill dup">3 copies</span> leads.email and leads.firstName copied from profiles · leads.healthScore and quizResult (never written by the app) · leads.userId link</td><td>Name or email changes on the profile do not reach the lead; the pipeline shows a score column that is always empty for app users</td><td><span class="pill one">one</span> for linked leads, profile fields come from a join on userId; the lead row holds only funnel facts (source, status, notes, assigned advisor, timestamps)</td><td>email / firstName kept only for anonymous leads; healthScore read from health_scores through the join.</td></tr>
+<tr><td class="fn">Upgrade intent</td><td><span class="pill dup">3 doors</span> smart upgrade card → lead · free-tier banner → mailto · locked slot and "book a call" → /book (404)</td><td>Two of three upgrade clicks leave no record; the funnel under-counts and the user gets a dead end</td><td><span class="pill one">one</span> every upgrade control calls the same interest action with its own source value</td><td>Remove the mailto; make /book either a real booking page or a redirect to the interest flow.</td></tr>
+</tbody></table></div>
+
+<div class="callout warn">
+<strong>Tier boundary is not a data fact today.</strong> Role is the only thing that separates a free user from a client, and only the one-goal cap checks it. Any source-of-truth design for the free tier has to assume the same tables serve both tiers, which is also the simplest way to make promotion lossless.
+</div>
+
+<h2 id="recommend">5 · Recommendations for the free-user architecture</h2>
+<div class="grid">
+  <div class="card"><h4>1. Same tables for both tiers</h4><p>Goals, assets, liabilities and budget already share tables except for budget. Move the free budget onto client_budget_months and the free score onto the shared scoring service, and promotion becomes a role flip with nothing to migrate and nothing stranded.</p></div>
+  <div class="card"><h4>2. Pathway writes owners, stores status</h4><p>Each step becomes a form bound to the owner table it edits. pathway_progress keeps step, status and completedAt. The dashboard backfill and the client-onboarding bridge are deleted because they no longer have anything to bridge.</p></div>
+  <div class="card"><h4>3. One tier policy module</h4><p>Limits (one goal, locked slot, which pages) live in one server module that both the API and the UI ask. The Add button is disabled from the same answer that makes the API return 403, so the user never sees a generic failure.</p></div>
+  <div class="card"><h4>4. Role check on the client tier</h4><p>Until the tiers truly share one model, put requireRole on the /client, scenarios, packages, portfolio and plan routers so the free user's real capability set equals the free UI (closes F-5).</p></div>
+  <div class="card"><h4>5. Engagement is a server fact</h4><p>Streak, milestones and tip history move to a user_engagement table. The advisor's lead view gains an engagement panel, which is the signal they most need to prioritise leads, and the free user keeps their badges across devices and across promotion.</p></div>
+  <div class="card"><h4>6. One upgrade action</h4><p>All upgrade controls call the interest action with a source value. Add a lightweight "we have passed you to an advisor" state on the free dashboard, driven by the lead status, so the user sees something happen after they raise their hand.</p></div>
+  <div class="card"><h4>7. Lead reads the profile, never copies it</h4><p>For linked leads, name, email, score and risk profile come through the userId join. The lead row is the funnel record only. This also removes the never-used quizResult column or gives it a real producer.</p></div>
+  <div class="card"><h4>8. Computed values are never written</h4><p>Goal growth, goal status, net worth and savings rate are computed on read by the shared goal-math and net worth services. Remove POST /goals/auto-update and the stored projection status.</p></div>
+  <div class="card"><h4>9. Fix the two dead ends first</h4><p>Transaction edit calls a route that does not exist, and three upgrade links go to /book which is a 404. Both are small changes with immediate user impact and should ship before any restructuring.</p></div>
+</div>
+
+<h2 id="migration">6 · Migration order (safe sequence)</h2>
+<ol class="steps">
+  <li><strong>Quick fixes.</strong> Add <code>PUT /budget/transactions/:id</code>; replace /book and the mailto with the interest action; disable the Add-goal button at the cap. No schema change.</li>
+  <li><strong>Role guard.</strong> requireRole("investment_client","super_admin") on the client routers; stop GET /client-profile/me from creating rows. Closes F-5 and defines the free capability set.</li>
+  <li><strong>Constraints.</strong> Unique (user, month) on budget tables, unique (user, date) on health_scores, CHECK on goal status. Surfaces duplicates created by the pathway before logic moves.</li>
+  <li><strong>Scoring service.</strong> One service with a tier column; free and client GET become reads; recalculation replaces today's row. Fix the "Score 70+" milestone to read it.</li>
+  <li><strong>Pathway rewrite.</strong> Steps bound to owner tables; formData dropped after a one-off backfill of any owner row that is still empty; delete the dashboard backfill and the client-onboarding bridge; upsert-by-name replaced by id-based updates.</li>
+  <li><strong>Budget unification.</strong> Migrate budget_entries into client_budget_months (free fields as a subset) and budget_transactions into the ledger; point free pages at the client budget routes behind the tier policy.</li>
+  <li><strong>Goal math.</strong> Remove auto-update and stored projection status; one computeGoalProgress for both tiers; pacing derived on read.</li>
+  <li><strong>Engagement table.</strong> user_engagement with streak, milestones, tip history; browser becomes a cache; advisor lead view shows it.</li>
+  <li><strong>Lead normalisation.</strong> Profile fields through the join for linked leads; drop the copied columns or restrict them to anonymous leads; remove or implement quizResult.</li>
+</ol>
+<div class="callout">
+Steps 1 to 3 are a week of work and remove the most visible defects. Steps 4 to 7 are the same services the investment-client plan needs, so they should be built once and shared rather than done per tier.
+</div>
+</main>
+
+</body>
+</html>

@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Free Tier Conversion Journey</title>
+</head>
+<body>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column (max 1120px); diagrams and tables scroll sideways inside their own box. tala palette: green / navy / paper. */
+:root{
+  --bg:#FDF6EC; --surface:#FFFFFF; --fg:#14342A; --muted:#5E6F67; --hair:#E9DFCE;
+  --green:#1D9E75; --green-soft:#DDF2EA; --navy:#042C53; --navy-soft:#DCE6F0;
+  --amber:#B8741A; --amber-soft:#FBEBD0; --red:#C2452D; --red-soft:#F9E1DC;
+  --font-body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F1A16; --surface:#18251F; --fg:#EAF2EC; --muted:#9FB3A8; --hair:#2A3A32;
+  --green:#3DC79A; --green-soft:#153A2E; --navy:#9DC1E6; --navy-soft:#1B2C3E;
+  --amber:#E2A24C; --amber-soft:#3B2C14; --red:#F08A75; --red-soft:#3E1F1A; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#0F1A16; --surface:#18251F; --fg:#EAF2EC; --muted:#9FB3A8; --hair:#2A3A32;
+  --green:#3DC79A; --green-soft:#153A2E; --navy:#9DC1E6; --navy-soft:#1B2C3E;
+  --amber:#E2A24C; --amber-soft:#3B2C14; --red:#F08A75; --red-soft:#3E1F1A; color-scheme:dark }
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 64px}
+main{max-width:1120px;margin:0 auto}
+header.top{padding-block:40px 24px;border-bottom:1px solid var(--hair);margin-bottom:32px}
+.eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--green);font-weight:600}
+h1{font-size:34px;line-height:1.1;margin:6px 0 12px;font-weight:700;letter-spacing:-.02em;text-wrap:balance}
+h2{font-size:24px;margin:48px 0 8px;letter-spacing:-.01em;text-wrap:balance}
+h3{font-size:17px;margin:28px 0 8px}
+p{max-width:68ch;margin:0 0 12px}
+p.lede{font-size:17px;color:var(--muted);max-width:72ch}
+nav.toc{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+nav.toc a{font-size:13px;color:var(--navy);text-decoration:none;border:1px solid var(--hair);border-radius:999px;padding:4px 12px;background:var(--surface)}
+nav.toc a:hover,nav.toc a:focus-visible{border-color:var(--green);outline:none}
+figure{margin:16px 0 8px;background:var(--surface);border:1px solid var(--hair);border-radius:12px;padding:16px;overflow-x:auto}
+figure svg{display:block;max-width:100%;height:auto;min-width:720px}
+figcaption{font-size:13px;color:var(--muted);margin-top:10px;max-width:80ch}
+.legend{display:flex;flex-wrap:wrap;gap:14px 22px;font-size:13px;color:var(--muted);margin:8px 0 0}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.tablewrap{overflow-x:auto;border:1px solid var(--hair);border-radius:12px;background:var(--surface);margin:12px 0 20px}
+table{border-collapse:collapse;width:100%;min-width:900px;font-size:13.5px}
+th,td{text-align:left;vertical-align:top;padding:10px 12px;border-bottom:1px solid var(--hair)}
+th{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;background:var(--bg)}
+tr:last-child td{border-bottom:0}
+td.fn{font-weight:600;min-width:140px}
+code{font-family:var(--font-mono);font-size:12px;background:var(--bg);padding:1px 5px;border-radius:4px;white-space:nowrap}
+td code{white-space:normal}
+.pill{display:inline-block;font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.pill.full{background:var(--green-soft);color:var(--green)}
+.pill.limited{background:var(--amber-soft);color:var(--amber)}
+.pill.preview{background:var(--navy-soft);color:var(--navy)}
+.pill.locked{background:var(--red-soft);color:var(--red)}
+.pill.cp{background:var(--navy);color:#fff}
+.pill.reuse{background:transparent;color:var(--green);border:1px solid var(--green)}
+.pill.new{background:transparent;color:var(--navy);border:1px solid var(--navy)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:14px 0}
+.card{background:var(--surface);border:1px solid var(--hair);border-radius:12px;padding:16px 18px}
+.card h4{margin:0 0 6px;font-size:15px}
+.card p{font-size:13.5px;margin:0;color:var(--muted)}
+ol.steps{padding-left:22px;max-width:72ch}
+ol.steps li{margin-bottom:10px}
+.callout{border-left:4px solid var(--green);background:var(--surface);padding:12px 16px;border-radius:0 10px 10px 0;margin:16px 0;max-width:78ch}
+.callout.warn{border-left-color:var(--red)}
+pre{font-family:var(--font-mono);font-size:12.5px;background:var(--surface);border:1px solid var(--hair);border-radius:10px;padding:14px 16px;overflow-x:auto;max-width:100%}
+@media (max-width:640px){h1{font-size:28px}h2{font-size:21px}}
+</style>
+
+<main>
+<header class="top">
+  <div class="eyebrow">tala wealth-app · target design · follows the investment-client and free-user audits</div>
+  <h1>Free Tier Conversion Journey</h1>
+  <p class="lede">Design for the free tier as a channel into the investment-client product: the same feature tree, the same tables, the same screens, with tier gates instead of a separate app, and conversion checkpoints placed where the user's own data shows they are ready. Nothing here needs a new data model that the client plan does not already call for.</p>
+  <nav class="toc" aria-label="Sections">
+    <a href="#thesis">1 · One product, three rungs</a>
+    <a href="#journey">2 · Journey with checkpoints</a>
+    <a href="#tree">3 · Same tree, gated</a>
+    <a href="#entitlements">4 · Entitlement matrix</a>
+    <a href="#checkpoints">5 · Checkpoint catalogue</a>
+    <a href="#state">6 · What the free user sees</a>
+    <a href="#engine">7 · Engine and source of truth</a>
+    <a href="#build">8 · Reuse, build, measure</a>
+  </nav>
+</header>
+
+<h2 id="thesis">1 · One product, three rungs</h2>
+<p>The current code already contains two products glued together: a free planner (pathway, budget_entries, one goal, health score) and a client portal (onboarding, client_budget_months, unlimited goals, wealth score). The proposal collapses them. A free user <em>is</em> a Track B client without an advisor and with limits. A Track B client is a free user plus an advisor. A Track A client is a Track B client plus an advised plan. Each rung unlocks by changing one field, not by moving data.</p>
+
+<figure>
+<svg viewBox="0 0 1120 300" role="img" aria-label="Three rungs of one product. Free tier: self-managed with limits and no advisor. Track B client: self-managed, advisor assigned, limits removed. Track A client: advised plan added. Arrows between rungs are labelled with the single field that changes and the checkpoint family that drives it.">
+  <defs><marker id="la" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="currentColor"/></marker></defs>
+  <g font-family="Figtree, system-ui, sans-serif" font-size="12" fill="currentColor">
+    <!-- rung 1 -->
+    <rect x="20" y="120" width="300" height="140" rx="10" fill="none" stroke="currentColor" stroke-width="1.2"/>
+    <text x="170" y="146" text-anchor="middle" font-weight="700" font-size="14">Free</text>
+    <text x="170" y="164" text-anchor="middle" font-size="11" fill="#5E6F67">role = free_user · advisorId = null</text>
+    <text x="36" y="190" font-size="11.5">• same onboarding, budget, goals, net worth, score, Sol</text>
+    <text x="36" y="208" font-size="11.5">• limits: 1 goal · 5 holdings · 3-month history · 1 scenario</text>
+    <text x="36" y="226" font-size="11.5">• previews of advised plan, coast point, plan page</text>
+    <text x="36" y="244" font-size="11.5">• no advisor, no messages, no documents</text>
+    <!-- rung 2 -->
+    <rect x="410" y="80" width="300" height="180" rx="10" fill="#DDF2EA" stroke="#1D9E75" stroke-width="1.2"/>
+    <text x="560" y="106" text-anchor="middle" font-weight="700" font-size="14" fill="#14342A">Self-managed client (Track B)</text>
+    <text x="560" y="124" text-anchor="middle" font-size="11" fill="#14342A">role = investment_client · advisorId set</text>
+    <text x="426" y="150" font-size="11.5" fill="#14342A">• everything in Free, limits removed</text>
+    <text x="426" y="168" font-size="11.5" fill="#14342A">• advisor card, messages, documents, KYC</text>
+    <text x="426" y="186" font-size="11.5" fill="#14342A">• financial plan and milestones from the advisor</text>
+    <text x="426" y="204" font-size="11.5" fill="#14342A">• all six scenarios, coast point, full score</text>
+    <text x="426" y="222" font-size="11.5" fill="#14342A">• off-track goals create advisor tasks</text>
+    <text x="426" y="244" font-size="11" fill="#14342A" font-style="italic">today: the existing Track B client</text>
+    <!-- rung 3 -->
+    <rect x="800" y="40" width="300" height="220" rx="10" fill="#042C53" stroke="#042C53"/>
+    <text x="950" y="66" text-anchor="middle" font-weight="700" font-size="14" fill="#fff">Advised client (Track A)</text>
+    <text x="950" y="84" text-anchor="middle" font-size="11" fill="#fff">clientTrack = track_a · advised plan inforce</text>
+    <text x="816" y="110" font-size="11.5" fill="#fff">• everything in Track B</text>
+    <text x="816" y="128" font-size="11.5" fill="#fff">• advised plans, statements, fund holdings</text>
+    <text x="816" y="146" font-size="11.5" fill="#fff">• plan premiums synced into budget</text>
+    <text x="816" y="164" font-size="11.5" fill="#fff">• goals linked to plan values</text>
+    <text x="816" y="182" font-size="11.5" fill="#fff">• blended return from holdings + plans</text>
+    <text x="816" y="244" font-size="11" fill="#fff" font-style="italic">today: the existing Track A client</text>
+    <!-- arrows -->
+    <path d="M320,190 L410,190" stroke="currentColor" stroke-width="1.5" fill="none" marker-end="url(#la)"/>
+    <text x="365" y="178" text-anchor="middle" font-size="10.5" font-weight="700">promote</text>
+    <text x="365" y="206" text-anchor="middle" font-size="10">role + advisorId</text>
+    <text x="365" y="219" text-anchor="middle" font-size="10">checkpoints C1–C7</text>
+    <path d="M710,150 L800,150" stroke="currentColor" stroke-width="1.5" fill="none" marker-end="url(#la)"/>
+    <text x="755" y="138" text-anchor="middle" font-size="10.5" font-weight="700">advise</text>
+    <text x="755" y="166" text-anchor="middle" font-size="10">first inforce plan</text>
+    <text x="755" y="179" text-anchor="middle" font-size="10">checkpoints C8–C10</text>
+    <!-- base line -->
+    <line x1="20" y1="280" x2="1100" y2="280" stroke="currentColor" stroke-width="1" stroke-dasharray="4 4"/>
+    <text x="560" y="296" text-anchor="middle" font-size="11" fill="#5E6F67">one schema · one onboarding · one goal-math · one net worth service · one scoring service · one tier policy</text>
+  </g>
+</svg>
+<figcaption>Promotion changes two fields and removes limits; advising adds one record. Because every rung runs on the same tables, nothing is migrated, nothing is re-entered, and the advisor inherits the full history the user built while free.</figcaption>
+</figure>
+
+<div class="callout">
+<strong>Why this is cheaper than it looks.</strong> The client tier already contains five Track B → Track A conversion components (surplus CTA, bring-under-management compare, goal scenario CTA, Track B conversion CTA, dashboard conversion section). The free tier needs the same components with a different destination: "talk to an advisor" instead of "message your advisor". One checkpoint engine serves both rungs.
+</div>
+
+<h2 id="journey">2 · The journey with conversion checkpoints</h2>
+<p>Checkpoints are not banners. Each one fires on the server when the user's own data crosses a threshold, records that it fired, and offers one specific thing an advisor could do with that data. The diamonds below are those moments. The lower lanes show what happens on the tala side once the user accepts one.</p>
+
+<figure>
+<svg viewBox="0 0 1180 520" role="img" aria-label="Journey map with four lanes. Free user lane: sign up, onboarding, first score, weekly use, data grows, accepts a checkpoint. Checkpoint engine lane: diamonds C1 to C7 placed under the stage that triggers them. Super admin lane: assign. Advisor lane: review lead data, message, promote. The free user lane continues as Track B client and later Track A.">
+  <defs><marker id="ja" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="currentColor"/></marker></defs>
+  <g font-family="Figtree, system-ui, sans-serif" font-size="12" fill="currentColor">
+    <g font-size="11.5" font-weight="700">
+      <rect x="10" y="30" width="1160" height="110" rx="8" fill="none" stroke="currentColor" stroke-opacity=".25"/><text x="22" y="48">FREE USER</text>
+      <rect x="10" y="150" width="1160" height="110" rx="8" fill="none" stroke="currentColor" stroke-opacity=".25"/><text x="22" y="168">CHECKPOINT ENGINE (server)</text>
+      <rect x="10" y="270" width="1160" height="70" rx="8" fill="none" stroke="currentColor" stroke-opacity=".25"/><text x="22" y="288">SUPER ADMIN</text>
+      <rect x="10" y="350" width="1160" height="110" rx="8" fill="none" stroke="currentColor" stroke-opacity=".25"/><text x="22" y="368">ADVISOR</text>
+    </g>
+    <!-- free user stages -->
+    <g font-size="11.5">
+      <rect x="40" y="62" width="120" height="52" rx="7" fill="none" stroke="currentColor"/><text x="100" y="84" text-anchor="middle" font-weight="700">Sign up</text><text x="100" y="100" text-anchor="middle" font-size="10.5">open, Clerk</text>
+      <rect x="190" y="62" width="130" height="52" rx="7" fill="none" stroke="currentColor"/><text x="255" y="84" text-anchor="middle" font-weight="700">Onboarding</text><text x="255" y="100" text-anchor="middle" font-size="10.5">same 8 screens, trimmed</text>
+      <rect x="350" y="62" width="120" height="52" rx="7" fill="#DDF2EA" stroke="#1D9E75"/><text x="410" y="84" text-anchor="middle" font-weight="700" fill="#14342A">First score</text><text x="410" y="100" text-anchor="middle" font-size="10.5" fill="#14342A">activation moment</text>
+      <rect x="500" y="62" width="130" height="52" rx="7" fill="none" stroke="currentColor"/><text x="565" y="84" text-anchor="middle" font-weight="700">Weekly use</text><text x="565" y="100" text-anchor="middle" font-size="10.5">budget · goal · net worth</text>
+      <rect x="660" y="62" width="130" height="52" rx="7" fill="none" stroke="currentColor"/><text x="725" y="84" text-anchor="middle" font-weight="700">Data grows</text><text x="725" y="100" text-anchor="middle" font-size="10.5">holdings · surplus · streak</text>
+      <rect x="820" y="62" width="130" height="52" rx="7" fill="#042C53"/><text x="885" y="84" text-anchor="middle" font-weight="700" fill="#fff">Accepts C-n</text><text x="885" y="100" text-anchor="middle" font-size="10.5" fill="#fff">"Talk to an advisor"</text>
+      <rect x="980" y="62" width="170" height="52" rx="7" fill="#DDF2EA" stroke="#1D9E75"/><text x="1065" y="84" text-anchor="middle" font-weight="700" fill="#14342A">Track B client</text><text x="1065" y="100" text-anchor="middle" font-size="10.5" fill="#14342A">same screens, limits off</text>
+    </g>
+    <g stroke="currentColor" stroke-width="1.2" fill="none" marker-end="url(#ja)">
+      <line x1="160" y1="88" x2="190" y2="88"/><line x1="320" y1="88" x2="350" y2="88"/><line x1="470" y1="88" x2="500" y2="88"/><line x1="630" y1="88" x2="660" y2="88"/><line x1="790" y1="88" x2="820" y2="88"/>
+    </g>
+    <!-- checkpoints as diamonds -->
+    <g font-size="10.5" font-weight="700">
+      <polygon points="410,180 432,202 410,224 388,202" fill="#042C53"/><text x="410" y="206" text-anchor="middle" fill="#fff">C1</text><text x="410" y="244" text-anchor="middle" font-weight="400">score ready</text>
+      <polygon points="540,180 562,202 540,224 518,202" fill="#042C53"/><text x="540" y="206" text-anchor="middle" fill="#fff">C2</text><text x="540" y="244" text-anchor="middle" font-weight="400">2nd goal</text>
+      <polygon points="600,180 622,202 600,224 578,202" fill="#042C53"/><text x="600" y="206" text-anchor="middle" fill="#fff">C3</text><text x="600" y="244" text-anchor="middle" font-weight="400">off track</text>
+      <polygon points="690,180 712,202 690,224 668,202" fill="#042C53"/><text x="690" y="206" text-anchor="middle" fill="#fff">C4</text><text x="690" y="244" text-anchor="middle" font-weight="400">surplus</text>
+      <polygon points="750,180 772,202 750,224 728,202" fill="#042C53"/><text x="750" y="206" text-anchor="middle" fill="#fff">C5</text><text x="750" y="244" text-anchor="middle" font-weight="400">investable</text>
+      <polygon points="810,180 832,202 810,224 788,202" fill="#042C53"/><text x="810" y="206" text-anchor="middle" fill="#fff">C6</text><text x="810" y="244" text-anchor="middle" font-weight="400">engaged</text>
+      <polygon points="885,180 907,202 885,224 863,202" fill="#1D9E75"/><text x="885" y="206" text-anchor="middle" fill="#fff">C7</text><text x="885" y="244" text-anchor="middle" font-weight="400">direct ask</text>
+    </g>
+    <g stroke="currentColor" stroke-width="1" stroke-dasharray="3 3" fill="none">
+      <line x1="410" y1="114" x2="410" y2="180"/><line x1="565" y1="114" x2="540" y2="180"/><line x1="580" y1="114" x2="600" y2="180"/><line x1="710" y1="114" x2="690" y2="180"/><line x1="740" y1="114" x2="750" y2="180"/><line x1="770" y1="114" x2="810" y2="180"/>
+    </g>
+    <!-- accept → lead → admin → advisor -->
+    <path d="M885,114 L885,180" stroke="currentColor" stroke-width="1.2" fill="none" marker-end="url(#ja)"/>
+    <path d="M885,224 L885,296" stroke="currentColor" stroke-width="1.2" fill="none" marker-end="url(#ja)"/>
+    <text x="895" y="262" font-size="10.5">lead + checkpoint record</text>
+    <rect x="820" y="296" width="130" height="36" rx="7" fill="#FBEBD0" stroke="#B8741A"/><text x="885" y="318" text-anchor="middle" font-weight="700" fill="#14342A">Assign advisor</text>
+    <path d="M885,332 L885,380" stroke="currentColor" stroke-width="1.2" fill="none" marker-end="url(#ja)"/>
+    <rect x="640" y="380" width="310" height="66" rx="7" fill="#DCE6F0" stroke="#042C53"/>
+    <text x="795" y="400" text-anchor="middle" font-weight="700" fill="#14342A">Lead view = the client view, read-only</text>
+    <text x="795" y="416" text-anchor="middle" font-size="10.5" fill="#14342A">goals · net worth · holdings · budget · score · streak · which checkpoint fired and why</text>
+    <text x="795" y="432" text-anchor="middle" font-size="10.5" fill="#14342A">message the lead · request a document · promote</text>
+    <path d="M950,413 L1065,413 L1065,114" stroke="#042C53" stroke-width="1.2" stroke-dasharray="4 3" fill="none" marker-end="url(#ja)"/>
+    <text x="1075" y="300" font-size="10.5" font-weight="700" fill="#042C53">promote</text>
+    <text x="1075" y="314" font-size="10">role flip,</text><text x="1075" y="326" font-size="10">advisorId set,</text><text x="1075" y="338" font-size="10">limits off,</text><text x="1075" y="350" font-size="10">no data moves</text>
+    <!-- visible state back to user -->
+    <path d="M820,314 L700,314 L700,114" stroke="#B8741A" stroke-width="1" stroke-dasharray="2 3" fill="none" marker-end="url(#ja)"/>
+    <text x="606" y="330" font-size="10" fill="#B8741A">user sees "an advisor is reviewing"</text>
+    <text x="22" y="480" font-size="11.5">Checkpoints C8–C10 (advised-plan preview, bring-under-management compare, premium capacity) run the same way for a Track B client toward Track A; they already exist as components today.</text>
+    <text x="22" y="498" font-size="11.5">A checkpoint fires at most once per 30 days per user, never more than one is shown at a time, and acceptance of any one suppresses the rest until the lead is resolved.</text>
+  </g>
+</svg>
+<figcaption>Checkpoints sit under the stage whose data triggers them. C1 is deliberately soft (a preview, no ask). C7 is always available. The advisor's lead view is the client view in read-only mode, so no second "lead detail" product has to be built.</figcaption>
+</figure>
+
+<h2 id="tree">3 · The same feature tree, gated</h2>
+<p>This is the investment-client organigram from the earlier map, annotated with what the free tier gets on each leaf. Nothing is removed from the tree; leaves are full, limited, previewed, or locked, and most locks carry a checkpoint.</p>
+
+<figure>
+<svg viewBox="0 0 1280 400" role="img" aria-label="The investment-client feature tree with each leaf marked for the free tier as full, limited, preview or locked, and checkpoint labels on the leaves that carry a conversion checkpoint.">
+  <g font-family="Figtree, system-ui, sans-serif" font-size="11.5" fill="currentColor">
+    <rect x="540" y="14" width="200" height="40" rx="8" fill="#1D9E75"/>
+    <text x="640" y="39" text-anchor="middle" font-size="14" font-weight="700" fill="#ffffff">One feature tree</text>
+    <line x1="640" y1="54" x2="640" y2="72" stroke="currentColor" stroke-width="1.2"/>
+    <line x1="80" y1="72" x2="1200" y2="72" stroke="currentColor" stroke-width="1.2"/>
+    <g stroke="currentColor" stroke-width="1.2">
+      <line x1="80" y1="72" x2="80" y2="88"/><line x1="240" y1="72" x2="240" y2="88"/><line x1="400" y1="72" x2="400" y2="88"/><line x1="560" y1="72" x2="560" y2="88"/><line x1="720" y1="72" x2="720" y2="88"/><line x1="880" y1="72" x2="880" y2="88"/><line x1="1040" y1="72" x2="1040" y2="88"/><line x1="1200" y1="72" x2="1200" y2="88"/>
+    </g>
+    <g font-weight="700" font-size="12">
+      <rect x="8" y="88" width="144" height="34" rx="7" fill="none" stroke="currentColor" stroke-width="1.2"/><text x="80" y="110" text-anchor="middle">Onboarding</text>
+      <rect x="168" y="88" width="144" height="34" rx="7" fill="none" stroke="currentColor" stroke-width="1.2"/><text x="240" y="110" text-anchor="middle">Holdings</text>
+      <rect x="328" y="88" width="144" height="34" rx="7" fill="none" stroke="currentColor" stroke-width="1.2"/><text x="400" y="110" text-anchor="middle">Advised plans</text>
+      <rect x="488" y="88" width="144" height="34" rx="7" fill="none" stroke="currentColor" stroke-width="1.2"/><text x="560" y="110" text-anchor="middle">Goals</text>
+      <rect x="648" y="88" width="144" height="34" rx="7" fill="none" stroke="currentColor" stroke-width="1.2"/><text x="720" y="110" text-anchor="middle">Budget</text>
+      <rect x="808" y="88" width="144" height="34" rx="7" fill="none" stroke="currentColor" stroke-width="1.2"/><text x="880" y="110" text-anchor="middle">Net worth</text>
+      <rect x="968" y="88" width="144" height="34" rx="7" fill="none" stroke="currentColor" stroke-width="1.2"/><text x="1040" y="110" text-anchor="middle">Plan &amp; advisor</text>
+      <rect x="1128" y="88" width="144" height="34" rx="7" fill="none" stroke="currentColor" stroke-width="1.2"/><text x="1200" y="110" text-anchor="middle">Insights</text>
+    </g>
+    <!-- gate glyph helper: small rect with letter F/L/P/X -->
+    <!-- Onboarding -->
+    <g>
+      <rect x="12" y="136" width="14" height="14" rx="3" fill="#1D9E75"/><text x="32" y="147">Basics, income, expenses</text>
+      <rect x="12" y="158" width="14" height="14" rx="3" fill="#B8741A"/><text x="32" y="169">Track choice (B only)</text>
+      <rect x="12" y="180" width="14" height="14" rx="3" fill="#B8741A"/><text x="32" y="191">Holdings (up to 5)</text>
+      <rect x="12" y="202" width="14" height="14" rx="3" fill="#1D9E75"/><text x="32" y="213">Goal (the one slot)</text>
+      <rect x="12" y="224" width="14" height="14" rx="3" fill="#1D9E75"/><text x="32" y="235">Risk quiz → score</text>
+      <rect x="12" y="246" width="14" height="14" rx="3" fill="#042C53"/><text x="32" y="257">Complete → C1 preview</text>
+    </g>
+    <!-- Holdings -->
+    <g>
+      <rect x="172" y="136" width="14" height="14" rx="3" fill="#B8741A"/><text x="192" y="147">Add / edit (max 5)</text>
+      <rect x="172" y="158" width="14" height="14" rx="3" fill="#1D9E75"/><text x="192" y="169">Ledger in / out</text>
+      <rect x="172" y="180" width="14" height="14" rx="3" fill="#1D9E75"/><text x="192" y="191">Live prices, search</text>
+      <rect x="172" y="202" width="14" height="14" rx="3" fill="#042C53"/><text x="192" y="213">Benchmark → C5</text>
+      <rect x="172" y="224" width="14" height="14" rx="3" fill="#C2452D"/><text x="192" y="235">6th holding → C5</text>
+    </g>
+    <!-- Advised -->
+    <g>
+      <rect x="332" y="136" width="14" height="14" rx="3" fill="#042C53"/><text x="352" y="147">Sample plan (preview)</text>
+      <rect x="332" y="158" width="14" height="14" rx="3" fill="#C2452D"/><text x="352" y="169">Statements</text>
+      <rect x="332" y="180" width="14" height="14" rx="3" fill="#C2452D"/><text x="352" y="191">Fund holdings</text>
+      <rect x="332" y="202" width="14" height="14" rx="3" fill="#C2452D"/><text x="352" y="213">Premium sync</text>
+      <rect x="332" y="224" width="14" height="14" rx="3" fill="#042C53"/><text x="352" y="235">"What a plan would do" → C8</text>
+    </g>
+    <!-- Goals -->
+    <g>
+      <rect x="492" y="136" width="14" height="14" rx="3" fill="#B8741A"/><text x="512" y="147">Create (1 slot)</text>
+      <rect x="492" y="158" width="14" height="14" rx="3" fill="#C2452D"/><text x="512" y="169">2nd slot → C2</text>
+      <rect x="492" y="180" width="14" height="14" rx="3" fill="#1D9E75"/><text x="512" y="191">Link holdings</text>
+      <rect x="492" y="202" width="14" height="14" rx="3" fill="#1D9E75"/><text x="512" y="213">Pacing status</text>
+      <rect x="492" y="224" width="14" height="14" rx="3" fill="#042C53"/><text x="512" y="235">Off track → C3</text>
+      <rect x="492" y="246" width="14" height="14" rx="3" fill="#C2452D"/><text x="512" y="257">Advisor task</text>
+    </g>
+    <!-- Budget -->
+    <g>
+      <rect x="652" y="136" width="14" height="14" rx="3" fill="#1D9E75"/><text x="672" y="147">Monthly budget</text>
+      <rect x="652" y="158" width="14" height="14" rx="3" fill="#1D9E75"/><text x="672" y="169">Contributions to holdings</text>
+      <rect x="652" y="180" width="14" height="14" rx="3" fill="#B8741A"/><text x="672" y="191">History (3 months)</text>
+      <rect x="652" y="202" width="14" height="14" rx="3" fill="#042C53"/><text x="672" y="213">Surplus → C4</text>
+      <rect x="652" y="224" width="14" height="14" rx="3" fill="#C2452D"/><text x="672" y="235">Plan premium lines</text>
+    </g>
+    <!-- Net worth -->
+    <g>
+      <rect x="812" y="136" width="14" height="14" rx="3" fill="#1D9E75"/><text x="832" y="147">Assets, liabilities</text>
+      <rect x="812" y="158" width="14" height="14" rx="3" fill="#1D9E75"/><text x="832" y="169">Synced holdings</text>
+      <rect x="812" y="180" width="14" height="14" rx="3" fill="#1D9E75"/><text x="832" y="191">Daily snapshot</text>
+      <rect x="812" y="202" width="14" height="14" rx="3" fill="#B8741A"/><text x="832" y="213">Trend (3 months)</text>
+    </g>
+    <!-- Plan & advisor -->
+    <g>
+      <rect x="972" y="136" width="14" height="14" rx="3" fill="#042C53"/><text x="992" y="147">Advisor card = C7 state</text>
+      <rect x="972" y="158" width="14" height="14" rx="3" fill="#B8741A"/><text x="992" y="169">Messages (after assign)</text>
+      <rect x="972" y="180" width="14" height="14" rx="3" fill="#B8741A"/><text x="992" y="191">Documents (after assign)</text>
+      <rect x="972" y="202" width="14" height="14" rx="3" fill="#C2452D"/><text x="992" y="213">Financial plan</text>
+      <rect x="972" y="224" width="14" height="14" rx="3" fill="#C2452D"/><text x="992" y="235">Milestones, review</text>
+    </g>
+    <!-- Insights -->
+    <g>
+      <rect x="1132" y="136" width="14" height="14" rx="3" fill="#B8741A"/><text x="1152" y="147">Score + 1 insight</text>
+      <rect x="1132" y="158" width="14" height="14" rx="3" fill="#B8741A"/><text x="1152" y="169">1 scenario type</text>
+      <rect x="1132" y="180" width="14" height="14" rx="3" fill="#042C53"/><text x="1152" y="191">Coast point (blurred)</text>
+      <rect x="1132" y="202" width="14" height="14" rx="3" fill="#B8741A"/><text x="1152" y="213">Sol (10 msgs/day)</text>
+      <rect x="1132" y="224" width="14" height="14" rx="3" fill="#1D9E75"/><text x="1152" y="235">Streak, milestones</text>
+      <rect x="1132" y="246" width="14" height="14" rx="3" fill="#042C53"/><text x="1152" y="257">Engaged → C6</text>
+    </g>
+    <!-- legend -->
+    <g font-size="11">
+      <rect x="12" y="300" width="14" height="14" rx="3" fill="#1D9E75"/><text x="32" y="311">Full: identical to the client</text>
+      <rect x="232" y="300" width="14" height="14" rx="3" fill="#B8741A"/><text x="252" y="311">Limited: same screen, a cap or shorter window</text>
+      <rect x="562" y="300" width="14" height="14" rx="3" fill="#042C53"/><text x="582" y="311">Preview or checkpoint: the client feature shown with the user's data, then an ask</text>
+      <rect x="12" y="326" width="14" height="14" rx="3" fill="#C2452D"/><text x="32" y="337">Locked: visible in navigation, explains what unlocks it</text>
+    </g>
+    <text x="12" y="372" font-size="11.5">Removed from the free tier entirely: the separate pathway wizard, budget_entries, the free health-score formula, the free goals page. Their jobs are done by the client screens with limits.</text>
+  </g>
+</svg>
+<figcaption>Nothing in the free tier is a separate implementation. A limited leaf is the client component with a number from the tier policy; a preview leaf is the client component rendered with the user's data and a checkpoint underneath; a locked leaf is the client navigation item with an explanation.</figcaption>
+</figure>
+
+<h2 id="entitlements">4 · Entitlement matrix</h2>
+<p>The matrix is the tier policy written out. It should exist once, as code, and be read by both the API guard and the UI, so a cap is never enforced in only one place. The numbers are proposals to tune, not fixed.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Capability</th><th>Free</th><th>Track B client</th><th>Track A client</th><th>Checkpoint on the gate</th><th>Why this limit</th></tr></thead>
+<tbody>
+<tr><td class="fn">Onboarding</td><td><span class="pill limited">limited</span> screens 1, 2, 4 (≤5 holdings), 6, 7, 8; track fixed to B</td><td><span class="pill full">full</span></td><td><span class="pill full">full</span></td><td><span class="pill cp">C1</span> on completion</td><td>Same data captured as a client, so promotion needs no second onboarding</td></tr>
+<tr><td class="fn">Goals</td><td><span class="pill limited">1 active</span></td><td>unlimited</td><td>unlimited</td><td><span class="pill cp">C2</span> on the second create</td><td>The existing cap; the one limit already enforced server-side</td></tr>
+<tr><td class="fn">Holdings</td><td><span class="pill limited">5 active</span>, all types</td><td>unlimited</td><td>unlimited</td><td><span class="pill cp">C5</span> on the sixth, or on value ≥ threshold</td><td>Enough to see a real portfolio; a sixth is a strong intent signal</td></tr>
+<tr><td class="fn">Budget</td><td><span class="pill limited">current + 3 months</span></td><td>12 months</td><td>12 months + plan premiums</td><td><span class="pill cp">C4</span> on sustained surplus</td><td>Habit forms in weeks; history is a client benefit</td></tr>
+<tr><td class="fn">Net worth</td><td><span class="pill full">full</span> entries; trend 3 months</td><td>24-month trend</td><td>24-month trend</td><td>—</td><td>The data magnet; never gate entry</td></tr>
+<tr><td class="fn">Wealth score</td><td><span class="pill limited">score + top insight</span>, immediate</td><td>full breakdown, history</td><td>full</td><td><span class="pill cp">C1</span> first score, <span class="pill cp">C6</span> on plateau</td><td>Free gets it immediately as the hook; the client 3-month gate moves to the breakdown, not the score</td></tr>
+<tr><td class="fn">Scenarios</td><td><span class="pill limited">increase monthly only</span></td><td>all six</td><td>all six + plan strategy returns</td><td><span class="pill cp">C3</span> from an off-track goal; locked types explain the unlock</td><td>One scenario shows the value; the rest are advisor conversation starters</td></tr>
+<tr><td class="fn">Coast point</td><td><span class="pill preview">blurred result</span> with the goal name</td><td>full</td><td>full</td><td><span class="pill cp">C8</span></td><td>The most "advisor-shaped" number in the app</td></tr>
+<tr><td class="fn">Advised plans</td><td><span class="pill preview">sample plan</span> built from the user's surplus</td><td>preview (today's Track B CTA)</td><td>full</td><td><span class="pill cp">C8</span>, <span class="pill cp">C9</span></td><td>Shows what Track A is before anyone asks for it</td></tr>
+<tr><td class="fn">Advisor card</td><td><span class="pill preview">conversion state</span> (none → reviewing → assigned)</td><td>advisor name, messages</td><td>same</td><td><span class="pill cp">C7</span> always</td><td>The user must see something happen after raising their hand</td></tr>
+<tr><td class="fn">Messages, documents</td><td><span class="pill locked">locked</span> until a lead is assigned, then open</td><td>full</td><td>full</td><td>—</td><td>Lets the advisor talk to and collect KYC from a lead before promotion</td></tr>
+<tr><td class="fn">Financial plan, milestones, review request</td><td><span class="pill locked">locked</span></td><td>full</td><td>full</td><td>explains "your advisor builds this"</td><td>Purely advisor-authored</td></tr>
+<tr><td class="fn">Sol chat</td><td><span class="pill limited">10 messages/day</span>, every shell, not mobile-only</td><td>unlimited within a budget</td><td>same</td><td>Sol itself can raise <span class="pill cp">C7</span></td><td>Spend control; also the audit's F-13</td></tr>
+<tr><td class="fn">Streak, milestones, tip</td><td><span class="pill full">full</span>, server-side</td><td>full</td><td>full</td><td><span class="pill cp">C6</span></td><td>Engagement is the advisor's best lead-quality signal; it must be a server fact</td></tr>
+</tbody></table></div>
+
+<pre>// lib/tier-policy/src/index.ts — the single source of truth for every gate
+export const TIER_LIMITS = {
+  free_user:         { goals: 1, holdings: 5, budgetMonths: 3, trendMonths: 3, scenarioTypes: ["increase_monthly"], solPerDay: 10,
+                       coastPoint: "preview", advisedPlans: "preview", messages: "after_assign", documents: "after_assign", plan: false },
+  investment_client: { goals: Infinity, holdings: Infinity, budgetMonths: 12, trendMonths: 24, scenarioTypes: ALL_SCENARIOS, solPerDay: 100,
+                       coastPoint: "full", advisedPlans: "full", messages: "full", documents: "full", plan: true },
+} as const;
+
+// API:  router.post("/goals", requireAuth, requireAllowance("goals"), …)      → 403 { code: "LIMIT", checkpoint: "C2" }
+// UI:   const { can, limit, checkpoint } = useEntitlement("goals")           → GET /me/entitlements, computed from the same table
+</pre>
+
+<h2 id="checkpoints">5 · Checkpoint catalogue</h2>
+<p>Each checkpoint has a server-side trigger over data that already exists, a single offer, and a lead source so the advisor knows why this person is in their pipeline. C1 to C7 move free → Track B. C8 to C10 move Track B → Track A and exist today as components; they are listed so the engine is designed for both rungs at once.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>#</th><th>Name</th><th>Trigger (server-evaluated)</th><th>Shown where</th><th>Offer</th><th>What the advisor receives</th><th>Reuse</th></tr></thead>
+<tbody>
+<tr><td><span class="pill cp">C1</span></td><td class="fn">Score ready</td><td>onboardingStage = complete and first score computed</td><td>dashboard, once</td><td>Soft: "Here is what an advisor would look at first" — a preview card using the user's weakest sub-score. No ask yet.</td><td>nothing; this is activation</td><td><span class="pill reuse">SmartUpgradeCard</span> with ask removed</td></tr>
+<tr><td><span class="pill cp">C2</span></td><td class="fn">Second goal</td><td>POST /goals returns LIMIT for free_user</td><td>goals page, in place of the failed create</td><td>"Clients plan every goal with an advisor. Keep this goal as a draft and talk to one?" Draft is saved as a pending goal.</td><td>lead source <code>goal_slot</code> + the draft goal</td><td><span class="pill reuse">LockedGoalSlotCard</span> wired to the interest action</td></tr>
+<tr><td><span class="pill cp">C3</span></td><td class="fn">Off track</td><td>computeGoalProgress = off_track for 2 consecutive snapshots</td><td>goal card</td><td>Run the one free scenario; locked scenarios say "an advisor can model retire-earlier and lump-sum with you".</td><td>lead source <code>goal_off_track</code> + goal, gap, months remaining</td><td><span class="pill reuse">GoalScenarioCTA</span></td></tr>
+<tr><td><span class="pill cp">C4</span></td><td class="fn">Sustained surplus</td><td>netSurplus ≥ 15% of income for 2 of the last 3 budget months</td><td>budget page, after save</td><td>"You have X/month unallocated. See what a regular savings plan does over 10 years." Projection shown, then ask.</td><td>lead source <code>surplus</code> + monthly surplus, savings rate</td><td><span class="pill reuse">SurplusCTA</span>, <span class="pill reuse">BudgetTrackBCTA</span></td></tr>
+<tr><td><span class="pill cp">C5</span></td><td class="fn">Investable</td><td>active holdings = 5 and a sixth is attempted, or Σ holding value ≥ threshold (e.g. 25k USD), or benchmark deviation &lt; −2 pp on a ticker holding</td><td>portfolio page</td><td>"Compare keeping this self-managed vs bringing it under management" using the user's holdings and benchmark.</td><td>lead source <code>investable</code> + portfolio value, deviation</td><td><span class="pill reuse">BringUnderManagementCompare</span></td></tr>
+<tr><td><span class="pill cp">C6</span></td><td class="fn">Engaged</td><td>streak ≥ 4 weeks and score ≥ 70, or 3 months active and score &lt; 50</td><td>dashboard</td><td>High score: "You are ahead of most people your age; the next step is a plan." Low score: "Three months in and still stuck? Get a second pair of eyes."</td><td>lead source <code>engaged_high</code> / <code>engaged_low</code> + streak, score trend</td><td><span class="pill new">new</span> uses the engagement table</td></tr>
+<tr><td><span class="pill cp">C7</span></td><td class="fn">Direct ask</td><td>always available</td><td>advisor card on the dashboard, Sol, navigation</td><td>"Talk to an advisor." One button, everywhere the three dead doors are today.</td><td>lead source <code>direct</code></td><td><span class="pill reuse">useCreateLeadFromInterest</span>; replaces mailto and /book</td></tr>
+<tr><td><span class="pill cp">C8</span></td><td class="fn">Plan preview</td><td>Track B client (or free) with surplus &gt; 0 and no inforce plan</td><td>dashboard, portfolio</td><td>Sample advised plan from the user's surplus and the admin's strategy returns.</td><td>message to the assigned advisor (or lead if free)</td><td><span class="pill reuse">TrackBConversionCTA</span>, <span class="pill reuse">ConversionCTASection</span></td></tr>
+<tr><td><span class="pill cp">C9</span></td><td class="fn">Under management</td><td>ticker holdings under-perform the asset-class benchmark</td><td>scenarios</td><td>Side-by-side projection, self-managed vs advised.</td><td>message "bringing X under management"</td><td><span class="pill reuse">BringUnderManagementCompare</span></td></tr>
+<tr><td><span class="pill cp">C10</span></td><td class="fn">Coast point</td><td>retirement goal exists</td><td>plan page</td><td>Free and Track B see the coast date blurred with "an advised plan at Y% moves this by N months".</td><td>message with the goal</td><td><span class="pill reuse">coast-point route</span> + blur</td></tr>
+</tbody></table></div>
+
+<div class="callout">
+<strong>Rules that keep checkpoints from becoming nagging.</strong> One visible checkpoint at a time, priority C7 &lt; C1 &lt; C6 &lt; C4 &lt; C3 &lt; C5 &lt; C2 (most data-specific wins). A fired checkpoint is recorded with the data snapshot that triggered it. Dismissal is a server fact with a 30-day cool-down, not a localStorage flag. Accepting any checkpoint creates one lead per user (re-touched, never duplicated) and suppresses all others until that lead is churned, cold, or converted.
+</div>
+
+<h2 id="state">6 · What the free user sees after raising a hand</h2>
+<p>Today a free user who clicks an interest CTA sees nothing change. The conversion state must be visible on the dashboard, driven by the lead status, so the user knows the hand-raise worked and the advisor's first message lands somewhere.</p>
+<div class="tablewrap"><table>
+<thead><tr><th>Lead status (owner: leads.status)</th><th>Advisor card on the free dashboard</th><th>What opens</th><th>Who moved it</th></tr></thead>
+<tbody>
+<tr><td><code>none</code></td><td>"No advisor yet · Talk to an advisor" (C7)</td><td>—</td><td>—</td></tr>
+<tr><td><code>unassigned</code></td><td>"Thanks, we are matching you with an advisor" + which checkpoint they accepted</td><td>nothing new</td><td>user accepted a checkpoint</td></tr>
+<tr><td><code>active</code></td><td>advisor name and photo, "Say hello"</td><td>messages and documents unlock for this pair</td><td>super admin assigned</td></tr>
+<tr><td><code>client</code></td><td>the normal client advisor card</td><td>every gate opens; limits off; same screens</td><td>advisor promoted (PUT /leads/:id status client)</td></tr>
+<tr><td><code>cold</code> / <code>churned</code></td><td>back to "Talk to an advisor"; checkpoints re-arm after 90 days</td><td>messages close</td><td>advisor</td></tr>
+</tbody></table></div>
+
+<h2 id="engine">7 · Engine and source of truth</h2>
+<p>Three small pieces, all server-side, all reading the owner tables from the client source-of-truth plan. The browser never decides a gate, never fires a checkpoint, and never stores a dismissal.</p>
+
+<figure>
+<svg viewBox="0 0 1120 330" role="img" aria-label="Flow: user writes (budget saved, goal created, holding added, score computed) go to the owner tables; the checkpoint evaluator runs after each write, reads tier policy and owner tables, writes a conversion_checkpoints row; acceptance writes or re-touches the lead; GET /me/entitlements combines tier policy, lead status and checkpoint state and feeds every screen; advisor lead view reads the same owner tables plus the checkpoint rows.">
+  <defs><marker id="ea" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="currentColor"/></marker></defs>
+  <g font-family="Figtree, system-ui, sans-serif" font-size="11.5" fill="currentColor">
+    <rect x="20" y="40" width="150" height="70" rx="7" fill="none" stroke="currentColor"/><text x="95" y="62" text-anchor="middle" font-weight="700">User writes</text><text x="95" y="80" text-anchor="middle" font-size="10.5">budget saved · goal created</text><text x="95" y="94" text-anchor="middle" font-size="10.5">holding added · score run</text>
+    <rect x="230" y="40" width="150" height="70" rx="7" fill="none" stroke="currentColor"/><text x="305" y="62" text-anchor="middle" font-weight="700">Owner tables</text><text x="305" y="80" text-anchor="middle" font-size="10.5">goals · holdings · budget</text><text x="305" y="94" text-anchor="middle" font-size="10.5">scores · engagement</text>
+    <rect x="440" y="40" width="170" height="70" rx="7" fill="#042C53"/><text x="525" y="62" text-anchor="middle" font-weight="700" fill="#fff">Checkpoint evaluator</text><text x="525" y="80" text-anchor="middle" font-size="10.5" fill="#fff">runs after each write</text><text x="525" y="94" text-anchor="middle" font-size="10.5" fill="#fff">pure function of tables + policy</text>
+    <rect x="670" y="40" width="170" height="70" rx="7" fill="none" stroke="currentColor"/><text x="755" y="62" text-anchor="middle" font-weight="700">conversion_checkpoints</text><text x="755" y="80" text-anchor="middle" font-size="10.5">user · code · firedAt · snapshot</text><text x="755" y="94" text-anchor="middle" font-size="10.5">shown · dismissed · accepted</text>
+    <rect x="900" y="40" width="200" height="70" rx="7" fill="none" stroke="currentColor"/><text x="1000" y="62" text-anchor="middle" font-weight="700">leads</text><text x="1000" y="80" text-anchor="middle" font-size="10.5">one per user · source = checkpoint</text><text x="1000" y="94" text-anchor="middle" font-size="10.5">status drives the advisor card</text>
+    <rect x="440" y="150" width="170" height="50" rx="7" fill="#DDF2EA" stroke="#1D9E75"/><text x="525" y="171" text-anchor="middle" font-weight="700" fill="#14342A">Tier policy</text><text x="525" y="188" text-anchor="middle" font-size="10.5" fill="#14342A">TIER_LIMITS, one file</text>
+    <rect x="230" y="240" width="380" height="60" rx="7" fill="#1D9E75"/><text x="420" y="262" text-anchor="middle" font-weight="700" fill="#fff">GET /me/entitlements</text><text x="420" y="280" text-anchor="middle" font-size="10.5" fill="#fff">policy × role × lead status × open checkpoint → what every screen renders</text>
+    <rect x="670" y="240" width="430" height="60" rx="7" fill="#DCE6F0" stroke="#042C53"/><text x="885" y="262" text-anchor="middle" font-weight="700" fill="#14342A">Advisor lead view = client screens, read-only</text><text x="885" y="280" text-anchor="middle" font-size="10.5" fill="#14342A">same owner tables + fired checkpoints + engagement; message, document request, promote</text>
+    <g stroke="currentColor" stroke-width="1.2" fill="none" marker-end="url(#ea)">
+      <line x1="170" y1="75" x2="230" y2="75"/><line x1="380" y1="75" x2="440" y2="75"/><line x1="610" y1="75" x2="670" y2="75"/><line x1="840" y1="75" x2="900" y2="75"/>
+      <line x1="525" y1="150" x2="525" y2="110"/>
+      <path d="M470,240 L470,200"/><path d="M305,240 L305,110"/><path d="M580,240 C580,220 700,220 755,110"/><path d="M600,255 C640,255 640,200 1000,110"/>
+      <path d="M885,240 L885,110"/><path d="M700,240 C700,200 330,200 330,110"/>
+    </g>
+    <text x="840" y="130" font-size="10.5" text-anchor="middle">accept</text>
+    <text x="460" y="128" font-size="10.5" text-anchor="middle">reads</text>
+    <text x="22" y="322" font-size="11.5">Browser: caches the entitlements response, renders gates and checkpoints from it, and never writes a gate or dismissal locally.</text>
+  </g>
+</svg>
+<figcaption>The evaluator is a pure function so it can be unit-tested against fixtures. Entitlements are the one answer both the UI and the API guard read, so a limit can never be enforced in only one place, which is the free-tier defect found in the audit.</figcaption>
+</figure>
+
+<h3>7.1 Source-of-truth rules specific to the funnel</h3>
+<div class="grid">
+  <div class="card"><h4>Tier is derived, never stored twice</h4><p>Tier = f(profiles.role, client_profiles.clientTrack). No "isFree" flags, no tier columns on feature tables. The pathway wizard, budget_entries and the free health-score formula are deleted because they encoded tier as separate code paths.</p></div>
+  <div class="card"><h4>Limits live in one file</h4><p>TIER_LIMITS is imported by requireAllowance on the server and serialised into /me/entitlements for the UI. Changing a number is one commit and takes effect in both places.</p></div>
+  <div class="card"><h4>Checkpoints are records</h4><p>conversion_checkpoints is the only memory of what was shown, dismissed or accepted. It replaces the four localStorage dismissal keys and makes funnel analytics a query.</p></div>
+  <div class="card"><h4>One lead per user</h4><p>The lead row is the funnel record. Name, email, score and risk profile are read through the userId join, never copied. Source is the checkpoint code, so the advisor sees why.</p></div>
+  <div class="card"><h4>Promotion moves nothing</h4><p>PUT /leads/:id status client flips role and sets advisorId. Goals, holdings, budget months, snapshots, scores and engagement are already in the client tables. The onboarding bridge and dashboard backfill are deleted.</p></div>
+  <div class="card"><h4>Engagement is a server fact</h4><p>Streak, milestones and tips move to a user_engagement table written by the same write hooks the evaluator uses. The advisor's lead view shows it; C6 reads it.</p></div>
+</div>
+
+<h2 id="build">8 · Reuse, build, measure</h2>
+<h3>8.1 What exists and what is new</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>Piece</th><th>Status</th><th>Change</th></tr></thead>
+<tbody>
+<tr><td class="fn">Client screens (onboarding, portfolio, goals, budget, net worth, scenarios, dashboard)</td><td><span class="pill reuse">reuse</span></td><td>Read entitlements; render caps, previews and locks. Remove the role array that hides them from free users.</td></tr>
+<tr><td class="fn">Conversion components (SmartUpgradeCard, LockedGoalSlotCard, GoalScenarioCTA, SurplusCTA, BudgetTrackBCTA, TrackBConversionCTA, BringUnderManagementCompare, ConversionCTASection)</td><td><span class="pill reuse">reuse</span></td><td>Take the checkpoint from entitlements instead of computing their own condition; destination = interest action for free, message for clients.</td></tr>
+<tr><td class="fn">useCreateLeadFromInterest, POST /leads/from-interest</td><td><span class="pill reuse">reuse</span></td><td>Accept a checkpoint code as source; record acceptance on the checkpoint row.</td></tr>
+<tr><td class="fn">Advisor lead routes (goals, net worth, holdings, documents)</td><td><span class="pill reuse">reuse</span></td><td>Extend to budget, score, engagement and checkpoints; serve the client screens in read-only mode instead of a bespoke lead-detail page.</td></tr>
+<tr><td class="fn">lib/tier-policy, requireAllowance, GET /me/entitlements</td><td><span class="pill new">new</span></td><td>~200 lines. Replaces the one hard-coded goal cap and the UI-only limits.</td></tr>
+<tr><td class="fn">Checkpoint evaluator + conversion_checkpoints table</td><td><span class="pill new">new</span></td><td>Pure function + one table + a hook after budget, goal, holding and score writes.</td></tr>
+<tr><td class="fn">user_engagement table</td><td><span class="pill new">new</span></td><td>Port lib/milestones.ts and the streak logic to the server; browser keeps a cache.</td></tr>
+<tr><td class="fn">Free pathway, budget_entries, free goals page, free health-score formula, /book, mailto</td><td><span class="pill locked">delete</span></td><td>After migration of existing free users' budget_entries into client_budget_months.</td></tr>
+</tbody></table></div>
+
+<h3>8.2 Metrics the engine makes free</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>Metric</th><th>Query over</th><th>Target to watch</th></tr></thead>
+<tbody>
+<tr><td class="fn">Activation</td><td>profiles with first score within 7 days of sign-up</td><td>share of sign-ups reaching C1</td></tr>
+<tr><td class="fn">Checkpoint reach</td><td>conversion_checkpoints fired per code per cohort</td><td>which signals actually occur in the free base</td></tr>
+<tr><td class="fn">Accept rate</td><td>accepted ÷ shown per code</td><td>which offer converts; retire the ones that do not</td></tr>
+<tr><td class="fn">Lead quality</td><td>leads by source → promoted within 30 days</td><td>advisor's view of which checkpoints produce clients</td></tr>
+<tr><td class="fn">Time to promote</td><td>lead createdAt → status client</td><td>super admin assignment and advisor response speed</td></tr>
+<tr><td class="fn">Retention after promote</td><td>engagement rows after role flip</td><td>whether the "nothing moves" promise holds in practice</td></tr>
+</tbody></table></div>
+
+<h3>8.3 Build order</h3>
+<ol class="steps">
+  <li><strong>Tier policy and entitlements.</strong> One file, one guard, one endpoint. Wire the existing goal cap through it so the Add button and the API agree. Closes audit finding F-5 as a side effect.</li>
+  <li><strong>Open the client screens to free users</strong> behind entitlements; retire the free pages one by one (goals, net worth, dashboard first; budget after the table migration).</li>
+  <li><strong>Direct ask everywhere (C7).</strong> Replace mailto and /book; add the conversion-state advisor card driven by lead status; unlock messages and documents for assigned leads.</li>
+  <li><strong>Checkpoint evaluator</strong> with C2, C4, C5 first (they have the clearest data signals and existing components), then C3, C1, C6.</li>
+  <li><strong>Engagement table</strong> and the advisor lead view as read-only client screens, including fired checkpoints.</li>
+  <li><strong>Budget unification</strong> (shared with the client source-of-truth plan), then delete the pathway, budget_entries and the free score formula.</li>
+  <li><strong>Track A checkpoints (C8–C10)</strong> re-pointed at the same engine; measure both rungs with the same queries.</li>
+</ol>
+<div class="callout">
+Steps 1 to 3 give a measurable funnel in a few weeks without touching the data model. Steps 4 to 6 are shared with the investment-client source-of-truth migration and should be scheduled together.
+</div>
+</main>
+
+</body>
+</html>

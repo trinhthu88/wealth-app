@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Investment Client Function Map</title>
+</head>
+<body>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column (max 1120px); diagrams and tables scroll sideways inside their own box. tala palette: green / navy / paper. */
+:root{
+  --bg:#FDF6EC; --surface:#FFFFFF; --fg:#14342A; --muted:#5E6F67; --hair:#E9DFCE;
+  --green:#1D9E75; --green-soft:#DDF2EA; --navy:#042C53; --navy-soft:#DCE6F0;
+  --amber:#B8741A; --amber-soft:#FBEBD0; --red:#C2452D; --red-soft:#F9E1DC;
+  --font-body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F1A16; --surface:#18251F; --fg:#EAF2EC; --muted:#9FB3A8; --hair:#2A3A32;
+  --green:#3DC79A; --green-soft:#153A2E; --navy:#9DC1E6; --navy-soft:#1B2C3E;
+  --amber:#E2A24C; --amber-soft:#3B2C14; --red:#F08A75; --red-soft:#3E1F1A; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#0F1A16; --surface:#18251F; --fg:#EAF2EC; --muted:#9FB3A8; --hair:#2A3A32;
+  --green:#3DC79A; --green-soft:#153A2E; --navy:#9DC1E6; --navy-soft:#1B2C3E;
+  --amber:#E2A24C; --amber-soft:#3B2C14; --red:#F08A75; --red-soft:#3E1F1A; color-scheme:dark }
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 64px}
+main{max-width:1120px;margin:0 auto}
+header.top{padding-block:40px 24px;border-bottom:1px solid var(--hair);margin-bottom:32px}
+.eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--green);font-weight:600}
+h1{font-size:34px;line-height:1.1;margin:6px 0 12px;font-weight:700;letter-spacing:-.02em;text-wrap:balance}
+h2{font-size:24px;margin:48px 0 8px;letter-spacing:-.01em;text-wrap:balance}
+h3{font-size:17px;margin:28px 0 8px}
+p{max-width:68ch;margin:0 0 12px}
+p.lede{font-size:17px;color:var(--muted);max-width:72ch}
+nav.toc{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+nav.toc a{font-size:13px;color:var(--navy);text-decoration:none;border:1px solid var(--hair);border-radius:999px;padding:4px 12px;background:var(--surface)}
+nav.toc a:hover,nav.toc a:focus-visible{border-color:var(--green);outline:none}
+figure{margin:16px 0 8px;background:var(--surface);border:1px solid var(--hair);border-radius:12px;padding:16px;overflow-x:auto}
+figure svg{display:block;max-width:100%;height:auto;min-width:720px}
+figcaption{font-size:13px;color:var(--muted);margin-top:10px;max-width:80ch}
+.legend{display:flex;flex-wrap:wrap;gap:14px 22px;font-size:13px;color:var(--muted);margin:8px 0 0}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+.tablewrap{overflow-x:auto;border:1px solid var(--hair);border-radius:12px;background:var(--surface);margin:12px 0 20px}
+table{border-collapse:collapse;width:100%;min-width:900px;font-size:13.5px}
+th,td{text-align:left;vertical-align:top;padding:10px 12px;border-bottom:1px solid var(--hair)}
+th{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;background:var(--bg)}
+tr:last-child td{border-bottom:0}
+td.fn{font-weight:600;min-width:150px}
+code{font-family:var(--font-mono);font-size:12px;background:var(--bg);padding:1px 5px;border-radius:4px;white-space:nowrap}
+td code{white-space:normal}
+.pill{display:inline-block;font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.pill.adv-w{background:var(--navy-soft);color:var(--navy)}
+.pill.adv-r{background:transparent;color:var(--navy);border:1px solid var(--navy)}
+.pill.sa{background:var(--amber-soft);color:var(--amber)}
+.pill.none{background:transparent;color:var(--muted);border:1px dashed var(--hair)}
+.pill.dup{background:var(--red-soft);color:var(--red)}
+.pill.one{background:var(--green-soft);color:var(--green)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin:14px 0}
+.card{background:var(--surface);border:1px solid var(--hair);border-radius:12px;padding:16px 18px}
+.card h4{margin:0 0 6px;font-size:15px}
+.card p{font-size:13.5px;margin:0;color:var(--muted)}
+ol.steps{padding-left:22px;max-width:72ch}
+ol.steps li{margin-bottom:10px}
+ul.tight{padding-left:20px;max-width:72ch}
+ul.tight li{margin-bottom:6px}
+.callout{border-left:4px solid var(--green);background:var(--surface);padding:12px 16px;border-radius:0 10px 10px 0;margin:16px 0;max-width:78ch}
+.callout.warn{border-left-color:var(--red)}
+.num{font-variant-numeric:tabular-nums}
+@media (prefers-reduced-motion:no-preference){a{transition:border-color .15s}}
+@media (max-width:640px){h1{font-size:28px}h2{font-size:21px}}
+</style>
+
+<main>
+<header class="top">
+  <div class="eyebrow">tala wealth-app · role audit</div>
+  <h1>Investment Client Function Map</h1>
+  <p class="lede">Every function an investment client can perform, what they put in, what comes back, which of those flows reach the advisor or super admin, and where the platform currently keeps the same fact in more than one place. Built from the code at commit <code>249d6ff</code>.</p>
+  <nav class="toc" aria-label="Sections">
+    <a href="#organigram">1 · Organigram</a>
+    <a href="#functions">2 · Functions, inputs, outputs, links</a>
+    <a href="#truth">3 · Source-of-truth map</a>
+    <a href="#principles">4 · Principles to adopt</a>
+    <a href="#migration">5 · Migration order</a>
+  </nav>
+</header>
+
+<h2 id="organigram">1 · Organigram of client functions</h2>
+<p>Eight functional areas hang off the client account. Each leaf is one thing the client can do. The colour of the leaf's dot says who else touches that data: green is client-only, navy means the advisor writes it or reacts to it, outlined navy means the advisor can only read it, amber means it also depends on reference data the super admin maintains.</p>
+
+<figure>
+<svg viewBox="0 0 1280 420" role="img" aria-label="Organigram: the investment client at the top, eight functional areas below it, and under each area the functions the client can perform, with dots showing whether the advisor writes, reads or does not touch each one.">
+  <defs>
+    <marker id="arr" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="currentColor"/></marker>
+  </defs>
+  <g font-family="Figtree, system-ui, sans-serif" font-size="12" fill="currentColor">
+    <!-- root -->
+    <rect x="540" y="14" width="200" height="44" rx="8" fill="#1D9E75"/>
+    <text x="640" y="35" text-anchor="middle" font-size="14" font-weight="700" fill="#ffffff">Investment client</text>
+    <text x="640" y="50" text-anchor="middle" font-size="10.5" fill="#ffffff">role = investment_client · client_profiles row</text>
+    <!-- trunk -->
+    <line x1="640" y1="58" x2="640" y2="78" stroke="currentColor" stroke-width="1.2"/>
+    <line x1="80" y1="78" x2="1200" y2="78" stroke="currentColor" stroke-width="1.2"/>
+    <!-- drops -->
+    <g stroke="currentColor" stroke-width="1.2">
+      <line x1="80" y1="78" x2="80" y2="96"/><line x1="240" y1="78" x2="240" y2="96"/><line x1="400" y1="78" x2="400" y2="96"/><line x1="560" y1="78" x2="560" y2="96"/>
+      <line x1="720" y1="78" x2="720" y2="96"/><line x1="880" y1="78" x2="880" y2="96"/><line x1="1040" y1="78" x2="1040" y2="96"/><line x1="1200" y1="78" x2="1200" y2="96"/>
+    </g>
+    <!-- domain boxes -->
+    <g font-weight="700" font-size="12.5">
+      <rect x="8" y="96" width="144" height="40" rx="7" fill="none" stroke="currentColor" stroke-width="1.2"/><text x="80" y="120" text-anchor="middle">Identity &amp; onboarding</text>
+      <rect x="168" y="96" width="144" height="40" rx="7" fill="none" stroke="currentColor" stroke-width="1.2"/><text x="240" y="120" text-anchor="middle">Self-managed portfolio</text>
+      <rect x="328" y="96" width="144" height="40" rx="7" fill="none" stroke="currentColor" stroke-width="1.2"/><text x="400" y="120" text-anchor="middle">Advised plans (Track A)</text>
+      <rect x="488" y="96" width="144" height="40" rx="7" fill="none" stroke="currentColor" stroke-width="1.2"/><text x="560" y="120" text-anchor="middle">Goals</text>
+      <rect x="648" y="96" width="144" height="40" rx="7" fill="none" stroke="currentColor" stroke-width="1.2"/><text x="720" y="120" text-anchor="middle">Budget</text>
+      <rect x="808" y="96" width="144" height="40" rx="7" fill="none" stroke="currentColor" stroke-width="1.2"/><text x="880" y="120" text-anchor="middle">Net worth</text>
+      <rect x="968" y="96" width="144" height="40" rx="7" fill="none" stroke="currentColor" stroke-width="1.2"/><text x="1040" y="120" text-anchor="middle">Plan &amp; advisor</text>
+      <rect x="1128" y="96" width="144" height="40" rx="7" fill="none" stroke="currentColor" stroke-width="1.2"/><text x="1200" y="120" text-anchor="middle">Insights &amp; scenarios</text>
+    </g>
+    <!-- leaf spines -->
+    <g stroke="currentColor" stroke-width="1" stroke-dasharray="2 3">
+      <line x1="20" y1="136" x2="20" y2="258"/><line x1="180" y1="136" x2="180" y2="258"/><line x1="340" y1="136" x2="340" y2="258"/><line x1="500" y1="136" x2="500" y2="300"/>
+      <line x1="660" y1="136" x2="660" y2="258"/><line x1="820" y1="136" x2="820" y2="258"/><line x1="980" y1="136" x2="980" y2="321"/><line x1="1140" y1="136" x2="1140" y2="300"/>
+    </g>
+    <!-- Identity leaves -->
+    <g>
+      <circle cx="20" cy="154" r="4" fill="#1D9E75"/><text x="30" y="158">Sign in / sign up (Clerk)</text>
+      <circle cx="20" cy="175" r="4" fill="#1D9E75"/><text x="30" y="179">Profile sync on login</text>
+      <circle cx="20" cy="196" r="4" fill="#042C53"/><text x="30" y="200">Onboarding, 8 screens</text>
+      <circle cx="20" cy="217" r="4" fill="#1D9E75"/><text x="30" y="221">Currency &amp; risk prefs</text>
+      <circle cx="20" cy="238" r="4" fill="none" stroke="#042C53" stroke-width="1.5"/><text x="30" y="242">Basics (name, country)</text>
+      <circle cx="20" cy="259" r="4" fill="#B8741A"/><text x="30" y="263">Account created by admin</text>
+    </g>
+    <!-- Self-managed -->
+    <g>
+      <circle cx="180" cy="154" r="4" fill="#1D9E75"/><text x="190" y="158">Add / edit / delete holding</text>
+      <circle cx="180" cy="175" r="4" fill="#1D9E75"/><text x="190" y="179">Holding ledger (in/out/fee)</text>
+      <circle cx="180" cy="196" r="4" fill="#1D9E75"/><text x="190" y="200">Symbol search, live price</text>
+      <circle cx="180" cy="217" r="4" fill="#B8741A"/><text x="190" y="221">Benchmark check</text>
+      <circle cx="180" cy="238" r="4" fill="#1D9E75"/><text x="190" y="242">Holding detail page</text>
+    </g>
+    <!-- Advised -->
+    <g>
+      <circle cx="340" cy="154" r="4" fill="#042C53"/><text x="350" y="158">View plans (visible only)</text>
+      <circle cx="340" cy="175" r="4" fill="#042C53"/><text x="350" y="179">View statements</text>
+      <circle cx="340" cy="196" r="4" fill="#042C53"/><text x="350" y="200">View fund holdings</text>
+      <circle cx="340" cy="217" r="4" fill="#042C53"/><text x="350" y="221">View plan transactions</text>
+      <circle cx="340" cy="238" r="4" fill="#B8741A"/><text x="350" y="242">Strategy target returns</text>
+    </g>
+    <!-- Goals -->
+    <g>
+      <circle cx="500" cy="154" r="4" fill="none" stroke="#042C53" stroke-width="1.5"/><text x="510" y="158">Create / edit goal</text>
+      <circle cx="500" cy="175" r="4" fill="#1D9E75"/><text x="510" y="179">Complete / cancel / reopen</text>
+      <circle cx="500" cy="196" r="4" fill="#042C53"/><text x="510" y="200">Link holdings &amp; plans (%)</text>
+      <circle cx="500" cy="217" r="4" fill="#1D9E75"/><text x="510" y="221">Progress movement (Sol card)</text>
+      <circle cx="500" cy="238" r="4" fill="#042C53"/><text x="510" y="242">Off-track → advisor task</text>
+      <circle cx="500" cy="259" r="4" fill="#042C53"/><text x="510" y="263">Express interest (lead)</text>
+      <circle cx="500" cy="280" r="4" fill="#1D9E75"/><text x="510" y="284">Goal scenario shortcut</text>
+    </g>
+    <!-- Budget -->
+    <g>
+      <circle cx="660" cy="154" r="4" fill="#1D9E75"/><text x="670" y="158">Monthly income &amp; expenses</text>
+      <circle cx="660" cy="175" r="4" fill="#1D9E75"/><text x="670" y="179">Investment contributions</text>
+      <circle cx="660" cy="196" r="4" fill="#042C53"/><text x="670" y="200">Sync plan premiums</text>
+      <circle cx="660" cy="217" r="4" fill="#1D9E75"/><text x="670" y="221">Surplus sweep to cash</text>
+      <circle cx="660" cy="238" r="4" fill="#1D9E75"/><text x="670" y="242">12-month history &amp; rate</text>
+    </g>
+    <!-- Net worth -->
+    <g>
+      <circle cx="820" cy="154" r="4" fill="#1D9E75"/><text x="830" y="158">Manual assets</text>
+      <circle cx="820" cy="175" r="4" fill="#1D9E75"/><text x="830" y="179">Manual liabilities</text>
+      <circle cx="820" cy="196" r="4" fill="#042C53"/><text x="830" y="200">Synced holdings &amp; plans</text>
+      <circle cx="820" cy="217" r="4" fill="#1D9E75"/><text x="830" y="221">Daily snapshot</text>
+      <circle cx="820" cy="238" r="4" fill="#1D9E75"/><text x="830" y="242">Trend chart (24 months)</text>
+    </g>
+    <!-- Plan & advisor -->
+    <g>
+      <circle cx="980" cy="154" r="4" fill="#042C53"/><text x="990" y="158">Financial plan &amp; milestones</text>
+      <circle cx="980" cy="175" r="4" fill="#042C53"/><text x="990" y="179">Milestone comments</text>
+      <circle cx="980" cy="196" r="4" fill="#042C53"/><text x="990" y="200">Request a review</text>
+      <circle cx="980" cy="217" r="4" fill="#042C53"/><text x="990" y="221">Messages</text>
+      <circle cx="980" cy="238" r="4" fill="#042C53"/><text x="990" y="242">Documents &amp; KYC</text>
+      <circle cx="980" cy="259" r="4" fill="#042C53"/><text x="990" y="263">Document request</text>
+      <circle cx="980" cy="280" r="4" fill="none" stroke="#042C53" stroke-width="1.5"/><text x="990" y="284">Advisor card on dashboard</text>
+      <circle cx="980" cy="301" r="4" fill="#1D9E75"/><text x="990" y="305">Notifications</text>
+    </g>
+    <!-- Insights -->
+    <g>
+      <circle cx="1140" cy="154" r="4" fill="#B8741A"/><text x="1150" y="158">Wealth score (gated 3 mo)</text>
+      <circle cx="1140" cy="175" r="4" fill="#1D9E75"/><text x="1150" y="179">Scenarios, 6 types</text>
+      <circle cx="1140" cy="196" r="4" fill="#042C53"/><text x="1150" y="200">Scenario alerts</text>
+      <circle cx="1140" cy="217" r="4" fill="#B8741A"/><text x="1150" y="221">Coast point</text>
+      <circle cx="1140" cy="238" r="4" fill="#1D9E75"/><text x="1150" y="242">Sol chat (mobile only)</text>
+      <circle cx="1140" cy="259" r="4" fill="#1D9E75"/><text x="1150" y="263">Dashboard summary</text>
+    </g>
+    <!-- legacy strip -->
+    <rect x="8" y="356" width="1264" height="50" rx="7" fill="none" stroke="currentColor" stroke-width="1" stroke-dasharray="4 4"/>
+    <text x="24" y="376" font-weight="700" font-size="12.5">Legacy, still reachable by API but no longer in the client UI</text>
+    <text x="24" y="395" font-size="11.5">packages &amp; allocations (/packages) · package transactions (/transactions/all) · portfolio_holdings (/portfolio) · scenarios v1 (/scenarios) · kyc_documents (/kyc/documents) · client_financial_snapshot</text>
+  </g>
+</svg>
+<figcaption>The eight branches map one-to-one to the client's sidebar plus onboarding. The dashed strip at the bottom is the earlier generation of the same features; those tables still receive reads and are still summed into some numbers shown to the admin (see §3).</figcaption>
+</figure>
+<div class="legend">
+  <span><i class="dot" style="background:#1D9E75"></i> client-only data</span>
+  <span><i class="dot" style="background:#042C53"></i> advisor writes it or is triggered by it</span>
+  <span><i class="dot" style="border:1.5px solid #042C53"></i> advisor reads only</span>
+  <span><i class="dot" style="background:#B8741A"></i> depends on reference data the super admin maintains</span>
+</div>
+
+<h2 id="functions">2 · Functions: input, output, and who else is in the loop</h2>
+<p>One table per branch. "Advisor link" and "Super-admin link" say how the other role's actions connect to this function, not merely whether they could see it. The super admin bypasses every advisor-ownership check, so anything the advisor can do, the admin can do for any client; the column only lists what is specific to the admin.</p>
+<div class="legend">
+  <span><span class="pill adv-w">writes</span> advisor creates or changes the data</span>
+  <span><span class="pill adv-r">reads</span> advisor can only read it</span>
+  <span><span class="pill sa">admin</span> super-admin-specific dependency</span>
+  <span><span class="pill none">none</span> no path to the other role today</span>
+</div>
+
+<h3>2.1 Identity &amp; onboarding</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>Function</th><th>Client input</th><th>Output to client</th><th>Advisor link</th><th>Super-admin link</th><th>Owning tables</th></tr></thead>
+<tbody>
+<tr><td class="fn">Account exists</td><td>none (cannot self-register as a client)</td><td>Clerk login works; <code>/dashboard</code> redirects to onboarding or dashboard</td><td><span class="pill adv-w">writes</span> converts a lead and chooses the client's first password</td><td><span class="pill sa">admin</span> creates the user with role, advisorId, riskProfile; can change the role later</td><td>Clerk user · profiles · client_profiles</td></tr>
+<tr><td class="fn">Profile sync on login</td><td>email, fullName (sent automatically)</td><td>profile with role</td><td><span class="pill none">none</span></td><td><span class="pill sa">admin</span> the same route grants super_admin if the posted email matches the env var (Finding F-1)</td><td>profiles</td></tr>
+<tr><td class="fn">Onboarding screen 1, basics</td><td>fullName (≥2), dateOfBirth, countryCode, isExpat, preferredCurrency</td><td>client_profiles row created/updated</td><td><span class="pill adv-r">reads</span> name and country in client detail</td><td>—</td><td>profiles (name, country, isExpat) + client_profiles (currency)</td></tr>
+<tr><td class="fn">Onboarding screen 2, income</td><td>monthlyIncome (&gt;0), currency, incomeType[], stable</td><td>first budget month</td><td><span class="pill none">none</span> (no advisor budget view exists)</td><td>—</td><td>client_budget_months</td></tr>
+<tr><td class="fn">Onboarding screen 3, track</td><td>hasExistingInvestments → Track A or B</td><td>track shown in summary</td><td><span class="pill adv-w">writes</span> creating an advised plan forces Track A regardless of the client's choice</td><td>—</td><td>client_profiles.clientTrack</td></tr>
+<tr><td class="fn">Onboarding screen 4, holdings</td><td>one mini-form per holding type</td><td>holdings created</td><td><span class="pill none">none</span> for promoted clients (advisor holdings route exists only for leads)</td><td>—</td><td>client_holdings</td></tr>
+<tr><td class="fn">Onboarding screen 6, goal</td><td>goalType, name, targetAmount, currency, targetDate</td><td>goal created or existing goal updated</td><td><span class="pill adv-r">reads</span> via client goals route</td><td>—</td><td>financial_goals</td></tr>
+<tr><td class="fn">Onboarding screen 7, expenses</td><td>6 expense lines + extraInvestment</td><td>budget month totals, savings rate</td><td><span class="pill none">none</span></td><td>—</td><td>client_budget_months</td></tr>
+<tr><td class="fn">Onboarding complete</td><td>preferredDisplayCurrency</td><td><code>onboardingTrackComplete=true</code>, routing switches to dashboard</td><td><span class="pill adv-r">reads</span> onboarding flags in client profile</td><td>—</td><td>profiles.onboardingComplete + client_profiles.onboardingTrackComplete</td></tr>
+<tr><td class="fn">Currency toggle / preferences</td><td>USD, VND, EUR; riskProfile, avatar, country</td><td>profile updated</td><td><span class="pill adv-w">writes</span> advisor sets a <em>different</em> riskProfile field on client_profiles</td><td>—</td><td>profiles.preferredCurrency vs client_profiles.preferredDisplayCurrency</td></tr>
+</tbody></table></div>
+
+<h3>2.2 Self-managed portfolio (Track B and the self-managed side of Track A)</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>Function</th><th>Client input</th><th>Output to client</th><th>Advisor link</th><th>Super-admin link</th><th>Owning tables</th></tr></thead>
+<tbody>
+<tr><td class="fn">Add holding</td><td>type (stock/ETF, mutual fund, bond, commodity, crypto, property, cash, pension, other) + type-specific fields: label*, ticker/coin, units, avg cost, broker/exchange, purchase &amp; current value, mortgage, rental income, bank, balance, rate, scheme, contributions, notes, expected return</td><td>holding row; appears in portfolio, net worth, goal links, Sol</td><td><span class="pill none">none</span> once promoted; advisor saw holdings only while the person was a lead</td><td>—</td><td>client_holdings</td></tr>
+<tr><td class="fn">Edit holding</td><td>any of the above</td><td>updated row</td><td><span class="pill none">none</span></td><td>—</td><td>client_holdings (today: any column, incl. userId, Finding F-3)</td></tr>
+<tr><td class="fn">Delete holding</td><td>id</td><td>soft-deleted (isActive=false); goal links keep pointing at it</td><td><span class="pill none">none</span></td><td>—</td><td>client_holdings</td></tr>
+<tr><td class="fn">Holding ledger</td><td>date, type in/out/fee/value_update, amount (&gt;0), units, note</td><td>ledger row; cash balance moved; budget contributions appear here too</td><td><span class="pill none">none</span></td><td>—</td><td>client_holding_transactions → client_holdings.currentBalance</td></tr>
+<tr><td class="fn">Symbol search, live price</td><td>query, type; ticker</td><td>symbol list; price_usd, 1-day change, stale flag</td><td>—</td><td><span class="pill sa">admin</span> none for stocks (Yahoo); admin maintains <em>fund</em> prices separately</td><td>price_cache (shared, written by any user's request)</td></tr>
+<tr><td class="fn">Benchmark check</td><td>holding id or (type, ticker, rates)</td><td>expected return vs benchmark, deviation</td><td>—</td><td><span class="pill sa">admin</span> maintains asset-class benchmarks (10-yr CAGR) used here</td><td>asset_class_benchmarks + Yahoo/CoinGecko</td></tr>
+</tbody></table></div>
+
+<h3>2.3 Advised plans (Track A)</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>Function</th><th>Client input</th><th>Output to client</th><th>Advisor link</th><th>Super-admin link</th><th>Owning tables</th></tr></thead>
+<tbody>
+<tr><td class="fn">View plans</td><td>none</td><td>plans with <code>isVisibleToClient</code>, latest statement, latest fund holdings; also exposes advisorNotes and introducerCode</td><td><span class="pill adv-w">writes</span> creates plan (provider, product, policy no., premiums, dates, status, visibility, notes); sets status inforce/scenario; changes contribution</td><td><span class="pill sa">admin</span> can do the same for any client, but the plan then records the admin as advisor, locking the real advisor out of status changes (F-24)</td><td>advised_plans</td></tr>
+<tr><td class="fn">View statements</td><td>plan id</td><td>periods, opening/closing, contributions, six fee lines, returns</td><td><span class="pill adv-w">writes</span> statement entry; hidden plans are still readable by id</td><td>—</td><td>advised_plan_statements</td></tr>
+<tr><td class="fn">View fund holdings</td><td>plan id, statement id</td><td>fund code, units, unit value, holding value, future allocation %</td><td><span class="pill adv-w">writes</span> funds[] on the statement</td><td><span class="pill sa">admin</span> maintains the funds catalogue these codes should map to (not enforced)</td><td>advised_plan_holdings · funds</td></tr>
+<tr><td class="fn">View plan transactions</td><td>plan id</td><td>last 50 transactions</td><td><span class="pill adv-w">writes</span> transactions[] on a full-detail statement</td><td>—</td><td>advised_plan_transactions</td></tr>
+<tr><td class="fn">Plan premiums in budget</td><td>none (automatic)</td><td>advised-plan contribution lines appear in each budget month</td><td><span class="pill adv-w">writes</span> setting status to <code>inforce</code> back-fills budget months from effectiveDate</td><td>—</td><td>advised_plans → client_budget_months.investmentContributions</td></tr>
+<tr><td class="fn">Strategy target returns</td><td>none</td><td>target annual return per plan type used in scenarios</td><td>—</td><td><span class="pill sa">admin</span> maintains advised_strategy_returns</td><td>advised_strategy_returns</td></tr>
+</tbody></table></div>
+
+<h3>2.4 Goals</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>Function</th><th>Client input</th><th>Output to client</th><th>Advisor link</th><th>Super-admin link</th><th>Owning tables</th></tr></thead>
+<tbody>
+<tr><td class="fn">Create goal</td><td>type*, title*, targetAmount, currency, targetDate, priority, notes</td><td>goal with pacing status (on_track / at_risk / off_track)</td><td><span class="pill adv-r">reads</span> client goals list; <span class="pill adv-w">writes</span> indirectly via plan milestones that link a goal</td><td>—</td><td>financial_goals</td></tr>
+<tr><td class="fn">Edit goal</td><td>same + currentAmount</td><td>updated goal; <em>monthlyContribution silently reset to 0 because the sheet never sends it</em> (F-20)</td><td><span class="pill adv-r">reads</span></td><td>—</td><td>financial_goals</td></tr>
+<tr><td class="fn">Complete / cancel / reopen</td><td>status</td><td>status badge</td><td><span class="pill adv-r">reads</span></td><td>—</td><td>financial_goals.status (vocabulary differs from free tier)</td></tr>
+<tr><td class="fn">Link holdings &amp; plans</td><td>source (holding or advised plan), allocation % (≤ remaining)</td><td>computed current amount = Σ source value × %; link breakdown</td><td><span class="pill adv-w">writes</span> the plan values that feed the link; no visibility of the links themselves</td><td>—</td><td>goal_holding_links → client_holdings / advised_plans / price_cache</td></tr>
+<tr><td class="fn">Progress movement (Sol card)</td><td>none</td><td>delta since last snapshot split into market, contribution, reallocation</td><td><span class="pill none">none</span></td><td>—</td><td>goal_progress_snapshots (written by the GET)</td></tr>
+<tr><td class="fn">Off-track trigger</td><td>none (fires when status is off_track)</td><td><code>{created, status}</code></td><td><span class="pill adv-w">writes</span> an advisor task "goal off track" is created for client_profiles.advisorId and closed when back on track</td><td>—</td><td>advisor_tasks</td></tr>
+<tr><td class="fn">Express interest</td><td>source (CTA name)</td><td>lead linked to this account</td><td><span class="pill adv-w">writes</span> lead appears in the advisor pipeline; setting it to <code>client</code> re-runs promotion</td><td><span class="pill sa">admin</span> assigns the lead to an advisor</td><td>leads</td></tr>
+</tbody></table></div>
+
+<h3>2.5 Budget</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>Function</th><th>Client input</th><th>Output to client</th><th>Advisor link</th><th>Super-admin link</th><th>Owning tables</th></tr></thead>
+<tbody>
+<tr><td class="fn">Monthly budget</td><td>4 income lines, 10 expense lines, notes, currency</td><td>month row with totals, net surplus, savings rate</td><td><span class="pill none">none</span> (no advisor budget route)</td><td>—</td><td>client_budget_months</td></tr>
+<tr><td class="fn">Investment contributions</td><td>per holding: amount; "other investments"</td><td>contributions JSON on the month + ledger rows on each holding</td><td><span class="pill adv-w">writes</span> advised-plan lines are injected by the plan sync and cannot be edited by the client</td><td>—</td><td>client_budget_months.investmentContributions (JSON) <em>and</em> client_holding_transactions (source budget_contribution)</td></tr>
+<tr><td class="fn">Surplus sweep</td><td>none (automatic on save)</td><td>a "Surplus (auto)" cash holding receives net surplus</td><td><span class="pill none">none</span></td><td>—</td><td>client_holdings + client_holding_transactions</td></tr>
+<tr><td class="fn">Debt payments</td><td>none (derived)</td><td>sum of holding mortgages shown read-only</td><td>—</td><td>—</td><td>derived from client_holdings.outstandingMortgage</td></tr>
+<tr><td class="fn">History</td><td>limit</td><td>last 12 months, savings-rate gauge</td><td><span class="pill none">none</span></td><td>—</td><td>client_budget_months</td></tr>
+</tbody></table></div>
+
+<h3>2.6 Net worth</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>Function</th><th>Client input</th><th>Output to client</th><th>Advisor link</th><th>Super-admin link</th><th>Owning tables</th></tr></thead>
+<tbody>
+<tr><td class="fn">Manual assets / liabilities</td><td>category*, label*, value*, currency; liability: balance*, monthlyPayment, interestRate</td><td>rows in the net worth page</td><td><span class="pill none">none</span> for promoted clients (advisor route exists only for leads)</td><td>—</td><td>assets · liabilities (shared with the free tier)</td></tr>
+<tr><td class="fn">Synced items</td><td>none</td><td>read-only rows built in the browser from holdings, advised plans and holding mortgages</td><td><span class="pill adv-w">writes</span> plan values; <span class="pill none">none</span> for holdings</td><td>—</td><td>computed client-side from client_holdings + advised_plans</td></tr>
+<tr><td class="fn">Daily snapshot</td><td>none (debounced 5 s after the page computes totals)</td><td>trend chart, and the dashboard ring</td><td><span class="pill none">none</span></td><td>—</td><td>net_worth_snapshots (client-computed totals persisted as fact)</td></tr>
+<tr><td class="fn">Dashboard ring</td><td>none</td><td>totalAssets, totalLiabilities, netWorth, source</td><td>—</td><td><span class="pill sa">admin</span> sees a <em>different</em> "portfolioValue" on /admin/clients, summed from legacy package snapshots</td><td>net_worth_snapshots, else assets − liabilities only</td></tr>
+</tbody></table></div>
+
+<h3>2.7 Plan &amp; advisor relationship</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>Function</th><th>Client input</th><th>Output to client</th><th>Advisor link</th><th>Super-admin link</th><th>Owning tables</th></tr></thead>
+<tbody>
+<tr><td class="fn">Financial plan &amp; milestones</td><td>none</td><td>plan title, status, next review date, milestones with linked goals, progress ring, countdown</td><td><span class="pill adv-w">writes</span> creates the plan and milestones; write access stays with whoever created the plan even after reassignment</td><td><span class="pill sa">admin</span> reassigning the advisor on /admin/clients does not update the plan's advisorId</td><td>financial_plans · plan_milestones</td></tr>
+<tr><td class="fn">Milestone comments</td><td>text</td><td>thread with author names</td><td><span class="pill adv-w">writes</span> advisors reply through the same route (but are always labelled "client")</td><td>—</td><td>milestone_comments (no ownership check, F-4)</td></tr>
+<tr><td class="fn">Request a review</td><td>urgency, message; advisorId taken from the dashboard advisor card</td><td>message sent, conversation id</td><td><span class="pill adv-w">writes</span> arrives as a message in the advisor's inbox</td><td>—</td><td>conversations · messages</td></tr>
+<tr><td class="fn">Messages</td><td>content</td><td>thread with the assigned advisor</td><td><span class="pill adv-w">writes</span> replies; may attach a URL</td><td><span class="pill sa">admin</span> can read any conversation</td><td>conversations · messages</td></tr>
+<tr><td class="fn">Documents</td><td>UI: request {type, details}; API: title, category, fileUrl</td><td>document list (URLs only; the server stores no files)</td><td><span class="pill adv-w">writes</span> uploads documents for the client (flagged admin-uploaded)</td><td>—</td><td>documents (kyc_documents still live in parallel)</td></tr>
+<tr><td class="fn">KYC status</td><td>none</td><td>status badge</td><td><span class="pill adv-w">writes</span> dropdown on client detail, independent of any document</td><td><span class="pill sa">admin</span> sees it on /admin/clients</td><td>client_profiles.kycStatus</td></tr>
+<tr><td class="fn">Advisor card</td><td>none</td><td>advisor id and name</td><td>—</td><td><span class="pill sa">admin</span> assigns or reassigns the advisor</td><td>client_profiles.advisorId → profiles</td></tr>
+<tr><td class="fn">Notifications</td><td>type, title, message, link (self-created)</td><td>list; mark all read</td><td><span class="pill none">none</span> (no server-side producer; nothing notifies the client when the advisor acts)</td><td>—</td><td>notifications</td></tr>
+</tbody></table></div>
+
+<h3>2.8 Insights &amp; scenarios</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>Function</th><th>Client input</th><th>Output to client</th><th>Advisor link</th><th>Super-admin link</th><th>Owning tables</th></tr></thead>
+<tbody>
+<tr><td class="fn">Wealth score</td><td>none</td><td>gated for the first 3 months; then 4 sub-scores (savings consistency, goal progress, investment growth, budget surplus) + overall</td><td><span class="pill none">none</span></td><td><span class="pill sa">admin</span> benchmarks and strategy returns feed the blended rate used inside</td><td>health_scores (row written by the GET; shares the table with the free-tier score, which uses a different formula)</td></tr>
+<tr><td class="fn">Scenarios</td><td>type (increase/reduce/pause monthly, lump sum, market drop, retire earlier) + parameters, years, assumed return; save</td><td>projection vs baseline, delta, compare view</td><td><span class="pill none">none</span> today: the UI shows "advisor-pushed" scenarios but no advisor route writes scenario_runs</td><td>—</td><td>scenario_runs (legacy scenarios table lets a client mark their own as advisor-pushed)</td></tr>
+<tr><td class="fn">Scenario alerts</td><td>viewed / dismissed</td><td>alert count and card on dashboard</td><td><span class="pill none">none</span> (no producer)</td><td>—</td><td>scenario_runs.status</td></tr>
+<tr><td class="fn">Coast point</td><td>extraMonthly</td><td>retirement goal, blended return, portfolio value, coast date base vs accelerated</td><td><span class="pill adv-w">writes</span> inforce plans and their values are part of the blended rate</td><td><span class="pill sa">admin</span> benchmarks</td><td>financial_goals + client_holdings + advised_plans + benchmarks</td></tr>
+<tr><td class="fn">Sol chat</td><td>free text (mobile free-tier nav only; the client shell has no chat)</td><td>assistant reply with tool access to goals, budget, net worth, holdings, health</td><td><span class="pill adv-w">writes</span> advisor-entered plan nicknames are passed to the model unsanitised</td><td>—</td><td>sol_conversations · sol_messages</td></tr>
+</tbody></table></div>
+
+<h2 id="truth">3 · Source-of-truth map</h2>
+<p>The principle you applied in Coach Connect: every fact has exactly one owner, every screen reads it from that owner (directly or through one derived view), and nothing persists a second copy that can drift. Measured against that, the client area today keeps eleven facts in two or more places. The worst case is net worth, where five different numbers can be shown for the same client on the same day.</p>
+
+<figure>
+<svg viewBox="0 0 1160 470" role="img" aria-label="Before and after. Before: five consumers each compute net worth from a different mix of tables, producing five numbers. After: one net worth service reads the four source tables and prices once, and every consumer plus the history snapshot reads that single value.">
+  <defs><marker id="arr2" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="currentColor"/></marker></defs>
+  <g font-family="Figtree, system-ui, sans-serif" font-size="12" fill="currentColor">
+    <text x="20" y="24" font-weight="700" font-size="14">Today: five net-worth numbers</text>
+    <!-- sources left -->
+    <g font-size="11.5">
+      <rect x="20" y="50" width="130" height="30" rx="6" fill="none" stroke="currentColor"/><text x="85" y="69" text-anchor="middle">client_holdings</text>
+      <rect x="20" y="92" width="130" height="30" rx="6" fill="none" stroke="currentColor"/><text x="85" y="111" text-anchor="middle">advised_plans</text>
+      <rect x="20" y="134" width="130" height="30" rx="6" fill="none" stroke="currentColor"/><text x="85" y="153" text-anchor="middle">assets / liabilities</text>
+      <rect x="20" y="176" width="130" height="30" rx="6" fill="none" stroke="currentColor"/><text x="85" y="195" text-anchor="middle">price_cache</text>
+      <rect x="20" y="218" width="130" height="30" rx="6" fill="none" stroke="currentColor" stroke-dasharray="4 3"/><text x="85" y="237" text-anchor="middle">net_worth_snapshots</text>
+      <rect x="20" y="260" width="130" height="30" rx="6" fill="none" stroke="currentColor" stroke-dasharray="4 3"/><text x="85" y="279" text-anchor="middle">portfolio_snapshots (legacy)</text>
+    </g>
+    <!-- consumers right -->
+    <g font-size="11.5">
+      <rect x="330" y="50" width="200" height="30" rx="6" fill="#DDF2EA" stroke="#1D9E75"/><text x="430" y="69" text-anchor="middle" fill="#14342A">Net worth page (browser sum)</text>
+      <rect x="330" y="92" width="200" height="30" rx="6" fill="#DDF2EA" stroke="#1D9E75"/><text x="430" y="111" text-anchor="middle" fill="#14342A">Dashboard ring</text>
+      <rect x="330" y="134" width="200" height="30" rx="6" fill="#DDF2EA" stroke="#1D9E75"/><text x="430" y="153" text-anchor="middle" fill="#14342A">Sol "net worth summary"</text>
+      <rect x="330" y="176" width="200" height="30" rx="6" fill="#DDF2EA" stroke="#1D9E75"/><text x="430" y="195" text-anchor="middle" fill="#14342A">Wealth score</text>
+      <rect x="330" y="218" width="200" height="30" rx="6" fill="#DDF2EA" stroke="#1D9E75"/><text x="430" y="237" text-anchor="middle" fill="#14342A">Admin / advisor "portfolioValue"</text>
+    </g>
+    <!-- edges (each consumer reads a different mix) -->
+    <g stroke="currentColor" stroke-width="1" fill="none" marker-end="url(#arr2)">
+      <path d="M150,65 L330,65"/><path d="M150,107 C240,107 240,70 330,70"/><path d="M150,149 C240,149 240,74 330,74"/><path d="M150,191 C240,191 240,78 330,78"/>
+      <path d="M150,233 C240,233 240,107 330,107"/><path d="M150,149 C240,149 240,111 330,111"/>
+      <path d="M150,65 C240,65 240,145 330,145"/><path d="M150,107 C240,107 240,149 330,149"/><path d="M150,149 C240,149 240,153 330,153"/><path d="M150,191 C240,191 240,157 330,157"/>
+      <path d="M150,65 C240,65 240,187 330,187"/><path d="M150,107 C240,107 240,191 330,191"/><path d="M150,149 C240,149 240,195 330,195"/>
+      <path d="M150,275 C240,275 240,233 330,233"/>
+    </g>
+    <!-- write-back -->
+    <path d="M430,80 C430,86 300,86 300,160 C300,228 150,228 150,233" stroke="#C2452D" stroke-width="1.2" fill="none" stroke-dasharray="3 3" marker-end="url(#arr2)"/>
+    <text x="236" y="300" font-size="11" fill="#C2452D">browser total written back as the snapshot "fact"</text>
+    <text x="20" y="330" font-size="11.5">Result: the ring may show manual assets only; the page shows holdings + plans; Sol and the score add the</text>
+    <text x="20" y="346" font-size="11.5">blended portfolio but ignore mortgages; the admin list sums legacy packages (usually 0). None agree.</text>
+
+    <!-- divider -->
+    <line x1="600" y1="40" x2="600" y2="440" stroke="currentColor" stroke-width="1" stroke-dasharray="4 4"/>
+
+    <text x="630" y="24" font-weight="700" font-size="14">Target: one owner, one computed value</text>
+    <g font-size="11.5">
+      <rect x="630" y="50" width="130" height="30" rx="6" fill="none" stroke="currentColor"/><text x="695" y="69" text-anchor="middle">client_holdings</text>
+      <rect x="630" y="92" width="130" height="30" rx="6" fill="none" stroke="currentColor"/><text x="695" y="111" text-anchor="middle">advised_plans</text>
+      <rect x="630" y="134" width="130" height="30" rx="6" fill="none" stroke="currentColor"/><text x="695" y="153" text-anchor="middle">assets / liabilities</text>
+      <rect x="630" y="176" width="130" height="30" rx="6" fill="none" stroke="currentColor"/><text x="695" y="195" text-anchor="middle">prices (server-fed)</text>
+    </g>
+    <rect x="820" y="100" width="150" height="62" rx="8" fill="#1D9E75"/>
+    <text x="895" y="124" text-anchor="middle" font-weight="700" fill="#ffffff">Net worth service</text>
+    <text x="895" y="141" text-anchor="middle" font-size="10.5" fill="#ffffff">GET /client/networth/summary</text>
+    <text x="895" y="154" text-anchor="middle" font-size="10.5" fill="#ffffff">one formula, server-side</text>
+    <g stroke="currentColor" stroke-width="1" fill="none" marker-end="url(#arr2)">
+      <path d="M760,65 C790,65 790,118 820,118"/><path d="M760,107 C790,107 790,124 820,124"/><path d="M760,149 C790,149 790,136 820,136"/><path d="M760,191 C790,191 790,146 820,146"/>
+    </g>
+    <g font-size="11.5">
+      <rect x="1000" y="50" width="140" height="26" rx="6" fill="#DDF2EA" stroke="#1D9E75"/><text x="1070" y="67" text-anchor="middle" fill="#14342A">Net worth page</text>
+      <rect x="1000" y="86" width="140" height="26" rx="6" fill="#DDF2EA" stroke="#1D9E75"/><text x="1070" y="103" text-anchor="middle" fill="#14342A">Dashboard ring</text>
+      <rect x="1000" y="122" width="140" height="26" rx="6" fill="#DDF2EA" stroke="#1D9E75"/><text x="1070" y="139" text-anchor="middle" fill="#14342A">Sol tool</text>
+      <rect x="1000" y="158" width="140" height="26" rx="6" fill="#DDF2EA" stroke="#1D9E75"/><text x="1070" y="175" text-anchor="middle" fill="#14342A">Wealth score</text>
+      <rect x="1000" y="194" width="140" height="26" rx="6" fill="#DDF2EA" stroke="#1D9E75"/><text x="1070" y="211" text-anchor="middle" fill="#14342A">Advisor &amp; admin views</text>
+      <rect x="1000" y="240" width="140" height="26" rx="6" fill="none" stroke="currentColor" stroke-dasharray="4 3"/><text x="1070" y="257" text-anchor="middle">net_worth_snapshots</text>
+    </g>
+    <g stroke="currentColor" stroke-width="1" fill="none" marker-end="url(#arr2)">
+      <path d="M970,120 C985,120 985,63 1000,63"/><path d="M970,124 C985,124 985,99 1000,99"/><path d="M970,130 L1000,135"/><path d="M970,138 C985,138 985,171 1000,171"/><path d="M970,146 C985,146 985,207 1000,207"/>
+      <path d="M970,152 C985,152 985,253 1000,253"/>
+    </g>
+    <text x="1004" y="282" font-size="10.5">history only, written by a nightly job</text>
+    <text x="630" y="330" font-size="11.5">Every consumer shows the same number because there is only one place that knows how to</text>
+    <text x="630" y="346" font-size="11.5">compute it. Snapshots become a record of what the service said, never an input to it.</text>
+  </g>
+</svg>
+<figcaption>Left: how net worth is assembled today, with each consumer choosing its own mix of tables and the browser writing its total back as a "snapshot" that the dashboard then treats as the truth. Right: one server-side service owns the formula, and snapshots are history, not source.</figcaption>
+</figure>
+
+<h3>3.1 All facts with more than one source today</h3>
+<div class="tablewrap"><table>
+<thead><tr><th>Fact</th><th>Where it lives today</th><th>How it drifts</th><th>Proposed single owner</th><th>Everything else becomes</th></tr></thead>
+<tbody>
+<tr><td class="fn">Net worth</td><td><span class="pill dup">5 sources</span> browser sum on the net worth page · net_worth_snapshots · Sol tool · wealth score · admin/advisor portfolioValue from legacy portfolio_snapshots</td><td>Each uses a different mix of holdings, plans, assets, mortgages and prices; the dashboard shows manual assets only until the client opens the net worth page</td><td><span class="pill one">one</span> a server-side net worth service over client_holdings + advised_plans + assets + liabilities + prices</td><td>Read-only views of the service. Snapshot written by a job, never by the browser. Drop portfolio_snapshots from admin lists.</td></tr>
+<tr><td class="fn">Portfolio value</td><td><span class="pill dup">4 sources</span> resolveBlendedRate (holdings + inforce plans) · client-side synced assets · legacy portfolio_snapshots · client_financial_snapshot (onboarding rough value)</td><td>Admin sees legacy value; client sees live value; onboarding value is never reconciled</td><td><span class="pill one">one</span> the same net worth service, exposing a "portfolio" sub-total</td><td>Retire client_packages, portfolio_holdings, client_financial_snapshots after export.</td></tr>
+<tr><td class="fn">Goal current amount</td><td><span class="pill dup">3 sources</span> financial_goals.currentAmount (manual) · Σ goal_holding_links × source value (server, computeCurrentBreakdown) · the same sum re-implemented in the browser (useGoals)</td><td>Free-tier auto-update and the pathway overwrite currentAmount; edit sheet resets monthlyContribution; linked and manual values can both exist on one goal</td><td><span class="pill one">one</span> goal funding = links when any exist, else manual; computed once server-side and returned on GET /goals</td><td>Browser stops recomputing. Free auto-update is disabled for linked goals.</td></tr>
+<tr><td class="fn">Goal status</td><td><span class="pill dup">3 vocabularies</span> on_track / almost / off_track (free projection) · no_target / on_track / at_risk / off_track / completed (client pacing) · active / completed / paused / cancelled (PATCH status route)</td><td>A reopened goal (<code>active</code>) scores 5/25 in the free health score and renders "off track"</td><td><span class="pill one">one</span> lifecycle enum (active / completed / cancelled) stored; pacing status derived, never stored</td><td>One computeGoalProgress for both tiers; DB CHECK constraint on the enum.</td></tr>
+<tr><td class="fn">Preferred currency</td><td><span class="pill dup">2 fields</span> profiles.preferredCurrency (toggle, currency fields) · client_profiles.preferredDisplayCurrency (onboarding, /client/profile/track)</td><td>Onboarding writes one, the toggle writes the other; amounts format from profiles while the track endpoint reports client_profiles</td><td><span class="pill one">one</span> profiles.preferredCurrency</td><td>Drop preferredDisplayCurrency; onboarding writes profiles.</td></tr>
+<tr><td class="fn">Risk profile</td><td><span class="pill dup">2 fields</span> profiles.riskProfile (free pathway, PUT /profiles/me) · client_profiles.riskProfile (advisor, admin create, lead convert, PUT /client-profile/me)</td><td>Client and advisor can hold different answers; the advisor never sees the client's own</td><td><span class="pill one">one</span> client_profiles.riskProfile with a <code>riskProfileSource</code> (self-assessed / advisor)</td><td>profiles.riskProfile removed; free tier writes the same field.</td></tr>
+<tr><td class="fn">Onboarding state</td><td><span class="pill dup">5 flags</span> profiles.onboardingComplete · client_profiles.onboardingStep · prospectOnboardingComplete · fullOnboardingComplete · onboardingTrackComplete · plus browser localStorage progress</td><td>Only onboardingTrackComplete drives routing; the others are set by different screens and never read together</td><td><span class="pill one">one</span> client_profiles.onboardingStage enum (not_started → basics → holdings → goal → budget → complete)</td><td>All booleans derived from the stage; localStorage holds only the unsaved draft.</td></tr>
+<tr><td class="fn">Who is my advisor</td><td><span class="pill dup">6 pointers</span> client_profiles.advisorId · leads.assignedAdvisorId · financial_plans.advisorId · advised_plans.advisorId · conversations.advisorId · review-request body advisorId</td><td>Reassigning on /admin/clients updates one; plans, conversations and ownership checks keep the old advisor</td><td><span class="pill one">one</span> client_profiles.advisorId (current) + an advisor_assignments history table</td><td>Plan and conversation rows carry no advisorId; ownership middleware resolves through client_profiles. Review request takes no advisorId from the body.</td></tr>
+<tr><td class="fn">Investment contributions</td><td><span class="pill dup">3 copies</span> client_budget_months.investmentContributions JSON · client_holding_transactions rows with source budget_contribution · advised-plan premiums injected by advisedPlanBudgetSync</td><td>Client can post arbitrary JSON (including fake advised_plan lines) that the score then sums; the ledger and the JSON are reconciled by hand on every save</td><td><span class="pill one">one</span> the holding ledger (and a plan-contribution ledger) is the record; the month's contribution list is a query over it</td><td>Remove the JSON column; budget totals computed from ledgers.</td></tr>
+<tr><td class="fn">Budget itself</td><td><span class="pill dup">2 tables</span> budget_entries (free tier, 7 lines) · client_budget_months (client, 14 lines + contributions)</td><td>A promoted client who visits /free/budget edits a budget nobody else reads; the two health scores read different tables</td><td><span class="pill one">one</span> client_budget_months for both tiers, with free-tier fields as a subset</td><td>Migrate budget_entries; free pages read the same table.</td></tr>
+<tr><td class="fn">Wealth / health score</td><td><span class="pill dup">2 formulas, 1 table</span> free POST /health-score (25/25/20/20/10 parts) and client GET /client/health-score (4 × 0–100) both write health_scores; disambiguated only by whether <code>details</code> is null</td><td>Two rows per day can coexist; history mixes scales; the GET writes on read</td><td><span class="pill one">one</span> one scoring service with a <code>tier</code> column, one row per user per day (unique index), written by a job or an explicit POST</td><td>GET becomes pure read.</td></tr>
+<tr><td class="fn">KYC</td><td><span class="pill dup">3 places</span> kyc_documents (still writable) · documents (migration target) · client_profiles.kycStatus (advisor dropdown, unrelated to any document)</td><td>Status can say "verified" with zero documents; two document tables</td><td><span class="pill one">one</span> documents with category kyc and a per-document status; kycStatus derived (all required categories verified)</td><td>Retire kyc_documents; remove the free-text dropdown.</td></tr>
+<tr><td class="fn">Scenarios</td><td><span class="pill dup">2 tables</span> scenarios (legacy, client may set isAdvisorPushed) · scenario_runs (current; nothing advisor-side writes it)</td><td>"Advisor-pushed" alerts exist in the UI with no producer</td><td><span class="pill one">one</span> scenario_runs with <code>createdByRole</code>; add the advisor route that creates one</td><td>Drop scenarios.</td></tr>
+<tr><td class="fn">Prices</td><td><span class="pill dup">3 sources</span> price_cache (Yahoo, written on any user's request, may store 0) · fund_prices (Twelve Data or manual, any advisor) · averageCostPrice fallback inside valuation</td><td>One user's bad fetch poisons everyone's valuation; fund vs ticker prices never cross-checked</td><td><span class="pill one">one</span> prices table fed by a server job, with provider and fetchedAt; writes restricted to the job and super admin</td><td>Request-time fetches become cache misses handled by the job, never by the caller.</td></tr>
+<tr><td class="fn">Client status</td><td><span class="pill dup">2 writers</span> client_profiles.status (advisor dropdown; also settable by the client via PUT /client-profile/me) · leads.status (unassigned → active → client)</td><td>A client can set their own account status; lead and client status can disagree after promotion</td><td><span class="pill one">one</span> client_profiles.status owned by advisor/admin only; lead status frozen at <code>client</code> on promotion</td><td>Remove status from the client-writable allowlist.</td></tr>
+</tbody></table></div>
+
+<div class="callout warn">
+<strong>Two facts that look duplicated but are legitimate history:</strong> advised_plan_statements (a statement is a dated document, not a live value) and goal_progress_snapshots (a daily record). Keep both, but make sure nothing reads them as the current value: today <code>advised_plans.latestAccountValue</code> is copied from the last statement and can be overwritten by a statement posted against the wrong plan (Finding F-2).
+</div>
+
+<h2 id="principles">4 · Source-of-truth principles to adopt for tala</h2>
+<div class="grid">
+  <div class="card"><h4>1. One owner table per fact</h4><p>Each column in the schema has exactly one table that may be written for it. Write the owner next to the fact in the schema file comment and enforce it in code review. Profiles own identity and preferences; client_profiles own the relationship (advisor, status, stage, risk).</p></div>
+  <div class="card"><h4>2. Derived values are computed, never stored</h4><p>Net worth, portfolio value, goal funding, savings rate, pacing status and wealth score are functions of owner tables. They are returned by one server-side service each. The browser never sums and never writes a total back.</p></div>
+  <div class="card"><h4>3. Snapshots are history, not source</h4><p>net_worth_snapshots, goal_progress_snapshots and health_scores are written by a scheduled job from the service output, one row per user per day (unique index). Reads never fall back to them for the current value.</p></div>
+  <div class="card"><h4>4. One vocabulary per state</h4><p>Role, goal status, plan status, lead status, client status and onboarding stage are Postgres enums or CHECK constraints shared with Zod schemas in lib/db. A string that is not in the enum cannot be stored.</p></div>
+  <div class="card"><h4>5. Relationships point one way</h4><p>"Who is the advisor" is answered only by client_profiles.advisorId. Plans, conversations, tasks and ownership middleware resolve through it. Reassignment is one UPDATE plus one history row.</p></div>
+  <div class="card"><h4>6. Ledgers over edited totals</h4><p>Money movements (holding in/out, budget contributions, plan premiums) are append-only ledger rows. Balances and monthly contribution lists are queries over the ledger. This replaces the contributions JSON and the manual balance arithmetic.</p></div>
+  <div class="card"><h4>7. Reference data has one admin door</h4><p>Prices, benchmarks, strategy returns and the fund catalogue are written only by server jobs or super_admin routes. Advisors and client requests read them; they never create cache rows.</p></div>
+  <div class="card"><h4>8. One tier model, feature-flagged</h4><p>Free and client tiers share the same tables (goals, budget, net worth, score). Tier only changes limits and which screens are offered, so promotion from free to client carries every number across with no migration.</p></div>
+  <div class="card"><h4>9. Legacy is read-only, then gone</h4><p>packages, portfolio_holdings, scenarios v1, kyc_documents, client_financial_snapshots and budget_entries get an export, a cut-over date, and then a drop. Until then, no new code path may read them.</p></div>
+</div>
+
+<h2 id="migration">5 · Migration order (safe sequence)</h2>
+<ol class="steps">
+  <li><strong>Enums and constraints first.</strong> Add CHECK constraints for role, goal status, plan status, lead status, client status; add unique indexes on (user, month) for budget, (user, date) for snapshots and scores. This surfaces existing bad rows before any logic moves.</li>
+  <li><strong>Net worth service.</strong> Implement <code>GET /client/networth/summary</code> server-side with the formula the net worth page uses today (holdings + plans + assets − mortgages − liabilities, live prices). Point the dashboard ring, Sol tool, wealth score and advisor/admin lists at it. Stop the browser POST of snapshots; add a nightly job.</li>
+  <li><strong>Goal funding.</strong> Return computed funding and pacing on <code>GET /goals</code>; delete the browser copy in useGoals; block auto-update and pathway upsert for goals that have links or belong to an investment client.</li>
+  <li><strong>Advisor pointer.</strong> Add advisor_assignments history; drop advisorId from financial_plans and conversations in favour of a join; rewrite the ownership middleware to resolve through client_profiles only; take advisorId out of the review-request body.</li>
+  <li><strong>Profile fields.</strong> Collapse preferredDisplayCurrency into profiles.preferredCurrency, riskProfile into client_profiles with a source column, five onboarding flags into one stage enum. Update the onboarding screens and the currency toggle in the same change.</li>
+  <li><strong>Ledgers.</strong> Introduce a plan-contribution ledger; replace investmentContributions JSON with a query; recompute month totals from ledgers; remove the hand-written balance updates.</li>
+  <li><strong>Scores and scenarios.</strong> One scoring service with a tier column; add the advisor "push scenario" route; drop the v1 scenarios table.</li>
+  <li><strong>Prices and KYC.</strong> Server-fed prices table with provider and timestamp; documents as the only document table with derived kycStatus.</li>
+  <li><strong>Retire legacy.</strong> Export, cut over, drop client_packages, portfolio_holdings, kyc_documents, client_financial_snapshots, budget_entries.</li>
+</ol>
+<div class="callout">
+Each step is independently shippable and testable against the existing supertest harness. Steps 2 to 4 also close security findings F-2, F-3, F-17, F-20 and F-24 from the audit, so they are worth doing before the UI redesign rather than after.
+</div>
+</main>
+
+</body>
+</html>
