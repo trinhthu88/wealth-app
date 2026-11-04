@@ -53,6 +53,15 @@ export async function checkAllowanceFor(
   const result = checkAllowance(tier, capability, usage, leadStatus, options);
   (req as any).allowanceGate = result.gate;
   if (result.allowed) return true;
+  // C2 and the sixth-holding path of C5 fire here, from the refused attempt itself.
+  if (result.checkpoint && (capability === "goals" || capability === "holdings")) {
+    const { raiseCheckpoint } = await import("../lib/checkpointEngine");
+    await raiseCheckpoint((req as any).userId, result.checkpoint, {
+      capability,
+      limit: result.limit,
+      used: capability === "goals" ? usage.goals : usage.holdings,
+    });
+  }
   res.status(403).json({
     code: "LIMIT",
     capability,

@@ -8,7 +8,8 @@ import CurrencyField from "@/components/shared/CurrencyField";
 import WealthScoreCard from "@/components/client/dashboard/WealthScoreCard";
 import ClientSetupChecklistCard from "@/components/client/ClientSetupChecklistCard";
 import AdvisorCard from "@/components/client/dashboard/AdvisorCard";
-import { useEntitlements } from "@/hooks/useEntitlements";
+import ConversionCTASection from "@/components/client/dashboard/sections/ConversionCTASection";
+import SmartUpgradeCard from "@/components/SmartUpgradeCard";
 import ClientRiskCheckSheet from "@/components/client/ClientRiskCheckSheet";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useProfile } from "@/hooks/useProfile";
@@ -31,7 +32,6 @@ function daysSince(dateStr: string) { return (Date.now() - new Date(dateStr).get
 
 export default function ClientDashboard() {
   const data = useDashboardData();
-  const { entitlements } = useEntitlements();
   const { profile } = useProfile();
   const { nextMilestone, advisorName } = usePlan();
   const netWorthSummary = useNetWorthSummary();
@@ -138,6 +138,7 @@ export default function ClientDashboard() {
     <ClientAppShell>
       <div className="space-y-4 pb-8">
         <ClientSetupChecklistCard onRiskCheck={() => setShowRiskCheck(true)} />
+        <SmartUpgradeCard />
         <SolNarration line={solLine} detail={solDetail} advisorFirstName={advisorFirstName} className="mb-0 px-1" />
 
         {recentStatementPlan && !dismissedCelebration && (
@@ -327,27 +328,7 @@ export default function ClientDashboard() {
           </section>
         )}
 
-        {/* Track B Conversion CTA */}
-        {data.isTrackB && entitlements?.tier !== "free" && (
-          <div className="bg-breeze rounded-[24px] p-5">
-            <div className="flex items-start gap-3 mb-4">
-              <Sol size="sm" animate="breathe" />
-              <div className="min-w-0">
-                <div className="text-[16px] font-semibold text-forest mb-1">Upgrade to Advised</div>
-                <div className="text-[14px] text-forest text-pretty leading-snug">
-                  Unlock personalized strategies, goal projections, and a dedicated advisor to accelerate your wealth.
-                </div>
-              </div>
-            </div>
-            <Link
-              href="/client/advisor/messages"
-              onClick={() => track("upgrade_cta_clicked", { location: "client_dashboard_track_b_cta" })}
-              className="bg-forest text-paper rounded-full h-11 px-5 text-[14px] font-semibold inline-flex items-center hover:opacity-90 transition-opacity"
-            >
-              Talk to an advisor
-            </Link>
-          </div>
-        )}
+        <ConversionCTASection />
 
         {/* Advisor card: conversion state for free users, the advisor for clients */}
         <AdvisorCard />

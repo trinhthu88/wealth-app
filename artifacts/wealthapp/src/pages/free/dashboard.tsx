@@ -536,24 +536,7 @@ export default function FreeDashboard() {
           </div>
 
           {/* Smart Upgrade Cards */}
-          <SmartUpgradeCard
-            condition={income > 0 && effectiveSavingsRate < 15}
-            insightText={`You're saving ${effectiveSavingsRate.toFixed(0)}% — reaching 20% could move your retirement forward by 2+ years`}
-            ctaText="Book a free discovery call"
-            ctaType="savings_rate"
-          />
-          <SmartUpgradeCard
-            condition={goals.length > 0 && assets.filter(a => a.category === "investment").length === 0 && income > 0 && savingsRate >= 15}
-            insightText="Your goal needs an investment strategy — an advisor can build your personalised roadmap"
-            ctaText="Book a free discovery call"
-            ctaType="no_investments"
-          />
-          <SmartUpgradeCard
-            condition={(profile?.isExpat ?? false) && income > 0}
-            insightText="As an expat, you may be missing tax and pension optimisations worth thousands per year"
-            ctaText="Book a free discovery call"
-            ctaType="expat"
-          />
+          <SmartUpgradeCard />
 
           {/* Quick actions */}
           <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">

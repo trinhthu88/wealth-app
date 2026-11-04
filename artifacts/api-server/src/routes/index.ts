@@ -24,6 +24,7 @@ import clientHealthScoreRouter from "./clientHealthScore";
 import solRouter from "./sol";
 import billingRouter from "./billing";
 import entitlementsRouter from "./entitlements";
+import checkpointsRouter from "./checkpoints";
 
 const router: IRouter = Router();
 
@@ -52,5 +53,6 @@ router.use(clientHealthScoreRouter);
 router.use(solRouter);
 router.use(billingRouter);
 router.use(entitlementsRouter);
+router.use(checkpointsRouter);
 
 export default router;

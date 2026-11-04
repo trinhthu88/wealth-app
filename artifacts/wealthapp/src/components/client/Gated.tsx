@@ -12,10 +12,12 @@ interface Props {
   preview?: ReactNode;
   /** For a whole page: wraps the locked state in the app shell the page would have rendered. */
   page?: boolean;
+  /** Shown beneath the locked state, such as a preview that stays open. */
+  lockedExtra?: ReactNode;
 }
 
 /** Renders a screen or section according to the server's gate for this capability. */
-export default function Gated({ capability, children, preview, page = false }: Props) {
+export default function Gated({ capability, children, preview, page = false, lockedExtra }: Props) {
   const { isLoading } = useEntitlements();
   const { gate, atCap, limits } = useCapability(capability);
   const view = resolveGatedView(gate, atCap, { isLoading });
@@ -23,7 +25,12 @@ export default function Gated({ capability, children, preview, page = false }: P
   if (view === "loading") return page ? <ClientAppShell>{null}</ClientAppShell> : null;
   if (view === "children") return <>{children}</>;
   if (view === "locked") {
-    const locked = <LockedFeature capability={capability} />;
+    const locked = (
+      <div className="space-y-4">
+        <LockedFeature capability={capability} />
+        {lockedExtra}
+      </div>
+    );
     return page ? <ClientAppShell>{locked}</ClientAppShell> : locked;
   }
   if (view === "preview") {

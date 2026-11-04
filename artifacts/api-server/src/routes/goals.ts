@@ -5,6 +5,7 @@ import { requireAuth, requireRole, requireAdvisorOwnsClient, requireAdvisorOwnsL
 import { getRemainingPct } from "../lib/goalAllocation";
 import { computeGoalFundingSummary, getProgressMovement } from "../lib/goalProgressSnapshot";
 import { ensureOffTrackTask } from "../lib/offTrackTasks";
+import { runCheckpointHook } from "../lib/checkpointEngine";
 
 const router: IRouter = Router();
 
@@ -49,6 +50,7 @@ router.post("/goals", requireAuth, requireAllowance("goals"), async (req, res): 
     targetDate: targetDate ?? null, currency: currency ?? "USD",
     priority: priority ?? "medium", status: parsedStatus?.success ? parsedStatus.data : "active", notes: notes ?? null,
   }).returning();
+  await runCheckpointHook(userId);
   res.status(201).json(goal);
 });
 
@@ -87,6 +89,7 @@ router.put("/goals/:id", requireAuth, async (req, res): Promise<void> => {
   const [updated] = await db.update(financialGoalsTable).set(updates)
     .where(and(eq(financialGoalsTable.id, rawId), eq(financialGoalsTable.userId, userId))).returning();
   if (!updated) { res.status(404).json({ error: "Not found" }); return; }
+  await runCheckpointHook(userId);
   res.json(updated);
 });
 

@@ -23,6 +23,7 @@ import { computeNetWorth } from "../lib/netWorthService";
 import { getCurrentAdvisorIdForClient } from "../lib/currentAdvisor";
 import { parseDateOfBirth } from "../lib/profileFields";
 import { getEntitlementContext } from "../lib/entitlements";
+import { runCheckpointHook } from "../lib/checkpointEngine";
 import { earliestBudgetMonth } from "@workspace/tier-policy";
 
 const router: IRouter = Router();
@@ -709,6 +710,7 @@ router.post("/client/holdings", requireAuth, requireAllowance("holdings"), async
     totalInvestedOther: totalInvestedOther != null ? String(totalInvestedOther) : null,
   }).returning();
 
+  await runCheckpointHook(userId);
   res.status(201).json(holding);
 });
 
@@ -1029,6 +1031,7 @@ router.post("/client/budget", requireAuth, async (req, res): Promise<void> => {
     });
   }
 
+  await runCheckpointHook(userId);
   res.json(row);
 });
 

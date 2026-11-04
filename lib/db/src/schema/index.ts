@@ -20,3 +20,4 @@ export * from "./clientBudget";
 export * from "./scenarioRuns";
 export * from "./solConversations";
 export * from "./subscriptions";
+export * from "./conversionCheckpoints";

@@ -12,6 +12,8 @@ export interface CoastPointResult {
 
 export interface CoastPointResponse {
   available: boolean;
+  /** Preview gate: the goal's name and no numbers. */
+  blurred?: boolean;
   reason?: string;
   goalId?: string;
   goalTitle?: string;

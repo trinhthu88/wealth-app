@@ -3,6 +3,7 @@ import { Link, useLocation } from "wouter";
 import { Map, CalendarDays, AlertTriangle } from "lucide-react";
 import ClientAppShell from "@/components/client/AppShell";
 import Gated from "@/components/client/Gated";
+import CoastPointPreview from "@/components/client/CoastPointPreview";
 import SolNarration from "@/components/client/SolNarration";
 import SolCard from "@/components/client/goals/SolCard";
 import RequestReviewSheet from "@/components/client/plan/RequestReviewSheet";
@@ -335,7 +336,7 @@ function ClientPlanContent() {
 
 export default function ClientPlan() {
   return (
-    <Gated capability="plan" page>
+    <Gated capability="plan" page lockedExtra={<CoastPointPreview />}>
       <ClientPlanContent />
     </Gated>
   );

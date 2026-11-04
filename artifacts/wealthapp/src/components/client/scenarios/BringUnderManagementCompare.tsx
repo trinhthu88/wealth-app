@@ -1,3 +1,6 @@
+import CheckpointCard from "@/components/client/CheckpointCard";
+import { useCheckpoint } from "@/hooks/useCheckpoint";
+import { useEntitlements } from "@/hooks/useEntitlements";
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
@@ -26,7 +29,30 @@ const HORIZON_YEARS = 12;
 
 const ELIGIBLE_TYPES = new Set(["stock_etf", "etf", "mutual_fund", "commodity", "bond", "crypto", "property", "cash", "pension", "other"]);
 
+// DECISION: for a free user this comparison is the C5 offer, so it appears only with C5
+// open. For a Track B client it is a standing tool on the scenarios page, so it stays
+// available and C9 adds the offer above it; gating it would leave that tab empty.
 export default function BringUnderManagementCompare({ holdings }: { holdings: ClientHolding[] }) {
+  const { entitlements } = useEntitlements();
+  const investable = useCheckpoint(["C5_investable"]);
+  if (entitlements?.tier === "free") {
+    if (!investable.checkpoint) return null;
+    return (
+      <div className="space-y-3">
+        <CheckpointCard codes={["C5_investable"]} />
+        <CompareTool holdings={holdings} />
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-3">
+      <CheckpointCard codes={["C9_under_management"]} />
+      <CompareTool holdings={holdings} />
+    </div>
+  );
+}
+
+function CompareTool({ holdings }: { holdings: ClientHolding[] }) {
   const eligible = holdings.filter(h => ELIGIBLE_TYPES.has(h.holdingType) && h.currentValue > 0);
   const [selectedId, setSelectedId] = useState<string | null>(eligible[0]?.id ?? null);
   const selected = eligible.find(h => h.id === selectedId) ?? null;

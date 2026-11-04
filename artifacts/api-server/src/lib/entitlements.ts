@@ -1,10 +1,12 @@
 import type { Request } from "express";
-import { and, asc, eq, gte, ne, sql } from "drizzle-orm";
+import { and, asc, eq, gte, isNull, ne, sql } from "drizzle-orm";
 import {
   db, advisedPlansTable, clientHoldingsTable, clientProfilesTable, financialGoalsTable,
-  leadsTable, profilesTable, solConversationsTable, solMessagesTable,
+  leadsTable, profilesTable, solConversationsTable, solMessagesTable, conversionCheckpointsTable,
 } from "@workspace/db";
-import { entitlementsFor, resolveTier, type Entitlements, type Tier, type Usage } from "@workspace/tier-policy";
+import {
+  entitlementsFor, resolveTier, type Checkpoint, type CheckpointCode, type Entitlements, type Tier, type Usage,
+} from "@workspace/tier-policy";
 
 export interface EntitlementContext {
   role: string;
@@ -50,6 +52,14 @@ async function loadContext(userId: string): Promise<EntitlementContext> {
       )),
     getLeadForUser(userId),
   ]);
+  const [open] = await db.select().from(conversionCheckpointsTable).where(and(
+    eq(conversionCheckpointsTable.userId, userId),
+    isNull(conversionCheckpointsTable.dismissedAt),
+    isNull(conversionCheckpointsTable.acceptedAt),
+  ));
+  const openCheckpoint: Checkpoint | null = open
+    ? { id: open.id, code: open.code as CheckpointCode, firedAt: open.firedAt.toISOString(), snapshot: open.snapshot }
+    : null;
 
   const role = profile?.role ?? "free_user";
   const tier = resolveTier(role, clientProfile?.clientTrack ?? null, !!inforcePlan);
@@ -69,7 +79,7 @@ async function loadContext(userId: string): Promise<EntitlementContext> {
 
   return {
     role, tier, usage, leadStatus, advisor,
-    entitlements: { ...entitlementsFor(tier, usage, leadStatus, null), advisor, leadSource: lead?.source ?? null },
+    entitlements: { ...entitlementsFor(tier, usage, leadStatus, openCheckpoint), advisor, leadSource: lead?.source ?? null },
   };
 }
 

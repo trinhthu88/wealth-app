@@ -7,6 +7,8 @@ import {
 import { requireAuth } from "../middlewares/requireAuth";
 import { computeCurrentBreakdown } from "../lib/goalProgressSnapshot";
 import { computeNetWorth } from "../lib/netWorthService";
+import { getEntitlementContext } from "../lib/entitlements";
+import { runCheckpointHook } from "../lib/checkpointEngine";
 
 const router: IRouter = Router();
 
@@ -45,7 +47,10 @@ router.get("/client/health-score", requireAuth, async (req, res): Promise<void> 
   const monthsActive = profile
     ? (Date.now() - new Date(profile.createdAt).getTime()) / (1000 * 60 * 60 * 24 * 30.44)
     : 0;
-  if (monthsActive < 3) { res.json({ gated: true, monthsActive: Math.round(monthsActive * 10) / 10 }); return; }
+  // A free user gets the score straight away, as the hook; the design's matrix keeps the
+  // three-month wait for clients only.
+  const { tier } = await getEntitlementContext(req);
+  if (tier !== "free" && monthsActive < 3) { res.json({ gated: true, monthsActive: Math.round(monthsActive * 10) / 10 }); return; }
 
   const today = new Date().toISOString().slice(0, 10);
   const [existingToday] = await db.select().from(healthScoresTable)
@@ -154,6 +159,7 @@ router.get("/client/health-score", requireAuth, async (req, res): Promise<void> 
     })
     .returning();
 
+  await runCheckpointHook(userId);
   res.json({ ...score, gated: false });
 });
 

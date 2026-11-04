@@ -1,4 +1,4 @@
-import { useQuery, type QueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { useUser } from "@clerk/react";
 import type { Capability, Entitlements } from "@workspace/tier-policy";
 import { apiFetch } from "@/lib/api";
@@ -23,6 +23,8 @@ export function useEntitlements() {
 
 /** Call after any mutation that changes usage or lead status. */
 export function invalidateEntitlements(qc: QueryClient) {
+  // The open checkpoint is part of the answer, so its cached detail goes with it.
+  qc.invalidateQueries({ queryKey: ["checkpoint"] });
   return qc.invalidateQueries({ queryKey: ENTITLEMENTS_QUERY_KEY });
 }
 
@@ -32,4 +34,19 @@ export function useCapability(capability: Capability) {
     ? entitlements.atCap[capability]
     : false;
   return { gate: entitlements?.gates[capability] ?? null, atCap, limits: entitlements?.limits ?? null };
+}
+
+/**
+ * DECISION: a capped Add button looks disabled and shows the checkpoint message, as the
+ * brief asks, but it still reports the click. C2 and the sixth-holding path of C5 fire from
+ * the refused attempt, so a natively disabled button would mean they could never fire.
+ * The empty body cannot create anything: the guard refuses at the cap, and if usage was
+ * stale the route rejects the body as invalid.
+ */
+export function useCapAttempt(path: "/goals" | "/client/holdings") {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiFetch(path, { method: "POST", body: "{}" }),
+    onSettled: () => invalidateEntitlements(qc),
+  });
 }

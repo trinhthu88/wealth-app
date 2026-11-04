@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useUser } from "@clerk/react";
 import { apiFetch } from "@/lib/api";
+import { invalidateEntitlements } from "@/hooks/useEntitlements";
 import { track } from "@/lib/analytics";
 import { toast } from "sonner";
 
@@ -95,6 +96,7 @@ export function useClientBudget(selectedMonth?: string) {
     onSuccess: (_data, variables) => {
       qc.invalidateQueries({ queryKey: ["client-budget"] });
       qc.invalidateQueries({ queryKey: ["dashboard-networth"] });
+      invalidateEntitlements(qc);
       track("budget_saved", { month: variables.month });
       toast.success("Saved", { duration: 1500 });
     },
