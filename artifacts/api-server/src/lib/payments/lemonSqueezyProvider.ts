@@ -149,7 +149,9 @@ export const lemonSqueezyProvider: PaymentProvider = {
   },
 
   async getPrice(id): Promise<ProviderPriceDetail> {
-    const [{ variant, product }, currency] = await Promise.all([loadVariant(id), storeCurrency()]);
+    // In this order, so a variant from another store answers not found before the store is read.
+    const { variant, product } = await loadVariant(id);
+    const currency = await storeCurrency();
     return {
       ...toProviderPrice(variant, product.attributes.name ?? null, currency),
       active: variant.attributes.status === "published" && product.attributes.status === "published",

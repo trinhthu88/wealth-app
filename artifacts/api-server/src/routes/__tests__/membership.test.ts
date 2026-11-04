@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { execFileSync } from "node:child_process";
+import { createHmac } from "node:crypto";
 import path from "node:path";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import request from "supertest";
@@ -9,8 +10,10 @@ vi.mock("@clerk/express", () => ({
   getAuth: (req: any) => ({ userId: req.headers["x-test-user-id"] ?? null }),
 }));
 
-// Stripe is replaced whole: nothing here can reach the real API. The webhook re-reads the
-// subscription from Stripe, so a test sets what Stripe "knows" in `subscriptions`.
+// Every scenario here runs through whichever provider PAYMENT_PROVIDER selects. Fixtures are written
+// once, in Stripe's shape, and a fake of the selected provider serves them: the Stripe SDK is replaced
+// whole, and Lemon Squeezy's HTTP API is faked below. Nothing here can reach a real API. The webhook
+// re-reads the subscription, so a test sets what the provider "knows" in `subscriptions`.
 const stripeState = vi.hoisted(() => ({
   subscriptions: new Map<string, any>(),
   created: [] as any[],
@@ -65,15 +68,105 @@ vi.mock("stripe", () => {
   return { default: Stripe };
 });
 
+process.env.PAYMENT_PROVIDER ||= "lemonsqueezy";
+const PROVIDER = process.env.PAYMENT_PROVIDER;
+const LS = PROVIDER === "lemonsqueezy";
+const LS_STORE = "99";
+process.env.LEMONSQUEEZY_API_KEY = "ls_key_for_tests";
+process.env.LEMONSQUEEZY_STORE_ID = LS_STORE;
+process.env.LEMONSQUEEZY_WEBHOOK_SECRET = "ls_secret_for_tests";
 process.env.STRIPE_SECRET_KEY = "sk_test_x";
 process.env.STRIPE_WEBHOOK_SECRET = "whsec_x";
 process.env.STRIPE_PRICE_MONTHLY = "price_monthly";
 process.env.STRIPE_PRICE_ANNUAL = "price_annual";
 
+// ---- A fake of Lemon Squeezy's API, serving the same fixtures.
+const iso = (seconds: number | null | undefined) => (seconds ? new Date(seconds * 1000).toISOString() : null);
+const LS_STATUS: Record<string, string> = { trialing: "on_trial", active: "active", past_due: "past_due", canceled: "expired" };
+const lsVariant = (p: any) => ({
+  id: p.id,
+  attributes: {
+    product_id: `prod-${p.id}`,
+    name: p.nickname,
+    status: p.active ? "published" : "draft",
+    price: p.unit_amount ?? 0,
+    pay_what_you_want: p.unit_amount === null || p.recurring?.usage_type === "metered",
+    is_subscription: p.type === "recurring",
+    interval: p.recurring?.interval ?? null,
+    interval_count: p.recurring?.interval_count ?? null,
+    has_free_trial: true, trial_interval: "day", trial_interval_count: 7,
+  },
+});
+const lsJson = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
+async function fakeLemonSqueezy(url: string, init: RequestInit = {}): Promise<Response> {
+  const path = decodeURI(url).replace("https://api.lemonsqueezy.com/v1", "");
+  const [route, query = ""] = path.split("?");
+  const [, resource, id] = route.split("/");
+  if (resource === "subscriptions") {
+    if (stripeState.failRetrieve) throw new Error("lemon squeezy is down");
+    const sub = stripeState.subscriptions.get(id);
+    const item = sub.items.data[0];
+    return lsJson({
+      data: {
+        id: sub.id,
+        attributes: {
+          status: sub.lsStatus ?? LS_STATUS[sub.status],
+          customer_id: sub.customer,
+          variant_id: item.price.id,
+          renews_at: iso(item.current_period_end),
+          ends_at: sub.ends_at ? iso(sub.ends_at) : null,
+          trial_ends_at: iso(sub.trial_end),
+        },
+      },
+    });
+  }
+  if (resource === "checkouts" && init.method === "POST") {
+    const { attributes, relationships } = JSON.parse(init.body as string).data;
+    const params = {
+      mode: "subscription",
+      payment_method_collection: "always",
+      customer_email: attributes.checkout_data.email,
+      line_items: [{ price: relationships.variant.data.id, quantity: 1 }],
+      subscription_data: {
+        metadata: { userId: attributes.checkout_data.custom.user_id },
+        ...(attributes.checkout_options.skip_trial ? {} : { trial_period_days: 7 }),
+      },
+    };
+    stripeState.created.push({ params });
+    const n = stripeState.created.length;
+    return lsJson({ data: { id: `ck_${n}`, attributes: { url: `https://checkout.test/${n}` } } });
+  }
+  if (resource === "checkouts") {
+    const expires = stripeState.sessionStatus === "open" ? Date.now() + 3_600_000 : Date.now() - 1000;
+    return lsJson({ data: { id, attributes: { expires_at: new Date(expires).toISOString() } } });
+  }
+  if (resource === "customers") return lsJson({ data: { id, attributes: { urls: { customer_portal: "https://portal.test/session" } } } });
+  if (stripeState.failPrices) throw new Error("lemon squeezy is down");
+  if (resource === "stores") return lsJson({ data: { id, attributes: { currency: "USD" } } });
+  if (resource === "products" && id) {
+    const p = stripeState.prices.get(id.replace("prod-", ""));
+    return lsJson({ data: { id, attributes: { store_id: Number(LS_STORE), status: p?.product?.active === false ? "draft" : "published", name: p?.product?.name } } });
+  }
+  if (resource === "products") {
+    return lsJson({ data: [{ id: "all", attributes: { status: "published", name: "tala Membership" } }], meta: { page: { lastPage: 1 } } });
+  }
+  if (resource === "variants" && id) {
+    stripeState.priceRetrievals.push(id);
+    const p = stripeState.prices.get(id);
+    return p ? lsJson({ data: lsVariant(p) }) : lsJson({ errors: [] }, 404);
+  }
+  if (resource === "variants") {
+    const rows = [...stripeState.prices.values()].filter((p) => !query.includes("filter[status]=published") || p.active).map(lsVariant);
+    return lsJson({ data: rows, meta: { page: { lastPage: 1 } } });
+  }
+  throw new Error(`The Lemon Squeezy fake has no route for ${path}`);
+}
+if (LS) vi.stubGlobal("fetch", fakeLemonSqueezy);
+
 const { default: app } = await import("../../app");
 const {
   db, profilesTable, clientProfilesTable, leadsTable, membershipsTable,
-  clientHoldingsTable, conversionCheckpointsTable, stripeWebhookEventsTable, advisorAssignmentsTable, membershipSettingsTable,
+  clientHoldingsTable, conversionCheckpointsTable, paymentWebhookEventsTable, advisorAssignmentsTable, membershipSettingsTable,
   subscriptionsTable, pathwayProgressTable,
 } = await import("@workspace/db");
 const { eq, inArray } = await import("drizzle-orm");
@@ -95,6 +188,11 @@ const asUser = (id: string) => ({ "x-test-user-id": id });
 
 function setSubscription(userId: string, overrides: Record<string, any> = {}) {
   const id = overrides.id ?? `sub_${userId}`;
+  const firstItem = overrides.items?.data?.[0];
+  if (LS && firstItem && !stripeState.prices.has(firstItem.price.id)) {
+    makePrice(firstItem.price.id, {}, { interval: firstItem.price.recurring?.interval ?? "month" });
+  }
+  if (LS && !stripeState.prices.has("price_monthly")) makePrice("price_monthly");
   const sub = {
     id,
     customer: `cus_${userId}`,
@@ -109,11 +207,38 @@ function setSubscription(userId: string, overrides: Record<string, any> = {}) {
   return sub;
 }
 
-function sendEvent(type: string, object: any, id = `evt_${++counter}_${RUN_ID}`, signature = "valid") {
+const LS_EVENTS: Record<string, string> = {
+  "checkout.session.completed": "subscription_created",
+  "customer.subscription.updated": "subscription_updated",
+  "customer.subscription.deleted": "subscription_expired",
+  "invoice.payment_failed": "subscription_payment_failed",
+};
+// A Lemon Squeezy event has no id of its own, so the same fixture id must give the same updated_at.
+const lsUpdatedAt = new Map<string, string>();
+let lsClock = Date.now();
+
+function lemonSqueezyBody(type: string, object: any, id: string): string {
+  const event_name = LS_EVENTS[type] ?? type;
+  const subscriptionId: string = object.parent?.subscription_details?.subscription ?? object.subscription ?? object.id;
+  if (!lsUpdatedAt.has(id)) lsUpdatedAt.set(id, new Date(lsClock += 1000).toISOString());
+  const updated_at = lsUpdatedAt.get(id)!;
+  const userId = object.noCustomData ? undefined : stripeState.subscriptions.get(subscriptionId)?.metadata?.userId;
+  const custom_data = userId ? { user_id: userId } : undefined;
+  const isInvoice = event_name.startsWith("subscription_payment_");
+  const data = isInvoice
+    ? { type: "subscription-invoices", id: `inv_${id}`, attributes: { subscription_id: subscriptionId, updated_at } }
+    : { type: "subscriptions", id: subscriptionId, attributes: { updated_at } };
+  eventIds.push(`${event_name}:${data.id}:${updated_at}`);
+  return JSON.stringify({ meta: { event_name, custom_data }, data });
+}
+
+function sendEvent(type: string, object: any, id = `evt_${++counter}_${RUN_ID}`, signature = "valid", path = "/api/webhooks/payments") {
   eventIds.push(id);
-  return request(app).post("/api/webhooks/stripe")
-    .set("stripe-signature", signature).set("content-type", "application/json")
-    .send(JSON.stringify({ id, type, data: { object } }));
+  const post = request(app).post(path).set("content-type", "application/json");
+  if (!LS) return post.set("stripe-signature", signature).send(JSON.stringify({ id, type, data: { object } }));
+  const body = lemonSqueezyBody(type, object, id);
+  const digest = createHmac("sha256", process.env.LEMONSQUEEZY_WEBHOOK_SECRET!).update(body).digest("hex");
+  return post.set("x-signature", signature === "valid" ? digest : "0".repeat(digest.length)).send(body);
 }
 const completed = (sub: { id: string; customer: string }) =>
   sendEvent("checkout.session.completed", { mode: "subscription", subscription: sub.id, customer: sub.customer });
@@ -154,7 +279,7 @@ beforeEach(() => {
 });
 
 afterAll(async () => {
-  await db.delete(stripeWebhookEventsTable).where(inArray(stripeWebhookEventsTable.eventId, eventIds));
+  await db.delete(paymentWebhookEventsTable).where(inArray(paymentWebhookEventsTable.eventId, eventIds));
   await db.delete(conversionCheckpointsTable).where(inArray(conversionCheckpointsTable.userId, created));
   await db.delete(clientHoldingsTable).where(inArray(clientHoldingsTable.userId, created));
   await db.delete(leadsTable).where(inArray(leadsTable.userId, created));
@@ -165,7 +290,16 @@ afterAll(async () => {
   await db.delete(profilesTable).where(inArray(profilesTable.id, created));
 });
 
-describe("POST /api/webhooks/stripe", () => {
+// Lemon Squeezy's prices are chosen by an admin, with no env fallback, so a checkout needs a row.
+async function ensureSellablePrices() {
+  makePrice("price_monthly");
+  makePrice("price_annual", {}, { interval: "year" });
+  if (!LS) return;
+  await db.delete(membershipSettingsTable);
+  await db.insert(membershipSettingsTable).values({ id: 1, monthlyPriceId: "price_monthly", annualPriceId: "price_annual" });
+}
+
+describe(`POST /api/webhooks/payments (${PROVIDER})`, () => {
   it("refuses a bad signature and writes nothing", async () => {
     const u = await makeUser();
     const sub = setSubscription(u);
@@ -190,7 +324,7 @@ describe("POST /api/webhooks/stripe", () => {
     expect((await checkpointsOf(u)).filter((c) => c.code === "C12_lapsed")).toHaveLength(0);
   });
 
-  it("answers 500 when Stripe can't be read, and the retry succeeds", async () => {
+  it("answers 500 when the provider can't be read, and the retry succeeds", async () => {
     const u = await makeUser();
     const sub = setSubscription(u);
     const id = `evt_retry_${u}`;
@@ -202,13 +336,10 @@ describe("POST /api/webhooks/stripe", () => {
     expect((await memberRow(u)).status).toBe("active");
   });
 
-  it("still accepts the old /billing/webhook path during the cutover", async () => {
+  it.each(["/api/webhooks/stripe", "/api/billing/webhook"])("still accepts the alias %s", async (path) => {
     const u = await makeUser();
     const sub = setSubscription(u);
-    const id = `evt_old_${u}`;
-    eventIds.push(id);
-    await request(app).post("/api/billing/webhook").set("stripe-signature", "valid").set("content-type", "application/json")
-      .send(JSON.stringify({ id, type: "customer.subscription.updated", data: { object: sub } })).expect(200);
+    await sendEvent("customer.subscription.updated", sub, `evt_old_${u}`, "valid", path).expect(200);
     expect((await memberRow(u)).status).toBe("active");
   });
 
@@ -221,7 +352,7 @@ describe("POST /api/webhooks/stripe", () => {
     });
     await completed(sub).expect(200);
     const row = await memberRow(u);
-    expect(row).toMatchObject({ status: "trialing", plan: "member_annual", source: "stripe", providerCustomerId: sub.customer });
+    expect(row).toMatchObject({ status: "trialing", plan: "member_annual", source: PROVIDER, provider: PROVIDER, providerCustomerId: sub.customer });
     expect(row.trialEndsAt?.getTime()).toBe(trialEnd * 1000);
     expect((await entitlements(u)).tier).toBe("track_b");
   });
@@ -237,28 +368,32 @@ describe("POST /api/webhooks/stripe", () => {
 });
 
 describe("grace window after a failed payment", () => {
-  it("counts seven days from the paid-through date, not Stripe's rolled-forward period end", async () => {
+  // Paid up to a date, and then a renewal fails. Each provider then reports a later date, which is no
+  // longer what was paid for: Stripe's rolled-forward period end, Lemon Squeezy's next charge attempt.
+  async function paidThenFailed(paidThrough: number) {
     const u = await makeUser();
-    const paidThrough = nowS() - 3 * DAY_S;
+    await sendEvent("customer.subscription.updated", setSubscription(u, {
+      items: { data: [{ current_period_start: paidThrough - 30 * DAY_S, current_period_end: paidThrough, price: { id: "price_monthly", recurring: { interval: "month" } } }] },
+    })).expect(200);
     const sub = setSubscription(u, {
       status: "past_due",
       items: { data: [{ current_period_start: paidThrough, current_period_end: paidThrough + 30 * DAY_S, price: { id: "price_monthly", recurring: { interval: "month" } } }] },
     });
     await sendEvent("invoice.payment_failed", { parent: { subscription_details: { subscription: sub.id } } }).expect(200);
+    return u;
+  }
+
+  it("counts seven days from the paid-through date, not the date the provider has moved on to", async () => {
+    const paidThrough = nowS() - 3 * DAY_S;
+    const u = await paidThenFailed(paidThrough);
     const row = await memberRow(u);
     expect(row.status).toBe("past_due");
     expect(row.currentPeriodEnd?.getTime()).toBe(paidThrough * 1000);
     expect((await entitlements(u)).tier).toBe("track_b");
   });
 
-  it("drops to free once the seven days have passed, even with a future Stripe period end", async () => {
-    const u = await makeUser();
-    const paidThrough = nowS() - 8 * DAY_S;
-    const sub = setSubscription(u, {
-      status: "past_due",
-      items: { data: [{ current_period_start: paidThrough, current_period_end: paidThrough + 30 * DAY_S, price: { id: "price_monthly", recurring: { interval: "month" } } }] },
-    });
-    await sendEvent("invoice.payment_failed", { parent: { subscription_details: { subscription: sub.id } } }).expect(200);
+  it("drops to free once the seven days have passed, even with a later date from the provider", async () => {
+    const u = await paidThenFailed(nowS() - 8 * DAY_S);
     const e = await entitlements(u);
     expect(e.tier).toBe("free");
     expect(e.membership).toMatchObject({ status: "past_due", isActive: false });
@@ -421,6 +556,8 @@ describe("advisor-led door", () => {
 });
 
 describe("POST /api/membership/checkout", () => {
+  beforeEach(ensureSellablePrices);
+
   it("writes no membership, and asks for a card with a 7-day trial", async () => {
     const u = await makeUser();
     const res = await request(app).post("/api/membership/checkout").set(asUser(u)).send({ plan: "member_monthly" }).expect(200);
@@ -451,7 +588,8 @@ describe("POST /api/membership/checkout", () => {
     const u = await makeUser();
     await request(app).post("/api/membership/checkout").set(asUser(u)).send({ plan: "member_monthly" }).expect(200);
     await request(app).post("/api/membership/checkout").set(asUser(u)).send({ plan: "member_annual" }).expect(200);
-    expect(stripeState.expired).toHaveLength(1);
+    // Lemon Squeezy has no way to close a checkout early; it runs out after 24 hours.
+    expect(stripeState.expired).toHaveLength(LS ? 0 : 1);
     expect(stripeState.created[1].params.line_items[0].price).toBe("price_annual");
   });
 
@@ -474,7 +612,9 @@ describe("POST /api/membership/checkout", () => {
     await request(app).post("/api/membership/checkout").set(asUser(u)).send({ plan: "member_monthly" }).expect(200);
     const { params } = stripeState.created[0];
     expect(params.subscription_data.trial_period_days).toBeUndefined();
-    expect(params.customer).toBe(sub.customer);
+    // Lemon Squeezy matches a returning customer by email.
+    if (LS) expect(params.customer_email).toBe(`${u}@test.local`);
+    else expect(params.customer).toBe(sub.customer);
   });
 
   it("tells the screens the same thing about the trial that checkout will do", async () => {
@@ -552,7 +692,7 @@ describe("PUT /api/admin/users/:id/membership", () => {
     await completed(setSubscription(paying)).expect(200);
     await request(app).put(`/api/admin/users/${paying}/membership`).set(asUser(admin)).send({ action: "comp", reason: "x" }).expect(409);
     await request(app).put(`/api/admin/users/${paying}/membership`).set(asUser(admin)).send({ action: "revoke", reason: "x" }).expect(409);
-    expect((await memberRow(paying)).source).toBe("stripe");
+    expect((await memberRow(paying)).source).toBe(PROVIDER);
   });
 
   it("refuses staff accounts", async () => {
@@ -595,6 +735,8 @@ describe("admin-configured prices", () => {
   const annual = (id: string, overrides = {}) => makePrice(id, overrides, { interval: "year" });
   let n = 0;
   const id = (tag: string) => `price_${tag}_${++n}`;
+  // A Lemon Squeezy store has one currency; a Stripe price has its own.
+  const CURRENCY = LS ? "usd" : "sgd";
   beforeEach(async () => { await db.delete(membershipSettingsTable); });
 
   describe("PUT /api/admin/membership/settings", () => {
@@ -657,11 +799,11 @@ describe("admin-configured prices", () => {
   describe("GET /api/admin/membership/prices", () => {
     it("lists active recurring prices with their product's name", async () => {
       const admin = await makeUser("super_admin");
-      const listed = makePrice(id("list"), { nickname: "Launch", unit_amount: 700, currency: "sgd" });
+      const listed = makePrice(id("list"), { nickname: "Launch", unit_amount: 700, currency: CURRENCY });
       const hidden = makePrice(id("hidden"), { active: false });
       const res = await request(app).get("/api/admin/membership/prices").set(asUser(admin)).expect(200);
       expect(res.body.find((p: any) => p.id === listed.id)).toEqual({
-        id: listed.id, nickname: "Launch", productName: "tala Membership", unitAmount: 700, currency: "sgd", interval: "month",
+        id: listed.id, nickname: "Launch", productName: "tala Membership", unitAmount: 700, currency: CURRENCY, interval: "month",
       });
       expect(res.body.map((p: any) => p.id)).not.toContain(hidden.id);
     });
@@ -670,18 +812,22 @@ describe("admin-configured prices", () => {
   describe("GET /api/billing/prices", () => {
     it("returns Stripe's amounts for the selected prices", async () => {
       const admin = await makeUser("super_admin");
-      const m = monthly(id("m"), { unit_amount: 777, currency: "sgd" });
-      const a = annual(id("a"), { unit_amount: 7000, currency: "sgd" });
+      const m = monthly(id("m"), { unit_amount: 777, currency: CURRENCY });
+      const a = annual(id("a"), { unit_amount: 7000, currency: CURRENCY });
       await settings(admin, { monthlyPriceId: m.id, annualPriceId: a.id }).expect(200);
       const res = await request(app).get("/api/billing/prices").expect(200);
       expect(res.body).toMatchObject({
         source: "settings",
-        monthly: { plan: "member_monthly", priceId: m.id, amount: 777, currency: "sgd", interval: "month", active: true },
-        annual: { plan: "member_annual", priceId: a.id, amount: 7000, currency: "sgd", interval: "year", active: true },
+        monthly: { plan: "member_monthly", priceId: m.id, amount: 777, currency: CURRENCY, interval: "month", active: true },
+        annual: { plan: "member_annual", priceId: a.id, amount: 7000, currency: CURRENCY, interval: "year", active: true },
       });
     });
 
-    it("falls back to the env prices, and says so", async () => {
+    it.runIf(LS)("has no env fallback on Lemon Squeezy, so it answers 503 until an admin chooses", async () => {
+      await request(app).get("/api/billing/prices").expect(503);
+    });
+
+    it.skipIf(LS)("falls back to the env prices, and says so", async () => {
       makePrice("price_monthly", { unit_amount: 111 });
       makePrice("price_annual", { unit_amount: 1111 }, { interval: "year" });
       const res = await request(app).get("/api/billing/prices").expect(200);
@@ -733,7 +879,13 @@ describe("admin-configured prices", () => {
       expect(stripeState.created[1].params.line_items[0].price).toBe(a.id);
     });
 
-    it("falls back to the env price with no settings row", async () => {
+    it.runIf(LS)("answers 503 with no settings row, and creates nothing", async () => {
+      const u = await makeUser();
+      await request(app).post("/api/membership/checkout").set(asUser(u)).send({ plan: "member_annual" }).expect(503);
+      expect(stripeState.created).toHaveLength(0);
+    });
+
+    it.skipIf(LS)("falls back to the env price with no settings row", async () => {
       const u = await makeUser();
       await request(app).post("/api/membership/checkout").set(asUser(u)).send({ plan: "member_annual" }).expect(200);
       expect(stripeState.created[0].params.line_items[0].price).toBe("price_annual");
@@ -752,7 +904,7 @@ describe("admin-configured prices", () => {
       const after = await request(app).post("/api/membership/checkout").set(asUser(u)).send({ plan: "member_monthly" }).expect(200);
       expect(after.body.url).not.toBe(before.body.url);
       expect(stripeState.created[1].params.line_items[0].price).toBe(second.id);
-      expect(stripeState.expired).toHaveLength(1);
+      expect(stripeState.expired).toHaveLength(LS ? 0 : 1);
     });
   });
 
@@ -762,6 +914,122 @@ describe("admin-configured prices", () => {
     await completed(sub).expect(200);
     expect((await memberRow(u)).plan).toBe("member_annual");
   });
+});
+
+describe.runIf(LS)("Lemon Squeezy through the store", () => {
+  const event = "customer.subscription.updated";
+  const inDays = (days: number) => nowS() + days * DAY_S;
+  const c12 = async (u: string) => (await checkpointsOf(u)).filter((c) => c.code === "C12_lapsed");
+
+  it("cancelled but paid through keeps access until the date, then expiry ends it and fires C12 once", async () => {
+    const u = await makeUser("investment_client");
+    await db.insert(clientProfilesTable).values({ userId: u });
+    const sub = setSubscription(u);
+    await sendEvent(event, sub).expect(200);
+
+    const ends = inDays(10);
+    setSubscription(u, { lsStatus: "cancelled", ends_at: ends });
+    await sendEvent("subscription_cancelled", sub).expect(200);
+    const row = await memberRow(u);
+    expect(row).toMatchObject({ status: "canceled", cancelAtPeriodEnd: true });
+    expect(row.currentPeriodEnd?.getTime()).toBe(ends * 1000);
+    const during = await entitlements(u);
+    expect(during.tier).toBe("track_b");
+    expect(during.membership.isActive).toBe(true);
+    // They still have what they paid for, so nothing says it has ended.
+    expect(await c12(u)).toHaveLength(0);
+    // Still a member, so checkout refuses rather than selling them a second subscription.
+    await ensureSellablePrices();
+    await request(app).post("/api/membership/checkout").set(asUser(u)).send({ plan: "member_monthly" }).expect(409);
+
+    setSubscription(u, { lsStatus: "expired", ends_at: nowS() - 1 });
+    await sendEvent("subscription_expired", sub).expect(200);
+    expect(await memberRow(u)).toMatchObject({ status: "canceled", cancelAtPeriodEnd: false, currentPeriodEnd: null });
+    expect((await entitlements(u)).tier).toBe("free");
+    expect(await c12(u)).toHaveLength(1);
+
+    await sendEvent("subscription_updated", sub).expect(200);
+    expect(await c12(u)).toHaveLength(1);
+  });
+
+  it("resuming during the paid-through time restores it, with no C12", async () => {
+    const u = await makeUser("investment_client");
+    await db.insert(clientProfilesTable).values({ userId: u });
+    const sub = setSubscription(u);
+    setSubscription(u, { lsStatus: "cancelled", ends_at: inDays(5) });
+    await sendEvent("subscription_cancelled", sub).expect(200);
+    setSubscription(u);
+    await sendEvent("subscription_resumed", sub).expect(200);
+    expect(await memberRow(u)).toMatchObject({ status: "active", cancelAtPeriodEnd: false });
+    expect(await c12(u)).toHaveLength(0);
+  });
+
+  it("a date that has passed with no expiry event still ends access", async () => {
+    const u = await makeUser("investment_client");
+    await db.insert(clientProfilesTable).values({ userId: u });
+    const sub = setSubscription(u, { lsStatus: "cancelled", ends_at: nowS() - 60 });
+    await sendEvent("subscription_cancelled", sub).expect(200);
+    expect((await entitlements(u)).tier).toBe("free");
+  });
+
+  it("paused ends access until it's unpaused", async () => {
+    const u = await makeUser("investment_client");
+    await db.insert(clientProfilesTable).values({ userId: u });
+    const sub = setSubscription(u);
+    await sendEvent(event, sub).expect(200);
+    setSubscription(u, { lsStatus: "paused" });
+    await sendEvent("subscription_paused", sub).expect(200);
+    expect((await entitlements(u)).tier).toBe("free");
+    setSubscription(u);
+    await sendEvent("subscription_unpaused", sub).expect(200);
+    expect((await entitlements(u)).tier).toBe("track_b");
+  });
+
+  it("past_due keeps the stored date through repeated updates as renews_at moves", async () => {
+    const u = await makeUser();
+    const paidThrough = inDays(-2);
+    await sendEvent(event, setSubscription(u, {
+      items: { data: [{ current_period_start: paidThrough - 30 * DAY_S, current_period_end: paidThrough, price: { id: "price_monthly", recurring: { interval: "month" } } }] },
+    })).expect(200);
+    for (const attempt of [3, 6]) {
+      const sub = setSubscription(u, {
+        status: "past_due",
+        items: { data: [{ current_period_start: paidThrough, current_period_end: inDays(attempt), price: { id: "price_monthly", recurring: { interval: "month" } } }] },
+      });
+      await sendEvent("subscription_updated", sub).expect(200);
+      expect((await memberRow(u)).currentPeriodEnd?.getTime()).toBe(paidThrough * 1000);
+    }
+  });
+
+  it("recovering a payment returns to active with the new date", async () => {
+    const u = await makeUser();
+    const first = setSubscription(u);
+    await sendEvent(event, first).expect(200);
+    const renewed = inDays(30);
+    const sub = setSubscription(u, { items: { data: [{ current_period_start: nowS(), current_period_end: renewed, price: { id: "price_monthly", recurring: { interval: "month" } } }] } });
+    await sendEvent("subscription_payment_recovered", { parent: { subscription_details: { subscription: sub.id } } }).expect(200);
+    const row = await memberRow(u);
+    expect(row.status).toBe("active");
+    expect(row.currentPeriodEnd?.getTime()).toBe(renewed * 1000);
+  });
+
+  it("finds the user by customer when a later event carries no custom data", async () => {
+    const u = await makeUser();
+    const sub = setSubscription(u);
+    await sendEvent("subscription_created", sub).expect(200);
+    setSubscription(u, { lsStatus: "cancelled", ends_at: inDays(3) });
+    await sendEvent("subscription_cancelled", { ...sub, noCustomData: true }).expect(200);
+    expect(await memberRow(u)).toMatchObject({ status: "canceled", cancelAtPeriodEnd: true });
+  });
+
+  it("writes nothing for a subscription it can't connect to a user", async () => {
+    const stranger = `sub_stranger_${RUN_ID}`;
+    stripeState.subscriptions.set(stranger, { ...setSubscription(`nobody_${RUN_ID}`, { id: stranger }), metadata: {}, customer: `cus_none_${RUN_ID}` });
+    await sendEvent(event, { id: stranger, noCustomData: true }).expect(200);
+    const rows = await db.select().from(membershipsTable).where(eq(membershipsTable.providerSubscriptionId, stranger));
+    expect(rows).toHaveLength(0);
+  });
+
 });
 
 describe("only the membership store writes memberships", () => {

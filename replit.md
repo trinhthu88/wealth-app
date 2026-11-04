@@ -30,29 +30,25 @@ See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and pa
 
 - `artifacts/wealthapp` — `VITE_POSTHOG_KEY`: PostHog product analytics key (see `.env.example`). Analytics only initializes in production builds; get a free key from posthog.com. Tracks the free-user and investment_client funnels (onboarding, goals, budget, health score, upgrade CTAs, milestones) — not yet wired into the advisor or admin portals.
 
-### Required environment variables (Stripe billing)
+### Required environment variables (membership payments)
 
-`artifacts/api-server` — see `.env.example`:
+`artifacts/api-server` — see `.env.example`. `PAYMENT_PROVIDER` selects the adapter behind `src/lib/payments`, and defaults to `lemonsqueezy`. An unknown value stops the server at boot. Missing keys make checkout answer 503.
 
 ```
-STRIPE_SECRET_KEY=sk_live_...        # from Stripe dashboard → API keys
-STRIPE_WEBHOOK_SECRET=whsec_...      # from Stripe dashboard → Webhooks
-STRIPE_PRICE_MONTHLY=price_...       # create in Stripe dashboard (see note)
-STRIPE_PRICE_ANNUAL=price_...        # create in Stripe dashboard (see note)
+PAYMENT_PROVIDER=lemonsqueezy
+LEMONSQUEEZY_API_KEY=...             # Settings → API. Test-mode keys and webhooks are separate from live ones.
+LEMONSQUEEZY_STORE_ID=...            # Settings → Stores
+LEMONSQUEEZY_WEBHOOK_SECRET=...      # the signing secret you choose for the webhook
 APP_URL=https://your-replit-app.repl.co   # your deployed Replit URL
 ```
 
-**Creating the Stripe prices** — in the Stripe dashboard → Products → Add product:
-- Name: "tala Membership"
-- Add two prices:
-  1. A monthly recurring price
-  2. A yearly recurring price (two months free is the usual choice)
+**Creating the prices** — in Lemon Squeezy, create one subscription product, "tala membership", with two variants: Monthly and Annual (two months free is the usual choice). Each variant needs a 7-day free trial, or `/admin/membership` refuses it. A super admin then chooses them at `/admin/membership`.
 
-A super admin chooses which prices the app sells at `/admin/membership`. Until then the app sells the prices in `STRIPE_PRICE_MONTHLY` and `STRIPE_PRICE_ANNUAL`, which may be left unset once a selection is saved.
+**Creating the webhook** — Settings → Webhooks:
+- URL: `https://your-replit-app.repl.co/api/webhooks/payments` — note the `/api` prefix; every api-server route is mounted under `/api` (see `src/app.ts`).
+- Events: `subscription_created`, `subscription_updated`, `subscription_cancelled`, `subscription_resumed`, `subscription_expired`, `subscription_paused`, `subscription_unpaused`, `subscription_payment_failed`, `subscription_payment_success`, `subscription_payment_recovered`
+- The signing secret you enter → `LEMONSQUEEZY_WEBHOOK_SECRET`
 
-**Creating the webhook** — in the Stripe dashboard → Developers → Webhooks → Add endpoint:
-- URL: `https://your-replit-app.repl.co/api/webhooks/stripe` — note the `/api` prefix; every api-server route is mounted under `/api` (see `src/app.ts`). The old `/api/billing/webhook` path still works, and should be removed once the endpoint has moved.
-- Events to listen for: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`
-- Copy the signing secret → `STRIPE_WEBHOOK_SECRET`
+**Stripe** remains as an adapter: `PAYMENT_PROVIDER=stripe`, with `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` and, until a super admin chooses prices, `STRIPE_PRICE_MONTHLY` and `STRIPE_PRICE_ANNUAL`. `/api/webhooks/stripe` and `/api/billing/webhook` stay as aliases of the endpoint until that provider is removed.
 
-The webhook route reads the raw request body (required for Stripe's signature check) via an `express.raw()` mount on both paths in `app.ts`, registered before the global `express.json()` — do not reorder those two.
+The webhook route reads the raw request body (required for the signature check) via an `express.raw()` mount on all three paths in `app.ts`, registered before the global `express.json()` — do not reorder those two.

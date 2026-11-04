@@ -4,6 +4,7 @@ import {
   db, advisedPlansTable, clientHoldingsTable, clientProfilesTable, financialGoalsTable,
   leadsTable, membershipsTable, profilesTable, solConversationsTable, solMessagesTable, conversionCheckpointsTable,
 } from "@workspace/db";
+import { getPaymentProvider } from "./payments";
 import {
   entitlementsFor, isMembershipActive, isTrialEligible, membershipGraceUntil, resolveTier,
   type Checkpoint, type CheckpointCode, type Entitlements, type MembershipPlan, type MembershipStatus,
@@ -87,7 +88,7 @@ async function loadContext(userId: string): Promise<EntitlementContext> {
     currentPeriodEnd: membership?.currentPeriodEnd?.toISOString() ?? null,
     trialEndsAt: membership?.trialEndsAt?.toISOString() ?? null,
     source: membership?.source ?? null,
-    manageUrl: membership?.providerCustomerId ? "/membership/portal" : null,
+    manageUrl: membership?.providerCustomerId && membership.provider === getPaymentProvider().name ? "/membership/portal" : null,
     isActive: isMembershipActive(membershipStatus, graceUntil),
     pendingPayment: role === "investment_client" && clientProfile?.status === "pending_payment",
     trialEligible: isTrialEligible(membershipStatus),

@@ -58,6 +58,17 @@ describe("resolveTier", () => {
     });
   });
 
+  it("canceled runs to the paid-through date, with no grace on top", () => {
+    const until = (days: number) => membershipGraceUntil(new Date(NOW.getTime() + days * DAY));
+    expect(resolveTier("investment_client", null, false, "canceled", until(3), NOW)).toBe("track_b");
+    expect(resolveTier("investment_client", null, true, "canceled", until(3), NOW)).toBe("track_a");
+    expect(resolveTier("investment_client", null, false, "canceled", until(-1), NOW)).toBe("free");
+    expect(resolveTier("investment_client", null, false, "canceled", null, NOW)).toBe("free");
+    // Where past_due would still be in its grace window, canceled is over.
+    expect(isMembershipActive("past_due", until(-1), NOW)).toBe(true);
+    expect(isMembershipActive("canceled", until(-1), NOW)).toBe(false);
+  });
+
   it("past_due holds until exactly currentPeriodEnd + 7 days", () => {
     const end = new Date(NOW.getTime() - GRACE_DAYS * DAY);
     const grace = membershipGraceUntil(end);

@@ -2,7 +2,7 @@
 
 Implements `docs/prompts/implement-free-tier-conversion.md` and, as Phase 5, `docs/prompts/subscription-addendum.md` on branch `feat/free-tier-conversion`. Typecheck and both test suites pass after every phase.
 
-**Not tested against Stripe.** Webhook and checkout tests use a mocked Stripe client, and no real Checkout has been completed, even in test mode, because this environment has no Stripe keys. The screens after payment were checked by setting membership rows by hand.
+**Not tested against a real payment provider.** Webhook and checkout tests use fakes of Stripe and Lemon Squeezy, built from their published docs, and no real checkout has been completed, even in test mode, because this environment has no keys. The screens after payment were checked by setting membership rows by hand.
 
 **Browser tested on 2026-11-04,** on a production build with test Clerk users, at phone width. Covered: sign-in, onboarding, return visit, locked screens and membership copy, goal cap and C2, "Talk to an advisor", the Activate and Reactivate screens, the pending, member, trial-ending and lapsed states, the advisor allow-list, and Add lead. Not covered: real payment, the super-admin screens, and desktop width.
 
@@ -10,25 +10,24 @@ Implements `docs/prompts/implement-free-tier-conversion.md` and, as Phase 5, `do
 
 Run these in order on each environment, including production:
 
-1. `pnpm --filter @workspace/db run push` adds `conversion_checkpoints`, `user_engagement`, `memberships`, `stripe_webhook_events` and `membership_checkout_sessions`.
-2. `pnpm --filter @workspace/scripts run apply-membership-constraints --apply` lets `client_profiles.status` hold `pending_payment`. **Push does not do this and reports success anyway.** Without this step every lead promotion fails with a 500.
-3. `pnpm --filter @workspace/scripts run migrate-free-tier-to-client` is a dry run. Read the counts it logs.
-4. `pnpm --filter @workspace/scripts run migrate-free-tier-to-client --apply` copies the data and sets `onboarding_stage`. It is safe to run again.
-5. `pnpm --filter @workspace/scripts run backfill-memberships` is a dry run. Read the counts it logs.
-6. `pnpm --filter @workspace/scripts run backfill-memberships --apply --comp-existing-clients` carries live `subscriptions` rows over to `memberships` and comps every other current client. **Run this before the new code serves users**, or those clients drop to free limits.
+1. `pnpm --filter @workspace/scripts run apply-membership-constraints --apply` renames `stripe_webhook_events` where it exists, because push would otherwise stop to ask about it. On a database that has never had memberships, this step reports that and changes nothing yet.
+2. `pnpm --filter @workspace/db run push` creates the membership tables, `conversion_checkpoints` and `user_engagement`.
+3. `pnpm --filter @workspace/scripts run apply-membership-constraints --apply` again. It lets `client_profiles.status` hold `pending_payment` and `memberships.source` hold `lemonsqueezy`. **Push does not do this and reports success anyway.** Without it, every lead promotion and every Lemon Squeezy webhook fails with a 500.
+4. `pnpm --filter @workspace/scripts run migrate-free-tier-to-client` is a dry run. Read the counts it logs.
+5. `pnpm --filter @workspace/scripts run migrate-free-tier-to-client --apply` copies the data and sets `onboarding_stage`. It is safe to run again.
+6. `pnpm --filter @workspace/scripts run backfill-memberships --comp-existing-clients` is a dry run. Read the counts it logs. If `paidBackfilled` is above zero, see decision 1 below first.
+7. `pnpm --filter @workspace/scripts run backfill-memberships --apply --comp-existing-clients` comps every current client without a live subscription. **Run this before the new code serves users**, or those clients drop to free limits.
 
-Then in Stripe and the environment:
+Then in Lemon Squeezy and the environment:
 
-7. Create a monthly and an annual recurring price, then choose them at `/admin/membership`. Until then the app sells `STRIPE_PRICE_MONTHLY` and `STRIPE_PRICE_ANNUAL`. `STRIPE_PRICE_YEARLY` is no longer read.
-8. Move the webhook endpoint to `/api/webhooks/stripe`. `/api/billing/webhook` still works during the cutover, and should be removed afterwards.
-
-The dev database has had steps 1 and 2 for Phase 5, and steps 3 and 4 for the earlier phases.
-
-**Final step, once production has run the migration:** delete `budgetEntriesTable` from `lib/db/src/schema/budget.ts` and `pathwayProgressTable` from `lib/db/src/schema/pathway.ts`, and clean up their remaining users (`routes/healthscore.ts`, `budgetP7.test.ts`, `scripts/src/seed-demo-data.ts` and the two migration scripts), then push. This drops both tables and cannot be undone, so it was left out of this branch.
+8. Create one product with two variants, Monthly and Annual, each with a 7-day free trial, and set `PAYMENT_PROVIDER`, `LEMONSQUEEZY_API_KEY`, `LEMONSQUEEZY_STORE_ID`, `LEMONSQUEEZY_WEBHOOK_SECRET` and `APP_URL`.
+9. Select the variants at `/admin/membership`. Lemon Squeezy has no env fallback, so sign-up answers 503 until this is done.
+10. Point the Lemon Squeezy webhook at `/api/webhooks/payments`, with the events in `replit.md`.
 
 ## Decisions for the product owner
 
-1. **Track B clients see fewer prompts.** Their conversion CTAs used to show on their own conditions and now appear only when a checkpoint is open, as the brief asks. The "Upgrade to Advised" dashboard card is now C8.
+1. **Any live Stripe subscribers need a plan before this deploys.** The backfill carries them over as Stripe memberships, but with `PAYMENT_PROVIDER=lemonsqueezy` their Stripe webhooks are refused and they can't reach a billing portal, so their membership would stay active with nothing updating it. `paidBackfilled` in the dry run shows how many there are.
+2. **Track B clients see fewer prompts.** Their conversion CTAs used to show on their own conditions and now appear only when a checkpoint is open, as the brief asks. The "Upgrade to Advised" dashboard card is now C8.
 
 Settled: paid sign-up stays (the addendum), `/client/*` screens keep advisors out, and users who finished the old onboarding don't repeat it. Current clients without a live subscription are comped at launch (product owner, 2026-11-04). The amounts are set in Stripe, and a super admin chooses which prices the app sells at `/admin/membership`.
 
@@ -88,6 +87,13 @@ Found by the browser test and fixed:
 - A change applies to new sign-ups. Existing subscribers stay on their current price until they are moved in Stripe.
 - The screens format by the price's own currency, including zero-decimal ones. "Best value" and "save N%" appear only when the real amounts show a saving.
 
+### Phase 8: Lemon Squeezy
+- `lib/payments` holds the `PaymentProvider` interface, `StripeProvider` and `LemonSqueezyProvider`. `PAYMENT_PROVIDER` selects at boot and defaults to `lemonsqueezy`; an unknown value stops the server. `handleProviderEvent` replaces `handleStripeEvent` and has no provider-specific code.
+- `POST /api/webhooks/payments`, with `/api/webhooks/stripe` and `/api/billing/webhook` as aliases. `stripe_webhook_events` is renamed `payment_webhook_events`.
+- Every owner decision stands. A variant without a 7-day free trial is refused at `/admin/membership`, and a returning member gets `skip_trial`.
+- A canceled membership now runs to its paid-through date. C12 fires when it actually runs out, not when the member cancels.
+- The Phase 5 and 7 scenarios run against both providers, through fakes of each, with `PAYMENT_PROVIDER` set to either value.
+
 ### Metrics
 - `pnpm --filter @workspace/scripts run funnel-report` (add `--weeks=<n>`, default 12). "Promoted within 30 days" uses the lead's `updatedAt` as the promotion date, so a later edit to a promoted lead can drop it from that count.
 
@@ -113,12 +119,20 @@ Found by the browser test and fixed:
 | Rate limit across instances | The `POST /leads` count is held in memory and the deployment is autoscale, so each instance counts separately and the real limit is 10 × instances. A shared store would make it exact. It also assumes one proxy hop (`trust proxy` in `app.ts`), which needs checking on the deployed app: too few hops would put every visitor in one bucket. |
 | C2 after a lead exists | A user who already asked for an advisor still sees C2's "Talk to an advisor" until they dismiss it. Accepting is harmless, since it touches the same lead. |
 | Temporary Vite proxy | `artifacts/wealthapp/vite.config.ts` has a proxy to port 8082 marked "TEMPORARY ... will be reverted". It came from an earlier commit on `main`, and affects the dev server only. |
+| Missed webhooks | Lemon Squeezy retries a failed webhook only three times, over about two and a half minutes, and then gives up. An outage longer than that leaves `memberships` out of date until that subscription's next event. A nightly job re-reading active subscriptions through `fetchSubscription` would close this. |
+| Closing a checkout on Lemon Squeezy | It has no way to end a checkout early. Someone who keeps an old tab open could complete it within its 24 hours, after changing plan or after an admin changes the price. |
+| Lemon Squeezy's deprecated fields | Amounts and billing come from the variant's own attributes, which are deprecated but still returned. The docs don't say how to pick a variant's current row from the Price history that replaces them. |
+| Lemon Squeezy store currency | The docs don't say that variant prices are always in the store's currency, which is what the screens show. Worth checking on the test run. |
 | OpenAPI spec | New routes are not in `lib/api-spec`. They use `apiFetch`, like most client routes. |
 
 ## Where Phase 5 departs from the addendum
 
 | Addendum | What shipped | Why |
 |---|---|---|
+| The interface as written | Added `isConfigured`, `getPrice`, `priceProblem`, `envPriceIds`, `isCheckoutOpen`, `closeCheckout`. `ProviderEvent` gains `userId`, `ProviderSubscription` gains `interval`, and amounts may be null. | `/billing/prices` and Phase 7's validation need one price; the user link exists only on the webhook; the plan is set by interval. |
+| The trial is "the variant's own setting" | Also sends `checkout_options.skip_trial` for a returning member | The docs offer it, and without it a member could cancel and rejoin for free indefinitely. |
+| `cancelled` maps to `canceled` "so access runs to the paid-through date" | Same mapping, and the tier rule now honours a future paid-through date on `canceled` | The rule treated `canceled` as over at once, which would have ended access the moment a member cancelled. |
+| `expired` maps to `canceled` | With no paid-through date | It is over whatever the date says. |
 | Promotion creates the Checkout session | Pressing Activate creates it | A session expires within 24 hours and is fixed to one price, while the next sign-in may be later and the client hasn't chosen a plan. |
 | `past_due` active until `currentPeriodEnd + 7 days` | Same formula, with `currentPeriodEnd` holding the paid-through date while past_due | Stripe rolls `current_period_end` forward before payment fails, so its value would give about 37 days, or over a year on annual. |
 | C11 fires for members "with no card on file" | Fires for every trialing member who hasn't chosen to cancel | Decision 1 requires a card, so the condition would mean C11 never fires. |
