@@ -18,7 +18,7 @@ describe("investment client navigation", () => {
     ["/client/scenarios", "/client/goals/what-if", "goals", "what-if"],
     ["/client/messages", "/client/advisor/messages", "advisor", "messages"],
     ["/client/documents", "/client/advisor/documents", "advisor", "documents"],
-    ["/client/budget", "/client/money", "home", null],
+    ["/client/budget", "/client/money", "budget", null],
     ["/client/packages", "/client/wealth/investments", "wealth", "investments"],
     ["/client/transactions", "/client/wealth/investments", "wealth", "investments"],
     ["/client/packages/package-456", "/client/wealth/investments/packages/package-456", "wealth", "investments"],
@@ -39,16 +39,17 @@ describe("investment client navigation", () => {
       .toBe("/client/advisor/messages?about=investment");
   });
 
-  it("shows the four primary places (Sol sits between Portfolio and Goals in the shell)", () => {
+  it("shows the five primary places (Sol sits between Portfolio and Goals in the shell)", () => {
     expect(CLIENT_PRIMARY_NAV.map(item => item.label)).toEqual([
-      "Home", "Portfolio", "Goals", "Advisor",
+      "Home", "Budget", "Portfolio", "Goals", "Advisor",
     ]);
-    expect(CLIENT_PRIMARY_NAV).toHaveLength(4);
+    expect(CLIENT_PRIMARY_NAV).toHaveLength(5);
   });
 
-  it("opens Portfolio on investments and keeps the budget under Home", () => {
+  it("gives the monthly budget its own place and opens Portfolio on investments", () => {
+    expect(CLIENT_PRIMARY_NAV.find(item => item.id === "budget")?.href).toBe("/client/money");
+    expect(getClientNavigationState("/client/money").primaryId).toBe("budget");
     expect(CLIENT_PRIMARY_NAV.find(item => item.id === "wealth")?.href).toBe("/client/wealth/investments");
-    expect(getClientNavigationState("/client/money").primaryId).toBe("home");
   });
 
   it("provides the required linkable tabs for each grouped destination", () => {
