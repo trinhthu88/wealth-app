@@ -1,4 +1,4 @@
-import { pgTable, text, boolean, timestamp, index, check } from "drizzle-orm/pg-core";
+import { pgTable, text, boolean, integer, timestamp, index, check } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { profilesTable } from "./profiles";
 
@@ -41,9 +41,22 @@ export const membershipCheckoutSessionsTable = pgTable("membership_checkout_sess
   userId: text("user_id").primaryKey().references(() => profilesTable.id, { onDelete: "cascade" }),
   sessionId: text("session_id").notNull(),
   plan: text("plan").notNull(),
+  // The Stripe price it sells. A session for a price the admin has since replaced is not reused.
+  priceId: text("price_id"),
   url: text("url").notNull(),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+// Which Stripe prices the app sells. A single row, id = 1. Stripe owns the amounts.
+export const membershipSettingsTable = pgTable("membership_settings", {
+  id: integer("id").primaryKey().default(1),
+  monthlyPriceId: text("monthly_price_id").notNull(),
+  annualPriceId: text("annual_price_id").notNull(),
+  updatedBy: text("updated_by"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+}, (t) => [
+  check("membership_settings_single_row", sql`${t.id} = 1`),
+]);
 
 export type Membership = typeof membershipsTable.$inferSelect;

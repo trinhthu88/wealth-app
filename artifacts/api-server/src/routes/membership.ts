@@ -2,29 +2,97 @@ import { Router, type IRouter } from "express";
 import type Stripe from "stripe";
 import { eq } from "drizzle-orm";
 import { z } from "zod/v4";
-import { db, membershipCheckoutSessionsTable, membershipsTable, profilesTable } from "@workspace/db";
-import { ANNUAL_MONTHS_FREE, MEMBERSHIP_PLANS, TRIAL_DAYS, isTrialEligible, type MembershipPlan, type MembershipStatus } from "@workspace/tier-policy";
-import { requireAuth } from "../middlewares/requireAuth";
+import { db, membershipCheckoutSessionsTable, membershipSettingsTable, membershipsTable, profilesTable } from "@workspace/db";
+import { MEMBERSHIP_PLANS, TRIAL_DAYS, isTrialEligible, type MembershipStatus } from "@workspace/tier-policy";
+import { requireAuth, requireRole } from "../middlewares/requireAuth";
 import { logger } from "../lib/logger";
 import { handleStripeEvent, isRowActive } from "../lib/membershipStore";
+import { getBillingPrices, getConfiguredPrices, priceIdForPlan, priceProblem } from "../lib/membershipPrices";
 import { getStripe } from "../lib/stripe";
-
-const MONTHLY_CENTS = 499;
-const PRICES = {
-  monthly: { plan: "member_monthly", label: "Monthly", amount: MONTHLY_CENTS, interval: "month" },
-  annual: { plan: "member_annual", label: "Annual", amount: MONTHLY_CENTS * (12 - ANNUAL_MONTHS_FREE), interval: "year" },
-} as const;
-
-function priceIdFor(plan: MembershipPlan): string | undefined {
-  return plan === "member_annual" ? process.env.STRIPE_PRICE_ANNUAL : process.env.STRIPE_PRICE_MONTHLY;
-}
 
 const router: IRouter = Router();
 const checkoutBody = z.object({ plan: z.enum(MEMBERSHIP_PLANS) });
+const settingsBody = z.object({ monthlyPriceId: z.string().trim().min(1), annualPriceId: z.string().trim().min(1) });
+const adminGuard = [requireAuth, requireRole("super_admin")];
 
-// One place for the display prices, so the frontend never hardcodes an amount.
-router.get("/billing/prices", (_req, res): void => {
-  res.json(PRICES);
+// Amounts come from Stripe, so the frontend never holds one.
+router.get("/billing/prices", async (_req, res): Promise<void> => {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    res.status(503).json({ error: "Membership prices aren't available right now." });
+    return;
+  }
+  try {
+    const prices = await getBillingPrices();
+    if (!prices) {
+      logger.error("No membership prices are configured");
+      res.status(503).json({ error: "Membership prices aren't available right now." });
+      return;
+    }
+    res.json(prices);
+  } catch (err) {
+    logger.error({ err }, "Reading membership prices from Stripe failed");
+    res.status(503).json({ error: "Membership prices aren't available right now." });
+  }
+});
+
+router.get("/admin/membership/prices", ...adminGuard, async (_req, res): Promise<void> => {
+  if (!process.env.STRIPE_SECRET_KEY) { res.status(503).json({ error: "Stripe isn't configured." }); return; }
+  try {
+    const prices = await getStripe().prices.list({ active: true, type: "recurring", limit: 100, expand: ["data.product"] });
+    res.json(prices.data.map((price) => ({
+      id: price.id,
+      nickname: price.nickname,
+      productName: typeof price.product === "object" && "name" in price.product ? price.product.name : null,
+      unitAmount: price.unit_amount,
+      currency: price.currency,
+      interval: price.recurring?.interval ?? null,
+    })));
+  } catch (err) {
+    logger.error({ err }, "Listing Stripe prices failed");
+    res.status(502).json({ error: "We couldn't reach Stripe." });
+  }
+});
+
+router.get("/admin/membership/settings", ...adminGuard, async (_req, res): Promise<void> => {
+  const [row] = await db.select().from(membershipSettingsTable).where(eq(membershipSettingsTable.id, 1));
+  const configured = await getConfiguredPrices();
+  res.json({
+    monthlyPriceId: configured?.monthlyPriceId ?? null,
+    annualPriceId: configured?.annualPriceId ?? null,
+    source: configured?.source ?? null,
+    updatedBy: row?.updatedBy ?? null,
+    updatedAt: row?.updatedAt ?? null,
+  });
+});
+
+router.put("/admin/membership/settings", ...adminGuard, async (req, res): Promise<void> => {
+  const parsed = settingsBody.safeParse(req.body ?? {});
+  if (!parsed.success) { res.status(400).json({ error: "monthlyPriceId and annualPriceId are required" }); return; }
+  const { monthlyPriceId, annualPriceId } = parsed.data;
+  if (!process.env.STRIPE_SECRET_KEY) { res.status(503).json({ error: "Stripe isn't configured." }); return; }
+
+  const stripe = getStripe();
+  let problem: string | null;
+  try {
+    const [monthly, annual] = await Promise.all(
+      [monthlyPriceId, annualPriceId].map((id) => stripe.prices.retrieve(id, { expand: ["product"] })),
+    );
+    problem = priceProblem(monthly, "month") ?? priceProblem(annual, "year");
+  } catch (err) {
+    if ((err as { code?: string }).code === "resource_missing") {
+      res.status(400).json({ error: "Stripe has no price with that id." });
+      return;
+    }
+    logger.error({ err }, "Verifying Stripe prices failed");
+    res.status(502).json({ error: "We couldn't reach Stripe, so nothing was saved." });
+    return;
+  }
+  if (problem) { res.status(400).json({ error: problem }); return; }
+
+  const values = { monthlyPriceId, annualPriceId, updatedBy: (req as any).userId as string, updatedAt: new Date() };
+  const [saved] = await db.insert(membershipSettingsTable).values({ id: 1, ...values })
+    .onConflictDoUpdate({ target: membershipSettingsTable.id, set: values }).returning();
+  res.json({ ...saved, source: "settings" });
 });
 
 router.get("/billing/subscription", requireAuth, async (req, res): Promise<void> => {
@@ -57,7 +125,9 @@ router.post("/membership/checkout", requireAuth, async (req, res): Promise<void>
   }
   if (isRowActive(membership)) { res.status(409).json({ error: "You are already a member." }); return; }
 
-  const price = priceIdFor(plan);
+  // Read fresh, not from the display cache: this is the price the member is charged.
+  const configured = await getConfiguredPrices();
+  const price = configured && priceIdForPlan(configured, plan);
   if (!price || !process.env.STRIPE_SECRET_KEY) {
     logger.error("Stripe is not configured for membership checkout");
     res.status(503).json({ error: "Membership sign-up isn't available right now." });
@@ -68,8 +138,9 @@ router.post("/membership/checkout", requireAuth, async (req, res): Promise<void>
   if (open && open.expiresAt > new Date()) {
     const session = await stripe.checkout.sessions.retrieve(open.sessionId);
     if (session.status === "open") {
-      if (open.plan === plan) { res.json({ url: open.url }); return; }
-      // Changing plan closes the other session, so one user can't complete both.
+      if (open.plan === plan && open.priceId === price) { res.json({ url: open.url }); return; }
+      // Changing plan, or an admin changing the price, closes the other session, so a user can't
+      // complete both or pay an amount the app no longer sells.
       await stripe.checkout.sessions.expire(open.sessionId);
     }
   }
@@ -91,12 +162,13 @@ router.post("/membership/checkout", requireAuth, async (req, res): Promise<void>
     allow_promotion_codes: true,
   }, {
     // Two clicks racing past the lookup above carry the same key and get one session.
-    idempotencyKey: `membership-checkout:${userId}:${plan}:${open?.sessionId ?? "first"}`,
+    idempotencyKey: `membership-checkout:${userId}:${price}:${open?.sessionId ?? "first"}`,
   });
 
   const record = {
     sessionId: session.id,
     plan,
+    priceId: price,
     url: session.url!,
     expiresAt: new Date(session.expires_at * 1000),
   };

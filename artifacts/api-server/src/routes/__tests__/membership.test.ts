@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import path from "node:path";
-import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import request from "supertest";
 
 vi.mock("@clerk/express", () => ({
@@ -17,6 +17,9 @@ const stripeState = vi.hoisted(() => ({
   sessionStatus: "open",
   expired: [] as string[],
   failRetrieve: false,
+  prices: new Map<string, any>(),
+  priceRetrievals: [] as string[],
+  failPrices: false,
 }));
 vi.mock("stripe", () => {
   class Stripe {
@@ -31,6 +34,19 @@ vi.mock("stripe", () => {
       retrieve: async (id: string) => {
         if (stripeState.failRetrieve) throw new Error("stripe is down");
         return stripeState.subscriptions.get(id);
+      },
+    };
+    prices = {
+      retrieve: async (id: string) => {
+        stripeState.priceRetrievals.push(id);
+        if (stripeState.failPrices) throw new Error("stripe is down");
+        const price = stripeState.prices.get(id);
+        if (!price) throw Object.assign(new Error("No such price"), { code: "resource_missing" });
+        return price;
+      },
+      list: async (params: any) => {
+        if (stripeState.failPrices) throw new Error("stripe is down");
+        return { data: [...stripeState.prices.values()].filter((p) => p.active === params.active && p.type === params.type) };
       },
     };
     checkout = {
@@ -57,7 +73,7 @@ process.env.STRIPE_PRICE_ANNUAL = "price_annual";
 const { default: app } = await import("../../app");
 const {
   db, profilesTable, clientProfilesTable, leadsTable, membershipsTable,
-  clientHoldingsTable, conversionCheckpointsTable, stripeWebhookEventsTable, advisorAssignmentsTable,
+  clientHoldingsTable, conversionCheckpointsTable, stripeWebhookEventsTable, advisorAssignmentsTable, membershipSettingsTable,
   subscriptionsTable, pathwayProgressTable,
 } = await import("@workspace/db");
 const { eq, inArray } = await import("drizzle-orm");
@@ -106,7 +122,31 @@ const entitlements = async (id: string) => (await request(app).get("/api/me/enti
 const leadsOf = (id: string) => db.select().from(leadsTable).where(eq(leadsTable.userId, id));
 const checkpointsOf = (id: string) => db.select().from(conversionCheckpointsTable).where(eq(conversionCheckpointsTable.userId, id));
 
+function makePrice(id: string, overrides: Record<string, any> = {}, recurring: Record<string, any> = {}) {
+  const price = {
+    id, active: true, type: "recurring", nickname: null, currency: "usd", unit_amount: 1000,
+    product: { id: "prod_1", name: "tala Membership", active: true },
+    recurring: { interval: "month", interval_count: 1, usage_type: "licensed", ...recurring },
+    ...overrides,
+  };
+  stripeState.prices.set(id, price);
+  return price;
+}
+
+// The settings row is one shared row, so this file owns it for its run and puts it back afterwards.
+let savedSettings: (typeof membershipSettingsTable.$inferSelect)[] = [];
+beforeAll(async () => {
+  savedSettings = await db.select().from(membershipSettingsTable);
+  await db.delete(membershipSettingsTable);
+});
+afterAll(async () => {
+  await db.delete(membershipSettingsTable);
+  if (savedSettings.length) await db.insert(membershipSettingsTable).values(savedSettings);
+});
+
 beforeEach(() => {
+  stripeState.failPrices = false;
+  stripeState.priceRetrievals.length = 0;
   stripeState.created.length = 0;
   stripeState.expired.length = 0;
   stripeState.sessionStatus = "open";
@@ -548,10 +588,179 @@ describe("C11_trial_ending", () => {
   });
 });
 
-describe("GET /api/billing/prices", () => {
-  it("prices the annual plan at ten months", async () => {
-    const res = await request(app).get("/api/billing/prices").expect(200);
-    expect(res.body.annual.amount).toBe(res.body.monthly.amount * 10);
+describe("admin-configured prices", () => {
+  const settings = (admin: string, body: unknown) =>
+    request(app).put("/api/admin/membership/settings").set(asUser(admin)).send(body as object);
+  const monthly = (id: string, overrides = {}) => makePrice(id, overrides);
+  const annual = (id: string, overrides = {}) => makePrice(id, overrides, { interval: "year" });
+  let n = 0;
+  const id = (tag: string) => `price_${tag}_${++n}`;
+  beforeEach(async () => { await db.delete(membershipSettingsTable); });
+
+  describe("PUT /api/admin/membership/settings", () => {
+    it("is for super admins only", async () => {
+      const advisor = await makeUser("advisor");
+      await settings(advisor, { monthlyPriceId: "a", annualPriceId: "b" }).expect(403);
+      const free = await makeUser();
+      await request(app).get("/api/admin/membership/prices").set(asUser(free)).expect(403);
+      await request(app).get("/api/admin/membership/settings").set(asUser(free)).expect(403);
+    });
+
+    it("needs both price ids", async () => {
+      const admin = await makeUser("super_admin");
+      await settings(admin, { monthlyPriceId: "price_x" }).expect(400);
+      await settings(admin, { monthlyPriceId: " ", annualPriceId: "price_y" }).expect(400);
+    });
+
+    it.each([
+      ["an inactive monthly price", () => monthly(id("m"), { active: false }), () => annual(id("a"))],
+      ["a one-off monthly price", () => monthly(id("m"), { type: "one_time", recurring: null }), () => annual(id("a"))],
+      ["a yearly price in the monthly slot", () => annual(id("m")), () => annual(id("a"))],
+      ["a monthly price in the annual slot", () => monthly(id("m")), () => monthly(id("a"))],
+      ["a price billed every three months", () => makePrice(id("m"), {}, { interval_count: 3 }), () => annual(id("a"))],
+      ["a metered price", () => makePrice(id("m"), {}, { usage_type: "metered" }), () => annual(id("a"))],
+      ["a price with no fixed amount", () => monthly(id("m"), { unit_amount: null }), () => annual(id("a"))],
+      ["a price on an archived product", () => monthly(id("m"), { product: { id: "p", name: "Old", active: false } }), () => annual(id("a"))],
+    ])("refuses %s and saves nothing", async (_label, makeMonthly, makeAnnual) => {
+      const admin = await makeUser("super_admin");
+      await settings(admin, { monthlyPriceId: makeMonthly().id, annualPriceId: makeAnnual().id }).expect(400);
+      expect(await db.select().from(membershipSettingsTable)).toHaveLength(0);
+    });
+
+    it("refuses a price Stripe doesn't have", async () => {
+      const admin = await makeUser("super_admin");
+      const res = await settings(admin, { monthlyPriceId: "price_missing", annualPriceId: annual(id("a")).id }).expect(400);
+      expect(res.body.error).toMatch(/no price/i);
+    });
+
+    it("saves nothing when Stripe can't be reached", async () => {
+      const admin = await makeUser("super_admin");
+      const body = { monthlyPriceId: monthly(id("m")).id, annualPriceId: annual(id("a")).id };
+      stripeState.failPrices = true;
+      await settings(admin, body).expect(502);
+      expect(await db.select().from(membershipSettingsTable)).toHaveLength(0);
+    });
+
+    it("saves valid prices to one row, and a second save replaces them", async () => {
+      const admin = await makeUser("super_admin");
+      await settings(admin, { monthlyPriceId: monthly(id("m")).id, annualPriceId: annual(id("a")).id }).expect(200);
+      const next = { monthlyPriceId: monthly(id("m")).id, annualPriceId: annual(id("a")).id };
+      await settings(admin, next).expect(200);
+      const rows = await db.select().from(membershipSettingsTable);
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({ id: 1, ...next, updatedBy: admin });
+      const read = await request(app).get("/api/admin/membership/settings").set(asUser(admin)).expect(200);
+      expect(read.body).toMatchObject({ ...next, source: "settings" });
+    });
+  });
+
+  describe("GET /api/admin/membership/prices", () => {
+    it("lists active recurring prices with their product's name", async () => {
+      const admin = await makeUser("super_admin");
+      const listed = makePrice(id("list"), { nickname: "Launch", unit_amount: 700, currency: "sgd" });
+      const hidden = makePrice(id("hidden"), { active: false });
+      const res = await request(app).get("/api/admin/membership/prices").set(asUser(admin)).expect(200);
+      expect(res.body.find((p: any) => p.id === listed.id)).toEqual({
+        id: listed.id, nickname: "Launch", productName: "tala Membership", unitAmount: 700, currency: "sgd", interval: "month",
+      });
+      expect(res.body.map((p: any) => p.id)).not.toContain(hidden.id);
+    });
+  });
+
+  describe("GET /api/billing/prices", () => {
+    it("returns Stripe's amounts for the selected prices", async () => {
+      const admin = await makeUser("super_admin");
+      const m = monthly(id("m"), { unit_amount: 777, currency: "sgd" });
+      const a = annual(id("a"), { unit_amount: 7000, currency: "sgd" });
+      await settings(admin, { monthlyPriceId: m.id, annualPriceId: a.id }).expect(200);
+      const res = await request(app).get("/api/billing/prices").expect(200);
+      expect(res.body).toMatchObject({
+        source: "settings",
+        monthly: { plan: "member_monthly", priceId: m.id, amount: 777, currency: "sgd", interval: "month", active: true },
+        annual: { plan: "member_annual", priceId: a.id, amount: 7000, currency: "sgd", interval: "year", active: true },
+      });
+    });
+
+    it("falls back to the env prices, and says so", async () => {
+      makePrice("price_monthly", { unit_amount: 111 });
+      makePrice("price_annual", { unit_amount: 1111 }, { interval: "year" });
+      const res = await request(app).get("/api/billing/prices").expect(200);
+      expect(res.body.source).toBe("env");
+      expect(res.body.monthly).toMatchObject({ priceId: "price_monthly", amount: 111 });
+    });
+
+    it("caches Stripe's objects, but a new selection shows at once", async () => {
+      const admin = await makeUser("super_admin");
+      const m = monthly(id("m"));
+      const a = annual(id("a"));
+      await settings(admin, { monthlyPriceId: m.id, annualPriceId: a.id }).expect(200);
+      stripeState.priceRetrievals.length = 0;
+      await request(app).get("/api/billing/prices").expect(200);
+      await request(app).get("/api/billing/prices").expect(200);
+      expect(stripeState.priceRetrievals.filter((p) => p === m.id)).toHaveLength(1);
+
+      const m2 = monthly(id("m"), { unit_amount: 2222 });
+      await settings(admin, { monthlyPriceId: m2.id, annualPriceId: a.id }).expect(200);
+      const res = await request(app).get("/api/billing/prices").expect(200);
+      expect(res.body.monthly).toMatchObject({ priceId: m2.id, amount: 2222 });
+    });
+
+    it("answers 503, with no amount, when Stripe can't be read", async () => {
+      makePrice("price_monthly");
+      const admin = await makeUser("super_admin");
+      const m = monthly(id("m"));
+      const a = annual(id("a"));
+      await settings(admin, { monthlyPriceId: m.id, annualPriceId: a.id }).expect(200);
+      stripeState.failPrices = true;
+      const fresh = monthly(id("m"));
+      await db.update(membershipSettingsTable).set({ monthlyPriceId: fresh.id });
+      const res = await request(app).get("/api/billing/prices").expect(503);
+      expect(res.body.monthly).toBeUndefined();
+    });
+  });
+
+  describe("POST /api/membership/checkout", () => {
+    it("sells the configured price for each plan, not the env one", async () => {
+      const admin = await makeUser("super_admin");
+      const m = monthly(id("m"));
+      const a = annual(id("a"));
+      await settings(admin, { monthlyPriceId: m.id, annualPriceId: a.id }).expect(200);
+      const u = await makeUser();
+      await request(app).post("/api/membership/checkout").set(asUser(u)).send({ plan: "member_monthly" }).expect(200);
+      expect(stripeState.created[0].params.line_items[0].price).toBe(m.id);
+      const v = await makeUser();
+      await request(app).post("/api/membership/checkout").set(asUser(v)).send({ plan: "member_annual" }).expect(200);
+      expect(stripeState.created[1].params.line_items[0].price).toBe(a.id);
+    });
+
+    it("falls back to the env price with no settings row", async () => {
+      const u = await makeUser();
+      await request(app).post("/api/membership/checkout").set(asUser(u)).send({ plan: "member_annual" }).expect(200);
+      expect(stripeState.created[0].params.line_items[0].price).toBe("price_annual");
+    });
+
+    it("won't reuse an open session for a price the admin has replaced", async () => {
+      const admin = await makeUser("super_admin");
+      const a = annual(id("a"));
+      const first = monthly(id("m"));
+      await settings(admin, { monthlyPriceId: first.id, annualPriceId: a.id }).expect(200);
+      const u = await makeUser();
+      const before = await request(app).post("/api/membership/checkout").set(asUser(u)).send({ plan: "member_monthly" }).expect(200);
+
+      const second = monthly(id("m"));
+      await settings(admin, { monthlyPriceId: second.id, annualPriceId: a.id }).expect(200);
+      const after = await request(app).post("/api/membership/checkout").set(asUser(u)).send({ plan: "member_monthly" }).expect(200);
+      expect(after.body.url).not.toBe(before.body.url);
+      expect(stripeState.created[1].params.line_items[0].price).toBe(second.id);
+      expect(stripeState.expired).toHaveLength(1);
+    });
+  });
+
+  it("records the plan by billing interval, so a changed selection doesn't mislabel a subscriber", async () => {
+    const u = await makeUser();
+    const sub = setSubscription(u, { items: { data: [{ current_period_start: nowS(), current_period_end: nowS() + 365 * DAY_S, price: { id: "price_old_annual", recurring: { interval: "year" } } }] } });
+    await completed(sub).expect(200);
+    expect((await memberRow(u)).plan).toBe("member_annual");
   });
 });
 

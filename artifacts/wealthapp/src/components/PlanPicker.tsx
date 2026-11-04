@@ -4,14 +4,16 @@ import { apiFetch } from "@/lib/api";
 import { track } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { ANNUAL_MONTHS_FREE, TRIAL_DAYS } from "@workspace/tier-policy";
+import { TRIAL_DAYS } from "@workspace/tier-policy";
+import { annualSavingPct, formatStripeAmount } from "@/lib/formatPrice";
 
 type PlanKey = "monthly" | "annual";
 
 interface PriceInfo {
   plan: "member_monthly" | "member_annual";
   label: string;
-  amount: number; // cents
+  amount: number; // In the currency's smallest unit, from Stripe.
+  currency: string;
   interval: string;
 }
 
@@ -20,18 +22,14 @@ interface PricesResponse {
   annual: PriceInfo;
 }
 
-function formatDollars(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`;
-}
-
 export default function PlanPicker({ hasTrial }: { hasTrial: boolean }) {
   const [selectedPlan, setSelectedPlan] = useState<PlanKey>("annual");
   const [loading, setLoading] = useState(false);
 
-  const { data: prices } = useQuery<PricesResponse>({
+  const { data: prices, isError } = useQuery<PricesResponse>({
     queryKey: ["billing-prices"],
     queryFn: () => apiFetch<PricesResponse>("/billing/prices"),
-    staleTime: Infinity,
+    staleTime: 5 * 60 * 1000,
   });
 
   function selectPlan(plan: PlanKey) {
@@ -60,7 +58,7 @@ export default function PlanPicker({ hasTrial }: { hasTrial: boolean }) {
 
   const monthly = prices?.monthly;
   const annual = prices?.annual;
-  const annualMonthlyEquivalent = annual ? annual.amount / 100 / 12 : null;
+  const saving = monthly && annual && monthly.currency === annual.currency ? annualSavingPct(monthly.amount, annual.amount) : null;
 
   return (
     <div className="space-y-4">
@@ -76,7 +74,7 @@ export default function PlanPicker({ hasTrial }: { hasTrial: boolean }) {
         >
           <p className="text-[13px] font-semibold text-forest">Monthly</p>
           <p className="font-display text-[22px] font-bold text-forest mt-1 leading-none">
-            {monthly ? formatDollars(monthly.amount) : "—"}
+            {monthly ? formatStripeAmount(monthly.amount, monthly.currency) : "—"}
             <span className="text-[13px] font-medium text-ink-40"> / month</span>
           </p>
         </button>
@@ -90,22 +88,27 @@ export default function PlanPicker({ hasTrial }: { hasTrial: boolean }) {
             selectedPlan === "annual" ? "border-green" : "border-hairline"
           )}
         >
-          <span className="absolute -top-2.5 right-4 rounded-full bg-green text-white text-[10px] font-semibold px-2.5 py-1">
-            Best value
-          </span>
+          {saving !== null && (
+            <span className="absolute -top-2.5 right-4 rounded-full bg-green text-white text-[10px] font-semibold px-2.5 py-1">
+              Best value
+            </span>
+          )}
           <p className="text-[13px] font-semibold text-forest">Annual</p>
           <p className="font-display text-[22px] font-bold text-forest mt-1 leading-none">
-            {annual ? formatDollars(annual.amount) : "—"}
+            {annual ? formatStripeAmount(annual.amount, annual.currency) : "—"}
             <span className="text-[13px] font-medium text-ink-40"> / year</span>
           </p>
-          {annualMonthlyEquivalent !== null && (
+          {annual && saving !== null && (
             <p className="text-[12px] text-ink-40 mt-1">
-              ${annualMonthlyEquivalent.toFixed(2)} / month · {ANNUAL_MONTHS_FREE} months free
+              {formatStripeAmount(Math.round(annual.amount / 12), annual.currency)} / month · save {saving}%
             </p>
           )}
         </button>
       </div>
 
+      {isError && (
+        <p role="status" className="text-[13px] text-ink-40">Membership sign-up isn't available right now. Please try again soon.</p>
+      )}
       <button
         type="button"
         onClick={handleGetStarted}

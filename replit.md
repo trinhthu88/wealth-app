@@ -45,8 +45,10 @@ APP_URL=https://your-replit-app.repl.co   # your deployed Replit URL
 **Creating the Stripe prices** — in the Stripe dashboard → Products → Add product:
 - Name: "tala Membership"
 - Add two prices:
-  1. $4.99 / month recurring → copy price ID → `STRIPE_PRICE_MONTHLY`
-  2. $49.90 / year recurring (10 × monthly: two months free) → copy price ID → `STRIPE_PRICE_ANNUAL`
+  1. A monthly recurring price
+  2. A yearly recurring price (two months free is the usual choice)
+
+A super admin chooses which prices the app sells at `/admin/membership`. Until then the app sells the prices in `STRIPE_PRICE_MONTHLY` and `STRIPE_PRICE_ANNUAL`, which may be left unset once a selection is saved.
 
 **Creating the webhook** — in the Stripe dashboard → Developers → Webhooks → Add endpoint:
 - URL: `https://your-replit-app.repl.co/api/webhooks/stripe` — note the `/api` prefix; every api-server route is mounted under `/api` (see `src/app.ts`). The old `/api/billing/webhook` path still works, and should be removed once the endpoint has moved.

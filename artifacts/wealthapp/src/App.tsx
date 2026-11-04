@@ -58,6 +58,7 @@ const AdminClients = lazy(() => import("@/pages/admin/clients"));
 const AdminLeads = lazy(() => import("@/pages/admin/leads"));
 const AdminPrices = lazy(() => import("@/pages/admin/prices"));
 const AdminBenchmarks = lazy(() => import("@/pages/admin/benchmarks"));
+const AdminMembership = lazy(() => import("@/pages/admin/membership"));
 
 const NotFound = lazy(() => import("@/pages/not-found"));
 
@@ -298,6 +299,7 @@ function AppRoutes() {
       <Route path="/admin/benchmarks"><ProtectedRoute component={AdminBenchmarks} role={["super_admin"]} /></Route>
       <Route path="/admin/blog"><ProtectedRoute component={AdminBlog} role={["super_admin", "advisor"]} /></Route>
       <Route path="/admin/funds"><ProtectedRoute component={AdminFunds} role={["super_admin"]} /></Route>
+      <Route path="/admin/membership"><ProtectedRoute component={AdminMembership} role={["super_admin"]} /></Route>
 
       <Route component={NotFound} />
     </Switch>

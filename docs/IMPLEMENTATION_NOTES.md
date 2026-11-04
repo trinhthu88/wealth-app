@@ -19,7 +19,7 @@ Run these in order on each environment, including production:
 
 Then in Stripe and the environment:
 
-7. Create the annual price at $49.90 (10 × monthly) and set `STRIPE_PRICE_ANNUAL`. `STRIPE_PRICE_YEARLY` is no longer read.
+7. Create a monthly and an annual recurring price, then choose them at `/admin/membership`. Until then the app sells `STRIPE_PRICE_MONTHLY` and `STRIPE_PRICE_ANNUAL`. `STRIPE_PRICE_YEARLY` is no longer read.
 8. Move the webhook endpoint to `/api/webhooks/stripe`. `/api/billing/webhook` still works during the cutover, and should be removed afterwards.
 
 The dev database has had steps 1 and 2 for Phase 5, and steps 3 and 4 for the earlier phases.
@@ -30,7 +30,7 @@ The dev database has had steps 1 and 2 for Phase 5, and steps 3 and 4 for the ea
 
 1. **Track B clients see fewer prompts.** Their conversion CTAs used to show on their own conditions and now appear only when a checkpoint is open, as the brief asks. The "Upgrade to Advised" dashboard card is now C8.
 
-Settled: paid sign-up stays (the addendum), `/client/*` screens keep advisors out, and users who finished the old onboarding don't repeat it. Current clients without a live subscription are comped at launch, and the prices are $4.99 monthly and $49.90 annual (product owner, 2026-11-04). `MONTHLY_CENTS` in `routes/membership.ts` is the display price, so the Stripe prices must match it.
+Settled: paid sign-up stays (the addendum), `/client/*` screens keep advisors out, and users who finished the old onboarding don't repeat it. Current clients without a live subscription are comped at launch (product owner, 2026-11-04). The amounts are set in Stripe, and a super admin chooses which prices the app sells at `/admin/membership`.
 
 ## What shipped
 
@@ -80,6 +80,13 @@ Found by the browser test and fixed:
 - **No new user could finish onboarding.** Saving step 2 sent them back to step 1, forever. `component={() => ...}` on each route made a new component type on every render, so a profile change remounted the page. `main` has the same code. Routes now take children, and a test refuses inline route components.
 - **A returning member was promised a free trial they wouldn't get,** so their card would be charged at once. `membership.trialEligible` now comes from the server, using the same rule as Checkout.
 - **A lead with no first name crashed the leads page to blank.** The server stores blanks as null, and the staff lists handle rows already saved.
+
+### Phase 7: admin-configured prices
+- `membership_settings` (one row, id = 1) names the Stripe prices the app sells. `GET /admin/membership/prices`, `GET` and `PUT /admin/membership/settings`, and the `/admin/membership` page. Prices are verified against Stripe before saving.
+- `GET /billing/prices` returns Stripe's amounts, with `source: "settings"` or `"env"`. The settings row is read on every request, and only Stripe's price objects are cached, for 5 minutes, by id, so a change reaches every instance at once.
+- Checkout reads the same row. An open session for a replaced price is closed rather than reused.
+- A change applies to new sign-ups. Existing subscribers stay on their current price until they are moved in Stripe.
+- The screens format by the price's own currency, including zero-decimal ones. "Best value" and "save N%" appear only when the real amounts show a saving.
 
 ### Metrics
 - `pnpm --filter @workspace/scripts run funnel-report` (add `--weeks=<n>`, default 12). "Promoted within 30 days" uses the lead's `updatedAt` as the promotion date, so a later edit to a promoted lead can drop it from that count.

@@ -8,7 +8,7 @@ import { track } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 import Sol from "./Sol";
 import {
-  Menu, X, LayoutDashboard, Map, DollarSign, Target, TrendingUp, Heart,
+  CreditCard, Menu, X, LayoutDashboard, Map, DollarSign, Target, TrendingUp, Heart,
   Users, ClipboardList, Star, BookOpen, Building2, ChevronLeft, ChevronRight,
   Briefcase, Settings
 } from "lucide-react";
@@ -41,6 +41,7 @@ const ADMIN_NAV: NavItem[] = [
   { label: "Dashboard", href: "/admin/dashboard",   icon: LayoutDashboard },
   { label: "Users",     href: "/admin/users",       icon: Users },
   { label: "Funds",     href: "/admin/funds",       icon: Building2 },
+  { label: "Membership", href: "/admin/membership", icon: CreditCard },
   { label: "Blog",      href: "/admin/blog",        icon: BookOpen },
   { label: "Clients",   href: "/advisor/clients",   icon: ClipboardList },
   { label: "Leads",     href: "/advisor/leads",     icon: Star },

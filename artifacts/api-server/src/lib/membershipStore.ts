@@ -37,9 +37,7 @@ function statusFromStripe(status: Stripe.Subscription.Status): MembershipStatus 
 
 function planFromPrice(price: Stripe.Price | undefined): MembershipPlan | null {
   if (!price) return null;
-  if (price.id === process.env.STRIPE_PRICE_ANNUAL) return "member_annual";
-  if (price.id === process.env.STRIPE_PRICE_MONTHLY) return "member_monthly";
-  // A subscriber on a price from before these two env vars is still one of the two plans.
+  // By interval, not id: an admin can change the configured prices, and subscribers stay on old ones.
   return price.recurring?.interval === "year" ? "member_annual" : "member_monthly";
 }
 
