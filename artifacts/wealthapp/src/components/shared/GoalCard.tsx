@@ -1,10 +1,18 @@
+// ANIMATION RULES FOR THIS COMPONENT:
+// ✓ ALLOWED: Progress-bar width transition, arrow rotate on expand
+// ✗ BANNED:  Inline style={{ color: '#hexcode' }} — use Tailwind tokens only
+// ✗ BANNED:  Pale status tints (sun-tint / green-tint) — tiles use full field / breeze / sun
+
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import Sol from "@/components/Sol";
 import CurrencyField from "@/components/shared/CurrencyField";
 import GoalStatusBadge from "@/components/client/goals/GoalStatusBadge";
 import type { GoalStatus } from "@/hooks/useGoalProgress";
 import type { ProjectionResult } from "@/lib/goalProjection";
+import {
+  MoreHorizontal, Pencil, Pause, Trash2, CheckCircle2, PlusCircle, TrendingUp, ArrowUpRight,
+} from "lucide-react";
 
 /**
  * Free tier's goal.status / ProjectionResult.status use a 4-value vocabulary
@@ -47,27 +55,6 @@ export function toGoalCardData(goal: FreeTierGoal, status: string, accountsBalan
     progressPct: target && target > 0 ? Math.min(100, Math.round((totalTowardGoal / target) * 100)) : 0,
   };
 }
-import {
-  MoreHorizontal, Pencil, Pause, Trash2, CheckCircle2, PlusCircle, TrendingUp,
-  Palmtree, Home, GraduationCap, Rocket, Briefcase, Globe, Coins, Shield, Target,
-  Umbrella, CreditCard, Plane, Car,
-} from "lucide-react";
-
-// Union of both tiers' goalType vocabularies — free tier and client tier grew
-// separate onboarding flows with different goalType values, so both key sets
-// are kept rather than picking one.
-const GOAL_ICONS: Record<string, React.ElementType> = {
-  retire: Palmtree, retirement: Umbrella,
-  property: Home, home_purchase: Home,
-  education: GraduationCap,
-  fire: Rocket, fi: Rocket, financial_independence: Rocket,
-  business: Briefcase,
-  emigrate: Globe, travel: Plane, vehicle: Car,
-  wealth: Coins, investment: TrendingUp,
-  emergency: Shield, emergency_fund: Shield,
-  debt: CreditCard, debt_payoff: CreditCard,
-  other: Target,
-};
 
 export interface GoalCardData {
   id: string;
@@ -93,9 +80,13 @@ interface Props {
   onMarkComplete?: (id: string) => void;
 
   // ── Free-tier superset: projection breakdown, growth chip, advisor CTA ──
+  /** When present the card becomes expandable: tapping it opens the projection
+   * block (what-if amounts, monthly breakdown, advisor CTA, contribute/edit). */
   projection?: ProjectionResult;
   accountsBalance?: number;
   onContribute?: () => void;
+  /** Start with the projection block open (free tier, single goal). */
+  defaultExpanded?: boolean;
 
   /** Client-tier extras that depend on hooks (Sol nudges, holding-links panel,
    * scenario CTA) — rendered by the caller, not this component, so this stays
@@ -111,31 +102,81 @@ function fmtCompact(n: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
 }
 
+function roundNice(n: number) {
+  const step = n >= 1000 ? 50 : n >= 100 ? 10 : 1;
+  return Math.max(step, Math.round(n / step) * step);
+}
+
 function GrowthChip({ amount }: { amount: number }) {
   if (amount <= 0) return null;
   return (
-    <div className="flex items-center gap-1.5 text-xs rounded-full px-3 py-1.5 w-fit bg-green-tint text-green">
+    <div className="flex items-center gap-1.5 text-[12px] font-semibold rounded-full px-3 py-1.5 w-fit bg-paper text-forest">
       <TrendingUp className="h-3.5 w-3.5 flex-shrink-0" aria-hidden="true" />
-      <span>+{fmtCompact(amount)}/month from savings interest &amp; investment returns</span>
+      <span className="tabular-nums">+{fmtCompact(amount)}/month from savings interest &amp; investment returns</span>
     </div>
   );
 }
 
-function BreakdownCard({ projection, currentMonthlyPace }: { projection: ProjectionResult; currentMonthlyPace: number }) {
+/** GoalDetail "If you put in each month" block — illustration from the real
+ * amount still needed and months remaining; counts contributions only. */
+function WhatIfBlock({ projection, targetDateStr }: { projection: ProjectionResult; targetDateStr: string | null }) {
+  const required = projection.requiredMonthlySaving;
+  const options = Array.from(new Set([0.75, 1, 1.25, 1.5].map(f => roundNice(required * f))));
+  const [monthly, setMonthly] = useState(options[Math.min(1, options.length - 1)]);
+  if (!(required > 0) || projection.amountStillNeeded <= 0) return null;
+
+  const months = Math.ceil(projection.amountStillNeeded / monthly);
+  const reach = new Date();
+  reach.setMonth(reach.getMonth() + months);
+  const reachLabel = reach.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+  const late = months - projection.monthsRemaining;
+  const note = late <= 0
+    ? (targetDateStr ? `in time for ${targetDateStr}` : "in time for your target")
+    : `${late} month${late === 1 ? "" : "s"} after your target`;
+
+  return (
+    <div className="bg-paper rounded-[20px] p-4 flex flex-col gap-3">
+      <span className="tala-eyebrow text-ink-40">If you put in each month</span>
+      <div role="group" aria-label="Monthly amount" className="flex flex-wrap gap-1.5">
+        {options.map(v => (
+          <button
+            key={v}
+            type="button"
+            aria-pressed={monthly === v}
+            onClick={() => setMonthly(v)}
+            className={cn(
+              "h-10 rounded-full px-4 text-[14px] font-semibold tabular-nums transition-colors",
+              monthly === v ? "bg-forest text-paper" : "border-[1.5px] border-forest text-forest",
+            )}
+          >
+            <CurrencyField amountUsd={v} compact />
+          </button>
+        ))}
+      </div>
+      <div className="flex items-baseline gap-2.5 flex-wrap">
+        <span className="font-display tabular-nums text-[40px] leading-[0.9] tracking-[-0.03em] text-forest">{reachLabel}</span>
+        <span className="text-[14px] font-semibold text-forest">{note}</span>
+      </div>
+      <span className="text-[13px] leading-[1.45] text-ink-40">Illustration only — counts what you put in, not returns.</span>
+    </div>
+  );
+}
+
+function BreakdownRows({ projection, currentMonthlyPace }: { projection: ProjectionResult; currentMonthlyPace: number }) {
   const isOffTrack = !projection.onTrack;
   const rows = [
     { label: "Months remaining", value: `${projection.monthsRemaining} mo` },
-    { label: "Required monthly", value: fmtCompact(projection.requiredMonthlySaving) },
-    { label: "Your current pace", value: fmtCompact(currentMonthlyPace) },
+    { label: "Needed each month", value: fmtCompact(projection.requiredMonthlySaving) },
+    { label: "Your pace now", value: fmtCompact(currentMonthlyPace) },
     ...(isOffTrack && projection.monthlyShortfall > 0 ? [{ label: "Monthly shortfall", value: `-${fmtCompact(projection.monthlyShortfall)}`, red: true }] : []),
     { label: "Projected at target date", value: fmtCompact(projection.projectedAmount) },
   ];
   return (
-    <div className="bg-surface rounded-xl p-4 border border-hairline space-y-2.5">
+    <div className="bg-paper rounded-[20px] p-1">
       {rows.map(r => (
-        <div key={r.label} className="flex items-center justify-between text-xs">
-          <span className="text-ink-40">{r.label}</span>
-          <span className={cn("font-semibold", r.red ? "text-clay" : "text-forest")}>{r.value}</span>
+        <div key={r.label} className="flex items-center justify-between gap-3 px-3 py-3.5 text-[14px] border-b border-hairline last:border-0">
+          <span className="text-forest">{r.label}</span>
+          <span className={cn("font-semibold tabular-nums", r.red ? "text-clay-ink" : "text-forest")}>{r.value}</span>
         </div>
       ))}
     </div>
@@ -144,98 +185,127 @@ function BreakdownCard({ projection, currentMonthlyPace }: { projection: Project
 
 function AdvisorCTA({ offTrack, shortfall }: { offTrack: boolean; shortfall: number }) {
   return (
-    <div className="bg-forest rounded-xl p-4">
-      <p className="text-paper text-sm font-medium mb-1">
-        {offTrack ? "This gap needs a professional strategy" : "Small optimisations could close this gap"}
-      </p>
-      {offTrack && shortfall > 0 ? (
-        <p className="text-green-tint text-xs mb-3">
-          A {fmtCompact(shortfall)} shortfall is solvable with the right investment plan. Let's talk.
+    <a
+      href="/free/advisor"
+      className="bg-breeze rounded-[20px] px-4 py-4 flex items-center gap-3.5 text-forest transition-opacity hover:opacity-90"
+    >
+      <div className="shrink-0"><Sol size="sm" animate="breathe" /></div>
+      <div className="min-w-0 flex-1">
+        <p className="text-[14px] font-semibold leading-[1.35]">
+          {offTrack ? "This gap needs a professional strategy" : "Small optimisations could close this gap"}
         </p>
-      ) : (
-        <p className="text-green-tint text-xs mb-3">An advisor can identify small adjustments to get you fully on track.</p>
-      )}
-      <a href="/book" className="inline-flex items-center gap-1.5 bg-paper text-forest text-xs font-semibold px-4 py-2 rounded-lg transition-colors hover:bg-paper/90">
-        Book a free call
-      </a>
-    </div>
+        <p className="text-[13px] leading-[1.45] mt-1 text-pretty">
+          {offTrack && shortfall > 0
+            ? <>A <span className="tabular-nums">{fmtCompact(shortfall)}</span> shortfall is solvable with the right investment plan. An advisor can model it with you.</>
+            : "An advisor can identify small adjustments to get you fully on track."}
+        </p>
+      </div>
+      <ArrowUpRight className="h-5 w-5 shrink-0" aria-hidden="true" />
+    </a>
   );
 }
 
-const RING_R = 33;
-const RING_CIRC = 2 * Math.PI * RING_R;
+type Tone = "field" | "breeze" | "sun" | "surface";
 
-function ProgressRing({ pct, status }: { pct: number; status: GoalStatus }) {
-  const ringColor = status === "off_track" ? "var(--clay)" : status === "at_risk" ? "var(--sun)" : "var(--green)";
-  const offset = RING_CIRC - (Math.min(100, Math.max(0, pct)) / 100) * RING_CIRC;
-  return (
-    <svg viewBox="0 0 80 80" className="w-[76px] h-[76px] -rotate-90" aria-hidden="true">
-      <circle cx="40" cy="40" r={RING_R} fill="none" stroke="var(--track)" strokeWidth="9" />
-      <circle
-        cx="40" cy="40" r={RING_R} fill="none" stroke={ringColor} strokeWidth="9" strokeLinecap="round"
-        strokeDasharray={RING_CIRC} strokeDashoffset={offset}
-        style={{ transition: "stroke-dashoffset 0.6s ease-out" }}
-      />
-    </svg>
-  );
+/** Full-strength tile colour follows pacing: Spring Field on track, Blue Breeze
+ * when ahead or done, Sunset Pop when the goal needs attention, plain surface
+ * when there's no target to pace against. */
+function toneFor(goal: GoalCardData, projection?: ProjectionResult): Tone {
+  switch (goal.trackStatus) {
+    case "at_risk":
+    case "off_track": return "sun";
+    case "completed": return "breeze";
+    case "on_track":
+      return projection && goal.targetAmountNum && projection.projectedAmount >= goal.targetAmountNum * 1.1 ? "breeze" : "field";
+    default: return "surface";
+  }
 }
+
+const TONE_BG: Record<Tone, string> = {
+  field: "bg-field", breeze: "bg-breeze", sun: "bg-sun", surface: "bg-surface",
+};
 
 export default function GoalCard({
-  goal, onEdit, onDelete, onMarkComplete, projection, accountsBalance, onContribute, children, className,
+  goal, onEdit, onDelete, onMarkComplete, projection, accountsBalance: _accountsBalance, onContribute, defaultExpanded = false, children, className,
 }: Props) {
   const [showMenu, setShowMenu] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmComplete, setConfirmComplete] = useState(false);
+  const [expanded, setExpanded] = useState(defaultExpanded);
 
-  const Icon = GOAL_ICONS[goal.goalType] ?? Target;
   const hasTarget = goal.targetAmountNum != null && goal.targetAmountNum > 0;
-  const pct = goal.progressPct ?? 0;
+  const pct = Math.min(100, Math.max(0, goal.progressPct ?? 0));
   const targetDateStr = goal.targetDate
     ? new Date(goal.targetDate).toLocaleDateString("en-US", { month: "short", year: "numeric" })
     : null;
+  const needsAttention = goal.trackStatus === "off_track" || goal.trackStatus === "at_risk";
+  const tone = toneFor(goal, projection);
+  const isAhead = tone === "breeze" && goal.trackStatus === "on_track";
 
   const growthAmount = projection?.monthlyGrowthFromReturns ?? 0;
   const currentMonthlyPace = (projection?.currentMonthlyCash ?? 0) + (projection?.monthlyGrowthFromReturns ?? 0);
   const hasMenu = !!onDelete;
+  // Free tier (projection present, no menu): tapping the tile opens the detail
+  // block in place. Otherwise the tile keeps its tap-to-edit contract.
+  const expandable = !!projection && !hasMenu;
+  const onTileActivate = expandable ? () => setExpanded(v => !v) : onEdit;
 
   return (
-    <div className={cn("bg-surface rounded-[28px] p-[20px_22px] shadow-[0_2px_14px_rgba(12,33,164,.06)]", className)}>
-      <div className="flex gap-[18px] items-start">
-        <div className="relative w-[76px] h-[76px] flex-none">
-          <ProgressRing pct={pct} status={goal.trackStatus} />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Icon className="h-6 w-6 text-forest" aria-hidden="true" />
-          </div>
+    <div className={cn("relative rounded-[28px] p-5 text-forest", TONE_BG[tone], className)}>
+      <div
+        className="cursor-pointer rounded-[20px] flex flex-col gap-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-forest/50"
+        onClick={onTileActivate}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onTileActivate(); } }}
+        aria-label={expandable ? `${goal.title} — ${expanded ? "hide" : "show"} details` : `Edit ${goal.title}`}
+        aria-expanded={expandable ? expanded : undefined}
+      >
+        <div className="flex items-center justify-between gap-2 min-h-11 pr-12">
+          <h3 className="text-[17px] font-semibold leading-tight truncate min-w-0">{goal.title}</h3>
         </div>
 
-        <div className="flex-1 min-w-0 cursor-pointer" onClick={onEdit} role="button" tabIndex={0}
-          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onEdit(); } }}
-          aria-label={`Edit ${goal.title}`}
-        >
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="font-display text-[18px] font-semibold text-forest leading-tight truncate">{goal.title}</div>
-            <GoalStatusBadge status={goal.trackStatus} />
-          </div>
-          <div className="text-[13.5px] text-ink-40 mt-0.5 mb-[6px]">
-            {hasTarget ? (
-              <>Target: <CurrencyField amountUsd={goal.targetAmountNum!} compact />{targetDateStr && <> by {targetDateStr}</>}</>
-            ) : targetDateStr ? (
-              <>Target date: {targetDateStr} · no amount set</>
-            ) : "No target set yet"}
-          </div>
-          <div className="text-[15px] font-semibold text-forest tabular-nums">
-            <CurrencyField amountUsd={goal.computedCurrentAmount} />
-            {hasTarget && (
-              <span className="font-normal text-ink-30 ml-1">of <CurrencyField amountUsd={goal.targetAmountNum!} /></span>
-            )}
-          </div>
+        <div className="flex items-end justify-between gap-2">
+          {hasTarget ? (
+            <span className="font-display tabular-nums text-[48px] leading-[0.9] tracking-[-0.03em]">{Math.round(pct)}%</span>
+          ) : (
+            <span className="font-display tabular-nums text-[32px] leading-none tracking-[-0.03em]">
+              <CurrencyField amountUsd={goal.computedCurrentAmount} />
+            </span>
+          )}
+          {isAhead ? (
+            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[12px] font-semibold leading-none shrink-0 bg-forest text-paper">Ahead</span>
+          ) : (
+            // On a Sunset tile the attention pill flips to Cobalt so it stays visible.
+            <span className={cn(needsAttention && "[&>span]:bg-forest [&>span]:text-paper")}>
+              <GoalStatusBadge status={goal.trackStatus} />
+            </span>
+          )}
         </div>
 
+        {hasTarget ? (
+          <>
+            <div className="h-2 rounded-full bg-forest/15 overflow-hidden" aria-hidden="true">
+              <div className="h-full rounded-full bg-forest transition-[width] duration-500 ease-out" style={{ width: `${pct}%` }} />
+            </div>
+            <div className="text-[14px] font-semibold tabular-nums">
+              <CurrencyField amountUsd={goal.computedCurrentAmount} compact /> of <CurrencyField amountUsd={goal.targetAmountNum!} compact />
+              {targetDateStr && <> · by {targetDateStr}</>}
+            </div>
+          </>
+        ) : (
+          <div className="text-[14px] font-semibold">
+            {targetDateStr ? <>Target date: {targetDateStr} · no amount set</> : "No target set yet"}
+          </div>
+        )}
+      </div>
+
+      <div className="absolute top-4 right-4">
         {hasMenu ? (
-          <div className="relative shrink-0">
+          <>
             <button
               onClick={(e) => { e.stopPropagation(); setShowMenu(v => !v); }}
-              className="h-8 w-8 flex items-center justify-center rounded-full text-ink-40 hover:text-forest hover:bg-black/5 transition-colors"
+              className="h-11 w-11 flex items-center justify-center rounded-full text-forest hover:bg-forest/10 transition-colors"
               aria-label="More options"
             >
               <MoreHorizontal className="h-5 w-5" />
@@ -243,71 +313,93 @@ export default function GoalCard({
             {showMenu && (
               <>
                 <div className="fixed inset-0 z-10" onClick={(e) => { e.stopPropagation(); setShowMenu(false); }} />
-                <div className="absolute right-0 top-10 z-20 w-48 bg-surface border border-hairline rounded-[16px] shadow-[0_4px_20px_rgba(0,0,0,.08)] py-2 text-[14px]">
-                  <button onClick={(e) => { e.stopPropagation(); onEdit(); setShowMenu(false); }} className="w-full flex items-center gap-2 px-4 py-2.5 text-left hover:bg-black/5 text-forest">
+                <div className="absolute right-0 top-12 z-20 w-52 bg-paper rounded-[20px] shadow-[0_8px_28px_rgba(12,33,164,.16)] p-1.5 text-[14px]">
+                  <button onClick={(e) => { e.stopPropagation(); onEdit(); setShowMenu(false); }} className="w-full flex items-center gap-2 px-3 min-h-11 rounded-[14px] text-left hover:bg-surface text-forest">
                     <Pencil className="h-4 w-4 text-ink-40" /> Edit goal
                   </button>
-                  <button onClick={(e) => { e.stopPropagation(); setShowMenu(false); }} className="w-full flex items-center gap-2 px-4 py-2.5 text-left hover:bg-black/5 text-ink-60">
+                  <button onClick={(e) => { e.stopPropagation(); setShowMenu(false); }} className="w-full flex items-center gap-2 px-3 min-h-11 rounded-[14px] text-left hover:bg-surface text-forest">
                     <Pause className="h-4 w-4 text-ink-40" /> Pause goal
                   </button>
-                  <div className="border-t border-hairline my-1.5" />
+                  <div className="border-t border-hairline my-1" />
                   {confirmDelete ? (
-                    <div className="px-4 py-2 space-y-2">
-                      <p className="text-[13px] text-clay font-medium">Remove "{goal.title}"?</p>
+                    <div className="px-3 py-2 space-y-2">
+                      <p className="text-[13px] text-clay-ink font-medium">Remove "{goal.title}"?</p>
                       <div className="flex gap-2">
-                        <button onClick={(e) => { e.stopPropagation(); onDelete!(goal.id); setShowMenu(false); }} className="flex-1 py-1.5 bg-clay text-white text-[13px] rounded-lg font-semibold hover:bg-red-600 transition-colors">Yes</button>
-                        <button onClick={(e) => { e.stopPropagation(); setConfirmDelete(false); }} className="flex-1 py-1.5 border border-hairline text-ink-60 text-[13px] rounded-lg font-medium hover:bg-black/5 transition-colors">No</button>
+                        <button onClick={(e) => { e.stopPropagation(); onDelete!(goal.id); setShowMenu(false); }} className="flex-1 h-9 bg-clay text-paper text-[13px] rounded-full font-semibold hover:opacity-90 transition-opacity">Yes</button>
+                        <button onClick={(e) => { e.stopPropagation(); setConfirmDelete(false); }} className="flex-1 h-9 border-[1.5px] border-forest text-forest text-[13px] rounded-full font-semibold hover:opacity-90 transition-opacity">No</button>
                       </div>
                     </div>
                   ) : (
-                    <button onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }} className="w-full flex items-center gap-2 px-4 py-2.5 text-left hover:bg-clay-tint text-clay">
+                    <button onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }} className="w-full flex items-center gap-2 px-3 min-h-11 rounded-[14px] text-left hover:bg-clay-tint text-clay-ink">
                       <Trash2 className="h-4 w-4" /> Delete goal
                     </button>
                   )}
                 </div>
               </>
             )}
-          </div>
+          </>
         ) : (
-          <button onClick={onEdit} className="h-8 w-8 shrink-0 flex items-center justify-center rounded-full text-ink-40 hover:text-forest hover:bg-black/5 transition-colors" aria-label="Edit goal">
-            <Pencil className="h-3.5 w-3.5" />
+          <button
+            type="button"
+            onClick={onTileActivate}
+            className="h-11 w-11 flex items-center justify-center rounded-full"
+            aria-label={expandable ? (expanded ? "Hide goal details" : "Show goal details") : "Edit goal"}
+            aria-expanded={expandable ? expanded : undefined}
+          >
+            <span className="w-9 h-9 rounded-full bg-forest text-paper flex items-center justify-center">
+              <ArrowUpRight className={cn("h-4 w-4 transition-transform duration-200", expanded && "rotate-90")} aria-hidden="true" />
+            </span>
           </button>
         )}
       </div>
 
       {typeof goal.linkCount === "number" && goal.linkCount > 0 && (
-        <p className="text-[13px] text-ink-40 mt-3">
+        <p className="text-[13px] mt-3">
           {goal.linkCount} investment{goal.linkCount !== 1 ? "s" : ""} linked.
         </p>
       )}
 
-      {/* Free-tier superset: projection breakdown, growth chip, advisor CTA — only
-          renders when the caller passes a real projection (free tier does; client
-          tier doesn't, since its funding comes from linked holdings, not a projection). */}
-      {projection && (
-        <div className="mt-3 space-y-3">
+      {/* Free-tier superset (GoalDetail look): what-if amounts, monthly breakdown,
+          growth chip, advisor CTA and contribute/edit — only when the caller passes
+          a real projection and the tile is expanded. */}
+      {projection && (expanded || !expandable) && (
+        <div className="mt-4 flex flex-col gap-3">
+          <WhatIfBlock projection={projection} targetDateStr={targetDateStr} />
+          <BreakdownRows projection={projection} currentMonthlyPace={currentMonthlyPace} />
           <GrowthChip amount={growthAmount} />
-          <BreakdownCard projection={projection} currentMonthlyPace={currentMonthlyPace} />
-          {(goal.trackStatus === "off_track" || goal.trackStatus === "at_risk") && (
+          {needsAttention && (
             <AdvisorCTA offTrack={goal.trackStatus === "off_track"} shortfall={projection.projectedShortfall} />
           )}
           {onContribute && (
-            <Button size="sm" className="w-full gap-1.5" onClick={onContribute}>
-              <PlusCircle className="h-3.5 w-3.5" aria-hidden="true" />Add contribution
-            </Button>
+            <button
+              type="button"
+              onClick={onContribute}
+              className="w-full h-11 inline-flex items-center justify-center gap-1.5 rounded-full bg-forest px-5 text-[14px] font-semibold text-paper transition-opacity hover:opacity-90"
+            >
+              <PlusCircle className="h-4 w-4" aria-hidden="true" />Add a contribution
+            </button>
+          )}
+          {expandable && (
+            <button
+              type="button"
+              onClick={onEdit}
+              className="w-full h-11 inline-flex items-center justify-center gap-1.5 rounded-full border-[1.5px] border-forest px-5 text-[14px] font-semibold text-forest transition-colors hover:bg-forest/5"
+            >
+              <Pencil className="h-4 w-4" aria-hidden="true" />Edit goal
+            </button>
           )}
         </div>
       )}
 
       {onMarkComplete && (
-        <div className="flex items-center gap-3 mt-4 pt-4 border-t border-hairline">
+        <div className="flex items-center gap-3 mt-4 pt-2 border-t border-forest/15">
           {confirmComplete ? (
             <div className="flex items-center gap-2">
-              <button onClick={() => { onMarkComplete(goal.id); setConfirmComplete(false); }} className="text-[13.5px] text-green font-bold hover:underline">Yes, complete!</button>
-              <button onClick={() => setConfirmComplete(false)} className="text-[13.5px] text-ink-40 hover:text-ink-60">Cancel</button>
+              <button onClick={() => { onMarkComplete(goal.id); setConfirmComplete(false); }} className="h-9 px-4 rounded-full bg-forest text-paper text-[13.5px] font-semibold hover:opacity-90 transition-opacity">Yes, complete!</button>
+              <button onClick={() => setConfirmComplete(false)} className="h-11 px-2 text-[13.5px] font-medium hover:underline">Cancel</button>
             </div>
           ) : (
-            <button onClick={() => setConfirmComplete(true)} className="flex items-center gap-1.5 text-[13.5px] font-medium text-ink-60 hover:text-green transition-colors">
+            <button onClick={() => setConfirmComplete(true)} className="flex items-center gap-1.5 min-h-11 text-[13.5px] font-semibold text-forest hover:underline underline-offset-2 transition-colors">
               <CheckCircle2 className="h-4 w-4" /> Mark complete
             </button>
           )}

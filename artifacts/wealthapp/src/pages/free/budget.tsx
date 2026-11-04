@@ -1,39 +1,40 @@
 // ANIMATION RULES FOR THIS PAGE:
-// ✓ ALLOWED: Chart draw animation (Recharts default)
-// ✓ ALLOWED: BottomSheet spring animation
+// ✓ ALLOWED: Split-bar width transitions
+// ✓ ALLOWED: Expand/collapse of the transaction form, carry-forward banner and budget-plan rows
 // ✗ BANNED:  Page-load stagger on sections
 // ✗ BANNED:  JetBrains Mono font
-// ✗ BANNED:  Cream/warm palette (#F1F4FE, #F1F4FE, #8F98C8)
+// ✗ BANNED:  Tailwind default palette (emerald/red/slate…) — design tokens only
 // ✗ BANNED:  Inline style={{ color: '#hexcode' }} — use Tailwind tokens only
-// ✗ BANNED:  Double bottom nav — AppShell is the ONLY nav
+// ✗ BANNED:  Own bottom nav / back nav / bottom padding hacks — Budget is a main tab; FreeAppShell owns nav + menu-bar padding
 
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import AppShell from "@/components/AppShell";
 import FreeTierBanner from "@/components/FreeTierBanner";
+import Sol from "@/components/Sol";
 import CurrencyField from "@/components/shared/CurrencyField";
 import InvestableSurplusCard from "@/components/shared/InvestableSurplusCard";
-import BottomNav from "@/components/BottomNav";
-import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
 import { track } from "@/lib/analytics";
 import { toast } from "sonner";
-import { ChevronLeft, ChevronRight, Pencil, Check, Plus, Trash2, X, RefreshCw, ChevronDown, ChevronUp, Home, Utensils, Bus, Zap, Ticket, MoreHorizontal, Wallet } from "lucide-react";
+import { Pencil, Check, Plus, Trash2, X, RefreshCw, ChevronDown, ChevronUp, ChevronRight, Home, Utensils, Bus, Zap, Ticket, MoreHorizontal, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useProfile } from "@/hooks/useProfile";
 
 interface BudgetEntry { id?: string; periodMonth: string; currency: string; income: string | null; housing: string | null; food: string | null; transport: string | null; utilities: string | null; entertainment: string | null; other: string | null; }
 interface BudgetTransaction { id: string; periodMonth: string; description: string; amount: string; type: string; category: string; transactionDate: string; isRecurring: boolean; }
 
+// mono/tile: monogram tiles in the Spending list (approved design). Sunset Pop
+// is reserved for a category that runs over plan.
 const CATS = [
-  { key: "housing" as const, icon: Home, label: "Housing" },
-  { key: "food" as const, icon: Utensils, label: "Food" },
-  { key: "transport" as const, icon: Bus, label: "Transport" },
-  { key: "utilities" as const, icon: Zap, label: "Utilities" },
-  { key: "entertainment" as const, icon: Ticket, label: "Entertainment" },
-  { key: "other" as const, icon: MoreHorizontal, label: "Other" },
+  { key: "housing" as const, icon: Home, label: "Housing", mono: "HO", tile: "bg-field" },
+  { key: "food" as const, icon: Utensils, label: "Food", mono: "FO", tile: "bg-breeze" },
+  { key: "transport" as const, icon: Bus, label: "Transport", mono: "TR", tile: "bg-breeze" },
+  { key: "utilities" as const, icon: Zap, label: "Utilities", mono: "UT", tile: "bg-paper" },
+  { key: "entertainment" as const, icon: Ticket, label: "Entertainment", mono: "EN", tile: "bg-breeze" },
+  { key: "other" as const, icon: MoreHorizontal, label: "Other", mono: "OT", tile: "bg-paper" },
 ];
 
 const TX_CATS = [
@@ -53,6 +54,19 @@ type TxErrors = { description?: string; amount?: string };
 const now = new Date();
 function monthKey(d: Date) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; }
 function monthLabel(d: Date) { return d.toLocaleDateString("en-US", { month: "long", year: "numeric" }); }
+// The free plan keeps three months: the current one and the two before it.
+function recentMonths(today: Date) {
+  return [2, 1, 0].map(back => new Date(today.getFullYear(), today.getMonth() - back, 1));
+}
+function daysLeftInMonth(today: Date) {
+  return new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate() - today.getDate();
+}
+function initials(text: string) {
+  const words = text.trim().split(/[\s&/,.-]+/).filter(Boolean);
+  if (words.length === 0) return "··";
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return (words[0][0] + words[1][0]).toUpperCase();
+}
 function prevMonthName(mk: string) {
   const [y, m] = mk.split("-").map(Number);
   return new Date(y, m - 2, 1).toLocaleDateString("en-US", { month: "long" });
@@ -90,7 +104,8 @@ export default function BudgetPage() {
   const autoShownEstimates = useRef(false);
   const [editingIncome, setEditingIncome] = useState(false);
   const [editingCat, setEditingCat] = useState<string | null>(null);
-  const [view, setView] = useState<"daily" | "monthly">("daily");
+  const txFormRef = useRef<HTMLDivElement>(null);
+  const planRef = useRef<HTMLElement>(null);
   const [form, setForm] = useState<BudgetForm>({ income: 0, housing: 0, food: 0, transport: 0, utilities: 0, entertainment: 0, other: 0 });
 
   const defaultTxDate = new Date().toISOString().slice(0, 10);
@@ -226,7 +241,7 @@ export default function BudgetPage() {
     mutationFn: (id: string) => apiFetch(`/budget/transactions/${id}`, { method: "DELETE" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["budget-transactions", mk] });
-      setConfirmDeleteId(null);
+      closeTxForm();
     },
   });
 
@@ -240,9 +255,27 @@ export default function BudgetPage() {
     },
   });
 
+  // Bring the form / plan into view when opened from a row higher up the page.
+  useEffect(() => {
+    if (showTxForm) txFormRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [showTxForm, editingTxId]);
+
+  function openPlan(field: "income" | (typeof CATS)[number]["key"]) {
+    setShowEstimates(true);
+    if (field === "income") { setEditingIncome(true); setEditingCat(null); }
+    else { setEditingIncome(false); setEditingCat(field); }
+    setTimeout(() => planRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+  }
+
+  function switchTxType(type: "income" | "expense") {
+    setTxType(type);
+    setTxForm(f => ({ ...f, type, category: type === "income" ? "income" : (f.category === "income" ? "other" : f.category) }));
+  }
+
   function closeTxForm() {
     setShowTxForm(false);
     setEditingTxId(null);
+    setConfirmDeleteId(null);
     setTxErrors({});
     setTxForm({ description: "", amount: "", type: "expense", category: "other", transactionDate: defaultTxDate, isRecurring: false });
   }
@@ -307,451 +340,552 @@ export default function BudgetPage() {
     total: transactions.filter(t => t.category === c.value).reduce((s, t) => s + parseFloat(t.amount), 0),
   })).filter(c => c.total > 0);
 
-  const prevMonth = () => { const d = new Date(viewDate); d.setMonth(d.getMonth() - 1); setViewDate(d); };
-  const nextMonth = () => { const d = new Date(viewDate); d.setMonth(d.getMonth() + 1); if (d <= now) setViewDate(d); };
-
   const fmt = (n: number) => `${sym}${Math.abs(n).toLocaleString()}`;
   const catIcon = (cat: string) => {
     const CatIcon = TX_CATS.find(c => c.value === cat)?.icon || MoreHorizontal;
-    return <CatIcon className="w-4 h-4 text-muted-foreground" />;
+    return <CatIcon className="w-4 h-4" />;
   };
   const catLabel = (cat: string) => TX_CATS.find(c => c.value === cat)?.label ?? cat;
 
   const grouped = groupByDate(transactions);
-
-  const CAT_COLORS: Record<string, string> = {
-    housing: "var(--forest-700)", food: "var(--green)", transport: "var(--sun)",
-    utilities: "var(--ink-40)", entertainment: "var(--clay)", other: "var(--ink-40)",
-    income: "var(--green)",
-  };
+  const incomeTxs = transactions.filter(t => t.type === "income");
 
   const isBusy = addTx.isPending || editTx.isPending;
 
+  // Sol's one observation, from real numbers only.
+  const biggestExpense = (txExpenses > 0
+    ? catTotals.filter(c => c.value !== "income").map(c => ({ label: c.label, value: c.total }))
+    : CATS.map(c => ({ label: c.label, value: form[c.key] }))
+  ).sort((a, b) => b.value - a.value)[0];
+  const monthName = viewDate.toLocaleDateString("en-US", { month: "long" });
+  const solLine = totalIncome > 0
+    ? saved >= 0
+      ? `You kept ${savingsRate.toFixed(0)}% of your income in ${monthName}.${biggestExpense && biggestExpense.value > 0 ? ` ${biggestExpense.label} is the biggest share at ${fmt(biggestExpense.value)}.` : ""}`
+      : `Spending is ${fmt(saved)} above income in ${monthName}.${biggestExpense && biggestExpense.value > 0 ? ` ${biggestExpense.label} is the largest share at ${fmt(biggestExpense.value)}.` : ""}`
+    : null;
+
+  // Split bar: share of income spent vs kept (visual only).
+  const spentW = totalIncome > 0 ? Math.max(0, Math.min(100, (totalExpenses / totalIncome) * 100)) : 0;
+  const keptW = Math.max(0, 100 - spentW);
+  const isCurrentMonth = mk === monthKey(now);
+  const pills = recentMonths(now);
+
+  // Spending rows: logged amounts per category when there are expense
+  // transactions (compared with the plan), otherwise the plan itself.
+  const spendRows = CATS.map(c => {
+    const plan = form[c.key];
+    const actual = txExpenses > 0 ? (catTotals.find(t => t.value === c.key)?.total ?? 0) : plan;
+    const over = txExpenses > 0 && plan > 0 && actual > plan;
+    return { ...c, plan, actual, over };
+  }).filter(r => r.actual > 0 || r.plan > 0);
+
+  const kept = totalIncome > 0 ? `${saved < 0 ? "−" : ""}${fmt(saved)}` : "—";
+
+  const inputCls = "w-full h-11 rounded-[16px] bg-paper px-4 text-[14px] text-forest border outline-none transition-colors placeholder:text-ink-30 focus:border-green";
+  const primaryBtn = "h-11 w-full rounded-full bg-forest px-5 text-[14px] font-semibold text-paper transition-opacity hover:opacity-90 disabled:opacity-60";
+  const rowCls = "flex w-full min-h-[64px] items-center gap-3 border-b border-hairline p-3 text-left last:border-0 transition-colors hover:bg-paper/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-forest/30";
+  const tileCls = "flex h-10 w-10 flex-none items-center justify-center rounded-[12px] text-[12px] font-semibold text-forest";
+
   return (
     <AppShell>
-      <div className="pb-20 md:pb-0">
+      <div className="space-y-[14px] pb-8">
 
-        <FreeTierBanner
-          feature="Basic income and expense tracking"
-          benefit="Investment clients get investment contribution sync, goal funding analysis, and 12-month history charts."
-          storageKey="budget"
-        />
-
-        {/* Dark navy header */}
-        <div className="-mx-4 -mt-4 md:-mx-6 md:-mt-6 bg-forest p-[20px_22px_48px]">
-          <div className="flex items-center justify-between mb-5">
-            <h1 className="text-[22px] font-bold text-white tracking-[-0.02em]">
-              Budget
-            </h1>
-            <div className="flex items-center gap-2 rounded-[10px] p-[7px_14px]" style={{ background: "rgba(255,255,255,0.1)" }}>
-              <button onClick={prevMonth}><ChevronLeft className="h-4 w-4 text-white" /></button>
-              <span className="text-white text-[13px] font-medium">{monthLabel(viewDate)}</span>
-              <button onClick={nextMonth} disabled={mk >= monthKey(now)}>
-                <ChevronRight className={`h-4 w-4 text-white ${mk >= monthKey(now) ? "opacity-30" : ""}`} />
-              </button>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-5 mb-3">
-            <div>
-              <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.5)" }}>Income</p>
-              <p className="text-[24px] font-bold text-white mt-0.5">
-                {totalIncome > 0 ? fmt(totalIncome) : "—"}
-              </p>
-            </div>
-            <div>
-              <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.5)" }}>Expenses</p>
-              <p className="text-[24px] font-bold text-white mt-0.5">
-                {totalExpenses > 0 ? fmt(totalExpenses) : "—"}
-              </p>
-            </div>
-          </div>
-          {totalIncome > 0 && (
-            <p className="text-sun text-[13px] font-medium">
-              Saved {fmt(Math.max(0, saved))} · {savingsRate.toFixed(0)}% rate
-            </p>
-          )}
+        {/* Title + month pills */}
+        <div className="px-1 pt-1">
+          <p className="tala-eyebrow text-ink-40">Monthly budget</p>
+          <h1 className="mt-1 font-display text-[36px] leading-[1.05] text-forest">{monthLabel(viewDate)}</h1>
+          <p className="mt-1 text-[14px] text-ink-40">
+            {isCurrentMonth ? `This month · ${daysLeftInMonth(now)} days left` : "Earlier month · you can still log and edit"}
+          </p>
         </div>
 
-        {/* Cream content area */}
-        <div className="-mx-4 md:-mx-6 bg-paper rounded-t-[24px] -mt-6 p-[22px_16px_0] min-h-full">
-        <div className="space-y-4">
+        <div className="flex gap-1.5" role="group" aria-label="Choose month">
+          {pills.map(d => {
+            const active = monthKey(d) === mk;
+            return (
+              <button
+                type="button"
+                key={monthKey(d)}
+                onClick={() => setViewDate(d)}
+                aria-pressed={active}
+                aria-label={monthLabel(d)}
+                className={cn(
+                  "h-10 rounded-full px-[18px] text-[14px] font-semibold transition-colors",
+                  active ? "bg-forest text-paper" : "border-[1.5px] border-hairline-2 text-forest hover:bg-surface",
+                )}
+              >
+                {d.toLocaleDateString("en-US", { month: "short" })}
+              </button>
+            );
+          })}
+        </div>
 
-        {totalIncome > 0 && <InvestableSurplusCard surplus={saved} currency={currency} />}
+        {/* Hero — the one focal number */}
+        <section aria-label={`Kept in ${monthLabel(viewDate)}`} className="flex flex-col gap-3.5 rounded-[28px] bg-forest p-5">
+          <p className="tala-eyebrow text-mint">Kept in {monthName}</p>
+          <div className="flex items-end justify-between gap-2">
+            <span className="min-w-0 truncate font-display tabular-nums text-[56px] leading-[0.9] tracking-[-0.045em] text-paper">
+              {kept}
+            </span>
+            {totalIncome > 0 && (
+              saved >= 0 ? (
+                <span className="shrink-0 rounded-full bg-field px-3 py-1.5 text-[12px] font-semibold text-forest whitespace-nowrap">
+                  {savingsRate.toFixed(0)}% savings rate
+                </span>
+              ) : (
+                <span className="shrink-0 rounded-full bg-sun px-3 py-1.5 text-[12px] font-semibold text-forest whitespace-nowrap">
+                  Over income
+                </span>
+              )
+            )}
+          </div>
+          {totalIncome > 0 && (
+            <div
+              role="img"
+              aria-label={`Of ${fmt(totalIncome)} income: ${fmt(totalExpenses)} spent, ${fmt(Math.max(0, saved))} kept`}
+              className="flex h-2.5 gap-0.5 overflow-hidden rounded-full bg-white/10"
+            >
+              {spentW > 0 && <span className="h-full bg-sun transition-[width] duration-[400ms] ease-out" style={{ width: `${spentW}%` }} />}
+              {keptW > 0 && <span className="h-full bg-field transition-[width] duration-[400ms] ease-out" style={{ width: `${keptW}%` }} />}
+            </div>
+          )}
+          <div className="grid grid-cols-3 gap-2">
+            <div className="flex min-w-0 flex-col gap-[3px]">
+              <div className="text-[12px] text-mint">Income</div>
+              <div className="truncate text-[16px] font-semibold tabular-nums text-paper">{totalIncome > 0 ? fmt(totalIncome) : "—"}</div>
+            </div>
+            <div className="flex min-w-0 flex-col gap-[3px]">
+              <div className="flex items-center gap-[5px] text-[12px] text-mint">
+                <span className="h-2 w-2 rounded-[2px] bg-sun" aria-hidden="true" />Spent
+              </div>
+              <div className="truncate text-[16px] font-semibold tabular-nums text-paper">{totalExpenses > 0 ? fmt(totalExpenses) : "—"}</div>
+            </div>
+            <div className="flex min-w-0 flex-col gap-[3px]">
+              <div className="flex items-center gap-[5px] text-[12px] text-mint">
+                <span className="h-2 w-2 rounded-[2px] bg-field" aria-hidden="true" />Kept
+              </div>
+              <div className="truncate text-[16px] font-semibold tabular-nums text-paper">{kept}</div>
+            </div>
+          </div>
+        </section>
 
         {/* Carry-forward banner */}
         <AnimatePresence>
           {carryPending?.pending && !carryForwardDismissed && (
             <motion.div
               initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, height: 0, marginTop: 0 }}
-              className="flex items-center justify-between gap-3 rounded-[16px] p-4 bg-green-tint border border-green/25"
+              className="flex items-center gap-3 rounded-[24px] bg-surface p-4"
             >
-              <div className="flex items-start gap-2.5 flex-1 min-w-0">
-                <RefreshCw className="h-4 w-4 mt-0.5 flex-shrink-0 text-green" />
-                <p className="text-[13px] font-medium text-green">
-                  {carryPending.count} recurring items from {prevMonthName(mk)} — copy them over?
-                </p>
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-field text-forest" aria-hidden="true">
+                <RefreshCw className="h-4 w-4" />
+              </span>
+              <p className="min-w-0 flex-1 text-[14px] font-medium leading-[1.4] text-forest text-pretty">
+                {carryPending.count} recurring items from {prevMonthName(mk)} — copy them over?
+              </p>
+              <div className="flex shrink-0 items-center gap-1">
                 <button
+                  type="button"
                   onClick={() => carryForward.mutate()} disabled={carryForward.isPending}
-                  className="rounded-full transition-colors bg-green text-white text-xs font-semibold px-3.5 py-1.5 min-h-8"
+                  className="h-11 rounded-full bg-forest px-4 text-[13px] font-semibold text-paper transition-opacity hover:opacity-90 disabled:opacity-60"
                 >
                   {carryForward.isPending ? "…" : "Yes, copy"}
                 </button>
-                <button onClick={() => setCarryForwardDismissed(true)} className="flex items-center justify-center text-ink-40 min-w-9 min-h-9" aria-label="Dismiss"><X className="h-4 w-4" /></button>
+                <button
+                  type="button"
+                  onClick={() => setCarryForwardDismissed(true)}
+                  className="flex h-11 w-11 items-center justify-center rounded-full text-forest/60 transition-colors hover:bg-forest/10 hover:text-forest"
+                  aria-label="Dismiss"
+                >
+                  <X className="h-4 w-4" />
+                </button>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Primary action buttons */}
-        <div className="grid grid-cols-2 gap-3">
-          <button
-            onClick={() => openTxForm("income")}
-            className="rounded-[20px] p-4 text-left active:scale-95 transition-transform bg-green-tint border border-green/25"
-          >
-            <div className="flex items-center gap-2 mb-1.5">
-              <span className="text-lg"></span>
-              <Plus className="h-3.5 w-3.5 text-green" />
+        {/* Sol tip */}
+        {solLine && (
+          <section aria-label="Sol" className="flex items-start gap-3 rounded-[24px] bg-breeze p-4 text-forest">
+            <Sol size="sm" animate="breathe" />
+            <div className="flex min-w-0 flex-col gap-1.5">
+              <p className="text-[14px] font-semibold leading-[1.5] text-pretty">{solLine}</p>
+              <p className="text-[13px] leading-[1.5] text-pretty">
+                A savings rate near 20–30% is strong by most standards. Small drift in one category matters far less than the rate holding steady.
+              </p>
             </div>
-            <p className="text-[13px] font-semibold text-green">Log Income</p>
-            <p className="text-[11px] text-green mt-0.5">Salary, freelance, etc.</p>
-          </button>
+          </section>
+        )}
+
+        {/* Surplus prompt */}
+        {totalIncome > 0 && <InvestableSurplusCard surplus={saved} currency={currency} />}
+
+        {/* Income */}
+        <section aria-label="Income" className="space-y-2.5">
+          <div className="flex items-baseline justify-between px-1 pt-1.5">
+            <h2 className="font-sans text-[16px] font-semibold text-forest">Income</h2>
+            <span className="text-[15px] font-semibold tabular-nums text-forest">{totalIncome > 0 ? fmt(totalIncome) : "—"}</span>
+          </div>
+          <div className="flex flex-col overflow-hidden rounded-[24px] bg-surface p-1">
+            {incomeTxs.length > 0 ? incomeTxs.map(tx => (
+              <button key={tx.id} type="button" onClick={() => openEditForm(tx)} className={rowCls} aria-label={`Edit ${tx.description}`}>
+                <span className={cn(tileCls, "bg-field")} aria-hidden="true">{initials(tx.description)}</span>
+                <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <span className="truncate text-[14px] font-medium text-forest">{tx.description}</span>
+                  <span className="text-[12px] text-ink-40">
+                    {tx.isRecurring ? "Recurring · " : ""}{todayLabel(new Date(tx.transactionDate + "T00:00:00"))}
+                  </span>
+                </span>
+                <span className="shrink-0 text-[15px] font-semibold tabular-nums text-forest">{sym}{parseFloat(tx.amount).toLocaleString()}</span>
+              </button>
+            )) : form.income > 0 ? (
+              <button type="button" onClick={() => openPlan("income")} className={rowCls}>
+                <span className={cn(tileCls, "bg-field")} aria-hidden="true">IN</span>
+                <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <span className="truncate text-[14px] font-medium text-forest">Monthly income</span>
+                  <span className="text-[12px] text-ink-40">Planned · from your budget plan</span>
+                </span>
+                <span className="shrink-0 text-[15px] font-semibold tabular-nums text-forest">{fmt(form.income)}</span>
+              </button>
+            ) : (
+              <button type="button" onClick={() => openTxForm("income")} className={rowCls}>
+                <span className={cn(tileCls, "bg-paper")} aria-hidden="true"><Plus className="h-4 w-4" /></span>
+                <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <span className="text-[14px] font-medium text-forest">Add your income</span>
+                  <span className="text-[12px] text-ink-40">Salary, freelance, rental…</span>
+                </span>
+                <ChevronRight className="h-4 w-4 shrink-0 text-ink-40" aria-hidden="true" />
+              </button>
+            )}
+          </div>
+        </section>
+
+        {/* Spending */}
+        <section aria-label="Spending" className="space-y-2.5">
+          <div className="flex items-baseline justify-between px-1 pt-1.5">
+            <h2 className="font-sans text-[16px] font-semibold text-forest">Spending</h2>
+            <span className="text-[15px] font-semibold tabular-nums text-forest">{totalExpenses > 0 ? fmt(totalExpenses) : "—"}</span>
+          </div>
+          <div className="flex flex-col overflow-hidden rounded-[24px] bg-surface p-1">
+            {spendRows.length > 0 ? spendRows.map(r => {
+              const share = totalIncome > 0 ? `${Math.round((r.actual / totalIncome) * 100)}% of income` : null;
+              const planNote = txExpenses > 0 && r.plan > 0 ? `${fmt(r.plan)} planned` : txExpenses > 0 ? "No plan set" : "Planned";
+              return (
+                <button key={r.key} type="button" onClick={() => openPlan(r.key)} className={rowCls} aria-label={`${r.label}: ${fmt(r.actual)}${r.over ? ", over plan" : ""}. Edit plan`}>
+                  <span className={cn(tileCls, r.over ? "bg-sun" : r.tile)} aria-hidden="true">{r.mono}</span>
+                  <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <span className="truncate text-[14px] font-medium text-forest">{r.label}</span>
+                    <span className="truncate text-[12px] text-ink-40">{[share, planNote].filter(Boolean).join(" · ")}</span>
+                  </span>
+                  {r.over && (
+                    <span className="shrink-0 rounded-full bg-sun px-2 py-[3px] text-[11px] font-semibold text-forest whitespace-nowrap">Over plan</span>
+                  )}
+                  <span className="shrink-0 text-[15px] font-semibold tabular-nums text-forest">{fmt(r.actual)}</span>
+                </button>
+              );
+            }) : (
+              <button type="button" onClick={() => openTxForm("expense")} className={rowCls}>
+                <span className={cn(tileCls, "bg-paper")} aria-hidden="true"><Plus className="h-4 w-4" /></span>
+                <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <span className="text-[14px] font-medium text-forest">No spending yet</span>
+                  <span className="text-[12px] text-ink-40">Log an expense or set a plan below</span>
+                </span>
+                <ChevronRight className="h-4 w-4 shrink-0 text-ink-40" aria-hidden="true" />
+              </button>
+            )}
+          </div>
+        </section>
+
+        {/* Log a transaction */}
+        {!showTxForm && (
           <button
+            type="button"
             onClick={() => openTxForm("expense")}
-            className="rounded-[20px] p-4 text-left active:scale-95 transition-transform bg-clay-tint border border-clay/25"
+            className="flex h-11 w-full items-center justify-center gap-1.5 rounded-full border-[1.5px] border-forest text-[14px] font-semibold text-forest transition-colors hover:bg-surface"
           >
-            <div className="flex items-center gap-2 mb-1.5">
-              <span className="text-lg"></span>
-              <Plus className="h-3.5 w-3.5 text-clay" />
-            </div>
-            <p className="text-[13px] font-semibold text-clay">Log Expense</p>
-            <p className="text-[11px] text-clay mt-0.5">Food, rent, bills, etc.</p>
+            <Plus className="h-4 w-4" aria-hidden="true" /> Log a transaction
           </button>
-        </div>
+        )}
 
         {/* Transaction form (add & edit) */}
         <AnimatePresence>
           {showTxForm && (
             <motion.div
+              ref={txFormRef}
               initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-              className="bg-card border border-card-border rounded-2xl p-4 space-y-3"
+              className="scroll-mt-4 space-y-3 rounded-[24px] bg-surface p-5"
             >
               <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold">
+                <h3 className="text-[15px] font-semibold text-forest">
                   {editingTxId
-                    ? (txType === "income" ? "Edit Income" : "Edit Expense")
-                    : (txType === "income" ? "Log Income" : "Log Expense")}
-                </p>
-                <button onClick={closeTxForm} className="flex items-center justify-center text-muted-foreground hover:text-foreground" aria-label="Close form" style={{ minWidth: 36, minHeight: 36 }}><X className="h-4 w-4" /></button>
+                    ? (txType === "income" ? "Edit income" : "Edit expense")
+                    : "Log a transaction"}
+                </h3>
+                <button
+                  type="button"
+                  onClick={closeTxForm}
+                  className="-mr-2 flex h-11 w-11 items-center justify-center rounded-full text-ink-40 transition-colors hover:bg-paper hover:text-forest"
+                  aria-label="Close form"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="flex gap-1.5" role="group" aria-label="Transaction type">
+                {(["expense", "income"] as const).map(t => (
+                  <button
+                    type="button"
+                    key={t}
+                    onClick={() => switchTxType(t)}
+                    aria-pressed={txType === t}
+                    className={cn(
+                      "h-10 rounded-full px-[18px] text-[14px] font-semibold transition-colors",
+                      txType === t ? "bg-forest text-paper" : "border-[1.5px] border-hairline-2 text-forest hover:bg-paper",
+                    )}
+                  >
+                    {t === "expense" ? "Expense" : "Income"}
+                  </button>
+                ))}
               </div>
 
               <div>
                 <input
                   placeholder={txType === "income" ? "e.g. Monthly salary" : "e.g. Grab lunch"}
+                  aria-label="Description"
                   value={txForm.description}
                   onChange={e => {
                     setTxForm(f => ({ ...f, description: e.target.value }));
                     if (txErrors.description) setTxErrors(e => ({ ...e, description: undefined }));
                   }}
-                  className={cn(
-                    "w-full border rounded-xl px-4 py-2.5 text-sm bg-background outline-none focus:ring-2 focus:ring-primary",
-                    txErrors.description ? "border-red-400" : "border-border"
-                  )}
+                  className={cn(inputCls, txErrors.description ? "border-clay" : "border-hairline-2")}
+                  aria-invalid={!!txErrors.description}
                   autoFocus
                 />
-                {txErrors.description && <p className="text-xs text-red-500 mt-1 ml-1">{txErrors.description}</p>}
+                {txErrors.description && <p className="mt-1 ml-1 text-[12px] text-clay-ink">{txErrors.description}</p>}
               </div>
 
               <div className="flex gap-2">
-                <div className="flex-1">
+                <div className="min-w-0 flex-1">
                   <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{sym}</span>
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[14px] text-ink-40">{sym}</span>
                     <input
                       type="number" placeholder="0"
+                      aria-label="Amount"
                       value={txForm.amount}
                       onChange={e => {
                         setTxForm(f => ({ ...f, amount: e.target.value }));
                         if (txErrors.amount) setTxErrors(e => ({ ...e, amount: undefined }));
                       }}
-                      className={cn(
-                        "w-full border rounded-xl pl-8 pr-4 py-2.5 text-sm bg-background outline-none focus:ring-2 focus:ring-primary",
-                        txErrors.amount ? "border-red-400" : "border-border"
-                      )}
+                      className={cn(inputCls, "pl-8 tabular-nums", txErrors.amount ? "border-clay" : "border-hairline-2")}
+                      aria-invalid={!!txErrors.amount}
                     />
                   </div>
-                  {txErrors.amount && <p className="text-xs text-red-500 mt-1 ml-1">{txErrors.amount}</p>}
+                  {txErrors.amount && <p className="mt-1 ml-1 text-[12px] text-clay-ink">{txErrors.amount}</p>}
                 </div>
                 <input
                   type="date" value={txForm.transactionDate}
+                  aria-label="Date"
                   onChange={e => setTxForm(f => ({ ...f, transactionDate: e.target.value }))}
-                  className="flex-1 border border-border rounded-xl px-3 py-2.5 text-sm bg-background outline-none focus:ring-2 focus:ring-primary"
+                  className={cn(inputCls, "min-w-0 flex-1 border-hairline-2 px-3")}
                 />
               </div>
 
               {txType === "expense" && (
                 <div className="flex flex-wrap gap-2">
                   {TX_CATS.filter(c => c.value !== "income").map(c => (
-                    <button key={c.value} onClick={() => setTxForm(f => ({ ...f, category: c.value }))}
-                      className={cn("rounded-full px-3 text-xs border transition-colors flex items-center gap-1.5",
-                        txForm.category === c.value ? "bg-primary/10 border-primary text-primary" : "border-border text-muted-foreground hover:border-primary/50")}
-                      style={{ minHeight: 36 }}>
-                      <c.icon className="w-3.5 h-3.5" /> {c.label}
+                    <button
+                      type="button"
+                      key={c.value}
+                      onClick={() => setTxForm(f => ({ ...f, category: c.value }))}
+                      aria-pressed={txForm.category === c.value}
+                      className={cn(
+                        "flex h-10 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-medium transition-colors",
+                        txForm.category === c.value ? "bg-forest text-paper" : "bg-paper text-forest hover:bg-breeze"
+                      )}
+                    >
+                      <c.icon className="h-3.5 w-3.5" /> {c.label}
                     </button>
                   ))}
                 </div>
               )}
 
-              <label className="flex items-center gap-2.5 text-sm cursor-pointer select-none py-1">
+              <label className="flex cursor-pointer select-none items-center gap-3 py-1 text-[14px]">
                 <div
                   onClick={() => setTxForm(f => ({ ...f, isRecurring: !f.isRecurring }))}
-                  className={cn("relative w-9 h-5 rounded-full transition-colors cursor-pointer flex-shrink-0",
-                    txForm.isRecurring ? "bg-primary" : "bg-muted-foreground/30")}
+                  className={cn("relative h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors",
+                    txForm.isRecurring ? "bg-forest" : "bg-track")}
                 >
-                  <div className={cn("absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform",
+                  <div className={cn("absolute top-0.5 h-4 w-4 rounded-full bg-paper shadow-[0_1px_3px_rgba(12,33,164,0.2)] transition-transform",
                     txForm.isRecurring ? "translate-x-4" : "translate-x-0.5")} />
                 </div>
                 <div>
-                  <span className="font-medium">Recurring</span>
+                  <span className="font-medium text-forest">Recurring</span>
                   {txForm.isRecurring
-                    ? <span className="text-xs text-primary ml-2 inline-flex items-center gap-1"><RefreshCw className="w-3 h-3" /> Copies automatically next month</span>
-                    : <span className="text-xs text-muted-foreground ml-2">One-off entry</span>}
+                    ? <span className="ml-2 inline-flex items-center gap-1 text-[12px] text-forest"><RefreshCw className="h-3 w-3" /> Copies automatically next month</span>
+                    : <span className="ml-2 text-[12px] text-ink-40">One-off entry</span>}
                 </div>
               </label>
 
-              <Button className="w-full" size="sm" onClick={submitTxForm} disabled={isBusy}>
-                {isBusy ? "Saving…" : editingTxId ? "Update Transaction" : `Save ${txType === "income" ? "Income" : "Expense"}`}
-              </Button>
+              <button type="button" className={primaryBtn} onClick={submitTxForm} disabled={isBusy}>
+                {isBusy ? "Saving…" : editingTxId ? "Update transaction" : `Save ${txType === "income" ? "income" : "expense"}`}
+              </button>
+
+              {editingTxId && (
+                confirmDeleteId === editingTxId ? (
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => deleteTx.mutate(editingTxId)}
+                      disabled={deleteTx.isPending}
+                      className="h-11 flex-1 rounded-full bg-sun px-4 text-[14px] font-semibold text-forest disabled:opacity-60"
+                    >
+                      {deleteTx.isPending ? "Deleting…" : "Yes, delete it"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDeleteId(null)}
+                      className="h-11 flex-1 rounded-full border-[1.5px] border-forest px-4 text-[14px] font-semibold text-forest"
+                    >
+                      Keep it
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDeleteId(editingTxId)}
+                    className="flex h-11 w-full items-center justify-center gap-1.5 rounded-full text-[14px] font-semibold text-forest transition-colors hover:bg-paper"
+                  >
+                    <Trash2 className="h-4 w-4" aria-hidden="true" /> Delete transaction
+                  </button>
+                )
+              )}
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Daily / Monthly tab toggle */}
-        <div className="flex gap-1 bg-muted rounded-xl p-1">
-          {(["daily", "monthly"] as const).map(v => (
-            <button key={v} onClick={() => setView(v)}
-              className={cn("flex-1 py-1.5 text-xs font-medium rounded-lg transition-all capitalize",
-                view === v ? "bg-white shadow text-foreground" : "text-muted-foreground hover:text-foreground")}>
-              {v === "daily" ? "Daily transactions" : "Monthly breakdown"}
-            </button>
-          ))}
-        </div>
-
-        {/* DAILY VIEW */}
-        {view === "daily" && (
-          <>
-            {txLoading ? (
-              <div className="space-y-2">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-14 bg-muted animate-pulse rounded-xl" />)}</div>
-            ) : grouped.length > 0 ? (
-              <div className="space-y-3">
-                {grouped.map(([date, txs]) => {
-                  const dayIncome = txs.filter(t => t.type === "income").reduce((s, t) => s + parseFloat(t.amount), 0);
-                  const dayExpense = txs.filter(t => t.type === "expense").reduce((s, t) => s + parseFloat(t.amount), 0);
-                  const parsedDate = new Date(date + "T00:00:00");
-                  return (
-                    <div key={date} className="bg-card border border-card-border rounded-2xl overflow-hidden">
-                      <div className="flex items-center justify-between px-4 py-2.5 bg-muted/40 border-b border-border">
-                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{todayLabel(parsedDate)}</p>
-                        <div className="flex gap-3 text-xs">
-                          {dayIncome > 0 && <span className="text-emerald-600 font-medium">+{fmt(dayIncome)}</span>}
-                          {dayExpense > 0 && <span className="text-red-500 font-medium">-{fmt(dayExpense)}</span>}
-                        </div>
-                      </div>
-                      {txs.map((tx) => (
-                        <div key={tx.id} className="flex items-center gap-3 px-4 py-3 border-t border-border first:border-0">
-                          <span className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-muted/50">
-                            {catIcon(tx.category)}
+        {/* Transactions (by day) */}
+        {txLoading ? (
+          <div className="space-y-2">{Array.from({ length: 2 }).map((_, i) => <div key={i} className="h-16 animate-pulse rounded-[24px] bg-surface" />)}</div>
+        ) : grouped.length > 0 && (
+          <section aria-label="Transactions" className="space-y-2.5">
+            <div className="flex items-baseline justify-between px-1 pt-1.5">
+              <h2 className="font-sans text-[16px] font-semibold text-forest">Transactions</h2>
+              <span className="text-[13px] text-ink-40 tabular-nums">{transactions.length} logged</span>
+            </div>
+            <div className="space-y-3">
+              {grouped.map(([date, txs]) => {
+                const parsedDate = new Date(date + "T00:00:00");
+                return (
+                  <div key={date} className="overflow-hidden rounded-[24px] bg-surface p-1">
+                    <p className="tala-eyebrow px-3 pb-1 pt-2.5 text-ink-40">{todayLabel(parsedDate)}</p>
+                    {txs.map(tx => (
+                      <button key={tx.id} type="button" onClick={() => openEditForm(tx)} className={rowCls} aria-label={`Edit ${tx.description}`}>
+                        <span className={cn(tileCls, tx.type === "income" ? "bg-field" : "bg-paper")} aria-hidden="true">
+                          {catIcon(tx.category)}
+                        </span>
+                        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                          <span className="flex items-center gap-1.5">
+                            <span className="truncate text-[14px] font-medium text-forest">{tx.description}</span>
+                            {tx.isRecurring && <RefreshCw className="h-3 w-3 shrink-0 text-ink-40" aria-label="Recurring" />}
                           </span>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <p className="text-sm font-medium truncate">{tx.description}</p>
-                              {tx.isRecurring && (
-                                <span className="flex-shrink-0 flex items-center justify-center bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium">
-                                  <RefreshCw className="w-3 h-3" />
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-xs text-muted-foreground">{catLabel(tx.category)}</p>
-                          </div>
-                          <span className={`flex-shrink-0 text-sm font-bold ${tx.type === "income" ? "text-green" : "text-clay"}`}>
-                            {tx.type === "income" ? "+" : "-"}{sym}{parseFloat(tx.amount).toLocaleString()}
-                          </span>
-
-                          {/* Edit & Delete controls */}
-                          {confirmDeleteId === tx.id ? (
-                            <div className="flex items-center gap-1 flex-shrink-0">
-                              <button
-                                onClick={() => deleteTx.mutate(tx.id)}
-                                disabled={deleteTx.isPending}
-                                className="text-xs text-white font-medium px-2 py-1 rounded-lg bg-clay"
-                              >
-                                {deleteTx.isPending ? "…" : "Delete"}
-                              </button>
-                              <button
-                                onClick={() => setConfirmDeleteId(null)}
-                                className="text-xs text-muted-foreground px-2 py-1 rounded-lg hover:bg-muted"
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-1 flex-shrink-0">
-                              <button
-                                onClick={() => openEditForm(tx)}
-                                className="flex items-center justify-center text-muted-foreground hover:text-primary transition-colors"
-                                aria-label={`Edit ${tx.description}`}
-                                style={{ minWidth: 36, minHeight: 36 }}
-                              >
-                                <Pencil className="h-3.5 w-3.5" />
-                              </button>
-                              <button
-                                onClick={() => setConfirmDeleteId(tx.id)}
-                                className="flex items-center justify-center text-muted-foreground hover:text-red-500 transition-colors"
-                                aria-label={`Delete ${tx.description}`}
-                                style={{ minWidth: 36, minHeight: 36 }}
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="rounded-2xl border border-dashed border-border p-8 text-center">
-                <p className="text-2xl mb-2"></p>
-                <p className="text-sm font-medium mb-1">No transactions yet for {monthLabel(viewDate)}</p>
-                <p className="text-xs text-muted-foreground">Tap "Log Income" or "Log Expense" above to start tracking.</p>
-              </div>
-            )}
-          </>
+                          <span className="text-[12px] text-ink-40">{catLabel(tx.category)}</span>
+                        </span>
+                        <span className="shrink-0 text-[15px] font-semibold tabular-nums text-forest">
+                          {tx.type === "income" ? "+" : "−"}{sym}{parseFloat(tx.amount).toLocaleString()}
+                        </span>
+                        <Pencil className="h-3.5 w-3.5 shrink-0 text-ink-40" aria-hidden="true" />
+                      </button>
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
         )}
 
-        {/* MONTHLY VIEW */}
-        {view === "monthly" && (
-          <div className="space-y-3">
-            {catTotals.length > 0 ? (
-              <div className="bg-card border border-card-border rounded-2xl overflow-hidden">
-                <p className="text-xs font-medium text-muted-foreground px-4 pt-3 pb-1 uppercase tracking-wide">Spending by category</p>
-                {catTotals.map(c => {
-                  const isIncome = c.value === "income";
-                  const pct = totalExpenses > 0 && !isIncome ? (c.total / totalExpenses) * 100 : 0;
-                  const dotColor = CAT_COLORS[c.value] ?? "var(--ink-40)";
-                  const budgetAmt = !isIncome ? (form as any)[c.value] as number ?? 0 : 0;
-                  const variance = !isIncome && budgetAmt > 0 ? c.total - budgetAmt : null;
-                  return (
-                    <div key={c.value} className="p-[12px_18px] border-b border-hairline">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: dotColor }} />
-                          <span className="text-[13px] font-medium text-forest">{c.label}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {variance !== null && (
-                            <span className={`text-[11px] font-medium ${variance > 0 ? "text-clay" : "text-green"}`}>
-                              {variance > 0 ? `+${sym}${Math.round(variance).toLocaleString()} over` : `-${sym}${Math.abs(Math.round(variance)).toLocaleString()} under`}
-                            </span>
-                          )}
-                          {!isIncome && variance === null && totalExpenses > 0 && (
-                            <span className="text-[11px] text-ink-40">{pct.toFixed(0)}%</span>
-                          )}
-                          <span className={`text-[13px] font-semibold ${isIncome ? "text-green" : "text-forest"}`}>
-                            {isIncome ? "+" : ""}{sym}{c.total.toLocaleString()}
-                          </span>
-                        </div>
+        {/* Monthly budget plan (collapsible) */}
+        <section ref={planRef} aria-label="Monthly budget plan" className="scroll-mt-4 overflow-hidden rounded-[24px] bg-surface">
+          <button
+            type="button"
+            onClick={() => setShowEstimates(v => !v)}
+            aria-expanded={showEstimates}
+            className="flex min-h-[64px] w-full items-center justify-between gap-3 p-4 text-left"
+          >
+            <div>
+              <h3 className="text-[15px] font-semibold text-forest">Monthly budget plan</h3>
+              <p className="mt-0.5 text-[13px] text-ink-40">Set target amounts per category</p>
+            </div>
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-paper text-forest" aria-hidden="true">
+              {showEstimates ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </span>
+          </button>
+
+          <AnimatePresence>
+            {showEstimates && (
+              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                <div className="px-1">
+                  <div className={cn("rounded-[16px] border-b border-hairline", editingIncome && "bg-paper/60")}>
+                    <button type="button" onClick={() => setEditingIncome(v => !v)} className="flex min-h-[64px] w-full items-center justify-between gap-3 p-3 text-left">
+                      <div className="flex items-center gap-3">
+                        <span className={cn(tileCls, "bg-field")} aria-hidden="true">IN</span>
+                        <span className="text-[14px] font-medium text-forest">Income</span>
                       </div>
-                      {!isIncome && (
-                        <div className="relative h-1.5 rounded-full bg-hairline overflow-hidden">
-                          {budgetAmt > 0 && (
-                            <div className="absolute h-full rounded-full bg-track" style={{ width: `${Math.min(100, (budgetAmt / Math.max(budgetAmt, c.total)) * 100)}%` }} />
-                          )}
-                          <div className="absolute h-full rounded-full" style={{ background: variance !== null && variance > 0 ? "var(--clay)" : dotColor, width: `${Math.min(100, budgetAmt > 0 ? (c.total / Math.max(budgetAmt, c.total)) * 100 : pct)}%`, transition: "width 0.4s ease" }} />
-                        </div>
+                      <div className="flex items-center gap-2">
+                        <span className={cn("text-[15px] font-semibold tabular-nums", form.income > 0 ? "text-forest" : "text-ink-40")}>
+                          {form.income > 0 ? `${sym}${form.income.toLocaleString()}` : "Set amount"}
+                        </span>
+                        {editingIncome ? <Check className="h-4 w-4 text-forest" /> : <Pencil className="h-4 w-4 text-ink-40" />}
+                      </div>
+                    </button>
+                    <AnimatePresence>
+                      {editingIncome && (
+                        <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                          <div className="px-3 pb-4"><CurrencyField editable value={form.income} onChange={v => setForm(f => ({ ...f, income: v }))} currency={currency} /></div>
+                        </motion.div>
                       )}
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="rounded-2xl border border-dashed border-border p-5 text-center">
-                <p className="text-xs text-muted-foreground">Log transactions to see your monthly breakdown by category.</p>
-              </div>
-            )}
+                    </AnimatePresence>
+                  </div>
 
-            {/* Monthly estimates (collapsible) */}
-            <div className="bg-card border border-card-border rounded-2xl overflow-hidden">
-              <button
-                onClick={() => setShowEstimates(v => !v)}
-                className="w-full flex items-center justify-between px-4 py-3.5 text-left"
-              >
-                <div>
-                  <p className="text-sm font-semibold">Monthly budget plan</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Set target amounts per category</p>
-                </div>
-                {showEstimates ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
-              </button>
-
-              <AnimatePresence>
-                {showEstimates && (
-                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-t border-border">
-                    <div className={cn("border-b border-border", editingIncome && "bg-muted/30")}>
-                      <button onClick={() => setEditingIncome(v => !v)} className="w-full flex items-center justify-between px-4 py-3.5 text-left">
-                        <div className="flex items-center gap-3"><span className="text-lg"></span><span className="font-medium text-sm">Income</span></div>
+                  {CATS.map((cat, i) => (
+                    <div key={cat.key} className={cn("rounded-[16px]", i < CATS.length - 1 && "border-b border-hairline", editingCat === cat.key && "bg-paper/60")}>
+                      <button type="button" onClick={() => setEditingCat(editingCat === cat.key ? null : cat.key)} className="flex min-h-[64px] w-full items-center justify-between gap-3 p-3 text-left">
+                        <div className="flex items-center gap-3">
+                          <span className={cn(tileCls, cat.tile)} aria-hidden="true">{cat.mono}</span>
+                          <span className="text-[14px] font-medium text-forest">{cat.label}</span>
+                        </div>
                         <div className="flex items-center gap-2">
-                          <span className={cn("text-sm font-semibold", form.income > 0 ? "text-emerald-600" : "text-muted-foreground")}>
-                            {form.income > 0 ? `${sym}${form.income.toLocaleString()}` : "Set amount"}
+                          <span className={cn("text-[15px] font-semibold tabular-nums", form[cat.key] > 0 ? "text-forest" : "text-ink-40")}>
+                            {form[cat.key] > 0 ? `${sym}${form[cat.key].toLocaleString()}` : "—"}
                           </span>
-                          {editingIncome ? <Check className="h-4 w-4 text-primary" /> : <Pencil className="h-4 w-4 text-muted-foreground" />}
+                          {editingCat === cat.key ? <Check className="h-4 w-4 text-forest" /> : <Pencil className="h-4 w-4 text-ink-40" />}
                         </div>
                       </button>
                       <AnimatePresence>
-                        {editingIncome && (
+                        {editingCat === cat.key && (
                           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                            <div className="px-4 pb-4"><CurrencyField editable value={form.income} onChange={v => setForm(f => ({ ...f, income: v }))} currency={currency} /></div>
+                            <div className="px-3 pb-4"><CurrencyField editable value={form[cat.key]} onChange={v => setForm(f => ({ ...f, [cat.key]: v }))} currency={currency} /></div>
                           </motion.div>
                         )}
                       </AnimatePresence>
                     </div>
+                  ))}
+                </div>
 
-                    {CATS.map((cat) => (
-                      <div key={cat.key} className={cn("border-b border-border last:border-0", editingCat === cat.key && "bg-muted/30")}>
-                        <button onClick={() => setEditingCat(editingCat === cat.key ? null : cat.key)} className="w-full flex items-center justify-between px-4 py-3.5 text-left">
-                          <div className="flex items-center gap-3"><cat.icon className="w-5 h-5 text-muted-foreground" /><span className="font-medium text-sm">{cat.label}</span></div>
-                          <div className="flex items-center gap-2">
-                            <span className={cn("text-sm font-semibold", form[cat.key] > 0 ? "text-red-500" : "text-muted-foreground")}>
-                              {form[cat.key] > 0 ? `${sym}${form[cat.key].toLocaleString()}` : "—"}
-                            </span>
-                            {editingCat === cat.key ? <Check className="h-4 w-4 text-primary" /> : <Pencil className="h-4 w-4 text-muted-foreground" />}
-                          </div>
-                        </button>
-                        <AnimatePresence>
-                          {editingCat === cat.key && (
-                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                              <div className="px-4 pb-4"><CurrencyField editable value={form[cat.key]} onChange={v => setForm(f => ({ ...f, [cat.key]: v }))} currency={currency} /></div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </div>
-                    ))}
+                <div className="p-4 pt-3">
+                  <button type="button" className={primaryBtn} onClick={() => saveEstimates.mutate()} disabled={saveEstimates.isPending}>
+                    {saveEstimates.isPending ? "Saving…" : "Save budget plan"}
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </section>
 
-                    <div className="px-4 py-3.5">
-                      <Button className="w-full" size="sm" onClick={() => saveEstimates.mutate()} disabled={saveEstimates.isPending}>
-                        {saveEstimates.isPending ? "Saving…" : "Save budget plan"}
-                      </Button>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
-        )}
-        </div>
-        </div>
+        <FreeTierBanner
+          feature="The free plan keeps 3 months of budgets"
+          benefit="Advised clients see 12 months of history, with investing contributions and goal funding synced in."
+          storageKey="budget"
+        />
       </div>
-      <BottomNav />
     </AppShell>
   );
 }

@@ -1,28 +1,25 @@
 // ANIMATION RULES FOR THIS PAGE:
-// ✓ ALLOWED: Chart draw animation (Recharts default)
-// ✓ ALLOWED: BottomSheet spring animation
+// ✓ ALLOWED: Ring stroke draw-in (HealthScoreRing) and history bar height transitions
 // ✗ BANNED:  Page-load stagger on sections
 // ✗ BANNED:  JetBrains Mono font
-// ✗ BANNED:  Cream/warm palette (#F1F4FE, #F1F4FE, #8F98C8)
 // ✗ BANNED:  Inline style={{ color: '#hexcode' }} — use Tailwind tokens only
-// ✗ BANNED:  Double bottom nav — AppShell is the ONLY nav
+// ✗ BANNED:  Page-level nav, own back button or bottom padding hacks — FreeAppShell owns the menu bar and back pill
 
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
 import { Link } from "wouter";
 import AppShell from "@/components/AppShell";
 import HealthScoreRing from "@/components/shared/HealthScoreRing";
 import BenchmarkCard from "@/components/BenchmarkCard";
-import BottomNav from "@/components/BottomNav";
 import WeeklyTipCard from "@/components/WeeklyTipCard";
 import { apiFetch } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
 import { track } from "@/lib/analytics";
 import { toast } from "sonner";
-import { RefreshCw, TrendingUp, ShieldAlert, CreditCard, Landmark, ChevronRight } from "lucide-react";
+import { RefreshCw, ArrowUp, ArrowDown, ArrowUpRight, Check, Lightbulb } from "lucide-react";
+import Sol from "@/components/Sol";
 import { cn } from "@/lib/utils";
-import { LineChart, Line, ResponsiveContainer, Tooltip } from "recharts";
+import { openSolChat } from "@/lib/solChat";
 import { useProfile } from "@/hooks/useProfile";
 import { generateWeeklyTip, getAgeBenchmarkSavingsRate } from "@/lib/tipEngine";
 import { getStreak, getRatesFromStorage } from "@/lib/milestones";
@@ -85,27 +82,39 @@ function investmentScore(investmentBalance: number): number {
   return 0;
 }
 
-function statusBadge(score: number) {
-  if (score >= 70) return { label: "Good",       color: "var(--green)", bg: "var(--green-tint)" };
-  if (score >= 40) return { label: "Fair",       color: "var(--amber-ink)", bg: "var(--sun-tint)" };
-  return             { label: "Needs work", color: "var(--clay-ink)", bg: "var(--clay-tint)" };
+// Status labels (read out with each sub-score tile).
+type Badge = { label: string };
+const GOOD: Badge = { label: "Good" };
+const FAIR: Badge = { label: "Fair" };
+const WORK: Badge = { label: "Needs work" };
+
+// Sub-score tile colour (approved design): full-strength Spring Field ≥70,
+// Blue Breeze 50–69, Sunset Pop <50. Text stays Cobalt on all three.
+function tileTone(score: number): string {
+  if (score >= 70) return "bg-field";
+  if (score >= 50) return "bg-breeze";
+  return "bg-sun";
 }
 
-function ringColor(score: number): string {
-  if (score >= 70) return "var(--green)";
-  if (score >= 50) return "var(--sun-deep)";
-  if (score >   0) return "var(--clay)";
-  return "var(--ink-40)";
+// Page title from the score band.
+function bandTitle(score: number, hasScore: boolean): string {
+  if (!hasScore) return "Your health score";
+  if (score >= 85) return "In great shape";
+  if (score >= 70) return "In good shape";
+  if (score >= 50) return "Getting there";
+  if (score >= 30) return "Needs some work";
+  return "Needs attention";
 }
 
 function monthKey(d: Date) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; }
 
-function insightCardStyle(text: string): { background: string; border: string } {
-  if (/on track|ahead|positive|grew|great|excellent/i.test(text))
-    return { background: "var(--green-tint)", border: "1px solid rgba(12,33,164,0.25)" };
-  if (/setting|unlock|attention|focus|shortfall/i.test(text))
-    return { background: "var(--sun-tint)", border: "1px solid rgba(245,185,71,0.35)" };
-  return { background: "var(--surface)", border: "1px solid var(--hairline)" };
+function isPositiveInsight(text: string): boolean {
+  return /on track|ahead|positive|grew|great|excellent/i.test(text);
+}
+
+function monthShort(dateStr: string): string {
+  const d = new Date(dateStr.length <= 10 ? `${dateStr.slice(0, 10)}T00:00:00` : dateStr);
+  return isNaN(d.getTime()) ? "" : d.toLocaleDateString("en-US", { month: "short" });
 }
 
 export default function HealthScorePage() {
@@ -221,19 +230,10 @@ export default function HealthScorePage() {
   const invScore = investmentScore(investmentBalance);
 
   // ── Per-dimension status badges (using underlying data thresholds, not score %) ──
-  const srBadge  = effectiveSavingsRate >= 15 ? { label: "Good",       color: "var(--green)", bg: "var(--green-tint)" }
-                 : effectiveSavingsRate >= 8  ? { label: "Fair",       color: "var(--amber-ink)", bg: "var(--sun-tint)" }
-                 :                              { label: "Needs work", color: "var(--clay-ink)", bg: "var(--clay-tint)" };
-  const efBadge  = emergencyMonths >= 6 ? { label: "Good",       color: "var(--green)", bg: "var(--green-tint)" }
-                 : emergencyMonths >= 3 ? { label: "Fair",       color: "var(--amber-ink)", bg: "var(--sun-tint)" }
-                 :                        { label: "Needs work", color: "var(--clay-ink)", bg: "var(--clay-tint)" };
-  const dlBadge  = debtToIncome <= 0   ? { label: "Good",       color: "var(--green)", bg: "var(--green-tint)" }
-                 : debtToIncome < 0.5  ? { label: "Good",       color: "var(--green)", bg: "var(--green-tint)" }
-                 : debtToIncome < 1.5  ? { label: "Fair",       color: "var(--amber-ink)", bg: "var(--sun-tint)" }
-                 :                       { label: "Needs work", color: "var(--clay-ink)", bg: "var(--clay-tint)" };
-  const invBadge = investmentBalance > 10_000 ? { label: "Good",       color: "var(--green)", bg: "var(--green-tint)" }
-                 : investmentBalance > 1_000  ? { label: "Fair",       color: "var(--amber-ink)", bg: "var(--sun-tint)" }
-                 :                              { label: "Needs work", color: "var(--clay-ink)", bg: "var(--clay-tint)" };
+  const srBadge: Badge  = effectiveSavingsRate >= 15 ? GOOD : effectiveSavingsRate >= 8 ? FAIR : WORK;
+  const efBadge: Badge  = emergencyMonths >= 6 ? GOOD : emergencyMonths >= 3 ? FAIR : WORK;
+  const dlBadge: Badge  = debtToIncome <= 0 ? GOOD : debtToIncome < 0.5 ? GOOD : debtToIncome < 1.5 ? FAIR : WORK;
+  const invBadge: Badge = investmentBalance > 10_000 ? GOOD : investmentBalance > 1_000 ? FAIR : WORK;
 
   // Tips (shown only when score < 70)
   const srTip: string | null = srScore < 70
@@ -259,7 +259,6 @@ export default function HealthScorePage() {
   const dimensions = [
     {
       label: "Savings rate",
-      icon: TrendingUp,
       score: srScore,
       badge: srBadge,
       detail: effectiveSavingsRate > 0 ? `${Math.round(effectiveSavingsRate)}% of income saved` : "No income data yet",
@@ -268,8 +267,7 @@ export default function HealthScorePage() {
       actionRoute: "/free/budget",
     },
     {
-      label: "Emergency fund",
-      icon: ShieldAlert,
+      label: "Safety net",
       score: efScore,
       badge: efBadge,
       detail: emergencyMonths >= 0.1
@@ -281,7 +279,6 @@ export default function HealthScorePage() {
     },
     {
       label: "Debt load",
-      icon: CreditCard,
       score: dlScore,
       badge: dlBadge,
       detail: totalDebt > 0
@@ -292,16 +289,15 @@ export default function HealthScorePage() {
       actionRoute: "/free/budget",
     },
     {
-      label: "Investment activity",
-      icon: Landmark,
+      label: "Investing",
       score: invScore,
       badge: invBadge,
       detail: investmentBalance > 0
         ? `${sym}${Math.round(investmentBalance).toLocaleString()} invested`
         : "Not started yet",
       tip: invTip,
-      actionLabel: "Talk to an advisor about investing",
-      actionRoute: "/book",
+      actionLabel: "Talk to an advisor",
+      actionRoute: "/free/advisor",
     },
   ];
 
@@ -360,148 +356,196 @@ export default function HealthScorePage() {
     return out;
   })();
 
-  const chartData = history.length > 1
-    ? history.map(h => ({ score: h.overallScore, date: h.scoreDate }))
-    : null;
+  // ── History: latest score per month, oldest → newest, last 3 months ──────
+  const monthlyHistory = useMemo(() => {
+    const byMonth = new Map<string, HealthScore>();
+    [...history]
+      .filter(h => typeof h.scoreDate === "string" && h.scoreDate.length >= 7)
+      .sort((a, b) => a.scoreDate.localeCompare(b.scoreDate))
+      .forEach(h => byMonth.set(h.scoreDate.slice(0, 7), h));
+    return Array.from(byMonth.values()).slice(-3);
+  }, [history]);
 
-  // ── Ring drawing values ───────────────────────────────────────────────────
-  const statusText = overall >= 85 ? "Excellent" : overall >= 70 ? "Good shape" : overall >= 50 ? "Getting there" : overall >= 30 ? "Needs work" : overall > 0 ? "Action needed" : "Calculating...";
-  const statusColor = ringColor(overall);
+  // Change chip: today's score vs the latest score from an earlier month.
+  const scoreMonth = score?.scoreDate?.slice(0, 7) ?? currentMk;
+  const previous = [...monthlyHistory].reverse().find(h => h.scoreDate.slice(0, 7) < scoreMonth) ?? null;
+  const change = score && previous ? Math.round(overall - previous.overallScore) : null;
+  const sinceMonth = previous ? monthShort(previous.scoreDate) : "";
+
+  // ── Sol line ──────────────────────────────────────────────────────────────
+  const weakest = dimensions.reduce((low, d) => (d.score < low.score ? d : low), dimensions[0]);
+  const allGood = weakest.score >= 70;
+  const solLine = !score
+    ? "Your score is being worked out from your budget, savings, debt and investments."
+    : allGood
+    ? `All four parts of your score are in good shape — ${overall} out of 100 overall.`
+    : `${weakest.label} is the part pulling your score down most.`;
+  const solDetail = weakest.tip ?? "Your score blends savings rate, safety net, debt and investing. It updates when you edit your plan, budget or asset data.";
 
   // ── Loading ───────────────────────────────────────────────────────────────
   if (isLoading || (!score && calculate.isPending)) return (
     <AppShell>
-      <div className="space-y-4 pb-20">
-        <div className="h-52 bg-muted animate-pulse rounded-2xl" />
-        <div className="grid grid-cols-2 gap-3">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-32 bg-muted animate-pulse rounded-2xl" />)}</div>
-        <div className="h-32 bg-muted animate-pulse rounded-2xl" />
+      <div className="space-y-[14px] pb-8">
+        <div className="h-20 bg-surface animate-pulse rounded-[24px]" />
+        <div className="h-[172px] bg-surface animate-pulse rounded-[28px]" />
+        <div className="grid grid-cols-2 gap-3">
+          {Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-32 bg-surface animate-pulse rounded-[24px]" />)}
+        </div>
       </div>
-      <BottomNav />
     </AppShell>
   );
 
   return (
     <AppShell>
-      <div className="pb-20 md:pb-0 space-y-5">
+      <div className="space-y-[14px] pb-8">
 
-        {/* ── Hero ring ──────────────────────────────────────────────────── */}
-        <motion.div
-          className="bg-surface rounded-[20px] p-6 text-center shadow-[0_4px_14px_rgba(15,23,42,0.06)]"
-          initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-        >
-          <div className="flex flex-col items-center gap-2 mb-2">
-            <HealthScoreRing score={overall} size="lg" />
-            <div className="text-[10px] tracking-[2.5px] text-ink-40">
-              /100
-            </div>
-            <div className="text-[13px] font-semibold" style={{ color: statusColor }}>
-              {statusText}
-            </div>
+        {/* ── Title from the score band ─────────────────────────────────── */}
+        <div className="px-1 pt-1">
+          <h1 className="font-display text-[36px] leading-[1.05] text-forest text-balance">{bandTitle(overall, !!score)}</h1>
+          <p className="mt-1 text-[14px] leading-[1.5] text-ink-40 text-pretty">
+            How saving, safety net, debt and investing add up
+          </p>
+        </div>
+
+        {/* ── Hero (Cobalt) — ring + change chip ────────────────────────── */}
+        <section aria-label="Your score" className="flex items-center gap-[18px] rounded-[28px] bg-forest p-5 text-paper">
+          <HealthScoreRing score={overall} size="lg" darkMode />
+          <div className="flex min-w-0 flex-1 flex-col items-start gap-2">
+            <span className="tala-eyebrow text-mint">Out of 100</span>
+            {change !== null && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-field px-3 py-1.5 text-[12px] font-semibold text-forest whitespace-nowrap">
+                {change > 0 && <ArrowUp className="h-3.5 w-3.5" aria-hidden="true" />}
+                {change < 0 && <ArrowDown className="h-3.5 w-3.5" aria-hidden="true" />}
+                {change === 0
+                  ? `Same as ${sinceMonth}`
+                  : <><span className="sr-only">{change > 0 ? "Up" : "Down"}</span>{Math.abs(change)} since {sinceMonth}</>}
+              </span>
+            )}
+            <span className="text-[13px] leading-[1.45] text-mint text-pretty">
+              Updates when you change your budget, goal or net worth.
+            </span>
+            <button
+              type="button"
+              className="inline-flex h-11 items-center gap-2 rounded-full border-[1.5px] border-paper/80 px-4 text-[13px] font-semibold text-paper transition-opacity hover:opacity-90 disabled:opacity-60"
+              onClick={() => calculate.mutate()} disabled={calculate.isPending}
+              aria-label="Recalculate financial health score"
+            >
+              <RefreshCw className={cn("h-4 w-4", calculate.isPending && "animate-spin")} aria-hidden="true" />
+              {calculate.isPending ? "Calculating…" : "Recalculate"}
+            </button>
           </div>
-          <button
-            className="inline-flex items-center gap-1.5 rounded-full transition-colors border-[1.5px] border-hairline px-[18px] py-[9px] text-[13px] font-medium text-ink-60 bg-surface min-h-11"
-            onClick={() => calculate.mutate()} disabled={calculate.isPending}
-            aria-label="Recalculate financial health score"
-          >
-            <RefreshCw className={cn("h-3.5 w-3.5", calculate.isPending && "animate-spin")} />
-            {calculate.isPending ? "Calculating…" : "Recalculate"}
-          </button>
-          <p className="text-[11px] text-ink-40 mt-2">Updates when you edit your plan, budget, or asset data</p>
-        </motion.div>
+        </section>
 
-        {/* ── Four dimension cards ────────────────────────────────────────── */}
+        {/* ── Four sub-scores (2×2) ─────────────────────────────────────── */}
         {score && (
-          <div className="space-y-3">
-            <h2 className="text-[11px] tracking-[0.12em] uppercase text-ink-40 m-0">
-              YOUR FINANCIAL HEALTH
-            </h2>
-            {dimensions.map((dim) => {
-              const badge = dim.badge;
-              const barPct = Math.min(100, dim.score);
-              const barColor = dim.score >= 70 ? "var(--green)" : dim.score >= 40 ? "var(--sun-deep)" : "var(--clay)";
-              return (
-                <div key={dim.label}>
-                  <div className="bg-surface rounded-2xl p-4 shadow-[0_2px_8px_rgba(15,23,42,0.05)]">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2.5">
-                        <div className="h-9 w-9 rounded-xl flex items-center justify-center"
-                          style={{ background: badge.bg, color: badge.color }} aria-hidden="true">
-                          <dim.icon className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <p className="text-[13px] font-semibold text-forest">{dim.label}</p>
-                          <p className="text-[11px] text-ink-40 mt-px">{dim.detail}</p>
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-end gap-1">
-                        <span className="text-[16px] font-bold" style={{ color: badge.color }}>
-                          {dim.score}
-                        </span>
-                        <span
-                          className="text-[10px] font-semibold rounded-full px-2 py-0.5"
-                          style={{ color: badge.color, background: badge.bg }}
-                        >
-                          {badge.label}
-                        </span>
-                      </div>
-                    </div>
-                    <div
-                      className="h-1.5 rounded-full bg-hairline overflow-hidden"
-                      role="progressbar"
-                      aria-valuenow={barPct}
-                      aria-valuemin={0}
-                      aria-valuemax={100}
-                      aria-label={`${dim.label}: ${dim.score} out of 100, ${badge.label}`}
-                    >
-                      <div className="h-full rounded-full transition-[width] duration-500 ease-out" style={{ background: barColor, width: `${barPct}%` }} />
-                    </div>
-                  </div>
-
-                  {/* Inline tip for scores below 70, always paired with a next-step action */}
-                  {dim.tip && (
-                    <div className="mt-1.5 mx-1 rounded-xl px-3 py-2.5 bg-sun-tint border border-sun/40">
-                      <p className="text-[12px] text-amber-ink leading-normal">{dim.tip}</p>
-                      <Link
-                        href={dim.actionRoute}
-                        className="inline-flex items-center gap-1 text-[12px] font-semibold text-green mt-1.5"
-                      >
-                        {dim.actionLabel}
-                        <ChevronRight className="h-3 w-3" />
-                      </Link>
-                    </div>
-                  )}
+          <section aria-label="What makes up your score" className="space-y-2.5">
+            <h2 className="font-sans text-[16px] font-semibold text-forest px-1 pt-1">What makes it up</h2>
+            <div className="grid grid-cols-2 gap-3">
+              {dimensions.map(dim => (
+                <div
+                  key={dim.label}
+                  className={cn("flex flex-col gap-1.5 rounded-[24px] p-4 text-forest", tileTone(dim.score))}
+                  aria-label={`${dim.label}: ${dim.score} out of 100, ${dim.badge.label}. ${dim.detail}`}
+                  role="group"
+                >
+                  <span className="font-display tabular-nums text-[34px] leading-none tracking-[-0.03em]" aria-hidden="true">{dim.score}</span>
+                  <span className="text-[14px] font-semibold" aria-hidden="true">{dim.label}</span>
+                  <span className="text-[13px] leading-[1.4] text-pretty" aria-hidden="true">{dim.detail}</span>
                 </div>
-              );
-            })}
-          </div>
+              ))}
+            </div>
+          </section>
         )}
 
-        {/* ── What would improve this — one clear next action ─────────────── */}
-        {score && (
-          <div>
-            <h2 className="text-xs font-medium text-muted-foreground mb-3">What would improve this</h2>
-            <WeeklyTipCard tip={weeklyTip} />
+        {/* ── Sol tip ───────────────────────────────────────────────────── */}
+        <section aria-label="Sol" className="flex items-start gap-3 rounded-[24px] bg-breeze p-4 text-forest">
+          <Sol size="sm" animate="breathe" />
+          <div className="flex min-w-0 flex-col gap-2">
+            <p className="text-[14px] font-semibold leading-[1.5] text-pretty">{solLine}</p>
+            <p className="text-[13px] leading-[1.5] text-pretty">{solDetail}</p>
+            {score && !allGood ? (
+              <Link
+                href={weakest.actionRoute}
+                className="inline-flex h-11 items-center gap-1.5 self-start rounded-full bg-forest px-4 text-[13px] font-semibold text-paper transition-opacity hover:opacity-90"
+              >
+                {weakest.actionLabel}
+                <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
+            ) : score ? (
+              <button
+                type="button"
+                onClick={openSolChat}
+                className="inline-flex h-11 items-center self-start rounded-full bg-forest px-4 text-[13px] font-semibold text-paper transition-opacity hover:opacity-90"
+              >
+                Ask Sol
+              </button>
+            ) : null}
           </div>
-        )}
+        </section>
 
-        {/* ── Personalised insights ──────────────────────────────────────── */}
-        {score && insights.length > 0 && (
-          <div>
-            <h2 className="text-xs font-medium text-muted-foreground mb-3">Personalised insights</h2>
-            <div className="space-y-2">
-              {insights.map((text, i) => {
-                const cardStyle = insightCardStyle(text);
+        {/* ── Score history (bars) ──────────────────────────────────────── */}
+        <section aria-label="Score history" className="flex flex-col gap-2.5 rounded-[24px] bg-surface p-4">
+          <h2 className="font-sans text-[16px] font-semibold text-forest">
+            {monthlyHistory.length > 1 ? `Last ${monthlyHistory.length} months` : "Score history"}
+          </h2>
+          {monthlyHistory.length > 1 ? (
+            <div
+              className="flex h-[112px] items-end gap-2.5"
+              role="img"
+              aria-label={`Health score by month: ${monthlyHistory.map(h => `${monthShort(h.scoreDate)} ${Math.round(h.overallScore)}`).join(", ")}`}
+            >
+              {monthlyHistory.map((h, i) => {
+                const latest = i === monthlyHistory.length - 1;
+                const pct = Math.max(6, Math.min(100, h.overallScore));
                 return (
-                  <div key={i} className="rounded-xl p-4 text-[13px] leading-[1.55] text-forest" style={{ background: cardStyle.background, border: cardStyle.border }}>
-                    {text}
+                  <div key={h.scoreDate} className="flex h-full flex-1 flex-col items-center justify-end gap-1.5" aria-hidden="true">
+                    <span className="text-[13px] font-semibold tabular-nums text-forest">{Math.round(h.overallScore)}</span>
+                    <span
+                      className={cn("w-full rounded-[10px] transition-[height] duration-500 ease-out", latest ? "bg-forest" : "bg-breeze")}
+                      style={{ height: `${(pct / 100) * 64}px` }}
+                    />
+                    <span className="text-[12px] text-ink-40">{monthShort(h.scoreDate)}</span>
                   </div>
                 );
               })}
             </div>
-          </div>
+          ) : (
+            <p className="text-[14px] leading-[1.5] text-ink-40 text-pretty">Check back next month to see your score trend.</p>
+          )}
+        </section>
+
+        {/* ── This week's tip — one clear next action ───────────────────── */}
+        {score && (
+          <section aria-label="This week's tip" className="space-y-2.5">
+            <h2 className="font-sans text-[16px] font-semibold text-forest px-1 pt-1">What would improve this</h2>
+            <WeeklyTipCard tip={weeklyTip} />
+          </section>
         )}
 
-        {/* ── Peer benchmark (only when age is known) ─────────────────────── */}
+        {/* ── Personalised insights ─────────────────────────────────────── */}
+        {score && insights.length > 0 && (
+          <section aria-label="Personalised insights" className="space-y-2.5">
+            <h2 className="font-sans text-[16px] font-semibold text-forest px-1 pt-1">Personalised insights</h2>
+            <div className="flex flex-col rounded-[24px] bg-surface p-1">
+              {insights.map((text, i) => {
+                const positive = isPositiveInsight(text);
+                return (
+                  <div key={i} className="flex items-center gap-3 border-b border-hairline p-3 last:border-0">
+                    <span
+                      className={cn("flex h-10 w-10 flex-none items-center justify-center rounded-[12px] text-forest", positive ? "bg-field" : "bg-paper")}
+                      aria-hidden="true"
+                    >
+                      {positive ? <Check className="h-4 w-4" /> : <Lightbulb className="h-4 w-4" />}
+                    </span>
+                    <p className="min-w-0 flex-1 text-[14px] leading-[1.45] text-forest text-pretty">{text}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* ── Peer benchmark (only when age is known) ───────────────────── */}
         {score && profileAge != null && (effectiveSavingsRate > 0 || overall > 0) && (
           <BenchmarkCard
             userSavingsRate={effectiveSavingsRate}
@@ -510,29 +554,7 @@ export default function HealthScorePage() {
           />
         )}
 
-        {/* ── Score history ─────────────────────────────────────────────── */}
-        <div>
-          <h2 className="text-xs font-medium text-muted-foreground mb-3">Score history</h2>
-          {chartData ? (
-            <div className="bg-card border border-card-border rounded-2xl p-4">
-              <div role="img" aria-label={`Health score history: latest score ${chartData[chartData.length - 1]?.score ?? "unavailable"} out of 100`}>
-                <ResponsiveContainer width="100%" height={100}>
-                  <LineChart data={chartData}>
-                    <Tooltip formatter={(v) => [`${v}`, "Score"]} labelFormatter={(l) => new Date(l).toLocaleDateString("en-US", { month: "short" })} />
-                    <Line type="monotone" dataKey="score" stroke="var(--green)" strokeWidth={2} dot={{ fill: "var(--green)", r: 4 }} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          ) : (
-            <div className="bg-muted/50 rounded-2xl p-5 text-center">
-              <p className="text-muted-foreground text-sm">Check back next month to see your score trend</p>
-            </div>
-          )}
-        </div>
-
       </div>
-      <BottomNav />
     </AppShell>
   );
 }

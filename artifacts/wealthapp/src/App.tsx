@@ -34,6 +34,7 @@ const HealthScorePage = lazy(() => import("@/pages/free/healthscore"));
 const MilestonesPage = lazy(() => import("@/pages/free/milestones"));
 const FreePortfolioPage = lazy(() => import("@/pages/free/portfolio"));
 const FreeSettingsPage = lazy(() => import("@/pages/free/settings"));
+const FreeAdvisorPage = lazy(() => import("@/pages/free/advisor"));
 
 const ClientDashboard = lazy(() => import("@/pages/client/ClientDashboard"));
 const ClientPortfolio = lazy(() => import("@/pages/client/ClientPortfolio"));
@@ -255,6 +256,7 @@ function AppRoutes() {
       <Route path="/free/milestones" component={() => <ProtectedRoute component={MilestonesPage} />} />
       <Route path="/free/portfolio" component={() => <ProtectedRoute component={FreePortfolioPage} />} />
       <Route path="/free/settings" component={() => <ProtectedRoute component={FreeSettingsPage} />} />
+      <Route path="/free/advisor" component={() => <ProtectedRoute component={FreeAdvisorPage} />} />
 
       <Route path="/client/onboarding" component={() => <ProtectedRoute component={ClientOnboarding} role={["investment_client", "super_admin"]} />} />
       <Route path="/client/dashboard" component={() => <ProtectedRoute component={ClientDashboard} role={["investment_client", "super_admin"]} />} />
@@ -318,6 +320,8 @@ function ClientRouteLayer() {
   const [location] = useLocation();
   const { profile } = useProfile();
   const isClientPage = location.startsWith("/client/");
+  // Free screens inside the app shell (onboarding is a standalone flow).
+  const isFreeShellPage = location.startsWith("/free/") && !location.startsWith("/free/onboarding");
 
   return (
     <>
@@ -325,6 +329,7 @@ function ClientRouteLayer() {
       {profile?.role === "investment_client" && isClientPage && (
         <FloatingSolChat isOnboarding={location.split(/[?#]/, 1)[0] === "/client/onboarding"} />
       )}
+      {profile?.role === "free_user" && isFreeShellPage && <FloatingSolChat />}
     </>
   );
 }

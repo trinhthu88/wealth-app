@@ -1,8 +1,7 @@
 import { useState } from "react";
+import { Link } from "wouter";
 import { X } from "lucide-react";
 import Sol from "@/components/Sol";
-import PlanPicker from "@/components/PlanPicker";
-import BottomSheet from "@/components/client/BottomSheet";
 import { useProfile } from "@/hooks/useProfile";
 import { useManageSubscription } from "@/hooks/useManageSubscription";
 import { track } from "@/lib/analytics";
@@ -14,10 +13,13 @@ interface Props {
   ctaType: string;
 }
 
+/**
+ * A dismissible Sol tip that nudges toward the Advisor tab (the upgrade
+ * destination). Subscribed users get "Manage subscription" instead.
+ */
 export default function SmartUpgradeCard({ condition, insightText, ctaText, ctaType }: Props) {
   const key = `upgrade_dismissed_${ctaType}`;
   const [dismissed, setDismissed] = useState(() => localStorage.getItem(key) === "1");
-  const [sheetOpen, setSheetOpen] = useState(false);
   const { profile } = useProfile();
   const isSubscribed = profile?.role === "investment_client";
   const manageSubscription = useManageSubscription();
@@ -29,42 +31,45 @@ export default function SmartUpgradeCard({ condition, insightText, ctaText, ctaT
     setDismissed(true);
   };
 
-  function handleCtaClick() {
-    track("upgrade_cta_clicked", { location: ctaType, action: isSubscribed ? "manage_subscription" : "open_plan_picker" });
-    if (isSubscribed) {
-      manageSubscription.mutate();
-      return;
-    }
-    setSheetOpen(true);
-  }
+  const ctaClass =
+    "mt-3 inline-flex h-11 items-center rounded-full bg-forest px-5 text-[14px] font-semibold text-paper transition-opacity hover:opacity-90 disabled:opacity-60";
 
   return (
-    <div className="relative bg-primary/5 border border-primary/20 rounded-xl p-4">
+    <div className="relative flex gap-3 rounded-[24px] bg-breeze p-4 pr-14">
       <button
+        type="button"
         onClick={handleDismiss}
-        className="absolute top-2 right-2 text-muted-foreground hover:text-foreground"
+        className="absolute right-1.5 top-1.5 inline-flex h-11 w-11 items-center justify-center rounded-full text-forest transition-colors hover:bg-forest/10"
         aria-label="Dismiss"
       >
-        <X className="h-4 w-4" />
+        <X className="h-4 w-4" aria-hidden="true" />
       </button>
-      <div className="flex gap-3 pr-6 items-start">
-        <Sol size="xs" animate="idle" showFace className="shrink-0 mt-0.5" />
-        <div>
-          <p className="text-sm text-foreground leading-snug">{insightText}</p>
+      <Sol size="sm" animate="none" className="shrink-0" />
+      <div className="min-w-0">
+        <div className="text-[15px] font-semibold text-forest">Sol noticed</div>
+        <p className="mt-0.5 text-[13px] leading-[1.5] text-forest text-pretty">{insightText}</p>
+        {isSubscribed ? (
           <button
             type="button"
-            onClick={handleCtaClick}
+            onClick={() => {
+              track("upgrade_cta_clicked", { location: ctaType, action: "manage_subscription" });
+              manageSubscription.mutate();
+            }}
             disabled={manageSubscription.isPending}
-            className="text-xs text-primary font-medium mt-1.5 inline-block hover:underline disabled:opacity-60"
+            className={ctaClass}
           >
-            {isSubscribed ? "Manage subscription" : ctaText} →
+            Manage subscription
           </button>
-        </div>
+        ) : (
+          <Link
+            href="/free/advisor"
+            onClick={() => track("upgrade_cta_clicked", { location: ctaType, action: "open_advisor" })}
+            className={ctaClass}
+          >
+            {ctaText}
+          </Link>
+        )}
       </div>
-
-      <BottomSheet isOpen={sheetOpen} onClose={() => setSheetOpen(false)} title="Choose your plan">
-        <PlanPicker />
-      </BottomSheet>
     </div>
   );
 }

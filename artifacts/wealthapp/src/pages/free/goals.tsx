@@ -1,11 +1,10 @@
 // ANIMATION RULES FOR THIS PAGE:
-// ✓ ALLOWED: Chart draw animation (Recharts default)
-// ✓ ALLOWED: BottomSheet spring animation
+// ✓ ALLOWED: Progress-bar width transition, BottomSheet spring animation, goal-tile arrow rotate on expand
 // ✗ BANNED:  Page-load stagger on sections
 // ✗ BANNED:  JetBrains Mono font
-// ✗ BANNED:  Cream/warm palette (#F1F4FE, #F1F4FE, #8F98C8)
+// ✗ BANNED:  Tailwind default palette (emerald/amber/red/slate/gray/blue) — use tala tokens
 // ✗ BANNED:  Inline style={{ color: '#hexcode' }} — use Tailwind tokens only
-// ✗ BANNED:  Double bottom nav — AppShell is the ONLY nav
+// ✗ BANNED:  Own bottom nav / back nav / brand header — FreeAppShell owns all navigation
 
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -14,19 +13,19 @@ import AppShell from "@/components/AppShell";
 import FreeTierBanner from "@/components/FreeTierBanner";
 import GoalCard, { toGoalCardData } from "@/components/shared/GoalCard";
 import LockedGoalSlotCard from "@/components/LockedGoalSlotCard";
-import GhostGoalCard from "@/components/GhostGoalCard";
 import CurrencyField from "@/components/shared/CurrencyField";
-import BottomNav from "@/components/BottomNav";
-import { Button } from "@/components/ui/button";
+import Sol from "@/components/Sol";
 import { apiFetch } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
 import { track } from "@/lib/analytics";
 import { toast } from "sonner";
-import { Lock, X, TrendingUp, Plus, Trash2, ChevronDown, Home, Palmtree, ShieldAlert, Rocket, CreditCard, GraduationCap, Plane, Car, Briefcase, Landmark, Target } from "lucide-react";
+import { Link } from "wouter";
+import { ArrowUpRight, X, Plus, Trash2, ChevronDown, Home, Palmtree, ShieldAlert, Rocket, CreditCard, GraduationCap, Plane, Car, Briefcase, Landmark, Target, Lock, ListOrdered, Trophy, ChartSpline } from "lucide-react";
 import { useProfile } from "@/hooks/useProfile";
 import { calculateProjection, applyMonthlyGrowth } from "@/lib/goalProjection";
 import type { ProjectionResult } from "@/lib/goalProjection";
-import { getRatesFromStorage } from "@/lib/milestones";
+import { getRatesFromStorage, getEarnedMilestones, MILESTONES } from "@/lib/milestones";
+import { openSolChat } from "@/lib/solChat";
 import { cn } from "@/lib/utils";
 
 export interface Goal {
@@ -361,165 +360,211 @@ export default function GoalsPage() {
 
   const isFormBusy = addGoalMutation.isPending || editGoalMutation.isPending;
 
-  // Ghost "suggested for you" goals — a concrete preview of what a client's
-  // unlocked 2nd+ goal slot would show, personalised from live budget data.
-  const existingGoalTypes = goals.map(g => g.goalType);
-  const ghostGoals = [
-    existingGoalTypes.includes("emergency_fund")
-      ? { icon: Plane, title: "Dream Holiday", description: "A 2-week trip to Southeast Asia or Europe", targetLabel: `${sym}5,000` }
-      : { icon: ShieldAlert, title: "Emergency Fund", description: expenses > 0 ? `3 months of your ${sym}${Math.round(expenses).toLocaleString()} expenses` : "3 months of your expenses", targetLabel: `${sym}${Math.round(Math.max(expenses, 1) * 3).toLocaleString()}` },
-    { icon: Palmtree, title: "Retirement Gap", description: "Estimated amount needed by retirement", targetLabel: income > 0 ? `${sym}${Math.round(income * 12 * 15).toLocaleString()}` : "Add your income to estimate" },
-  ];
+  // ── Contribute sheet ──────────────────────────────────────────────────────
+  const [contributeGoal, setContributeGoal] = useState<Goal | null>(null);
+  const contributeMutation = useMutation({
+    mutationFn: ({ id, currentAmount }: { id: string; currentAmount: number }) =>
+      apiFetch(`/goals/${id}`, { method: "PUT", body: JSON.stringify({ currentAmount: String(currentAmount) }) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["goals"] });
+      queryClient.invalidateQueries({ queryKey: ["health-score"] });
+      toast.success("Contribution added");
+      setContributeGoal(null);
+    },
+    onError: () => toast.error("Failed to add contribution"),
+  });
+
+  // ── "Plan ahead" tile counts (same pathway query + milestone store the tabs read) ──
+  const { data: pathwaySteps = [] } = useQuery<{ stepNumber: number; status: string }[]>({
+    queryKey: ["pathway"],
+    queryFn: () => apiFetch<{ stepNumber: number; status: string }[]>("/pathway"),
+    retry: false,
+  });
+  const pathwayDone = Math.min(6, pathwaySteps.filter(s => s.status === "completed").length);
+  const [earnedBadges, setEarnedBadges] = useState(0);
+  useEffect(() => { setEarnedBadges(getEarnedMilestones().length); }, []);
+
+  const isFreeAtCap = profile?.role === "free_user" && goals.length >= 1;
 
   // ── Loading ───────────────────────────────────────────────────────────────
   if (isLoading) return (
     <AppShell>
-      <div className="space-y-4 pb-20">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-40 bg-muted animate-pulse rounded-2xl" />)}</div>
-      <BottomNav />
+      <div className="space-y-4 pb-8">
+        <div className="h-10 w-48 bg-surface animate-pulse rounded-full" />
+        {Array.from({ length: 2 }).map((_, i) => <div key={i} className="h-44 bg-surface animate-pulse rounded-[28px]" />)}
+      </div>
     </AppShell>
+  );
+
+  const newGoalButton = isFreeAtCap ? (
+    <Link
+      href="/free/advisor"
+      onClick={() => track("upgrade_cta_clicked", { location: "goals_new_goal" })}
+      className="h-11 shrink-0 rounded-full bg-surface px-[18px] inline-flex items-center gap-1.5 text-[14px] font-semibold text-forest transition-opacity hover:opacity-90"
+    >
+      <Lock className="h-4 w-4" aria-hidden="true" />New goal
+    </Link>
+  ) : (
+    <button
+      type="button"
+      onClick={openAddForm}
+      className="h-11 shrink-0 rounded-full bg-surface px-[18px] inline-flex items-center gap-1.5 text-[14px] font-semibold text-forest transition-opacity hover:opacity-90"
+    >
+      <Plus className="h-4 w-4" aria-hidden="true" />New goal
+    </button>
+  );
+
+  const pageHeader = (headline: string, sub?: string | null) => (
+    <header className="flex flex-col gap-3.5 px-1 pt-1 pb-1.5">
+      <div className="flex items-center justify-between gap-3">
+        <span className="tala-eyebrow text-ink-40">Goals</span>
+        {newGoalButton}
+      </div>
+      <div>
+        <h1 className="font-display text-[36px] leading-[1.05] text-forest text-balance">{headline}</h1>
+        {sub && <p className="text-[14px] text-ink-40 leading-[1.5] mt-2 text-pretty tabular-nums">{sub}</p>}
+      </div>
+    </header>
   );
 
   // ── Empty state ───────────────────────────────────────────────────────────
   if (goals.length === 0) {
     return (
       <AppShell>
-        <div className="pb-20 md:pb-0 flex flex-col items-center justify-center min-h-[60vh] text-center gap-4">
-          <Target className="w-12 h-12 text-primary" />
-          <h2 className="text-xl font-semibold">Set your first financial goal</h2>
-          <p className="text-muted-foreground text-sm max-w-xs">A clear goal with a target date is the foundation of every great financial plan.</p>
-          <Button onClick={openAddForm}>Add your first goal →</Button>
+        <div className="space-y-3.5 pb-8">
+          {pageHeader("Pick one thing to save toward", "Give it an amount and a date, and we'll show you the pace that gets you there.")}
+          <div className="bg-field rounded-[28px] p-5 flex flex-col gap-3 text-forest">
+            <div className="w-11 h-11 rounded-[14px] bg-paper flex items-center justify-center">
+              <Target className="h-5 w-5" aria-hidden="true" />
+            </div>
+            <h2 className="font-sans text-[17px] font-semibold">Set your first financial goal</h2>
+            <p className="text-[14px] leading-[1.5] text-pretty">
+              A clear goal with a target date is the foundation of every great financial plan.
+            </p>
+            <button
+              onClick={openAddForm}
+              className="self-start h-11 px-5 rounded-full bg-forest text-paper text-[14px] font-semibold transition-opacity hover:opacity-90"
+            >
+              Add your first goal
+            </button>
+          </div>
         </div>
 
         <AnimatePresence>{showGoalForm && <GoalFormSheet form={goalForm} setForm={setGoalForm} errors={formErrors} editingGoal={editingGoal} onClose={closeGoalForm} onSubmit={submitGoalForm} isBusy={isFormBusy} currency={currency} />}</AnimatePresence>
-        <BottomNav />
       </AppShell>
     );
   }
 
+  // Sol's one observation, from the same numbers the top goal card shows.
+  const topStatus = topGoal ? (topGoalProjection?.status ?? topGoal.status) : null;
+  const topCard = topGoal && topStatus ? toGoalCardData(topGoal, topStatus, savingsBalance + investmentValue) : null;
+  const solLine = topCard && topCard.targetAmountNum
+    ? `${topCard.title} sits at ${topCard.progressPct}% of ${sym}${Math.round(topCard.targetAmountNum).toLocaleString()}${topGoalProjection?.monthsRemaining ? `, with ${topGoalProjection.monthsRemaining} months to cover the rest` : ""}.`
+    : null;
+
+  // Headline summarises pacing across every goal.
+  const statuses = sortedGoals.map(g => (g.id === topGoal?.id ? topGoalProjection : projections.get(g.id))?.status ?? g.status);
+  const attentionCount = statuses.filter(s => s === "off_track" || s === "almost").length;
+  const one = goals.length === 1;
+  const headline = attentionCount > 0
+    ? (one ? "Your goal needs attention" : `${attentionCount} of your goals need attention`)
+    : statuses.every(s => s === "achieved")
+    ? (one ? "You reached your goal" : "You reached your goals")
+    : statuses.some(s => s === "on_track")
+    ? (one ? "Your goal is on track" : "Your goals are on track")
+    : (one ? "Your goal is set" : "Your goals are set");
+
+  // Cash cushion, from the same savings balance and monthly spending used above.
+  const cushionMonths = expenses > 0 && savingsBalance > 0 ? savingsBalance / expenses : 0;
+
   // ── Main render ───────────────────────────────────────────────────────────
   return (
     <AppShell>
-      <div className="pb-20 md:pb-0 space-y-4">
+      <div className="flex flex-col gap-3.5 pb-8">
 
-        <FreeTierBanner
-          feature="1-goal limit, manual progress tracking"
-          benefit="Investment clients get unlimited advisor-managed goals with auto-synced portfolio progress."
-          storageKey="goals"
-        />
+        {pageHeader(headline, solLine)}
 
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-forest text-[22px] font-bold tracking-[-0.02em]">
-              Financial Goals
-            </h1>
-            <p className="text-[12px] text-ink-40 mt-0.5">
-              {goals.length} {goals.length === 1 ? "goal" : "goals"} active
-            </p>
-          </div>
-          <Button size="sm" onClick={openAddForm} className="flex items-center gap-1.5">
-            <Plus className="h-4 w-4" />Add goal
-          </Button>
-        </div>
-
-        {/* Monthly growth chip */}
-        {totalMonthlyGrowth > 0 && topGoal && (
-          <div className="bg-primary/5 border border-primary/20 rounded-2xl px-4 py-3 flex items-center gap-3">
-            <TrendingUp className="h-4 w-4 text-primary flex-shrink-0" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-primary">
-                +{sym}{Math.round(totalMonthlyGrowth).toLocaleString()}/month growing toward your goals
-              </p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {monthlyCashSaved > 0 && `${sym}${Math.round(monthlyCashSaved).toLocaleString()} cash saved`}
-                {monthlyCashSaved > 0 && monthlyReturns > 0 && " + "}
-                {monthlyReturns > 0 && `${sym}${Math.round(monthlyReturns).toLocaleString()} from returns`}
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Goal list */}
+        {/* Goal list — full-colour tiles; tap to open the projection block */}
         {sortedGoals.map((goal) => {
           const proj = goal.id === topGoal?.id ? topGoalProjection : projections.get(goal.id);
           const st = proj?.status ?? goal.status;
-          const eyebrowColor = st === "on_track" ? "var(--green)" : st === "almost" ? "var(--sun-deep)" : "var(--clay)";
-          const eyebrowText = st === "on_track" ? "ON TRACK" : st === "almost" ? "AT RISK" : "OFF TRACK";
           const projText = goalProjectionText(goal);
-          const isAchieved = parseFloat(goal.currentAmount ?? "0") >= parseFloat(goal.targetAmount ?? "1");
 
           return (
-            <div key={goal.id} className="space-y-2">
-              {/* Status eyebrow */}
-              {!isAchieved && (
-                <p className="text-[11px] tracking-[0.11em] uppercase" style={{ color: eyebrowColor }}>
-                  {eyebrowText}
-                </p>
-              )}
-
+            <div key={goal.id} className="flex flex-col gap-1.5">
               <GoalCard
                 goal={toGoalCardData(goal, st, goal.id === topGoal?.id ? savingsBalance + investmentValue : 0)}
                 projection={proj}
+                defaultExpanded={false}
                 onEdit={() => openEditForm(goal)}
+                onContribute={() => setContributeGoal(goal)}
               />
 
-              {/* Projection text line */}
-              {projText && (
-                <div className="flex items-center gap-2 px-1">
-                  <div style={{ width: 6, height: 6, borderRadius: "50%", background: eyebrowColor, flexShrink: 0 }} />
-                  <p className="text-xs text-muted-foreground">{projText}</p>
-                </div>
-              )}
+              <div className="flex items-center justify-between gap-3 px-1">
+                {projText ? (
+                  <p className="text-[13px] text-ink-40 leading-[1.4] text-pretty min-w-0">{projText}</p>
+                ) : <span />}
 
-              {/* Delete controls */}
-              {confirmDeleteId === goal.id ? (
-                <div className="flex items-center gap-2 justify-end px-1 pt-1">
-                  <span className="text-xs text-muted-foreground">Delete this goal?</span>
-                  <button
-                    onClick={() => deleteGoalMutation.mutate(goal.id)}
-                    disabled={deleteGoalMutation.isPending}
-                    className="text-xs text-white font-medium px-3 py-1.5 rounded-lg bg-clay"
-                  >
-                    {deleteGoalMutation.isPending ? "Deleting…" : "Delete"}
-                  </button>
-                  <button
-                    onClick={() => setConfirmDeleteId(null)}
-                    className="text-xs text-muted-foreground px-3 py-1.5 rounded-lg border border-border hover:bg-muted"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              ) : (
-                <div className="flex justify-end px-1">
+                {/* Delete controls */}
+                {confirmDeleteId === goal.id ? (
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-[13px] text-ink-40 hidden sm:inline">Delete this goal?</span>
+                    <button
+                      onClick={() => deleteGoalMutation.mutate(goal.id)}
+                      disabled={deleteGoalMutation.isPending}
+                      className="h-11 px-4 rounded-full bg-clay text-paper text-[13px] font-semibold transition-opacity hover:opacity-90 disabled:opacity-60"
+                    >
+                      {deleteGoalMutation.isPending ? "Deleting…" : "Delete"}
+                    </button>
+                    <button
+                      onClick={() => setConfirmDeleteId(null)}
+                      className="h-11 px-4 rounded-full border-[1.5px] border-hairline-2 text-forest text-[13px] font-semibold transition-opacity hover:opacity-90"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
                   <button
                     onClick={() => setConfirmDeleteId(goal.id)}
-                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-red-500 transition-colors"
+                    className="shrink-0 min-h-11 px-2 flex items-center gap-1.5 text-[13px] font-medium text-ink-40 hover:text-clay-ink transition-colors"
                     aria-label={`Delete goal: ${goal.title}`}
-                    style={{ minHeight: 36, padding: "0 8px" }}
                   >
-                    <Trash2 className="h-3 w-3" />Delete
+                    <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />Delete
                   </button>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           );
         })}
 
         {/* Locked 2nd goal slot — free users at the 1-goal cap */}
-        {profile?.role === "free_user" && goals.length >= 1 && (
-          <div className="space-y-3">
-            <LockedGoalSlotCard />
-            <p className="text-[11px] tracking-[0.11em] uppercase text-ink-40 px-1">Suggested for you</p>
-            <div className="space-y-3">
-              {ghostGoals.map((g, i) => (
-                <GhostGoalCard key={i} icon={g.icon} title={g.title} description={g.description} targetLabel={g.targetLabel} />
-              ))}
-            </div>
-          </div>
+        {isFreeAtCap && <LockedGoalSlotCard />}
+
+        {/* Cash cushion — Sunset "worth a look" tile */}
+        {cushionMonths > 0 && (
+          <section aria-label="Emergency fund" className="bg-sun rounded-[28px] p-5 flex flex-col gap-2.5 text-forest">
+            <span className="tala-eyebrow">Worth a look</span>
+            <span className="text-[22px] font-semibold tabular-nums">{cushionMonths.toFixed(1)} months</span>
+            <p className="text-[15px] leading-[1.45] text-pretty">
+              of spending saved as cash.{" "}
+              {cushionMonths >= 6
+                ? "Many people aim for 6 — you're there, so new savings could go to your goal."
+                : cushionMonths >= 3
+                ? "Many people aim for 3 to 6 months — you're within that range."
+                : "Many people aim for 3 to 6 months before saving hard for other goals."}
+            </p>
+            <button
+              type="button"
+              onClick={openSolChat}
+              className="self-start mt-1 h-11 rounded-full bg-forest px-5 text-[14px] font-semibold text-paper transition-opacity hover:opacity-90"
+            >
+              Ask Sol why
+            </button>
+          </section>
         )}
 
-        {/* Upgrade CTA — contextual (skip when the locked slot above already carries this message) */}
-        {!(profile?.role === "free_user" && goals.length >= 1) && (() => {
+        {/* Upgrade CTA — only when the locked slot above isn't already carrying it */}
+        {!isFreeAtCap && (() => {
           const offTrackGoal = sortedGoals.find(g => {
             const p = g.id === topGoal?.id ? topGoalProjection : projections.get(g.id);
             return (p?.status ?? g.status) === "off_track";
@@ -533,22 +578,59 @@ export default function GoalsPage() {
             ? `An advisor can create a personalised investment roadmap for ${topGoal.title}.`
             : "An advisor can help you build a personalised financial plan.";
           return (
-            <div className="rounded-[20px] p-5 bg-hairline border-[1.5px] border-dashed border-hairline">
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 flex items-center justify-center rounded-xl w-10 h-10 bg-green-tint">
-                  <Lock className="h-4 w-4 text-green" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-semibold text-forest leading-[1.4]">{insight}</p>
-                  <Button variant="outline" size="sm" className="mt-3 text-xs border-primary text-primary hover:bg-primary/5">
-                    Book a free discovery call →
-                  </Button>
-                </div>
+            <div className="bg-breeze rounded-[24px] p-4 flex gap-3 text-forest">
+              <div className="shrink-0"><Sol size="sm" animate="breathe" /></div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[14px] font-semibold leading-[1.4] text-pretty">{insight}</p>
+                <Link
+                  href="/free/advisor"
+                  className="mt-3 inline-flex items-center gap-1.5 h-11 rounded-full bg-forest px-5 text-[14px] font-semibold text-paper transition-opacity hover:opacity-90"
+                >
+                  Meet an advisor <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+                </Link>
               </div>
             </div>
           );
         })()}
 
+        {!isFreeAtCap && <FreeTierBanner
+          feature="1-goal limit, manual progress tracking"
+          benefit="Investment clients get unlimited advisor-managed goals with auto-synced portfolio progress."
+          storageKey="goals"
+        />}
+
+        {/* Plan ahead — Pathway + Milestones tabs, locked What-if */}
+        <section aria-label="Plan ahead" className="flex flex-col gap-3 pt-1.5">
+          <h2 className="font-sans text-[16px] font-semibold text-forest px-1">Plan ahead</h2>
+          <div className="grid grid-cols-2 gap-3">
+            <Link href="/free/pathway" className="bg-field rounded-[24px] p-4 min-h-[140px] flex flex-col justify-between gap-5 text-forest transition-opacity hover:opacity-90">
+              <ListOrdered className="h-8 w-8" strokeWidth={1.8} aria-hidden="true" />
+              <span className="flex flex-col gap-1">
+                <span className="text-[16px] font-semibold">My pathway</span>
+                <span className="text-[13px] tabular-nums">{pathwayDone} of 6 steps done</span>
+              </span>
+            </Link>
+            <Link href="/free/milestones" className="bg-breeze rounded-[24px] p-4 min-h-[140px] flex flex-col justify-between gap-5 text-forest transition-opacity hover:opacity-90">
+              <Trophy className="h-8 w-8" strokeWidth={1.8} aria-hidden="true" />
+              <span className="flex flex-col gap-1">
+                <span className="text-[16px] font-semibold">Milestones</span>
+                <span className="text-[13px] tabular-nums">{earnedBadges} of {MILESTONES.length} badges</span>
+              </span>
+            </Link>
+            <Link
+              href="/free/advisor"
+              onClick={() => track("upgrade_cta_clicked", { location: "goals_what_if" })}
+              className="col-span-2 bg-surface rounded-[24px] p-4 flex items-center gap-3.5 text-forest transition-opacity hover:opacity-90"
+            >
+              <ChartSpline className="h-8 w-8 shrink-0" strokeWidth={1.8} aria-hidden="true" />
+              <span className="flex flex-col gap-1 flex-1 min-w-0">
+                <span className="text-[16px] font-semibold">What-if</span>
+                <span className="text-[13px] text-ink-40">Try changes first · with an advisor</span>
+              </span>
+              <Lock className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
+            </Link>
+          </div>
+        </section>
       </div>
 
       {/* Add / Edit goal sheet */}
@@ -567,8 +649,56 @@ export default function GoalsPage() {
         )}
       </AnimatePresence>
 
-      <BottomNav />
+      {/* Add-a-contribution sheet */}
+      <AnimatePresence>
+        {contributeGoal && (
+          <ContributeSheet
+            goal={contributeGoal}
+            onClose={() => setContributeGoal(null)}
+            isBusy={contributeMutation.isPending}
+            onSubmit={(amount) => contributeMutation.mutate({
+              id: contributeGoal.id,
+              currentAmount: parseFloat(contributeGoal.currentAmount ?? "0") + amount,
+            })}
+          />
+        )}
+      </AnimatePresence>
+
     </AppShell>
+  );
+}
+
+// ── Contribute bottom sheet ───────────────────────────────────────────────────
+function ContributeSheet({ goal, onClose, onSubmit, isBusy }: { goal: Goal; onClose: () => void; onSubmit: (amount: number) => void; isBusy: boolean }) {
+  const [amount, setAmount] = useState(0);
+  return (
+    <>
+      <motion.div className="fixed inset-0 bg-forest-900/40 z-40" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
+      <motion.div
+        className="fixed bottom-0 left-0 right-0 bg-paper rounded-t-[28px] z-50 px-5 pt-3 pb-10 shadow-[0_-8px_28px_rgba(12,33,164,0.12)] max-h-[92vh] overflow-y-auto md:max-w-lg md:mx-auto"
+        initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", damping: 25, stiffness: 300 }}
+      >
+        <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-hairline-2" aria-hidden="true" />
+        <div className="flex items-center justify-between mb-5">
+          <div className="min-w-0">
+            <div className="tala-eyebrow text-ink-40">Add a contribution</div>
+            <h3 className="text-[18px] font-semibold text-forest truncate mt-1">{goal.title}</h3>
+          </div>
+          <button onClick={onClose} className="h-11 w-11 shrink-0 flex items-center justify-center rounded-full bg-surface text-forest transition-opacity hover:opacity-80" aria-label="Close">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <CurrencyField editable value={amount} onChange={setAmount} currency={goal.currency || "USD"} label="Amount you've put aside" />
+        <button
+          type="button"
+          className="w-full h-11 mt-6 rounded-full bg-forest px-5 text-[14px] font-semibold text-paper transition-opacity hover:opacity-90 disabled:opacity-60"
+          disabled={isBusy || amount <= 0}
+          onClick={() => onSubmit(amount)}
+        >
+          {isBusy ? "Saving…" : "Add contribution"}
+        </button>
+      </motion.div>
+    </>
   );
 }
 
@@ -584,75 +714,78 @@ interface GoalFormSheetProps {
   currency: string;
 }
 
+const FIELD_LABEL = "text-[13px] font-semibold text-forest block mb-1.5";
+const FIELD_INPUT = "w-full h-11 rounded-2xl bg-surface px-4 text-[14px] text-forest border outline-none transition-colors focus:border-green";
+
 function GoalFormSheet({ form, setForm, errors, editingGoal, onClose, onSubmit, isBusy, currency }: GoalFormSheetProps) {
   const formCurrency = form.currency || currency;
 
   return (
     <>
-      <motion.div className="fixed inset-0 bg-black/30 z-40" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
+      <motion.div className="fixed inset-0 bg-forest-900/40 z-40" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
       <motion.div
-        className="fixed bottom-0 left-0 right-0 bg-card rounded-t-2xl z-50 p-6 pb-10 shadow-2xl max-h-[92vh] overflow-y-auto"
+        className="fixed bottom-0 left-0 right-0 bg-paper rounded-t-[28px] z-50 px-5 pt-3 pb-10 shadow-[0_-8px_28px_rgba(12,33,164,0.12)] max-h-[92vh] overflow-y-auto md:max-w-lg md:mx-auto"
         initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", damping: 25, stiffness: 300 }}
       >
+        <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-hairline-2" aria-hidden="true" />
         <div className="flex items-center justify-between mb-5">
-          <h3 className="text-lg font-semibold">{editingGoal ? "Edit goal" : "Add a goal"}</h3>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="h-5 w-5" /></button>
+          <h3 className="text-[18px] font-semibold text-forest">{editingGoal ? "Edit goal" : "Add a goal"}</h3>
+          <button onClick={onClose} className="h-11 w-11 flex items-center justify-center rounded-full bg-surface text-forest transition-opacity hover:opacity-80" aria-label="Close">
+            <X className="h-5 w-5" />
+          </button>
         </div>
 
         <div className="space-y-4">
           {/* Title */}
           <div>
-            <label className="text-sm font-medium block mb-1.5">Goal name</label>
+            <label className={FIELD_LABEL}>Goal name</label>
             <input
               value={form.title}
               onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
               placeholder="e.g. Emergency fund"
               autoFocus
-              className={cn(
-                "w-full border rounded-xl px-4 py-2.5 text-sm bg-card outline-none focus:ring-2 focus:ring-primary",
-                errors.title ? "border-red-400" : "border-border"
-              )}
+              className={cn(FIELD_INPUT, "placeholder:text-ink-30", errors.title ? "border-clay" : "border-hairline-2")}
             />
-            {errors.title && <p className="text-xs text-red-500 mt-1 ml-1">{errors.title}</p>}
+            {errors.title && <p className="text-[12px] text-clay-ink mt-1 ml-1">{errors.title}</p>}
           </div>
 
           {/* Goal type */}
           <div>
-            <label className="text-sm font-medium block mb-1.5">Goal type</label>
+            <label className={FIELD_LABEL}>Goal type</label>
             <div className="relative">
               <select
                 value={form.goalType}
                 onChange={e => setForm(f => ({ ...f, goalType: e.target.value }))}
-                className="w-full border border-border rounded-xl px-4 py-2.5 text-sm bg-card outline-none focus:ring-2 focus:ring-primary appearance-none pr-10"
+                className={cn(FIELD_INPUT, "border-hairline-2 appearance-none pr-10")}
               >
                 {GOAL_TYPES.map(t => (
                   <option key={t.value} value={t.value}>{t.label}</option>
                 ))}
               </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-40 pointer-events-none" />
             </div>
           </div>
 
           {/* Currency */}
           <div>
-            <label className="text-sm font-medium block mb-1.5">Currency</label>
+            <label className={FIELD_LABEL}>Currency</label>
             <div className="relative">
               <select
                 value={form.currency}
                 onChange={e => setForm(f => ({ ...f, currency: e.target.value }))}
-                className="w-full border border-border rounded-xl px-4 py-2.5 text-sm bg-card outline-none focus:ring-2 focus:ring-primary appearance-none pr-10"
+                className={cn(FIELD_INPUT, "border-hairline-2 appearance-none pr-10")}
               >
                 <option value="USD">USD — US Dollar ($)</option>
                 <option value="VND">VND — Vietnamese Đồng (₫)</option>
               </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-40 pointer-events-none" />
             </div>
           </div>
 
           {/* Target amount */}
           <div>
             <CurrencyField editable value={form.targetAmount} onChange={v => setForm(f => ({ ...f, targetAmount: v }))} currency={formCurrency} label="Target amount" />
-            {errors.targetAmount && <p className="text-xs text-red-500 mt-1 ml-1">{errors.targetAmount}</p>}
+            {errors.targetAmount && <p className="text-[12px] text-clay-ink mt-1 ml-1">{errors.targetAmount}</p>}
           </div>
 
           {/* Current amount */}
@@ -663,19 +796,24 @@ function GoalFormSheet({ form, setForm, errors, editingGoal, onClose, onSubmit, 
 
           {/* Target date */}
           <div>
-            <label className="text-sm font-medium block mb-1.5">Target date</label>
+            <label className={FIELD_LABEL}>Target date</label>
             <input
               type="month"
               value={form.targetDate}
               onChange={e => setForm(f => ({ ...f, targetDate: e.target.value }))}
-              className="w-full border border-border rounded-xl px-4 py-2.5 text-sm bg-card outline-none focus:ring-2 focus:ring-primary"
+              className={cn(FIELD_INPUT, "border-hairline-2")}
             />
           </div>
         </div>
 
-        <Button className="w-full mt-6" disabled={isBusy} onClick={onSubmit}>
+        <button
+          type="button"
+          className="w-full h-11 mt-6 rounded-full bg-forest px-5 text-[14px] font-semibold text-paper transition-opacity hover:opacity-90 disabled:opacity-60"
+          disabled={isBusy}
+          onClick={onSubmit}
+        >
           {isBusy ? "Saving…" : editingGoal ? "Save changes" : "Add goal"}
-        </Button>
+        </button>
       </motion.div>
     </>
   );

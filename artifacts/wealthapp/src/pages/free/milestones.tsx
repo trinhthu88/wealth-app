@@ -1,10 +1,14 @@
+// ANIMATION RULES FOR THIS PAGE:
+// ✓ ALLOWED: Streak progress-bar width transition
+// ✗ BANNED:  Page-load stagger on sections or badge tiles
+// ✗ BANNED:  Inline style={{ color: '#hexcode' }} — use Tailwind tokens only
+// ✗ BANNED:  Page-level nav or bottom padding hacks — FreeAppShell owns the menu bar
+
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
 import AppShell from "@/components/AppShell";
-import BottomNav from "@/components/BottomNav";
-import Sol from "@/components/Sol";
 import { MILESTONES, getEarnedMilestones, getStreak } from "@/lib/milestones";
-import { Target, Flame } from "lucide-react";
+import { Lock, Check } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default function MilestonesPage() {
   const [earnedKeys, setEarnedKeys] = useState<string[]>([]);
@@ -18,163 +22,95 @@ export default function MilestonesPage() {
   const earned = MILESTONES.filter(m => earnedKeys.includes(m.key));
   const locked = MILESTONES.filter(m => !earnedKeys.includes(m.key));
 
-  const streakBadges = ["streak_4", "streak_12"];
-  const isStreakBadge = (key: string) => streakBadges.includes(key);
+  // Next streak badge: 4 weeks, then 12 weeks (the two streak milestones).
+  const nextStreakTarget = streakWeeks < 4 ? 4 : streakWeeks < 12 ? 12 : null;
+  const streakPct = nextStreakTarget ? Math.min(100, (streakWeeks / nextStreakTarget) * 100) : 100;
+  const streakText = nextStreakTarget == null
+    ? "You've earned both streak badges. Keep it going."
+    : streakWeeks === 0
+    ? "Check in weekly to build your streak and unlock badges."
+    : `${nextStreakTarget - streakWeeks} more week${nextStreakTarget - streakWeeks !== 1 ? "s" : ""} earns the ${nextStreakTarget}-week badge.`;
 
   return (
     <AppShell>
-      <div className="pb-24 md:pb-0">
+      <div className="flex flex-col gap-3.5 pb-8">
 
-        {/* Header row */}
-        <div className="flex items-center justify-between mb-5">
-          <h1 className="font-display text-[30px] font-semibold text-forest tracking-[-0.02em]">
-            Milestones
+        <section className="flex flex-col gap-1 px-1 pt-1">
+          <span className="tala-eyebrow text-ink-40">Milestones</span>
+          <h1 className="font-display text-[36px] leading-[1.05] text-forest tabular-nums mt-2">
+            {earned.length} of {MILESTONES.length} badges
           </h1>
-          {streakWeeks > 0 && (
-            <div className="flex items-center gap-1.5 rounded-full bg-sun-tint px-3 py-1.5">
-              <Flame className="h-4 w-4 text-amber-600" aria-hidden="true" />
-              <span className="text-xs font-bold text-amber-ink tabular-nums">
-                {streakWeeks} weeks
-              </span>
-            </div>
-          )}
-        </div>
+          <p className="text-[14px] text-ink-40 mt-1">
+            {earned.length > 0 ? "Small habits that add up" : "The first ones come from setting a goal and finishing your pathway."}
+          </p>
+        </section>
 
-        {/* Streak card */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          className="relative overflow-hidden rounded-[22px] mb-5 bg-forest p-5 shadow-[0_2px_14px_rgba(12,33,164,.06)]"
-        >
-          {/* Decorative dots */}
-          <div className="absolute top-3 right-[60px] h-2 w-2 rounded-full bg-sun opacity-70" />
-          <div className="absolute top-7 right-10 h-1.5 w-1.5 rounded-full bg-green opacity-60" />
-          <div className="absolute bottom-4 right-[70px] h-1.5 w-1.5 rounded-full bg-clay opacity-50" />
-
-          <div className="flex items-center gap-4">
-            <div className="shrink-0">
-              <Sol size="sm" animate="idle" showFace />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-display text-[17px] font-semibold text-paper leading-[1.3]">
-                {streakWeeks > 0 ? `${streakWeeks}-week streak` : "Start your streak"}
-              </p>
-              <p className="text-xs text-mint mt-1 leading-[1.45]">
-                {streakWeeks >= 4
-                  ? "You're in the top 20% for consistency. Keep it up."
-                  : streakWeeks > 0
-                  ? `${4 - streakWeeks} more week${4 - streakWeeks !== 1 ? "s" : ""} to unlock the 4-week badge.`
-                  : "Check in weekly to build your streak and unlock badges."}
-              </p>
-            </div>
-          </div>
-        </motion.div>
+        {/* Cobalt streak hero */}
+        <section aria-label="Streak" className="bg-forest text-paper rounded-[28px] p-5 flex items-center gap-4">
+          <span className="flex flex-col items-center flex-none min-w-[64px]">
+            <span className="font-display tabular-nums text-[64px] leading-[0.85] tracking-[-0.045em] text-field">{streakWeeks}</span>
+            <span className="text-[12px] font-semibold tracking-[0.1em] uppercase mt-1">{streakWeeks === 1 ? "Week" : "Weeks"}</span>
+          </span>
+          <span className="flex flex-col gap-1.5 flex-1 min-w-0">
+            <span className="text-[17px] font-semibold">Check-in streak</span>
+            <span className="text-[14px] text-mint leading-[1.45] text-pretty">{streakText}</span>
+            <span className="h-2 rounded-full bg-paper/15 overflow-hidden mt-1" aria-hidden="true">
+              <span className="block h-full rounded-full bg-field transition-[width] duration-500 ease-out" style={{ width: `${streakPct}%` }} />
+            </span>
+          </span>
+        </section>
 
         {/* Earned badges */}
         {earned.length > 0 && (
-          <div className="mb-6">
-            <h2 className="font-display text-[15px] font-semibold text-forest mb-2.5">
-              Earned · {earned.length} of {MILESTONES.length}
-            </h2>
-            <div className="grid grid-cols-3 gap-[10px]">
-              {earned.map(m => (
-                <motion.div
-                  key={m.key}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="bg-surface border border-hairline rounded-[20px] text-center p-3 shadow-[0_2px_14px_rgba(12,33,164,.06)]"
-                >
-                  <div className={`mx-auto flex h-[52px] w-[52px] items-center justify-center rounded-[12px] mb-2 ${isStreakBadge(m.key) ? "bg-sun-tint" : "bg-green-tint"}`}>
-                    <Target className="h-6 w-6 text-primary" aria-hidden="true" />
-                  </div>
-                   <p className="text-[11px] font-semibold text-forest leading-[1.3]">{m.label}</p>
-                   <p className="tala-eyebrow text-green mt-1">
-                    Earned
-                  </p>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* In-progress: closest badges */}
-        {locked.slice(0, 3).length > 0 && (
-          <div className="mb-6">
-            <h2 className="font-display text-[15px] font-semibold text-forest mb-2.5">
-              Almost there
-            </h2>
-            <div className="grid grid-cols-3 gap-[10px]">
-              {locked.slice(0, 3).map(m => (
+          <section className="flex flex-col gap-3">
+            <h2 className="font-sans text-[16px] font-semibold text-forest px-1 pt-1">Earned</h2>
+            <div className="grid grid-cols-2 gap-3" role="list">
+              {earned.map((m, i) => (
                 <div
                   key={m.key}
-                  className="rounded-[20px] bg-sun-tint border-[1.5px] border-dashed border-sun shadow-[0_2px_8px_rgba(255,137,31,.12)] text-center p-3"
+                  role="listitem"
+                  aria-label={`${m.label}: ${m.desc} — earned`}
+                  className={cn("rounded-[24px] p-4 flex flex-col gap-2.5 min-h-[112px] text-forest", (Math.floor(i / 2) + i) % 2 === 0 ? "bg-field" : "bg-breeze")}
                 >
-                  <div className="mx-auto flex h-[52px] w-[52px] items-center justify-center rounded-[12px] mb-2 bg-sun/20">
-                    <Target className="h-6 w-6 text-primary" aria-hidden="true" />
-                  </div>
-                  <p className="text-[11px] font-semibold text-amber-ink leading-[1.3]">{m.label}</p>
-                  <p className="tala-eyebrow text-amber-ink mt-1">
-                    Not yet
-                  </p>
+                  <span className="w-9 h-9 rounded-[12px] bg-paper flex items-center justify-center" aria-hidden="true">
+                    <Check className="h-4 w-4" strokeWidth={2.6} />
+                  </span>
+                  <span className="flex flex-col gap-0.5">
+                    <span className="text-[15px] font-semibold leading-[1.3]">{m.label}</span>
+                    <span className="text-[12px] leading-[1.4] text-pretty">{m.desc}</span>
+                  </span>
                 </div>
               ))}
             </div>
-          </div>
+          </section>
         )}
 
-        {/* Locked badges */}
-        {locked.slice(3).length > 0 && (
-          <div>
-            <h2 className="font-display text-[15px] font-semibold text-forest mb-2.5">
-              Locked · {locked.slice(3).length} more
-            </h2>
-            <div className="grid grid-cols-3 gap-[10px]">
-              {locked.slice(3).map(m => (
+        {/* Still to earn */}
+        {locked.length > 0 && (
+          <section className="flex flex-col gap-3">
+            <h2 className="font-sans text-[16px] font-semibold text-forest px-1 pt-1">Still to earn</h2>
+            <div className="bg-surface rounded-[28px] p-1 flex flex-col" role="list">
+              {locked.map(m => (
                 <div
                   key={m.key}
-                  className="bg-surface border border-hairline rounded-[20px] text-center p-3 opacity-50 shadow-[0_2px_14px_rgba(12,33,164,.04)]"
+                  role="listitem"
+                  aria-label={`${m.label}: ${m.desc} — locked`}
+                  className="flex items-center gap-3 p-3 border-b border-hairline last:border-0 text-forest"
                 >
-                  <div className="mx-auto flex h-[52px] w-[52px] items-center justify-center rounded-[12px] mb-2 bg-hairline">
-                    <Target className="h-6 w-6 text-muted-foreground" aria-hidden="true" />
-                  </div>
-                  <p className="text-[11px] font-semibold text-forest leading-[1.3]">{m.label}</p>
-                  <p className="tala-eyebrow text-ink-40 mt-1">
-                    Locked
-                  </p>
+                  <span className="w-10 h-10 shrink-0 rounded-[12px] bg-paper flex items-center justify-center" aria-hidden="true">
+                    <Lock className="h-[18px] w-[18px]" />
+                  </span>
+                  <span className="flex flex-col gap-0.5 flex-1 min-w-0">
+                    <span className="text-[15px] font-semibold">{m.label}</span>
+                    <span className="text-[13px] text-ink-40 text-pretty">{m.desc}</span>
+                  </span>
                 </div>
               ))}
             </div>
-          </div>
-        )}
-
-        {/* Empty earned state */}
-        {earned.length === 0 && (
-          <div className="text-center py-4">
-            <Sol size="md" animate="idle" showFace className="mx-auto mb-4" />
-            <p className="font-display text-base font-semibold text-forest mb-1.5">
-              Your badges await
-            </p>
-            <p className="text-[13px] text-ink-40 max-w-[220px] mx-auto mb-5 leading-[1.5]">
-              Complete your pathway and track your budget to earn your first badge.
-            </p>
-            {/* Preview of first earnable badges */}
-            <div className="grid grid-cols-3 gap-[10px] mt-2">
-              {MILESTONES.slice(0, 3).map(m => (
-                <div key={m.key} className="bg-surface border border-hairline rounded-[20px] text-center p-3 opacity-50 shadow-[0_2px_14px_rgba(12,33,164,.04)]">
-                  <div className="mx-auto flex h-[52px] w-[52px] items-center justify-center rounded-[12px] mb-2 bg-hairline">
-                    <Target className="h-6 w-6 text-muted-foreground" aria-hidden="true" />
-                  </div>
-                  <p className="text-[11px] font-semibold text-forest leading-[1.3]">{m.label}</p>
-                  <p className="tala-eyebrow text-ink-40 mt-1">Earn it</p>
-                </div>
-              ))}
-            </div>
-          </div>
+          </section>
         )}
 
       </div>
-      <BottomNav />
     </AppShell>
   );
 }
