@@ -28,7 +28,7 @@ Add `membership: { status, plan, currentPeriodEnd, trialEndsAt, manageUrl }` to 
 
 Two doors into the client rung, same destination.
 
-**Advisor-led (default).** Free user accepts a checkpoint → lead → super admin assigns → advisor promotes. Promotion sets `role = investment_client` and `advisorId`, and creates a Stripe Checkout session; the user's next sign-in shows an "Activate your membership" screen (price, what unlocks, 14-day trial). Until the webhook confirms, the user is in state `pending_payment`: role is client, tier resolves to free, advisor card shows the advisor's name with "Activate to start". The advisor sees `pending_payment` on the client and lead lists.
+**Advisor-led (default).** Free user accepts a checkpoint → lead → super admin assigns → advisor promotes. Promotion sets `role = investment_client` and `advisorId`, and creates a Stripe Checkout session; the user's next sign-in shows an "Activate your membership" screen (price, what unlocks, 7-day trial with card required). Until the webhook confirms, the user is in state `pending_payment`: role is client, tier resolves to free, advisor card shows the advisor's name with "Activate to start". The advisor sees `pending_payment` on the client and lead lists.
 
 **Self-serve.** The advisor card's second action, "Become a member", opens Checkout directly for a free user with no lead. The webhook sets membership active and creates a lead with `source = "self_serve_member"`, `status = unassigned`, so the super admin assigns an advisor as usual. Until assignment the user has full client limits and the advisor card shows "We are matching you with an advisor".
 
@@ -70,10 +70,12 @@ Secrets: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_MONTHLY`, `
 - Self-serve door creates exactly one unassigned lead with `source = self_serve_member`.
 - Advisor-led door leaves the user at free limits until the webhook, then at client limits.
 
-## Decisions for the owner (defaults in brackets)
+## Decisions (final, confirmed by the product owner on 2026-11-04)
 
-1. Trial length and card-up-front [14 days, card required].
-2. Grace window after a failed payment [7 days].
-3. Does an in-force advised plan waive the fee [no; one price for everyone, revisit with advisory-fee data].
-4. Annual plan discount [two months free].
-5. Whether a super admin can comp a membership [yes, with a reason, visible on the client list].
+1. Trial: **7 days, card required**. `trialEndsAt = checkout + 7 days`. C11_trial_ending fires 2 days before the end, not 3.
+2. Grace window after a failed payment: **7 days**. `past_due` counts as active until `currentPeriodEnd + 7 days`.
+3. Fee waiver for Track A: **no**. One price for everyone, set at a level affordable for both tracks. The `source = "advised_plan"` option stays in the schema but is not used.
+4. Annual plan: **yes, two months free** (annual price = 10 × monthly). Both prices come from `STRIPE_PRICE_MONTHLY` and `STRIPE_PRICE_ANNUAL`.
+5. Comped memberships: **yes**. Super admin only, reason required, `source = "comped"`, shown as a badge on `/admin/clients` and in the advisor's client list.
+
+Implement exactly these values. Put them in `lib/tier-policy` as named constants (`TRIAL_DAYS = 7`, `GRACE_DAYS = 7`, `ANNUAL_MONTHS_FREE = 2`) so they are changed in one place.
