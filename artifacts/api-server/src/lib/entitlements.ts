@@ -2,10 +2,12 @@ import type { Request } from "express";
 import { and, asc, eq, gte, isNull, ne, sql } from "drizzle-orm";
 import {
   db, advisedPlansTable, clientHoldingsTable, clientProfilesTable, financialGoalsTable,
-  leadsTable, profilesTable, solConversationsTable, solMessagesTable, conversionCheckpointsTable,
+  leadsTable, membershipsTable, profilesTable, solConversationsTable, solMessagesTable, conversionCheckpointsTable,
 } from "@workspace/db";
 import {
-  entitlementsFor, resolveTier, type Checkpoint, type CheckpointCode, type Entitlements, type Tier, type Usage,
+  entitlementsFor, isMembershipActive, membershipGraceUntil, resolveTier,
+  type Checkpoint, type CheckpointCode, type Entitlements, type MembershipPlan, type MembershipStatus,
+  type MembershipSummary, type Tier, type Usage,
 } from "@workspace/tier-policy";
 
 export interface EntitlementContext {
@@ -14,7 +16,11 @@ export interface EntitlementContext {
   usage: Usage;
   leadStatus: string | null;
   advisor: { id: string; name: string | null } | null;
-  entitlements: Entitlements & { advisor: { id: string; name: string | null } | null; leadSource: string | null };
+  entitlements: Entitlements & {
+    advisor: { id: string; name: string | null } | null;
+    leadSource: string | null;
+    membership: MembershipSummary;
+  };
 }
 
 /** The user's one lead: the oldest live row, else their most recent churned row. */
@@ -33,9 +39,9 @@ async function loadContext(userId: string): Promise<EntitlementContext> {
   const startOfUtcDay = new Date();
   startOfUtcDay.setUTCHours(0, 0, 0, 0);
 
-  const [[profile], [clientProfile], [inforcePlan], [goals], [holdings], [sol], lead] = await Promise.all([
+  const [[profile], [clientProfile], [inforcePlan], [goals], [holdings], [sol], lead, [membership]] = await Promise.all([
     db.select({ role: profilesTable.role }).from(profilesTable).where(eq(profilesTable.id, userId)),
-    db.select({ clientTrack: clientProfilesTable.clientTrack, advisorId: clientProfilesTable.advisorId })
+    db.select({ clientTrack: clientProfilesTable.clientTrack, advisorId: clientProfilesTable.advisorId, status: clientProfilesTable.status })
       .from(clientProfilesTable).where(eq(clientProfilesTable.userId, userId)),
     db.select({ id: advisedPlansTable.id }).from(advisedPlansTable)
       .where(and(eq(advisedPlansTable.userId, userId), eq(advisedPlansTable.status, "inforce"))).limit(1),
@@ -51,6 +57,7 @@ async function loadContext(userId: string): Promise<EntitlementContext> {
         gte(solMessagesTable.sentAt, startOfUtcDay),
       )),
     getLeadForUser(userId),
+    db.select().from(membershipsTable).where(eq(membershipsTable.userId, userId)),
   ]);
   const [open] = await db.select().from(conversionCheckpointsTable).where(and(
     eq(conversionCheckpointsTable.userId, userId),
@@ -62,14 +69,28 @@ async function loadContext(userId: string): Promise<EntitlementContext> {
     : null;
 
   const role = profile?.role ?? "free_user";
-  const tier = resolveTier(role, clientProfile?.clientTrack ?? null, !!inforcePlan);
+  const membershipStatus = (membership?.status ?? "none") as MembershipStatus;
+  const graceUntil = membershipGraceUntil(membership?.currentPeriodEnd ?? null);
+  const tier = resolveTier(role, clientProfile?.clientTrack ?? null, !!inforcePlan, membershipStatus, graceUntil);
   const usage: Usage = { goals: goals?.n ?? 0, holdings: holdings?.n ?? 0, solMessagesToday: sol?.n ?? 0 };
-  const leadStatus = lead?.status ?? null;
+  // A client with an advisor has an assignment whether or not a lead row records it (staff can
+  // create clients directly), so a lapse keeps messages and documents open with that advisor.
+  const leadStatus = role === "investment_client" && clientProfile?.advisorId ? "client" : lead?.status ?? null;
 
   // A preferences-only client_profiles row on a free user is not an advisor pointer.
   const advisorId = role === "investment_client"
     ? clientProfile?.advisorId ?? null
     : leadStatus === "active" || leadStatus === "client" ? lead?.assignedAdvisorId ?? null : null;
+  const membershipSummary: MembershipSummary = {
+    status: membershipStatus,
+    plan: (membership?.plan ?? null) as MembershipPlan | null,
+    currentPeriodEnd: membership?.currentPeriodEnd?.toISOString() ?? null,
+    trialEndsAt: membership?.trialEndsAt?.toISOString() ?? null,
+    source: membership?.source ?? null,
+    manageUrl: membership?.providerCustomerId ? "/membership/portal" : null,
+    isActive: isMembershipActive(membershipStatus, graceUntil),
+    pendingPayment: role === "investment_client" && clientProfile?.status === "pending_payment",
+  };
   let advisor: EntitlementContext["advisor"] = null;
   if (advisorId) {
     const [row] = await db.select({ id: profilesTable.id, name: profilesTable.fullName })
@@ -79,7 +100,12 @@ async function loadContext(userId: string): Promise<EntitlementContext> {
 
   return {
     role, tier, usage, leadStatus, advisor,
-    entitlements: { ...entitlementsFor(tier, usage, leadStatus, openCheckpoint), advisor, leadSource: lead?.source ?? null },
+    entitlements: {
+      ...entitlementsFor(tier, usage, leadStatus, openCheckpoint),
+      advisor,
+      leadSource: lead?.source ?? null,
+      membership: membershipSummary,
+    },
   };
 }
 

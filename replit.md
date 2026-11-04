@@ -38,19 +38,19 @@ See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and pa
 STRIPE_SECRET_KEY=sk_live_...        # from Stripe dashboard → API keys
 STRIPE_WEBHOOK_SECRET=whsec_...      # from Stripe dashboard → Webhooks
 STRIPE_PRICE_MONTHLY=price_...       # create in Stripe dashboard (see note)
-STRIPE_PRICE_YEARLY=price_...        # create in Stripe dashboard (see note)
+STRIPE_PRICE_ANNUAL=price_...        # create in Stripe dashboard (see note)
 APP_URL=https://your-replit-app.repl.co   # your deployed Replit URL
 ```
 
 **Creating the Stripe prices** — in the Stripe dashboard → Products → Add product:
-- Name: "tala Investment Plan"
+- Name: "tala Membership"
 - Add two prices:
   1. $4.99 / month recurring → copy price ID → `STRIPE_PRICE_MONTHLY`
-  2. $41.92 / year recurring → copy price ID → `STRIPE_PRICE_YEARLY`
+  2. $49.90 / year recurring (10 × monthly: two months free) → copy price ID → `STRIPE_PRICE_ANNUAL`
 
 **Creating the webhook** — in the Stripe dashboard → Developers → Webhooks → Add endpoint:
-- URL: `https://your-replit-app.repl.co/api/billing/webhook` — note the `/api` prefix; every api-server route is mounted under `/api` (see `src/app.ts`), so the bare `/billing/webhook` path Stripe docs examples often show will 404 here.
+- URL: `https://your-replit-app.repl.co/api/webhooks/stripe` — note the `/api` prefix; every api-server route is mounted under `/api` (see `src/app.ts`). The old `/api/billing/webhook` path still works, and should be removed once the endpoint has moved.
 - Events to listen for: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`
 - Copy the signing secret → `STRIPE_WEBHOOK_SECRET`
 
-The webhook route reads the raw request body (required for Stripe's signature check) via an `express.raw()` mount at `/api/billing/webhook` in `app.ts`, registered before the global `express.json()` — do not reorder those two.
+The webhook route reads the raw request body (required for Stripe's signature check) via an `express.raw()` mount on both paths in `app.ts`, registered before the global `express.json()` — do not reorder those two.

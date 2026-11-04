@@ -12,7 +12,8 @@ import { profilesTable } from "./profiles";
 //
 // source: an authenticated interest action stores a checkpoint code (see
 // @workspace/tier-policy and POST /leads/from-interest); the anonymous quiz funnel and
-// rows from before the checkpoint engine hold free text.
+// rows from before the checkpoint engine hold free text. The membership webhook stores
+// self_serve_member, and a comped free user's lead stores comped_member.
 export const leadsTable = pgTable("leads", {
   id: uuid("id").primaryKey().defaultRandom(),
   email: text("email").notNull(),

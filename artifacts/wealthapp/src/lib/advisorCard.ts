@@ -1,10 +1,17 @@
 import type { Tier } from "@workspace/tier-policy";
 
-export type AdvisorCardState = "none" | "matching" | "assigned" | "client";
+export type AdvisorCardState = "none" | "matching" | "assigned" | "client" | "activate";
 
 /** What the dashboard's advisor card shows, from the server's lead status and advisor. */
-export function advisorCardState(tier: Tier, leadStatus: string | null, hasAdvisor: boolean): AdvisorCardState {
-  if (tier !== "free") return hasAdvisor ? "client" : "none";
+export function advisorCardState(
+  tier: Tier,
+  leadStatus: string | null,
+  hasAdvisor: boolean,
+  pendingPayment = false,
+): AdvisorCardState {
+  if (pendingPayment) return "activate";
+  // A member with no advisor yet came through the self-serve door and is waiting on assignment.
+  if (tier !== "free") return hasAdvisor ? "client" : "matching";
   switch (leadStatus) {
     case "unassigned":
       return "matching";
@@ -28,6 +35,7 @@ const ACCEPTED_CHECKPOINT_COPY: Record<string, string> = {
   C8_plan_preview: "You asked what an advised plan would look like.",
   C9_under_management: "You asked about bringing your holdings under management.",
   C10_coast_point: "You asked about your coast point.",
+  self_serve_member: "You joined as a member.",
 };
 
 export function acceptedCheckpointCopy(source: string | null): string | null {

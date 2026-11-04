@@ -3,6 +3,7 @@ import { and, eq, inArray, desc } from "drizzle-orm";
 import {
   db, clientProfilesTable, profilesTable, advisedPlansTable,
   clientBudgetMonthsTable, normalizeRiskProfile, healthScoresTable,
+  membershipsTable,
 } from "@workspace/db";
 import { requireAuth, requireRole, requireAdvisorOwnsClient, requireAdvisorOwnsLead } from "../middlewares/requireAuth";
 import { computeNetWorth } from "../lib/netWorthService";
@@ -151,8 +152,10 @@ router.get("/advisor/clients", ...advisorGuard, async (req, res): Promise<void> 
     indicativeAmount: clientProfilesTable.indicativeAmount,
     onboardingStep: clientProfilesTable.onboardingStep,
     advisorId: clientProfilesTable.advisorId,
+    membershipSource: membershipsTable.source,
   }).from(profilesTable)
-    .innerJoin(clientProfilesTable, eq(clientProfilesTable.userId, profilesTable.id));
+    .innerJoin(clientProfilesTable, eq(clientProfilesTable.userId, profilesTable.id))
+    .leftJoin(membershipsTable, eq(membershipsTable.userId, profilesTable.id));
   // A client_profiles row alone does not make a client (free users may hold
   // preferences there); every client list filters on role.
   const isClient = eq(profilesTable.role, "investment_client");

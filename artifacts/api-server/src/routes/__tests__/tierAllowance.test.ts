@@ -1,5 +1,6 @@
 import { afterAll, describe, expect, it, vi } from "vitest";
 import request from "supertest";
+import { grantMembership } from "./helpers/membership";
 
 vi.mock("@clerk/express", () => ({
   clerkMiddleware: () => (_req: any, _res: any, next: any) => next(),
@@ -28,6 +29,7 @@ async function makeUser(role: "free_user" | "investment_client" | "advisor" = "f
 }
 async function makeClient(advisorId?: string) {
   const id = await makeUser("investment_client");
+  await grantMembership(id);
   await db.insert(clientProfilesTable).values({ userId: id, advisorId: advisorId ?? null });
   return id;
 }
@@ -196,7 +198,7 @@ describe("the plan is locked for free", () => {
     const u = await makeUser();
     await makeLead(u, "active");
     expectLimit(await request(app).get("/api/client/plan").set(asUser(u)), "plan", null, "C7_direct");
-    const client = await makeClient();
+    const client = await makeClient(await makeUser("advisor"));
     await request(app).get("/api/client/plan").set(asUser(client)).expect(200);
   });
 });
@@ -300,6 +302,10 @@ describe("GET /me/entitlements", () => {
       leadSource: null,
       advisor: null,
       openCheckpoint: null,
+      membership: {
+        status: "none", plan: null, currentPeriodEnd: null, trialEndsAt: null, source: null,
+        manageUrl: null, isActive: false, pendingPayment: false,
+      },
     });
   });
 

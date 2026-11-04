@@ -1,5 +1,5 @@
 import { Lock } from "lucide-react";
-import { gateMessage, type Capability } from "@workspace/tier-policy";
+import { gateMessage, UNLOCKS, type Capability } from "@workspace/tier-policy";
 
 const TITLES: Record<Capability, string> = {
   goals: "Goals",
@@ -21,6 +21,10 @@ export default function LockedFeature({ capability }: { capability: Capability }
       </div>
       <h2 className="text-[16px] font-semibold text-forest">{TITLES[capability]}</h2>
       <p className="mx-auto mt-1.5 max-w-sm text-[14px] leading-relaxed text-ink-40">{gateMessage(capability, null)}</p>
+      <div className="mx-auto mt-3 max-w-sm space-y-1 text-left text-[13px] leading-relaxed text-ink-40">
+        <p><span className="font-semibold text-forest">Membership unlocks</span> {UNLOCKS.membership}.</p>
+        <p><span className="font-semibold text-forest">An advisor unlocks</span> {UNLOCKS.advisor}.</p>
+      </div>
     </div>
   );
 }

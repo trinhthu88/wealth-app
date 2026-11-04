@@ -1,7 +1,7 @@
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import {
   db, clientBudgetMonthsTable, clientHoldingsTable, clientProfilesTable, conversionCheckpointsTable,
-  financialGoalsTable, goalProgressSnapshotsTable, healthScoresTable, profilesTable, advisedPlansTable,
+  financialGoalsTable, goalProgressSnapshotsTable, healthScoresTable, membershipsTable, profilesTable, advisedPlansTable,
   type ConversionCheckpoint,
 } from "@workspace/db";
 import {
@@ -9,7 +9,7 @@ import {
   type CheckpointCandidate, type CheckpointContext, type ExistingCheckpoint,
 } from "@workspace/checkpoints";
 import { computeGoalProgress } from "@workspace/goal-math";
-import { resolveTier, type CheckpointCode } from "@workspace/tier-policy";
+import { membershipGraceUntil, resolveTier, type CheckpointCode, type MembershipStatus } from "@workspace/tier-policy";
 import { resolveHoldingBenchmark } from "./benchmarks";
 import { computeGoalFundingSummary, recordSnapshotIfStale } from "./goalProgressSnapshot";
 import { getLeadForUser } from "./entitlements";
@@ -95,7 +95,7 @@ async function loadHoldings(userId: string): Promise<CheckpointContext["holdings
 }
 
 async function loadContext(userId: string): Promise<CheckpointContext | null> {
-  const [[profile], [clientProfile], [inforcePlan], lead, existingCheckpoints] = await Promise.all([
+  const [[profile], [clientProfile], [inforcePlan], lead, existingCheckpoints, [membership]] = await Promise.all([
     db.select({ role: profilesTable.role, createdAt: profilesTable.createdAt }).from(profilesTable).where(eq(profilesTable.id, userId)),
     db.select({ clientTrack: clientProfilesTable.clientTrack, onboardingStage: clientProfilesTable.onboardingStage })
       .from(clientProfilesTable).where(eq(clientProfilesTable.userId, userId)),
@@ -103,19 +103,25 @@ async function loadContext(userId: string): Promise<CheckpointContext | null> {
       .where(and(eq(advisedPlansTable.userId, userId), eq(advisedPlansTable.status, "inforce"))).limit(1),
     getLeadForUser(userId),
     loadExisting(userId),
+    db.select().from(membershipsTable).where(eq(membershipsTable.userId, userId)),
   ]);
   if (!profile) return null;
-  const tier = resolveTier(profile.role, clientProfile?.clientTrack ?? null, !!inforcePlan);
-  if (profile.role === "advisor" || profile.role === "super_admin" || tier === "track_a") return null;
+  if (profile.role === "advisor" || profile.role === "super_admin") return null;
+  const tier = resolveTier(
+    profile.role, clientProfile?.clientTrack ?? null, !!inforcePlan,
+    (membership?.status ?? "none") as MembershipStatus, membershipGraceUntil(membership?.currentPeriodEnd ?? null),
+  );
 
+  // Track A only ever gets the trial reminder, so its financial data isn't loaded.
+  const skipData = tier === "track_a";
   const [goals, holdings, budgetMonths, scores, streakWeeks] = await Promise.all([
-    loadGoals(userId),
-    loadHoldings(userId),
-    db.select().from(clientBudgetMonthsTable).where(eq(clientBudgetMonthsTable.userId, userId))
+    skipData ? [] : loadGoals(userId),
+    skipData ? [] : loadHoldings(userId),
+    skipData ? [] : db.select().from(clientBudgetMonthsTable).where(eq(clientBudgetMonthsTable.userId, userId))
       .orderBy(desc(clientBudgetMonthsTable.month)).limit(3),
-    db.select().from(healthScoresTable).where(eq(healthScoresTable.userId, userId))
+    skipData ? [] : db.select().from(healthScoresTable).where(eq(healthScoresTable.userId, userId))
       .orderBy(desc(healthScoresTable.scoreDate), desc(healthScoresTable.createdAt)).limit(1),
-    loadEngagementStreak(userId),
+    skipData ? null : loadEngagementStreak(userId),
   ]);
 
   return {
@@ -135,6 +141,9 @@ async function loadContext(userId: string): Promise<CheckpointContext | null> {
     existingCheckpoints,
     leadStatus: lead?.status ?? null,
     leadUpdatedAt: lead?.updatedAt ?? null,
+    membership: membership
+      ? { status: membership.status, trialEndsAt: membership.trialEndsAt, cancelAtPeriodEnd: membership.cancelAtPeriodEnd }
+      : null,
     now: new Date(),
   };
 }

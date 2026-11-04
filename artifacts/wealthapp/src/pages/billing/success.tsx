@@ -4,35 +4,26 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Sol from "@/components/Sol";
 import { apiFetch } from "@/lib/api";
 import { track } from "@/lib/analytics";
+import { ENTITLEMENTS_QUERY_KEY } from "@/hooks/useEntitlements";
 
 interface SubscriptionStatus {
   status: string;
   currentPeriodEnd: string | null;
   cancelAtPeriodEnd: boolean;
-  stripePriceId: string | null;
+  plan: string | null;
 }
 
-interface PriceInfo {
-  id: string;
-  label: string;
-  amount: number;
-  interval: string;
-}
-
-interface PricesResponse {
-  monthly: PriceInfo;
-  yearly: PriceInfo;
-}
+const PLAN_LABELS: Record<string, string> = { member_monthly: "Monthly", member_annual: "Annual" };
 
 export default function BillingSuccess() {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    // The webhook that promotes the user's role runs async — invalidating
-    // here means the UI picks up investment_client as soon as it lands,
-    // rather than waiting for some other query to naturally refetch it.
+    // The webhook that activates the membership runs async, and only it decides the tier.
+    // Invalidating here means the UI picks that up as soon as it lands.
     queryClient.invalidateQueries({ queryKey: ["profile"] });
+    queryClient.invalidateQueries({ queryKey: ENTITLEMENTS_QUERY_KEY });
     track("subscription_activated", { source: "checkout" });
   }, [queryClient]);
 
@@ -45,15 +36,8 @@ export default function BillingSuccess() {
     queryKey: ["billing-subscription"],
     queryFn: () => apiFetch<SubscriptionStatus>("/billing/subscription"),
   });
-  const { data: prices } = useQuery<PricesResponse>({
-    queryKey: ["billing-prices"],
-    queryFn: () => apiFetch<PricesResponse>("/billing/prices"),
-    staleTime: Infinity,
-  });
 
-  const planLabel = subscription?.stripePriceId && prices
-    ? Object.values(prices).find(p => p.id === subscription.stripePriceId)?.label
-    : null;
+  const planLabel = subscription?.plan ? PLAN_LABELS[subscription.plan] ?? null : null;
   const nextBillingDate = subscription?.currentPeriodEnd
     ? new Date(subscription.currentPeriodEnd).toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric" })
     : null;

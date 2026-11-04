@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { and, asc, eq, isNull } from "drizzle-orm";
 import { z } from "zod/v4";
 import { db, conversionCheckpointsTable, profilesTable } from "@workspace/db";
-import { CHECKPOINT_CODES, type CheckpointCode } from "@workspace/tier-policy";
+import { CHECKPOINT_CODES, MEMBERSHIP_CHECKPOINTS, type CheckpointCode } from "@workspace/tier-policy";
 import { requireAuth, requireRole, requireAdvisorOwnsLead } from "../middlewares/requireAuth";
 import { getOpenCheckpoint } from "../lib/checkpointEngine";
 import { getEntitlementContext } from "../lib/entitlements";
@@ -60,7 +60,7 @@ router.post("/me/checkpoint/:id/accept", requireAuth, async (req, res): Promise<
   // so accepting records the choice without creating a lead. Only a free user gets a lead.
   const { tier } = await getEntitlementContext(req);
   let leadId: string | null = null;
-  if (tier === "free") {
+  if (tier === "free" && !MEMBERSHIP_CHECKPOINTS.includes(row.code as CheckpointCode)) {
     const [profile] = await db.select({ email: profilesTable.email }).from(profilesTable).where(eq(profilesTable.id, userId));
     if (!profile) { res.status(404).json({ error: "Profile not found" }); return; }
     ({ lead: { id: leadId } } = await registerInterest(userId, profile.email, row.code as CheckpointCode));

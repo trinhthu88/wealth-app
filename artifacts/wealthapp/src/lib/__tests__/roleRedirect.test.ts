@@ -25,3 +25,14 @@ describe("resolveRoleRedirectPath", () => {
     expect(resolveRoleRedirectPath("free_user", "complete")).toBe("/client/dashboard");
   });
 });
+
+describe("resolveRoleRedirectPath with a pending membership", () => {
+  it("sends a promoted client to activation, whatever their onboarding stage", () => {
+    expect(resolveRoleRedirectPath("investment_client", "complete", true)).toBe("/client/activate");
+    expect(resolveRoleRedirectPath("investment_client", "not_started", true)).toBe("/client/activate");
+  });
+  it("leaves everyone else where they were", () => {
+    expect(resolveRoleRedirectPath("investment_client", "complete", false)).toBe("/client/dashboard");
+    expect(resolveRoleRedirectPath("advisor", "complete", false)).toBe("/advisor/dashboard");
+  });
+});

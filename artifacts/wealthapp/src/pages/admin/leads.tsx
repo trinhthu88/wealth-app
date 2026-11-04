@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 interface Lead {
+  pendingPayment?: boolean;
   id: string;
   email: string;
   firstName: string | null;
@@ -141,6 +142,7 @@ export default function AdminLeads() {
                     <span className={cn("text-[13px] px-3 py-1 rounded-full font-medium capitalize inline-block", STATUS_COLORS[l.status] ?? "bg-surface border border-hairline text-ink-60")}>
                       {l.status}
                     </span>
+                    {l.pendingPayment && <span className="ml-1.5 text-[13px] px-3 py-1 rounded-full font-medium inline-block bg-surface border border-hairline text-amber-ink">Pending payment</span>}
                   </td>
                   <td className="px-5 py-3 text-[14px] text-ink-60">
                     {assignId === l.id ? (

@@ -2,10 +2,11 @@ import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
 import { z } from "zod/v4";
 import { CHECKPOINT_CODES } from "@workspace/tier-policy";
-import { db, leadsTable, profilesTable, leadStatusSchema, normalizeRiskProfile } from "@workspace/db";
+import { db, leadsTable, membershipsTable, profilesTable, leadStatusSchema, normalizeRiskProfile } from "@workspace/db";
 import { requireAuth, requireRole, requireAdvisorOwnsLeadById } from "../middlewares/requireAuth";
 import { createUserWithProfile } from "../lib/createUserWithProfile";
 import { promoteLeadToClient } from "../lib/promoteLead";
+import { isRowActive } from "../lib/membershipStore";
 import { registerInterest, withLinkedPerson } from "../lib/leadInterest";
 
 const router: IRouter = Router();
@@ -127,6 +128,23 @@ router.put("/leads/:id/assign", ...superAdminGuard, async (req, res): Promise<vo
     updatedAt: new Date(),
   }).where(eq(leadsTable.id, rawId)).returning();
 
+  // A paying self-serve member is already a client with no advisor pointer, which would lock
+  // their new advisor out of the client routes. Assignment finishes their promotion, so both
+  // doors end in the same state.
+  if (updated.userId && updated.status === "active") {
+    const [member] = await db.select({ id: membershipsTable.userId, status: membershipsTable.status, currentPeriodEnd: membershipsTable.currentPeriodEnd })
+      .from(membershipsTable).where(eq(membershipsTable.userId, updated.userId));
+    const [profile] = await db.select({ role: profilesTable.role }).from(profilesTable).where(eq(profilesTable.id, updated.userId));
+    if (profile?.role === "investment_client" && isRowActive(member)) {
+      const promotion = await promoteLeadToClient(updated, (req as any).userId);
+      if (!promotion.ok) { res.status(promotion.httpStatus).json({ error: promotion.error }); return; }
+      const [promoted] = await db.update(leadsTable).set({ status: "client", updatedAt: new Date() })
+        .where(eq(leadsTable.id, rawId)).returning();
+      res.json(promoted);
+      return;
+    }
+  }
+
   res.json(updated);
 });
 
@@ -159,7 +177,7 @@ router.post("/leads/:id/convert", ...leadGuard, async (req, res): Promise<void> 
     advisorId: lead.assignedAdvisorId || userId,
     assignedBy: userId,
     riskProfile: riskProfile ?? null,
-    status: "active",
+    status: "pending_payment",
   });
   if (!result.ok) { res.status(result.httpStatus).json({ error: result.error }); return; }
 

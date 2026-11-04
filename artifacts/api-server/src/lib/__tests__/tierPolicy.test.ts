@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   ALL_SCENARIO_TYPES, TIER_LIMITS, checkAllowance, earliestBudgetMonth, earliestTrendDate,
   entitlementsFor, resolveTier, type Usage,
+  ANNUAL_MONTHS_FREE, GRACE_DAYS, TRIAL_DAYS, TRIAL_ENDING_NOTICE_DAYS, isMembershipActive, membershipGraceUntil,
 } from "@workspace/tier-policy";
 
 const noUsage: Usage = { goals: 0, holdings: 0, solMessagesToday: 0 };
@@ -21,7 +22,52 @@ describe("resolveTier", () => {
     ["", null, false, "free"],
     ["unknown_role", "track_a", true, "free"],
   ] as const)("role %s, track %s, inforce %s resolves to %s", (role, track, inforce, tier) => {
-    expect(resolveTier(role, track, inforce)).toBe(tier);
+    expect(resolveTier(role, track, inforce, "active", null)).toBe(tier);
+  });
+
+  const NOW = new Date("2026-06-15T12:00:00Z");
+  const DAY = 86_400_000;
+  const insideGrace = membershipGraceUntil(new Date(NOW.getTime() - 3 * DAY));
+  const pastGrace = membershipGraceUntil(new Date(NOW.getTime() - 8 * DAY));
+  const STATUSES = [
+    ["none", null, false],
+    ["trialing", null, true],
+    ["active", null, true],
+    ["past_due", insideGrace, true],
+    ["past_due", pastGrace, false],
+    ["past_due", null, false],
+    ["canceled", insideGrace, false],
+    [null, null, false],
+  ] as const;
+
+  describe.each(STATUSES)("membership %s, grace until %s", (status, grace, active) => {
+    it.each([null, "track_a", "track_b"])("clientTrack %s never changes the answer", (track) => {
+      expect(resolveTier("investment_client", track, false, status, grace, NOW)).toBe(active ? "track_b" : "free");
+      expect(resolveTier("investment_client", track, true, status, grace, NOW)).toBe(active ? "track_a" : "free");
+    });
+    it("a free user stays free, whatever the membership says", () => {
+      expect(resolveTier("free_user", null, false, status, grace, NOW)).toBe("free");
+      expect(resolveTier("free_user", null, true, status, grace, NOW)).toBe("free");
+    });
+    it("staff keep track_a, whatever the membership says", () => {
+      expect(resolveTier("advisor", null, false, status, grace, NOW)).toBe("track_a");
+      expect(resolveTier("super_admin", null, false, status, grace, NOW)).toBe("track_a");
+    });
+    it("an unknown role is free", () => {
+      expect(resolveTier("unknown", null, true, status, grace, NOW)).toBe("free");
+    });
+  });
+
+  it("past_due holds until exactly currentPeriodEnd + 7 days", () => {
+    const end = new Date(NOW.getTime() - GRACE_DAYS * DAY);
+    const grace = membershipGraceUntil(end);
+    expect(isMembershipActive("past_due", grace, NOW)).toBe(true);
+    expect(isMembershipActive("past_due", grace, new Date(NOW.getTime() + 1))).toBe(false);
+  });
+
+  it("holds the product owner's final values", () => {
+    expect({ TRIAL_DAYS, GRACE_DAYS, ANNUAL_MONTHS_FREE, TRIAL_ENDING_NOTICE_DAYS })
+      .toEqual({ TRIAL_DAYS: 7, GRACE_DAYS: 7, ANNUAL_MONTHS_FREE: 2, TRIAL_ENDING_NOTICE_DAYS: 2 });
   });
 });
 
@@ -34,10 +80,10 @@ describe("TIER_LIMITS", () => {
     expect(TIER_LIMITS.free.scenarioTypes).toEqual(["increase_monthly"]);
     expect(TIER_LIMITS.track_b).toMatchObject({
       goals: Infinity, holdings: Infinity, budgetMonths: 12, trendMonths: 24, solPerDay: 100,
-      coastPoint: "full", advisedPlans: "preview", messages: "full", documents: "full", plan: "full",
+      coastPoint: "full", advisedPlans: "preview", messages: "after_assign", documents: "after_assign", plan: "after_assign",
     });
     expect(TIER_LIMITS.track_b.scenarioTypes).toEqual(ALL_SCENARIO_TYPES);
-    expect(TIER_LIMITS.track_a).toEqual({ ...TIER_LIMITS.track_b, advisedPlans: "full" });
+    expect(TIER_LIMITS.track_a).toEqual({ ...TIER_LIMITS.track_b, advisedPlans: "full", messages: "full", documents: "full", plan: "full" });
   });
 });
 
@@ -89,7 +135,9 @@ describe("checkAllowance", () => {
 
   it("locks the plan for free regardless of lead status, and previews the coast point", () => {
     expect(checkAllowance("free", "plan", noUsage, "active")).toMatchObject({ allowed: false, gate: "locked" });
-    expect(checkAllowance("track_b", "plan", noUsage, null)).toEqual({ allowed: true, gate: "full" });
+    expect(checkAllowance("track_b", "plan", noUsage, "client")).toEqual({ allowed: true, gate: "full" });
+    // A self-serve member has limits lifted, but the plan waits for an advisor.
+    expect(checkAllowance("track_b", "plan", noUsage, "unassigned")).toMatchObject({ allowed: false, gate: "after_assign", checkpoint: null });
     expect(checkAllowance("free", "coastPoint", noUsage, null)).toEqual({ allowed: true, gate: "preview" });
     expect(checkAllowance("track_b", "coastPoint", noUsage, null)).toEqual({ allowed: true, gate: "full" });
   });

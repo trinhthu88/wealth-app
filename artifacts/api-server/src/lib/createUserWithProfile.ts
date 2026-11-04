@@ -65,9 +65,8 @@ export async function createUserWithProfile(input: CreateUserInput): Promise<Cre
     }).returning();
 
     if (role === "investment_client") {
-      // client_profiles.status is account health for an already-promoted client
-      // now (active | paused | churned) — a row created here is one, so "active"
-      // is the only sensible default (see clients.ts's clientProfilesTable comment).
+      // A new client has no membership yet, so they wait on payment unless staff say otherwise
+      // (see clients.ts's clientProfilesTable comment).
       const assignedAdvisorId = advisorId || null;
       await tx.insert(clientProfilesTable).values({
         userId: clerkUser.id,
@@ -75,7 +74,7 @@ export async function createUserWithProfile(input: CreateUserInput): Promise<Cre
         // Set by staff (admin create / advisor lead conversion), so source is advisor.
         riskProfile: normalizeRiskProfile(riskProfile),
         riskProfileSource: normalizeRiskProfile(riskProfile) ? "advisor" : null,
-        status: status || "active",
+        status: status || "pending_payment",
       });
       if (assignedAdvisorId) {
         await tx.insert(advisorAssignmentsTable).values({

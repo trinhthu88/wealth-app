@@ -18,7 +18,13 @@ describe("advisorCardState", () => {
   it("shows clients their advisor regardless of any lead status", () => {
     expect(advisorCardState("track_b", null, true)).toBe("client");
     expect(advisorCardState("track_a", "churned", true)).toBe("client");
-    expect(advisorCardState("track_b", null, false)).toBe("none");
+    // A member with no advisor came through the self-serve door and is being matched.
+    expect(advisorCardState("track_b", "unassigned", false)).toBe("matching");
+  });
+
+  it("asks a promoted client to activate until their membership is confirmed", () => {
+    expect(advisorCardState("free", "client", true, true)).toBe("activate");
+    expect(advisorCardState("track_b", "client", true, false)).toBe("client");
   });
 });
 

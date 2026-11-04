@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import request from "supertest";
+import { grantMembership } from "./helpers/membership";
 
 vi.mock("@clerk/express", () => ({
   clerkMiddleware: () => (_req: any, _res: any, next: any) => next(),
@@ -80,7 +81,7 @@ describe("lead promotion (PUT /leads/:id → status: client)", () => {
     expect(profile.role).toBe("investment_client");
 
     const [cp] = await db.select().from(clientProfilesTable).where(eq(clientProfilesTable.userId, userId));
-    expect(cp.status).toBe("active");
+    expect(cp.status).toBe("pending_payment");
     expect(cp.advisorId).toBe(advisorId);
 
     const track = await request(app).get("/api/client/profile/track").set(asUser(userId)).expect(200);
@@ -140,7 +141,7 @@ describe("lead promotion (PUT /leads/:id → status: client)", () => {
 
     const rows = await db.select().from(clientProfilesTable).where(eq(clientProfilesTable.userId, userId));
     expect(rows).toHaveLength(1); // updated, not duplicated
-    expect(rows[0].status).toBe("active");
+    expect(rows[0].status).toBe("pending_payment");
     expect(rows[0].advisorId).toBe(advisorId);
 
     await cleanupUser(userId);

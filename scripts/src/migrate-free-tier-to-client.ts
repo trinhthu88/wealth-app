@@ -2,13 +2,15 @@
 // Idempotent and safe by default: without --apply it only reports what it would do.
 //   1. budget_entries → client_budget_months (runs migrate-free-budget-entries.ts)
 //   2. pathway step formData → any still-empty owner row
+//   3. onboarding_stage → complete for anyone who already finished the old onboarding, so they
+//      aren't sent through it again: profiles.onboarding_complete, or pathway step 6 completed
 // Only ever fills an empty owner; never overwrites something the user has entered.
 // Add --user=<id> to scope a run. Run with --apply on every environment before
 // budget_entries and pathway_progress are dropped.
 import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
 import {
   db, pool, assetsTable, clientBudgetMonthsTable, clientProfilesTable, financialGoalsTable,
   liabilitiesTable, normalizeRiskProfile, pathwayProgressTable, profilesTable,
@@ -35,7 +37,7 @@ const MONTHS: Record<string, string> = {
   Jul: "07", Aug: "08", Sep: "09", Oct: "10", Nov: "11", Dec: "12",
 };
 
-const counts = { users: 0, budgetMonths: 0, goals: 0, assets: 0, liabilities: 0, riskProfiles: 0, profileFields: 0 };
+const counts = { users: 0, budgetMonths: 0, goals: 0, assets: 0, liabilities: 0, riskProfiles: 0, profileFields: 0, onboardingCompleted: 0 };
 
 try {
   const rows = await db.select().from(pathwayProgressTable).where(
@@ -149,6 +151,28 @@ try {
             .onConflictDoUpdate({ target: clientProfilesTable.userId, set: { riskProfile, riskProfileSource: "self" }, where: and(sql`${clientProfilesTable.riskProfile} is null`) });
         }
       }
+    }
+  }
+  // Separate from the loop above: someone with onboarding_complete may have no pathway rows.
+  const scope = onlyUsers.length ? inArray(profilesTable.id, onlyUsers) : sql`true`;
+  const finished = await db.selectDistinct({ id: profilesTable.id }).from(profilesTable)
+    .leftJoin(pathwayProgressTable, and(
+      eq(pathwayProgressTable.userId, profilesTable.id),
+      eq(pathwayProgressTable.stepNumber, 6),
+      eq(pathwayProgressTable.status, "completed"),
+    ))
+    .leftJoin(clientProfilesTable, eq(clientProfilesTable.userId, profilesTable.id))
+    .where(and(
+      scope,
+      inArray(profilesTable.role, ["free_user", "investment_client"]),
+      or(eq(profilesTable.onboardingComplete, true), isNotNull(pathwayProgressTable.id)),
+      or(isNull(clientProfilesTable.userId), ne(clientProfilesTable.onboardingStage, "complete")),
+    ));
+  counts.onboardingCompleted = finished.length;
+  if (apply) {
+    for (const { id } of finished) {
+      await db.insert(clientProfilesTable).values({ userId: id, onboardingStage: "complete" })
+        .onConflictDoUpdate({ target: clientProfilesTable.userId, set: { onboardingStage: "complete" } });
     }
   }
   console.log(`Pathway migration ${apply ? "apply" : "dry run"}: ${JSON.stringify(counts)}`);

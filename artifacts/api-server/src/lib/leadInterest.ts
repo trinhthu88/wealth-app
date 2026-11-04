@@ -1,5 +1,5 @@
 import { and, asc, eq, inArray, ne, sql, desc } from "drizzle-orm";
-import { db, healthScoresTable, leadsTable, profilesTable, type Lead } from "@workspace/db";
+import { db, clientProfilesTable, healthScoresTable, leadsTable, profilesTable, type Lead } from "@workspace/db";
 import type { CheckpointCode } from "@workspace/tier-policy";
 
 /**
@@ -41,13 +41,16 @@ export async function registerInterest(
 export async function withLinkedPerson<T extends Lead>(leads: T[]): Promise<T[]> {
   const userIds = [...new Set(leads.map((l) => l.userId).filter((id): id is string => !!id))];
   if (userIds.length === 0) return leads;
-  const [profiles, scores] = await Promise.all([
+  const [profiles, scores, clientRows] = await Promise.all([
     db.select({ id: profilesTable.id, email: profilesTable.email, fullName: profilesTable.fullName })
       .from(profilesTable).where(inArray(profilesTable.id, userIds)),
     db.selectDistinctOn([healthScoresTable.userId], { userId: healthScoresTable.userId, overallScore: healthScoresTable.overallScore })
       .from(healthScoresTable).where(inArray(healthScoresTable.userId, userIds))
       .orderBy(healthScoresTable.userId, desc(healthScoresTable.scoreDate), desc(healthScoresTable.createdAt)),
+    db.select({ userId: clientProfilesTable.userId, status: clientProfilesTable.status })
+      .from(clientProfilesTable).where(inArray(clientProfilesTable.userId, userIds)),
   ]);
+  const pendingPayment = new Set(clientRows.filter((c) => c.status === "pending_payment").map((c) => c.userId));
   const profileById = new Map(profiles.map((p) => [p.id, p]));
   const scoreByUser = new Map(scores.map((s) => [s.userId, s.overallScore]));
   return leads.map((lead) => {
@@ -58,6 +61,7 @@ export async function withLinkedPerson<T extends Lead>(leads: T[]): Promise<T[]>
       email: profile.email,
       firstName: profile.fullName,
       healthScore: scoreByUser.get(profile.id) ?? null,
+      pendingPayment: pendingPayment.has(profile.id),
     };
   });
 }

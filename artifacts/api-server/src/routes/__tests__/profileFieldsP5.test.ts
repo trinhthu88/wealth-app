@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import request from "supertest";
+import { grantMembership } from "./helpers/membership";
 import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -74,7 +75,7 @@ describe("a client_profiles row is not an investment client", () => {
     const rows = await db.select().from(clientProfilesTable).where(eq(clientProfilesTable.userId, userId));
     expect(rows).toHaveLength(1);
     expect(rows[0].advisorId).toBe(advisorId);
-    expect(rows[0].status).toBe("active");
+    expect(rows[0].status).toBe("pending_payment");
     expect(rows[0].riskProfile).toBe("balanced"); // preferences kept on the same row
 
     const after = await request(app).get("/api/advisor/clients").set(asUser(advisorId)).expect(200);

@@ -11,7 +11,7 @@ export default function AdvisorCard() {
   if (!entitlements) return null;
 
   const { advisor } = entitlements;
-  const state = advisorCardState(entitlements.tier, entitlements.leadStatus, !!advisor);
+  const state = advisorCardState(entitlements.tier, entitlements.leadStatus, !!advisor, entitlements.membership.pendingPayment);
   const advisorName = advisor?.name ?? "Your advisor";
   const firstName = advisorName.split(" ")[0];
   const initials = advisorName.split(" ").map((part) => part[0]).join("");
@@ -23,7 +23,20 @@ export default function AdvisorCard() {
         <p className="mb-4 mt-1 text-[14px] leading-snug text-ink-40">
           An advisor can look through your goals and numbers with you, whenever you're ready.
         </p>
-        <TalkToAdvisorButton source="C7_direct" location="dashboard_advisor_card" className={ACTION} />
+        <div className="flex flex-wrap items-center gap-4">
+          <TalkToAdvisorButton source="C7_direct" location="dashboard_advisor_card" className={ACTION} />
+          <Link href="/client/activate" className="text-[14px] font-semibold text-green underline underline-offset-4">Become a member</Link>
+        </div>
+      </section>
+    );
+  }
+
+  if (state === "activate") {
+    return (
+      <section className="rounded-[24px] bg-surface p-5" data-testid="advisor-card-activate">
+        <h2 className="text-[16px] font-semibold text-forest">{advisorName} is your advisor</h2>
+        <p className="mb-4 mt-1 text-[14px] leading-snug text-ink-40">Activate your membership to start working together.</p>
+        <Link href="/client/activate" className={ACTION}>Activate to start</Link>
       </section>
     );
   }

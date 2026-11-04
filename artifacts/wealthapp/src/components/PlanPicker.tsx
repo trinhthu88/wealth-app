@@ -4,10 +4,12 @@ import { apiFetch } from "@/lib/api";
 import { track } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { ANNUAL_MONTHS_FREE, TRIAL_DAYS } from "@workspace/tier-policy";
 
-type PlanKey = "monthly" | "yearly";
+type PlanKey = "monthly" | "annual";
 
 interface PriceInfo {
+  plan: "member_monthly" | "member_annual";
   label: string;
   amount: number; // cents
   interval: string;
@@ -15,7 +17,7 @@ interface PriceInfo {
 
 interface PricesResponse {
   monthly: PriceInfo;
-  yearly: PriceInfo;
+  annual: PriceInfo;
 }
 
 function formatDollars(cents: number): string {
@@ -23,7 +25,7 @@ function formatDollars(cents: number): string {
 }
 
 export default function PlanPicker() {
-  const [selectedPlan, setSelectedPlan] = useState<PlanKey>("yearly");
+  const [selectedPlan, setSelectedPlan] = useState<PlanKey>("annual");
   const [loading, setLoading] = useState(false);
 
   const { data: prices } = useQuery<PricesResponse>({
@@ -40,12 +42,13 @@ export default function PlanPicker() {
 
   async function handleGetStarted() {
     const price = prices?.[selectedPlan];
-    if (price) track("checkout_started", { plan: selectedPlan, price: price.amount / 100 });
+    if (!price) return;
+    track("checkout_started", { plan: selectedPlan, price: price.amount / 100 });
     setLoading(true);
     try {
-      const data = await apiFetch<{ url: string }>("/billing/create-checkout-session", {
+      const data = await apiFetch<{ url: string }>("/membership/checkout", {
         method: "POST",
-        body: JSON.stringify({ plan: selectedPlan }),
+        body: JSON.stringify({ plan: price.plan }),
       });
       window.location.href = data.url;
     } catch {
@@ -56,9 +59,8 @@ export default function PlanPicker() {
   }
 
   const monthly = prices?.monthly;
-  const yearly = prices?.yearly;
-  const yearlyMonthlyEquivalent = yearly ? yearly.amount / 100 / 12 : null;
-  const savePct = monthly && yearly ? Math.round((1 - yearly.amount / (monthly.amount * 12)) * 100) : null;
+  const annual = prices?.annual;
+  const annualMonthlyEquivalent = annual ? annual.amount / 100 / 12 : null;
 
   return (
     <div className="space-y-4">
@@ -81,24 +83,24 @@ export default function PlanPicker() {
 
         <button
           type="button"
-          onClick={() => selectPlan("yearly")}
-          aria-pressed={selectedPlan === "yearly"}
+          onClick={() => selectPlan("annual")}
+          aria-pressed={selectedPlan === "annual"}
           className={cn(
             "relative text-left rounded-2xl border-2 bg-surface p-4 transition-colors",
-            selectedPlan === "yearly" ? "border-green" : "border-hairline"
+            selectedPlan === "annual" ? "border-green" : "border-hairline"
           )}
         >
           <span className="absolute -top-2.5 right-4 rounded-full bg-green text-white text-[10px] font-semibold px-2.5 py-1">
             Best value
           </span>
-          <p className="text-[13px] font-semibold text-forest">Yearly</p>
+          <p className="text-[13px] font-semibold text-forest">Annual</p>
           <p className="font-display text-[22px] font-bold text-forest mt-1 leading-none">
-            {yearly ? formatDollars(yearly.amount) : "—"}
+            {annual ? formatDollars(annual.amount) : "—"}
             <span className="text-[13px] font-medium text-ink-40"> / year</span>
           </p>
-          {yearlyMonthlyEquivalent !== null && (
+          {annualMonthlyEquivalent !== null && (
             <p className="text-[12px] text-ink-40 mt-1">
-              ${yearlyMonthlyEquivalent.toFixed(2)} / month{savePct !== null ? ` · save ${savePct}%` : ""}
+              ${annualMonthlyEquivalent.toFixed(2)} / month · {ANNUAL_MONTHS_FREE} months free
             </p>
           )}
         </button>
@@ -110,7 +112,7 @@ export default function PlanPicker() {
         disabled={loading || !prices}
         className="flex items-center justify-center w-full h-12 rounded-xl bg-green text-white text-[15px] font-semibold hover:bg-forest-700 transition-colors disabled:opacity-60"
       >
-        {loading ? "Redirecting…" : "Start my plan →"}
+        {loading ? "Redirecting…" : `Start my ${TRIAL_DAYS}-day free trial →`}
       </button>
     </div>
   );

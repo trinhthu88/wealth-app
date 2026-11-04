@@ -12,7 +12,7 @@ import { Plus, Star, Calendar, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-interface Lead { id: string; email: string; firstName: string | null; source: string | null; status: string; quizResult: unknown; healthScore: number | null; notes: string | null; createdAt: string; convertedUserId: string | null; }
+interface Lead { id: string; email: string; firstName: string | null; source: string | null; status: string; quizResult: unknown; healthScore: number | null; notes: string | null; createdAt: string; convertedUserId: string | null; pendingPayment?: boolean; }
 
 // unassigned (default) → active (assigned to an advisor) → cold | churned |
 // client. Pre-redesign values (new/contacted/qualified/lost/converted) are
@@ -155,6 +155,7 @@ export default function AdvisorLeads() {
                 </div>
                 <div className="flex items-center gap-4 shrink-0">
                   <span className={cn("text-[13px] px-3 py-1 rounded-full font-medium capitalize", STATUS_COLORS[l.status] ?? "bg-surface border border-hairline text-ink-60")}>{l.status}</span>
+                  {l.pendingPayment && <span className="ml-1.5 text-[13px] px-3 py-1 rounded-full font-medium inline-block bg-surface border border-hairline text-amber-ink">Pending payment</span>}
                   {l.convertedUserId ? (
                     <span className="text-[13px] text-ink-40 italic">Client account created</span>
                   ) : (

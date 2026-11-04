@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import {
   db,
   profilesTable,
-  clientProfilesTable,
+  clientProfilesTable, membershipsTable,
   financialGoalsTable,
   budgetEntriesTable,
   budgetTransactionsTable,
@@ -228,6 +228,7 @@ async function run() {
   const elenaId = await createClerkUser("elena.novak@demo.wealthapp.io", "Elena Novak");
   await upsertProfile({ id: elenaId, email: "elena.novak@demo.wealthapp.io", fullName: "Elena Novak", role: "investment_client", totalInvestments: "185000", investmentRatePercent: "8.5" });
 
+  await db.insert(membershipsTable).values({ userId: elenaId, status: "active", source: "comped", reason: "Demo data" }).onConflictDoNothing();
   await db.insert(clientProfilesTable).values({
     userId: elenaId, advisorId: advisor.id, status: "active", kycStatus: "verified",
     riskProfile: "growth", riskScore: 74, investmentStyle: "growth", indicativeAmount: "250000",
@@ -298,6 +299,7 @@ async function run() {
   const jamesId = await createClerkUser("james.whitfield@demo.wealthapp.io", "James Whitfield");
   await upsertProfile({ id: jamesId, email: "james.whitfield@demo.wealthapp.io", fullName: "James Whitfield", role: "investment_client", totalInvestments: "142000", investmentRatePercent: "7.2" });
 
+  await db.insert(membershipsTable).values({ userId: jamesId, status: "active", source: "comped", reason: "Demo data" }).onConflictDoNothing();
   await db.insert(clientProfilesTable).values({
     userId: jamesId, advisorId: advisor.id, status: "active", kycStatus: "verified",
     riskProfile: "balanced", riskScore: 58, investmentStyle: "balanced", indicativeAmount: "150000",

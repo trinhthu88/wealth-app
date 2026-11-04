@@ -1,7 +1,8 @@
-import type { CheckpointCode, Tier } from "@workspace/tier-policy";
+import { MEMBERSHIP_CHECKPOINTS, TRIAL_ENDING_NOTICE_DAYS, type CheckpointCode, type Tier } from "@workspace/tier-policy";
 
 /** Most specific first. The brief's order, then the Track B rung's codes. */
 export const CHECKPOINT_PRIORITY: readonly CheckpointCode[] = [
+  "C12_lapsed", "C11_trial_ending",
   "C2_goal_slot", "C5_investable", "C3_off_track", "C4_surplus", "C6_engaged", "C1_score_ready", "C7_direct",
   "C9_under_management", "C10_coast_point", "C8_plan_preview",
 ];
@@ -71,6 +72,7 @@ export interface CheckpointContext {
   existingCheckpoints: ExistingCheckpoint[];
   leadStatus: string | null;
   leadUpdatedAt: Date | null;
+  membership: { status: string; trialEndsAt: Date | null; cancelAtPeriodEnd: boolean } | null;
   now: Date;
 }
 
@@ -89,12 +91,15 @@ export function isSuppressed(
   ctx: Pick<CheckpointContext, "existingCheckpoints" | "leadStatus" | "leadUpdatedAt" | "now">,
 ): boolean {
   const { leadStatus, leadUpdatedAt, now } = ctx;
-  // While someone is already on the case, nothing new fires.
-  if (leadStatus === "unassigned" || leadStatus === "active") return true;
-  // The design re-arms checkpoints 90 days after a lead goes cold or churns.
-  if ((leadStatus === "cold" || leadStatus === "churned") && leadUpdatedAt
-    && now.getTime() - leadUpdatedAt.getTime() < LEAD_REARM_DAYS * DAY_MS) {
-    return true;
+  // C11 and C12 are about the member's own billing, so the lead rules don't apply to them.
+  if (!MEMBERSHIP_CHECKPOINTS.includes(code)) {
+    // While someone is already on the case, nothing new fires.
+    if (leadStatus === "unassigned" || leadStatus === "active") return true;
+    // The design re-arms checkpoints 90 days after a lead goes cold or churns.
+    if ((leadStatus === "cold" || leadStatus === "churned") && leadUpdatedAt
+      && now.getTime() - leadUpdatedAt.getTime() < LEAD_REARM_DAYS * DAY_MS) {
+      return true;
+    }
   }
   const history = ctx.existingCheckpoints.filter((c) => c.code === code);
   // The one already open is not fired again.
@@ -194,6 +199,19 @@ function coastPointCandidate(ctx: CheckpointContext): CheckpointCandidate | null
 }
 
 /**
+ * DECISION: C11 fires for every trialing member who hasn't already chosen to cancel. The addendum
+ * also says "with no card on file", but its final decision makes a card required, so that
+ * condition would mean C11 never fires. Reminding people before the first charge is what's left.
+ */
+function trialEndingCandidate(ctx: CheckpointContext): CheckpointCandidate | null {
+  const m = ctx.membership;
+  if (m?.status !== "trialing" || !m.trialEndsAt || m.cancelAtPeriodEnd) return null;
+  const msLeft = m.trialEndsAt.getTime() - ctx.now.getTime();
+  if (msLeft <= 0 || msLeft > TRIAL_ENDING_NOTICE_DAYS * DAY_MS) return null;
+  return { code: "C11_trial_ending", snapshot: { trialEndsAt: m.trialEndsAt.toISOString() } };
+}
+
+/**
  * Pure: which checkpoints this user's data qualifies for right now, after the suppression
  * rules. C2 and the sixth-holding path of C5 are raised by requireAllowance, not here.
  *
@@ -201,16 +219,19 @@ function coastPointCandidate(ctx: CheckpointContext): CheckpointCandidate | null
  * wires components to those codes, which would then never appear. Their triggers come from
  * the design's catalogue. Tiers follow the design: C1, C2, C5, C6 and C10 are free only;
  * C3, C4 and C8 reach Track B too, because their components are Track B CTAs today; C9 is
- * Track B only. Track A is the top rung, so nothing fires for it.
+ * Track B only. Track A is the top rung, so only the trial reminder fires for it. C12 is raised
+ * by the membership store at the moment of the lapse, so it fires once and not on every evaluation.
  */
 export function evaluate(ctx: CheckpointContext): CheckpointCandidate[] {
-  if (ctx.tier === "track_a") return [];
-  const found: (CheckpointCandidate | null)[] = ctx.tier === "free"
+  const trialEnding = trialEndingCandidate(ctx);
+  const found: (CheckpointCandidate | null)[] = ctx.tier === "track_a"
+    ? [trialEnding]
+    : ctx.tier === "free"
     ? [
         surplusCandidate(ctx), investableCandidate(ctx), offTrackCandidate(ctx), scoreReadyCandidate(ctx),
         engagedCandidate(ctx), planPreviewCandidate(ctx), coastPointCandidate(ctx),
       ]
-    : [surplusCandidate(ctx), offTrackCandidate(ctx), planPreviewCandidate(ctx), underManagementCandidate(ctx)];
+    : [trialEnding, surplusCandidate(ctx), offTrackCandidate(ctx), planPreviewCandidate(ctx), underManagementCandidate(ctx)];
   return found.filter((c): c is CheckpointCandidate => !!c && !isSuppressed(c.code, ctx));
 }
 

@@ -8,7 +8,7 @@ function ctx(overrides: Partial<CheckpointContext> = {}): CheckpointContext {
   return {
     tier: "free", onboardingComplete: false, signedUpAt: daysAgo(10), hasInforcePlan: false,
     goals: [], holdings: [], budgetMonths: [], scores: [], engagement: null,
-    existingCheckpoints: [], leadStatus: null, leadUpdatedAt: null, now: NOW,
+    existingCheckpoints: [], leadStatus: null, leadUpdatedAt: null, membership: null, now: NOW,
     ...overrides,
   };
 }
@@ -206,5 +206,47 @@ describe("cool-down and lead rules", () => {
   });
   it("a client's lead status does not suppress", () => {
     expect(isSuppressed("C4_surplus", rules([], "client", daysAgo(1)))).toBe(false);
+  });
+});
+
+describe("membership checkpoints", () => {
+  const trial = (days: number, cancelAtPeriodEnd = false) => ({
+    membership: { status: "trialing", trialEndsAt: new Date(NOW.getTime() + days * 86_400_000), cancelAtPeriodEnd },
+  });
+  const codes = (c: CheckpointContext) => evaluate(c).map((x) => x.code);
+
+  it("C11 fires two days before the trial's end, not three", () => {
+    expect(codes(ctx({ tier: "track_b", ...trial(3) }))).not.toContain("C11_trial_ending");
+    expect(codes(ctx({ tier: "track_b", ...trial(2) }))).toContain("C11_trial_ending");
+    expect(codes(ctx({ tier: "track_b", ...trial(-1) }))).not.toContain("C11_trial_ending");
+  });
+
+  it("C11 reaches Track A, the one thing that fires there", () => {
+    expect(codes(ctx({ tier: "track_a", ...trial(1) }))).toEqual(["C11_trial_ending"]);
+    expect(codes(ctx({ tier: "track_a" }))).toEqual([]);
+  });
+
+  it("C11 skips a member who has already chosen to cancel", () => {
+    expect(codes(ctx({ tier: "track_b", ...trial(1, true) }))).not.toContain("C11_trial_ending");
+  });
+
+  it("the lead rules don't silence C11 and C12, but do silence the rest", () => {
+    const base = { existingCheckpoints: [], leadStatus: "unassigned", leadUpdatedAt: null, now: NOW };
+    expect(isSuppressed("C11_trial_ending", base)).toBe(false);
+    expect(isSuppressed("C12_lapsed", base)).toBe(false);
+    expect(isSuppressed("C2_goal_slot", base)).toBe(true);
+  });
+
+  it("C12 cools down for 30 days after it is dismissed", () => {
+    const history = (ago: number): ExistingCheckpoint[] => [{ id: "1", code: "C12_lapsed", firedAt: daysAgo(ago + 1), dismissedAt: daysAgo(ago), acceptedAt: null }];
+    const rest = { leadStatus: null, leadUpdatedAt: null, now: NOW };
+    expect(isSuppressed("C12_lapsed", { ...rest, existingCheckpoints: history(29) })).toBe(true);
+    expect(isSuppressed("C12_lapsed", { ...rest, existingCheckpoints: history(31) })).toBe(false);
+  });
+
+  it("a membership checkpoint replaces an open conversion prompt, and not the other way round", () => {
+    const open = (code: string): ExistingCheckpoint[] => [{ id: "1", code, firedAt: daysAgo(1), dismissedAt: null, acceptedAt: null }];
+    expect(decide([{ code: "C11_trial_ending", snapshot: {} }], open("C4_surplus")).fire?.code).toBe("C11_trial_ending");
+    expect(decide([{ code: "C2_goal_slot", snapshot: {} }], open("C12_lapsed")).fire).toBeNull();
   });
 });

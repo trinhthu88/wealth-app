@@ -1,7 +1,8 @@
 import { and, eq, isNull } from "drizzle-orm";
 import {
-  db, profilesTable, clientProfilesTable, leadsTable, advisorAssignmentsTable,
+  db, profilesTable, clientProfilesTable, leadsTable, advisorAssignmentsTable, membershipsTable,
 } from "@workspace/db";
+import { isRowActive } from "./membershipStore";
 
 export type PromoteLeadResult =
   | { ok: true; profile: typeof profilesTable.$inferSelect; clientProfile: typeof clientProfilesTable.$inferSelect }
@@ -22,6 +23,14 @@ export type PromoteLeadResult =
  * Runs the role flip, client_profiles upsert, and convertedUserId stamp as a
  * single transaction — a promotion that partially succeeds (role flipped but
  * no client_profiles row, or vice versa) is worse than not promoting at all.
+ *
+ * Without an active membership the client starts as pending_payment: their tier stays free until
+ * the webhook confirms payment.
+ *
+ * DECISION: promotion does not create the Checkout session, though the addendum says it should.
+ * The session is created when the client presses Activate. A Stripe session expires within 24
+ * hours while the client's next sign-in may be later, and it is fixed to one price before they have
+ * chosen monthly or annual. It would also put a network call to Stripe in the way of promotion.
  */
 export async function promoteLeadToClient(
   lead: typeof leadsTable.$inferSelect,
@@ -41,6 +50,9 @@ export async function promoteLeadToClient(
     return { ok: false, httpStatus: 404, error: "Linked profile not found" };
   }
 
+  const [membership] = await db.select().from(membershipsTable).where(eq(membershipsTable.userId, userId));
+  const status = isRowActive(membership) ? "active" : "pending_payment";
+
   const { updatedProfile, clientProfile } = await db.transaction(async (tx) => {
     const nextProfile = profile.role === "investment_client"
       ? profile
@@ -50,13 +62,13 @@ export async function promoteLeadToClient(
     const [existingCp] = await tx.select().from(clientProfilesTable).where(eq(clientProfilesTable.userId, userId));
     const nextCp = existingCp
       ? (await tx.update(clientProfilesTable).set({
-          advisorId, status: "active", updatedAt: new Date(),
+          advisorId, status, updatedAt: new Date(),
         }).where(eq(clientProfilesTable.userId, userId)).returning())[0]
       : (await tx.insert(clientProfilesTable).values({
-          userId, advisorId, status: "active",
+          userId, advisorId, status,
         }).onConflictDoUpdate({
           target: clientProfilesTable.userId,
-          set: { advisorId, status: "active", updatedAt: new Date() },
+          set: { advisorId, status, updatedAt: new Date() },
         }).returning())[0];
 
     const openAssignments = await tx.select({

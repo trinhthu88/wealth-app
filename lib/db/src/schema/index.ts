@@ -22,3 +22,4 @@ export * from "./solConversations";
 export * from "./subscriptions";
 export * from "./conversionCheckpoints";
 export * from "./userEngagement";
+export * from "./memberships";

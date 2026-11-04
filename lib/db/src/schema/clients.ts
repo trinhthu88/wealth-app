@@ -4,7 +4,8 @@ import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
-// status: active | paused | churned only — this table represents an
+// status: pending_payment | active | paused | churned. pending_payment is a promoted client
+// whose membership is not active yet. This table represents an
 // already-promoted client's account health, not the pre-client pipeline.
 // "prospect"/"pending" no longer belong here; that stage now lives on the
 // lead (see leads.ts) until the lead-status redesign's promotion transaction
@@ -51,7 +52,7 @@ export const clientProfilesTable = pgTable("client_profiles", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (t) => [
-  check("client_profiles_status_check", sql`${t.status} IN ('active', 'paused', 'churned')`),
+  check("client_profiles_status_check", sql`${t.status} IN ('pending_payment', 'active', 'paused', 'churned')`),
   check("client_profiles_onboarding_stage_check", sql`${t.onboardingStage} IN ('not_started', 'profile', 'complete')`),
   check("client_profiles_first_focus_check", sql`${t.firstFocus} IN ('know_my_money', 'start_investing', 'save_for_big', 'organise_existing', 'plan_retirement')`),
   check("client_profiles_risk_profile_check", sql`${t.riskProfile} IN ('conservative', 'balanced', 'growth')`),

@@ -7,6 +7,17 @@
 export type Tier = "free" | "track_b" | "track_a";
 export type Gate = "full" | "limited" | "preview" | "locked" | "after_assign";
 
+/** The product owner's final membership decisions (2026-11-04). Change them here only. */
+export const TRIAL_DAYS = 7;
+export const GRACE_DAYS = 7;
+export const ANNUAL_MONTHS_FREE = 2;
+export const TRIAL_ENDING_NOTICE_DAYS = 2;
+
+export const MEMBERSHIP_STATUSES = ["none", "trialing", "active", "past_due", "canceled"] as const;
+export type MembershipStatus = (typeof MEMBERSHIP_STATUSES)[number];
+export const MEMBERSHIP_PLANS = ["member_monthly", "member_annual"] as const;
+export type MembershipPlan = (typeof MEMBERSHIP_PLANS)[number];
+
 export const ALL_SCENARIO_TYPES = [
   "increase_monthly",
   "add_lump_sum",
@@ -26,9 +37,10 @@ const TRACK_B = {
   solPerDay: 100,
   coastPoint: "full" as Gate,
   advisedPlans: "preview" as Gate,
-  messages: "full" as Gate,
-  documents: "full" as Gate,
-  plan: "full" as Gate,
+  // Membership does not bring these; an advisor does. A self-serve member waits for assignment.
+  messages: "after_assign" as Gate,
+  documents: "after_assign" as Gate,
+  plan: "after_assign" as Gate,
 };
 
 export const TIER_LIMITS: Record<Tier, typeof TRACK_B> = {
@@ -46,7 +58,8 @@ export const TIER_LIMITS: Record<Tier, typeof TRACK_B> = {
     plan: "locked",
   },
   track_b: TRACK_B,
-  track_a: { ...TRACK_B, advisedPlans: "full" },
+  // Staff resolve here and share these routes, so nothing on this rung waits for an assignment.
+  track_a: { ...TRACK_B, advisedPlans: "full", messages: "full", documents: "full", plan: "full" },
 };
 
 export const CHECKPOINT_CODES = [
@@ -60,8 +73,19 @@ export const CHECKPOINT_CODES = [
   "C8_plan_preview",
   "C9_under_management",
   "C10_coast_point",
+  "C11_trial_ending",
+  "C12_lapsed",
 ] as const;
 export type CheckpointCode = (typeof CHECKPOINT_CODES)[number];
+
+/** About the member's own membership, not a route to an advisor: they never create a lead. */
+export const MEMBERSHIP_CHECKPOINTS: readonly CheckpointCode[] = ["C11_trial_ending", "C12_lapsed"];
+
+/** What each door opens, for locked-feature copy. They differ, so the screens say which is which. */
+export const UNLOCKS = {
+  membership: "unlimited goals and holdings, 12-month budget and 24-month trend, all six scenarios, your full coast point, and more time with Sol",
+  advisor: "messages, documents, your financial plan and milestones, review requests and advised plans",
+} as const;
 
 export const CAPABILITIES = [
   "goals",
@@ -121,12 +145,38 @@ export interface Entitlements {
   openCheckpoint: Checkpoint | null;
 }
 
+/** The server's view of the caller's membership, added to GET /api/me/entitlements. */
+export interface MembershipSummary {
+  status: MembershipStatus;
+  plan: MembershipPlan | null;
+  currentPeriodEnd: string | null;
+  trialEndsAt: string | null;
+  source: string | null;
+  /** The route that opens the Stripe billing portal, or null when there is nothing to manage. */
+  manageUrl: string | null;
+  isActive: boolean;
+  /** Promoted by an advisor and waiting on the first payment. */
+  pendingPayment: boolean;
+}
+
 export type AllowanceResult =
   | { allowed: true; gate: Gate }
   | { allowed: false; gate: Gate; limit: number | null; checkpoint: CheckpointCode | null };
 
+/** The last moment a past_due membership still counts as active. */
+export function membershipGraceUntil(currentPeriodEnd: Date | null): Date | null {
+  return currentPeriodEnd ? new Date(currentPeriodEnd.getTime() + GRACE_DAYS * 86_400_000) : null;
+}
+
+/** Active for entitlement purposes: trialing, active, or past_due inside the grace window. */
+export function isMembershipActive(status: MembershipStatus | null, graceUntil: Date | null, now: Date = new Date()): boolean {
+  if (status === "trialing" || status === "active") return true;
+  return status === "past_due" && !!graceUntil && now <= graceUntil;
+}
+
 /**
- * Tier is derived from the role and the user's plans, never stored.
+ * Tier is derived from the role, the user's plans and their membership, never stored.
+ * A client without an active membership gets free limits on the same data.
  *
  * DECISION: clientTrack is accepted but does not decide the tier. The brief names
  * client_profiles.clientTrack as a source, but that column is deprecated and no
@@ -138,10 +188,17 @@ export type AllowanceResult =
  * who share the /conversations and /documents routes with clients. An unknown role or
  * a missing profile resolves to free, the strictest tier.
  */
-export function resolveTier(role: string, _clientTrack: string | null, hasInforcePlan: boolean): Tier {
+export function resolveTier(
+  role: string,
+  _clientTrack: string | null,
+  hasInforcePlan: boolean,
+  membershipStatus: MembershipStatus | null,
+  graceUntil: Date | null,
+  now: Date = new Date(),
+): Tier {
   if (role === "advisor" || role === "super_admin") return "track_a";
-  if (role === "investment_client") return hasInforcePlan ? "track_a" : "track_b";
-  return "free";
+  if (role !== "investment_client" || !isMembershipActive(membershipStatus, graceUntil, now)) return "free";
+  return hasInforcePlan ? "track_a" : "track_b";
 }
 
 function capLimit(tier: Tier, capability: Capability): number | null {
@@ -246,15 +303,15 @@ export function earliestTrendDate(tier: Tier, now: Date = new Date()): string {
 export function gateMessage(capability: Capability, limit: number | null): string {
   switch (capability) {
     case "goals":
-      return `The free plan covers ${limit} active goal. An advisor can plan every goal with you.`;
+      return `The free plan covers ${limit} active goal. Membership removes the limit.`;
     case "holdings":
-      return `The free plan tracks ${limit} holdings. An advisor can look at your whole portfolio with you.`;
+      return `The free plan tracks ${limit} holdings. Membership removes the limit.`;
     case "scenarios":
-      return "The free plan includes the increase monthly scenario. An advisor can model the others with you.";
+      return "The free plan includes the increase monthly scenario. Membership opens all six.";
     case "sol":
-      return `You've used today's ${limit} messages with Sol. They reset tomorrow.`;
+      return `You've used today's ${limit} messages with Sol. They reset tomorrow, and membership gives you more.`;
     case "coastPoint":
-      return "Your coast point is something an advisor can walk through with you.";
+      return "Your full coast point opens with membership.";
     case "advisedPlans":
       return "Advised plans start with a conversation with an advisor.";
     case "messages":

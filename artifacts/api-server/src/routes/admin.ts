@@ -2,17 +2,28 @@ import { Router, type IRouter } from "express";
 import { and, eq, inArray, desc, isNull } from "drizzle-orm";
 import {
   db, profilesTable, clientProfilesTable, assetClassBenchmarksTable,
-  advisedStrategyReturnsTable, advisedPlansTable, advisorAssignmentsTable,
+  advisedStrategyReturnsTable, advisedPlansTable, advisorAssignmentsTable, membershipsTable,
   roleSchema, clientStatusSchema, normalizeRiskProfile,
 } from "@workspace/db";
 import { requireAuth, requireRole } from "../middlewares/requireAuth";
 import { createUserWithProfile } from "../lib/createUserWithProfile";
 import { computeNetWorth } from "../lib/netWorthService";
+import { setCompedMembership } from "../lib/membershipStore";
+import { z } from "zod/v4";
 
 const router: IRouter = Router();
 const adminGuard = [requireAuth, requireRole("super_admin")];
+const membershipBody = z.object({ action: z.enum(["comp", "revoke"]), reason: z.string().trim().min(1) });
 
 // ── Users ──────────────────────────────────────────────────────────────────
+
+router.put("/admin/users/:id/membership", ...adminGuard, async (req, res): Promise<void> => {
+  const parsed = membershipBody.safeParse(req.body ?? {});
+  if (!parsed.success) { res.status(400).json({ error: "action (comp or revoke) and a reason are required" }); return; }
+  const result = await setCompedMembership(req.params.id as string, parsed.data.action, parsed.data.reason);
+  if (!result.ok) { res.status(result.httpStatus).json({ error: result.error }); return; }
+  res.json(result.membership);
+});
 
 router.get("/admin/users", ...adminGuard, async (req, res): Promise<void> => {
   const users = await db.select().from(profilesTable).orderBy(desc(profilesTable.createdAt));
@@ -156,8 +167,11 @@ router.get("/admin/clients", ...adminGuard, async (req, res): Promise<void> => {
     riskProfile: clientProfilesTable.riskProfile,
     investmentStyle: clientProfilesTable.investmentStyle,
     advisorId: clientProfilesTable.advisorId,
+    membershipSource: membershipsTable.source,
+    membershipStatus: membershipsTable.status,
   }).from(profilesTable)
     .innerJoin(clientProfilesTable, eq(clientProfilesTable.userId, profilesTable.id))
+    .leftJoin(membershipsTable, eq(membershipsTable.userId, profilesTable.id))
     .where(eq(profilesTable.role, "investment_client"))
     .orderBy(desc(profilesTable.createdAt));
 

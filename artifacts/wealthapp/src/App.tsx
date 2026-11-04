@@ -10,6 +10,8 @@ import { useProfile } from "@/hooks/useProfile";
 import { useOnboardingStage } from "@/hooks/useClientTrack";
 import { resolveRoleRedirectPath } from "@/lib/roleRedirect";
 import { resolveLegacyClientLocation } from "@/lib/clientNavigation";
+import { CLIENT_SCREEN_ROLES } from "@/lib/clientRoutes";
+import { useEntitlements } from "@/hooks/useEntitlements";
 import { setTokenGetter } from "@/lib/api";
 import { trackPageView, resetUser } from "@/lib/analytics";
 import { useEffect, useRef, lazy, Suspense } from "react";
@@ -36,6 +38,7 @@ const ClientNetWorth = lazy(() => import("@/pages/client/networth"));
 const ClientDocuments = lazy(() => import("@/pages/client/documents"));
 const ClientMessages = lazy(() => import("@/pages/client/messages"));
 const ClientOnboarding = lazy(() => import("@/pages/client/ClientOnboarding"));
+const ActivateMembership = lazy(() => import("@/pages/client/ActivateMembership"));
 const ClientPackageDetail = lazy(() => import("@/pages/client/package-detail"));
 const ClientScenarios = lazy(() => import("@/pages/client/ClientScenarios"));
 const ClientBudget = lazy(() => import("@/pages/client/budget"));
@@ -183,10 +186,11 @@ function RoleRedirect() {
   const { profile, isLoading } = useProfile();
   const usesClientScreens = profile?.role === "investment_client" || profile?.role === "free_user";
   const { onboardingStage, isLoading: trackLoading } = useOnboardingStage(usesClientScreens);
+  const { entitlements, isLoading: entitlementsLoading } = useEntitlements();
 
-  if (isLoading || trackLoading) return <PageLoader />;
+  if (isLoading || trackLoading || entitlementsLoading) return <PageLoader />;
   if (!profile) return <Redirect to="/sign-in" />;
-  return <Redirect to={resolveRoleRedirectPath(profile.role, onboardingStage)} />;
+  return <Redirect to={resolveRoleRedirectPath(profile.role, onboardingStage, !!entitlements?.membership.pendingPayment)} />;
 }
 
 function SignInPage() {
@@ -239,22 +243,23 @@ function AppRoutes() {
       {/* The free pages are gone; old links land on the right client screen. */}
       <Route path="/free/*?" component={() => <Redirect to="/dashboard" />} />
 
-      <Route path="/client/onboarding" component={() => <ProtectedRoute component={ClientOnboarding} />} />
-      <Route path="/client/dashboard" component={() => <ProtectedRoute component={ClientDashboard} />} />
-      <Route path="/client/money" component={() => <ProtectedRoute component={ClientBudget} />} />
+      <Route path="/client/activate" component={() => <ProtectedRoute component={ActivateMembership} role={CLIENT_SCREEN_ROLES} />} />
+      <Route path="/client/onboarding" component={() => <ProtectedRoute component={ClientOnboarding} role={CLIENT_SCREEN_ROLES} />} />
+      <Route path="/client/dashboard" component={() => <ProtectedRoute component={ClientDashboard} role={CLIENT_SCREEN_ROLES} />} />
+      <Route path="/client/money" component={() => <ProtectedRoute component={ClientBudget} role={CLIENT_SCREEN_ROLES} />} />
       <Route path="/client/wealth" component={() => <Redirect to="/client/wealth/overview" />} />
-      <Route path="/client/wealth/overview" component={() => <ProtectedRoute component={ClientNetWorth} />} />
-      <Route path="/client/wealth/property-debts" component={() => <ProtectedRoute component={ClientNetWorth} />} />
-      <Route path="/client/wealth/investments" component={() => <ProtectedRoute component={ClientPortfolio} />} />
-      <Route path="/client/wealth/investments/holding/:holdingId" component={() => <ProtectedRoute component={HoldingDetail} />} />
-      <Route path="/client/wealth/investments/:planId/funds/:fundCode" component={() => <ProtectedRoute component={FundDetail} />} />
-      <Route path="/client/wealth/investments/packages/:id" component={() => <ProtectedRoute component={ClientPackageDetail} />} />
-      <Route path="/client/wealth/investments/:planId" component={() => <ProtectedRoute component={AdvisedPlanDetail} />} />
-      <Route path="/client/goals/goals" component={() => <ProtectedRoute component={ClientGoals} />} />
-      <Route path="/client/goals/my-plan" component={() => <ProtectedRoute component={ClientPlan} />} />
-      <Route path="/client/goals/what-if" component={() => <ProtectedRoute component={ClientScenarios} />} />
-      <Route path="/client/advisor/messages" component={() => <ProtectedRoute component={ClientMessages} />} />
-      <Route path="/client/advisor/documents" component={() => <ProtectedRoute component={ClientDocuments} />} />
+      <Route path="/client/wealth/overview" component={() => <ProtectedRoute component={ClientNetWorth} role={CLIENT_SCREEN_ROLES} />} />
+      <Route path="/client/wealth/property-debts" component={() => <ProtectedRoute component={ClientNetWorth} role={CLIENT_SCREEN_ROLES} />} />
+      <Route path="/client/wealth/investments" component={() => <ProtectedRoute component={ClientPortfolio} role={CLIENT_SCREEN_ROLES} />} />
+      <Route path="/client/wealth/investments/holding/:holdingId" component={() => <ProtectedRoute component={HoldingDetail} role={CLIENT_SCREEN_ROLES} />} />
+      <Route path="/client/wealth/investments/:planId/funds/:fundCode" component={() => <ProtectedRoute component={FundDetail} role={CLIENT_SCREEN_ROLES} />} />
+      <Route path="/client/wealth/investments/packages/:id" component={() => <ProtectedRoute component={ClientPackageDetail} role={CLIENT_SCREEN_ROLES} />} />
+      <Route path="/client/wealth/investments/:planId" component={() => <ProtectedRoute component={AdvisedPlanDetail} role={CLIENT_SCREEN_ROLES} />} />
+      <Route path="/client/goals/goals" component={() => <ProtectedRoute component={ClientGoals} role={CLIENT_SCREEN_ROLES} />} />
+      <Route path="/client/goals/my-plan" component={() => <ProtectedRoute component={ClientPlan} role={CLIENT_SCREEN_ROLES} />} />
+      <Route path="/client/goals/what-if" component={() => <ProtectedRoute component={ClientScenarios} role={CLIENT_SCREEN_ROLES} />} />
+      <Route path="/client/advisor/messages" component={() => <ProtectedRoute component={ClientMessages} role={CLIENT_SCREEN_ROLES} />} />
+      <Route path="/client/advisor/documents" component={() => <ProtectedRoute component={ClientDocuments} role={CLIENT_SCREEN_ROLES} />} />
 
       {/* Legacy client links redirect to their new place and retain query strings. */}
       <Route path="/client/portfolio/holding/:holdingId" component={LegacyClientRedirect} />

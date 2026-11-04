@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { useUser } from "@clerk/react";
-import type { Capability, Entitlements } from "@workspace/tier-policy";
+import type { Capability, Entitlements, MembershipSummary } from "@workspace/tier-policy";
 import { apiFetch } from "@/lib/api";
 
 export const ENTITLEMENTS_QUERY_KEY = ["entitlements"] as const;
@@ -8,6 +8,7 @@ export const ENTITLEMENTS_QUERY_KEY = ["entitlements"] as const;
 export type EntitlementsResponse = Entitlements & {
   advisor: { id: string; name: string | null } | null;
   leadSource: string | null;
+  membership: MembershipSummary;
 };
 
 /** The server's answer for every gate. Screens render from this and never decide a gate. */

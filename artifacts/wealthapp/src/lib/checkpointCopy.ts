@@ -63,6 +63,16 @@ export function checkpointCopy(code: CheckpointCode, snapshot: Record<string, an
         body: `You expect ${snapshot.holdingLabel} to return ${Math.abs(Number(snapshot.deviationPp))} points below its benchmark. Your advisor can compare it with an advised plan.`,
         action: "Message your advisor",
       };
+    case "C11_trial_ending":
+      return {
+        body: `Your free trial ends on ${new Date(snapshot.trialEndsAt).toLocaleDateString(undefined, { day: "numeric", month: "long" })}, and your card is charged then unless you cancel.`,
+        action: "Manage membership",
+      };
+    case "C12_lapsed":
+      return {
+        body: "Your membership has ended. All your goals and holdings are still here, and your advisor stays with you. You're back on the free plan's limits, so you can't add more until you reactivate.",
+        action: "Reactivate",
+      };
     case "C10_coast_point":
       return {
         body: `Your coast point for "${snapshot.goalTitle}" is the date you could stop contributing and still get there. An advisor can walk through it with you.`,

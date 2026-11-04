@@ -1,5 +1,6 @@
 import { afterAll, describe, expect, it, vi } from "vitest";
 import request from "supertest";
+import { grantMembership } from "./helpers/membership";
 
 vi.mock("@clerk/express", () => ({
   clerkMiddleware: () => (_req: any, _res: any, next: any) => next(),
@@ -21,6 +22,7 @@ async function makeUser(role: "free_user" | "investment_client" | "advisor" = "f
   const id = `chk-${++counter}-${RUN_ID}`;
   created.push(id);
   await db.insert(profilesTable).values({ id, email: `${id}@test.local`, fullName: "Test User", role, ...values });
+  if (role === "investment_client") await grantMembership(id);
   return id;
 }
 const asUser = (id: string) => ({ "x-test-user-id": id });

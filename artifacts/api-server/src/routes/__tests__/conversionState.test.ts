@@ -1,5 +1,6 @@
 import { afterAll, describe, expect, it, vi } from "vitest";
 import request from "supertest";
+import { grantMembership } from "./helpers/membership";
 
 vi.mock("@clerk/express", () => ({
   clerkMiddleware: () => (_req: any, _res: any, next: any) => next(),
@@ -164,6 +165,10 @@ describe("lead status drives conversion state and the after_assign gate", () => 
     const lead = (await interest(u).expect(201)).body;
     await request(app).put(`/api/leads/${lead.id}/assign`).set(asUser(admin)).send({ advisorId: advisor }).expect(200);
     await request(app).put(`/api/leads/${lead.id}`).set(asUser(advisor)).send({ status: "client" }).expect(200);
+
+    // Promotion alone changes nothing until the membership is active.
+    expect((await entitlements(u)).tier).toBe("free");
+    await grantMembership(u);
 
     const e = await entitlements(u);
     expect(e).toMatchObject({ tier: "track_b", advisor: { id: advisor } });

@@ -21,7 +21,7 @@ import clientPortalRouter from "./clientPortal";
 import coastPointRouter from "./coastPoint";
 import clientHealthScoreRouter from "./clientHealthScore";
 import solRouter from "./sol";
-import billingRouter from "./billing";
+import billingRouter from "./membership";
 import entitlementsRouter from "./entitlements";
 import checkpointsRouter from "./checkpoints";
 

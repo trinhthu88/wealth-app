@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import request from "supertest";
+import { grantMembership } from "./helpers/membership";
 import { and, eq, inArray, isNull } from "drizzle-orm";
 vi.mock("@clerk/express", () => ({
   clerkMiddleware: () => (_req: any, _res: any, next: any) => next(),
@@ -44,6 +45,7 @@ beforeAll(async () => {
     { id: advisorBId, email: `${advisorBId}@test.local`, fullName: "Advisor B", role: "advisor" },
     { id: clientId, email: `${clientId}@test.local`, fullName: "P4 Client", role: "investment_client" },
   ]);
+  await grantMembership(clientId);
   await db.insert(clientProfilesTable).values({ userId: clientId, advisorId: advisorAId });
   await db.insert(advisorAssignmentsTable).values({
     clientUserId: clientId,

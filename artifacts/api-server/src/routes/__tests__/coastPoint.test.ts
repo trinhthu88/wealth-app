@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import request from "supertest";
+import { grantMembership } from "./helpers/membership";
 
 vi.mock("@clerk/express", () => ({
   clerkMiddleware: () => (_req: any, _res: any, next: any) => next(),
@@ -28,6 +29,7 @@ beforeAll(async () => {
   await db.insert(profilesTable).values({
     id: clientId, email: `coast-point-${RUN_ID}@test.local`, fullName: "Coast Point Test User", role: "investment_client",
   });
+  await grantMembership(clientId);
 
   // Ensure an rsp advised_strategy_returns row exists so resolveBlendedRate has
   // a real rate to weight against (admin-managed; insert one only if missing —
@@ -98,6 +100,7 @@ describe("GET /client/plan/coast-point", () => {
   it("reports unavailable for a client with no retirement-type goal", async () => {
     const otherId = `user_test_other_${RUN_ID}`;
     await db.insert(profilesTable).values({ id: otherId, email: `coast-point-other-${RUN_ID}@test.local`, role: "investment_client" });
+    await grantMembership(otherId);
     try {
       const res = await request(app).get("/api/client/plan/coast-point").set(asUser(otherId)).expect(200);
       expect(res.body).toEqual({ available: false, reason: "no_retirement_goal" });
@@ -112,6 +115,7 @@ describe("GET /client/plan/coast-point", () => {
   it("also matches a goal seeded with the legacy goalType spelling 'retirement'", async () => {
     const seedStyleId = `user_test_seedstyle_${RUN_ID}`;
     await db.insert(profilesTable).values({ id: seedStyleId, email: `coast-point-seedstyle-${RUN_ID}@test.local`, role: "investment_client" });
+    await grantMembership(seedStyleId);
     const tenYearsOut = new Date();
     tenYearsOut.setFullYear(tenYearsOut.getFullYear() + 10);
     const [legacyGoal] = await db.insert(financialGoalsTable).values({
