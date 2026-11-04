@@ -1,5 +1,5 @@
 // ANIMATION RULES FOR THIS PAGE:
-// ✓ ALLOWED: Chart draw animation (Recharts default)
+// ✓ ALLOWED: Chart draw animation (Recharts default) in the Cobalt hero
 // ✓ ALLOWED: BottomSheet spring animation
 // ✗ BANNED:  Page-load stagger on sections
 // ✗ BANNED:  JetBrains Mono font
@@ -22,7 +22,7 @@ import {
   CreditCard, Wallet, AlertCircle, Car, GraduationCap, Minus,
 } from "lucide-react";
 import { toast } from "sonner";
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { useProfile } from "@/hooks/useProfile";
 
 interface Asset { id: string; name: string; category: string; valueUsd: string; currencyOriginal: string; }
@@ -30,18 +30,20 @@ interface Liability { id: string; name: string; category: string; balanceUsd: st
 interface NetWorthSnapshot { id: string; snapshotDate: string; netWorthUsd: string; }
 
 const FREE_HISTORY_MONTHS = 3;
+const PERIODS = [1, 2, 3] as const;
+type Period = typeof PERIODS[number];
 
-// Free-tier: exactly 5 asset categories. Icon tiles cycle the calm palette
-// (Spring Field / Blue Breeze / Soft Cloud) — Cobalt stays on text and actions.
+// Free-tier: exactly 5 asset categories. Icon tiles match the "What you own"
+// tiles: Investments Cobalt, Cash Sunset Pop, Other Blue Breeze (debts Spring Field).
 const ASSET_CAT_INFO: Record<string, { label: string; icon: React.ElementType; tile: string }> = {
-  cash:        { label: "Cash",        icon: Landmark,   tile: "bg-breeze text-forest" },
-  savings:     { label: "Savings",     icon: PiggyBank,  tile: "bg-breeze text-forest" },
-  investment:  { label: "Investment",  icon: TrendingUp, tile: "bg-field text-forest" },
-  business:    { label: "Business",    icon: Briefcase,  tile: "bg-field text-forest" },
-  real_estate: { label: "Real Estate", icon: Home,       tile: "bg-paper text-forest" },
+  cash:        { label: "Cash",        icon: Landmark,   tile: "bg-sun text-forest" },
+  savings:     { label: "Savings",     icon: PiggyBank,  tile: "bg-sun text-forest" },
+  investment:  { label: "Investment",  icon: TrendingUp, tile: "bg-forest text-paper" },
+  business:    { label: "Business",    icon: Briefcase,  tile: "bg-breeze text-forest" },
+  real_estate: { label: "Real Estate", icon: Home,       tile: "bg-breeze text-forest" },
 };
 // Fallback for any legacy categories still in DB
-const ASSET_CAT_FALLBACK = { label: "Other", icon: FileText, tile: "bg-paper text-forest" };
+const ASSET_CAT_FALLBACK = { label: "Other", icon: FileText, tile: "bg-breeze text-forest" };
 
 const LIABILITY_CAT_INFO: Record<string, { label: string; icon: React.ElementType }> = {
   mortgage:     { label: "Mortgage",        icon: Home },
@@ -73,7 +75,7 @@ const primaryBtn =
 
 function IconTile({ icon: Icon, className }: { icon: React.ElementType; className: string }) {
   return (
-    <div className={cn("w-10 h-10 rounded-[14px] shrink-0 flex items-center justify-center", className)} aria-hidden="true">
+    <div className={cn("w-11 h-11 rounded-[14px] shrink-0 flex items-center justify-center", className)} aria-hidden="true">
       <Icon className="h-[18px] w-[18px]" />
     </div>
   );
@@ -124,7 +126,7 @@ export default function NetWorthPage() {
   const { profile } = useProfile();
   const currency = profile?.preferredCurrency ?? "USD";
 
-  const [tab, setTab]             = useState<"assets" | "liabilities">("assets");
+  const [period, setPeriod]       = useState<Period>(3);
   const [showAssetForm, setShowAssetForm]   = useState(false);
   const [showLiabForm, setShowLiabForm]     = useState(false);
   const [confirmDeleteAsset, setConfirmDeleteAsset]   = useState<string | null>(null);
@@ -145,9 +147,6 @@ export default function NetWorthPage() {
 
   const isFreeUser = profile?.role === "free_user";
   const visibleSnapshots = isFreeUser ? snapshots.slice(-FREE_HISTORY_MONTHS) : snapshots;
-  const netWorthDelta = visibleSnapshots.length >= 2
-    ? parseFloat(visibleSnapshots[visibleSnapshots.length - 1].netWorthUsd) - parseFloat(visibleSnapshots[visibleSnapshots.length - 2].netWorthUsd)
-    : null;
   const trendData = visibleSnapshots.map(s => ({
     date: s.snapshotDate,
     value: parseFloat(s.netWorthUsd),
@@ -198,97 +197,89 @@ export default function NetWorthPage() {
   const cashTotal = assets.filter(a => CASH_CATS.has(a.category)).reduce((s, a) => s + parseFloat(a.valueUsd), 0);
   const cashPct = totalAssets > 0 ? Math.round((cashTotal / totalAssets) * 100) : 0;
 
-  const categoryTotals = ASSET_CATS
-    .map(key => ({ key, ...ASSET_CAT_INFO[key], total: assets.filter(a => a.category === key).reduce((s, a) => s + parseFloat(a.valueUsd), 0) }))
-    .filter(c => c.total > 0);
+  // Hero range: 1M / 2M / 3M within the free-plan history window.
+  const rangePoints = Math.min(trendData.length, period + 1);
+  const rangeData = trendData.slice(-rangePoints);
+  const rangeDelta = rangeData.length >= 2 ? rangeData[rangeData.length - 1].value - rangeData[0].value : null;
+  const rangeBase = rangeData.length >= 2 ? rangeData[0].value : 0;
+  const rangePct = rangeDelta !== null && rangeBase > 0 ? (rangeDelta / rangeBase) * 100 : null;
+  const rangeSpan = rangeData.length - 1;
 
   let deltaNode: React.ReactNode = null;
-  if (netWorthDelta !== null) {
-    const DeltaIcon = netWorthDelta === 0 ? Minus : netWorthDelta > 0 ? TrendingUp : TrendingDown;
+  if (rangeDelta !== null) {
+    const DeltaIcon = rangeDelta === 0 ? Minus : rangeDelta > 0 ? TrendingUp : TrendingDown;
     deltaNode = (
-      <span className={cn(
-        "inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[13px] font-semibold tabular-nums",
-        netWorthDelta >= 0 ? "bg-field text-forest" : "bg-sun-tint text-amber-ink",
-      )}>
+      <span className="self-start inline-flex items-center gap-1 rounded-full bg-field px-3 py-1.5 text-[12px] font-semibold tabular-nums text-forest">
         <DeltaIcon className="h-3.5 w-3.5" aria-hidden="true" />
-        {netWorthDelta === 0 ? "No change" : `${netWorthDelta > 0 ? "+" : "-"}${fmt(Math.abs(netWorthDelta))}`} this month
+        {rangeDelta === 0
+          ? "No change"
+          : `${rangeDelta > 0 ? "+" : "-"}${fmt(Math.abs(rangeDelta))}${rangePct !== null ? ` · ${Math.abs(rangePct).toFixed(1)}%` : ""}`}
+        {" "}past {rangeSpan === 1 ? "month" : `${rangeSpan} months`}
       </span>
     );
   }
+
+  // "What you own" tiles from real asset / liability categories.
+  const investTotal = assets.filter(a => a.category === "investment").reduce((s, a) => s + parseFloat(a.valueUsd), 0);
+  const otherAssets = assets.filter(a => a.category !== "investment" && !CASH_CATS.has(a.category));
+  const otherTotal = otherAssets.reduce((s, a) => s + parseFloat(a.valueUsd), 0);
+  const otherLabels = Array.from(new Set(otherAssets.map(a => (ASSET_CAT_INFO[a.category] ?? ASSET_CAT_FALLBACK).label)));
+  const pctOf = (v: number) => (totalAssets > 0 ? `${Math.round((v / totalAssets) * 100)}%` : "0%");
+  const liabSub = liabilities.length === 0
+    ? "Nothing owed"
+    : liabilities.length === 1
+      ? `${(LIABILITY_CAT_INFO[liabilities[0].category] ?? { label: liabilities[0].category }).label}${liabilities[0].interestRatePercent ? ` · ${liabilities[0].interestRatePercent}%` : ""}`
+      : `${liabilities.length} debts`;
+  const tiles = [
+    { key: "investments", big: pctOf(investTotal), label: "Investments", sub: fmt(investTotal), card: "bg-forest text-paper", subCls: "text-mint" },
+    { key: "cash", big: pctOf(cashTotal), label: "Cash", sub: fmt(cashTotal), card: "bg-sun text-forest", subCls: "text-forest" },
+    { key: "other", big: pctOf(otherTotal), label: "Other", sub: `${fmt(otherTotal)}${otherLabels.length ? ` · ${otherLabels.join(", ").toLowerCase()}` : ""}`, card: "bg-breeze text-forest", subCls: "text-forest" },
+    { key: "owe", big: totalLiabilities > 0 ? `-${fmt(totalLiabilities)}` : "$0", label: "You owe", sub: liabSub, card: "bg-field text-forest", subCls: "text-forest" },
+  ];
+
+  const addLink =
+    "inline-flex min-h-11 items-center gap-1 text-[14px] font-semibold text-forest underline underline-offset-4 hover:opacity-80";
 
   return (
     <AppShell>
       <div className="space-y-4 pb-8">
 
+        <header className="px-1 pt-1">
+          <h1 className="font-display text-[36px] leading-[1.05] text-forest">Wealth</h1>
+          <p className="mt-1 text-[14px] text-ink-40 leading-[1.5]">Everything you own, tracked by you</p>
+        </header>
 
-        {totalAssets > 0 && (
-          <SolNarration
-            line={`${fmt(totalAssets)} across ${assets.length} asset${assets.length !== 1 ? "s" : ""}. Cash and savings are ${cashPct}% of it.`}
-            detail="A cash buffer is usually sized in months of expenses — three to six is typical. Money beyond that has an opportunity cost, which is worth understanding as your net worth grows."
-          />
-        )}
-
-        <div className="px-1">
-          <h1 className="font-display text-[30px] leading-[1.1] text-forest">Net worth</h1>
-          <p className="mt-1 text-[14px] text-ink-40 leading-[1.5]">What you own, minus what you owe.</p>
-        </div>
-
-        {/* Focal number */}
-        <section aria-label="Net worth" className="px-1 pt-2 space-y-3">
-          <p className="tala-eyebrow text-ink-40">Net worth</p>
-          <p className={cn(
-            "font-display tabular-nums text-[56px] leading-none tracking-[-0.04em]",
-            netWorth < 0 ? "text-clay-ink" : "text-forest",
-          )}>
+        {/* Cobalt hero */}
+        <section aria-label="Net worth" className="bg-forest text-paper rounded-[28px] p-5 flex flex-col gap-3">
+          <span className="tala-eyebrow text-mint">Net worth</span>
+          <span className="font-display tabular-nums text-[56px] leading-[0.9] tracking-[-0.045em] text-paper">
             {hasItems ? fmt(netWorth) : "—"}
-          </p>
-          {deltaNode && <div>{deltaNode}</div>}
-          <div className="flex gap-6 pt-1">
-            <div>
-              <p className="tala-eyebrow text-ink-30">Assets</p>
-              <p className="text-[16px] font-semibold tabular-nums text-forest mt-1">{totalAssets > 0 ? fmt(totalAssets) : "—"}</p>
-            </div>
-            <div>
-              <p className="tala-eyebrow text-ink-30">Liabilities</p>
-              <p className="text-[16px] font-semibold tabular-nums text-forest mt-1">{totalLiabilities > 0 ? fmt(totalLiabilities) : "—"}</p>
-            </div>
-          </div>
-        </section>
+          </span>
+          {deltaNode}
 
-        {netWorth < 0 && (
-          <div className="rounded-[24px] p-4 flex items-start gap-3 bg-sun-tint">
-            <AlertCircle className="h-5 w-5 shrink-0 text-amber-ink mt-px" aria-hidden="true" />
-            <p className="text-[14px] text-amber-ink leading-[1.5]">Your liabilities currently exceed your assets.</p>
-          </div>
-        )}
-
-        {/* Trend */}
-        {trendData.length >= 2 ? (
-          <div
-            className="bg-surface rounded-[24px] p-5"
-            role="img"
-            aria-label={`Net worth trend: latest ${fmt(trendData[trendData.length - 1].value)}`}
-          >
-            <h2 className="font-sans text-[16px] font-semibold text-forest mb-3">Trend</h2>
-            <div className="h-[160px]">
+          {rangeData.length >= 2 ? (
+            <div
+              className="h-[110px] -mx-1"
+              role="img"
+              aria-label={`Net worth trend: latest ${fmt(rangeData[rangeData.length - 1].value)}`}
+            >
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={trendData} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
+                <AreaChart data={rangeData} margin={{ top: 6, right: 4, bottom: 0, left: 4 }}>
                   <defs>
                     <linearGradient id="free-nw-fill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="var(--forest)" stopOpacity={0.18} />
-                      <stop offset="100%" stopColor="var(--forest)" stopOpacity={0} />
+                      <stop offset="0%" stopColor="var(--field)" stopOpacity={0.28} />
+                      <stop offset="100%" stopColor="var(--field)" stopOpacity={0.04} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--hairline)" vertical={false} />
-                  <XAxis dataKey="label" tick={{ fontSize: 11, fill: "var(--ink-30)" }} axisLine={false} tickLine={false} />
+                  <XAxis dataKey="label" hide />
                   <YAxis hide domain={["dataMin", "dataMax"]} />
                   <Tooltip
-                    cursor={{ stroke: "var(--hairline-2)" }}
+                    cursor={{ stroke: "var(--mint)", strokeOpacity: 0.5 }}
                     content={({ active, payload }) => {
                       if (!active || !payload?.length) return null;
                       const d = payload[0].payload as { label: string; value: number };
                       return (
-                        <div className="bg-paper rounded-[14px] px-3 py-2 shadow-[0_8px_24px_rgba(12,33,164,0.12)] text-[12px]">
+                        <div className="bg-paper rounded-[14px] px-3 py-2 text-[12px]">
                           <p className="font-semibold text-forest">{d.label}</p>
                           <p className="text-ink-40">Net worth <span className="font-semibold tabular-nums text-forest">{fmt(d.value)}</span></p>
                         </div>
@@ -298,196 +289,182 @@ export default function NetWorthPage() {
                   <Area
                     type="monotone"
                     dataKey="value"
-                    stroke="var(--forest)"
-                    strokeWidth={2.5}
+                    stroke="var(--field)"
+                    strokeWidth={2.8}
+                    strokeLinecap="round"
                     fill="url(#free-nw-fill)"
                     dot={false}
-                    activeDot={{ r: 4, fill: "var(--forest)" }}
+                    activeDot={{ r: 4, fill: "var(--field)", stroke: "none" }}
                   />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
-            {isFreeUser && snapshots.length > FREE_HISTORY_MONTHS && (
-              <p className="text-[12px] text-ink-30 mt-3">History beyond {FREE_HISTORY_MONTHS} months is available to clients.</p>
-            )}
-          </div>
-        ) : hasItems ? (
-          <div className="bg-surface rounded-[24px] p-5 flex items-center gap-3">
-            <IconTile icon={TrendingUp} className="bg-field text-forest" />
-            <p className="text-[14px] text-ink-40 leading-[1.5] text-pretty">
+          ) : hasItems ? (
+            <p className="text-[13px] text-mint leading-[1.5] text-pretty">
               Your trend appears here once there are two monthly snapshots to compare.
             </p>
-          </div>
-        ) : null}
+          ) : null}
 
-        {/* Assets / liabilities switch */}
-        <div className="flex gap-1 rounded-full bg-surface p-1" role="tablist" aria-label="Net worth items">
-          {(["assets", "liabilities"] as const).map(t => (
-            <button
-              key={t}
-              type="button"
-              role="tab"
-              aria-selected={tab === t}
-              onClick={() => setTab(t)}
-              className={cn(
-                "min-h-11 flex-1 rounded-full px-4 text-[13px] font-semibold transition-colors",
-                tab === t ? "bg-forest text-paper" : "text-ink-40 hover:text-forest",
-              )}
-            >
-              {t === "assets" ? `Assets (${assets.length})` : `Liabilities (${liabilities.length})`}
-            </button>
-          ))}
-        </div>
-
-        {/* Assets tab */}
-        {tab === "assets" && (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between gap-3 px-1">
-              <div className="flex items-baseline gap-2 min-w-0">
-                <h2 className="font-sans text-[16px] font-semibold text-forest">Assets</h2>
-                {assets.length > 0 && (
-                  <span className="text-[15px] font-semibold tabular-nums text-ink-40">{fmt(totalAssets)}</span>
-                )}
-              </div>
-              <button
-                onClick={() => setShowAssetForm(true)}
-                className="shrink-0 flex items-center gap-1.5 h-11 px-4 rounded-full bg-forest text-paper text-[14px] font-semibold hover:opacity-90 transition-opacity"
-              >
-                <Plus className="h-4 w-4" aria-hidden="true" />
-                Add asset
-              </button>
+          {trendData.length >= 2 && (
+            <div role="group" aria-label="Time range" className="grid grid-cols-3 gap-1 rounded-full bg-paper/15 p-1">
+              {PERIODS.map(p => (
+                <button
+                  key={p}
+                  type="button"
+                  aria-pressed={period === p}
+                  onClick={() => setPeriod(p)}
+                  className={cn(
+                    "h-10 rounded-full text-[14px] font-semibold transition-colors",
+                    period === p ? "bg-field text-forest" : "text-paper hover:bg-paper/10",
+                  )}
+                >
+                  {p}M
+                </button>
+              ))}
             </div>
+          )}
 
-            {assets.length === 0 ? (
-              <div className="bg-surface rounded-[24px] py-10 px-5 text-center">
-                <p className="text-[14px] font-medium text-forest">No assets added yet</p>
-                <p className="text-[13px] text-ink-40 mt-1">Cash, savings, investments, business or property — track what you own to see your net worth.</p>
-              </div>
-            ) : (
-              <div className="bg-surface rounded-[24px] p-1">
-                {assets.map(a => {
-                  const info = ASSET_CAT_INFO[a.category] ?? ASSET_CAT_FALLBACK;
-                  return (
-                    <div key={a.id} className="flex items-center justify-between gap-2 p-3 border-b border-hairline last:border-0">
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <IconTile icon={info.icon} className={info.tile} />
-                        <div className="min-w-0">
-                          <p className="text-[15px] font-semibold text-forest truncate">{a.name}</p>
-                          <p className="text-[13px] text-ink-40 mt-0.5 truncate">{info.label}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <span className="text-[15px] font-semibold tabular-nums text-forest">{fmt(parseFloat(a.valueUsd))}</span>
-                        {confirmDeleteAsset === a.id ? (
-                          <ConfirmRemove
-                            pending={delAsset.isPending}
-                            onConfirm={() => delAsset.mutate(a.id)}
-                            onCancel={() => setConfirmDeleteAsset(null)}
-                          />
-                        ) : (
-                          <button onClick={() => setConfirmDeleteAsset(a.id)}
-                            className="h-11 w-11 flex items-center justify-center rounded-full text-ink-40 hover:text-clay-ink hover:bg-paper transition-colors"
-                            aria-label={`Delete ${a.name}`}>
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+          {isFreeUser && (
+            <span className="text-[12px] text-mint">Free plan shows {FREE_HISTORY_MONTHS} months of history</span>
+          )}
+        </section>
 
-            {/* Category totals breakdown */}
-            {categoryTotals.length > 0 && (
-              <div className="bg-surface rounded-[24px] p-5">
-                <h3 className="text-[15px] font-semibold text-forest mb-3">By category</h3>
-                <div className="space-y-3">
-                  {categoryTotals.map(c => {
-                    const pct = totalAssets > 0 ? (c.total / totalAssets) * 100 : 0;
-                    return (
-                      <div key={c.key}>
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <c.icon className="w-4 h-4 text-ink-40 shrink-0" aria-hidden="true" />
-                            <span className="text-[14px] text-forest truncate">{c.label}</span>
-                          </div>
-                          <span className="text-[14px] font-semibold tabular-nums text-forest">{fmt(c.total)}</span>
-                        </div>
-                        <div className="mt-2 h-2 rounded-full bg-track overflow-hidden">
-                          <div className="h-full rounded-full bg-forest" style={{ width: `${pct}%` }} />
-                        </div>
-                      </div>
-                    );
-                  })}
+        {netWorth < 0 && (
+          <div className="rounded-[24px] p-4 flex items-start gap-3 bg-sun text-forest">
+            <AlertCircle className="h-5 w-5 shrink-0 mt-px" aria-hidden="true" />
+            <p className="text-[14px] font-medium leading-[1.5]">Your liabilities currently exceed your assets.</p>
+          </div>
+        )}
+
+        {/* What you own */}
+        {hasItems && (
+          <section aria-label="What you own" className="space-y-3">
+            <h2 className="font-sans text-[16px] font-semibold text-forest px-1">What you own</h2>
+            <div className="grid grid-cols-2 gap-3">
+              {tiles.map(t => (
+                <div key={t.key} className={cn("rounded-[24px] p-4 flex flex-col gap-1.5 min-w-0", t.card)}>
+                  <span className="font-display tabular-nums text-[30px] leading-none tracking-[-0.03em]">{t.big}</span>
+                  <span className="text-[14px] font-semibold truncate">{t.label}</span>
+                  <span className={cn("text-[13px] tabular-nums truncate", t.subCls)}>{t.sub}</span>
                 </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Liabilities tab */}
-        {tab === "liabilities" && (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between gap-3 px-1">
-              <div className="flex items-baseline gap-2 min-w-0">
-                <h2 className="font-sans text-[16px] font-semibold text-forest">Liabilities</h2>
-                {liabilities.length > 0 && (
-                  <span className="text-[15px] font-semibold tabular-nums text-ink-40">{fmt(totalLiabilities)}</span>
-                )}
-              </div>
-              <button
-                onClick={() => setShowLiabForm(true)}
-                className="shrink-0 flex items-center gap-1.5 h-11 px-4 rounded-full bg-forest text-paper text-[14px] font-semibold hover:opacity-90 transition-opacity"
-              >
-                <Plus className="h-4 w-4" aria-hidden="true" />
-                Add liability
-              </button>
+              ))}
             </div>
-
-            {liabilities.length === 0 ? (
-              <div className="bg-surface rounded-[24px] py-10 px-5 text-center">
-                <p className="text-[14px] font-medium text-forest">No liabilities added yet</p>
-                <p className="text-[13px] text-ink-40 mt-1">Mortgage, loans or card balances — track what you owe for a complete picture.</p>
-              </div>
-            ) : (
-              <div className="bg-surface rounded-[24px] p-1">
-                {liabilities.map(l => {
-                  const info = LIABILITY_CAT_INFO[l.category] ?? { label: l.category, icon: AlertCircle };
-                  return (
-                    <div key={l.id} className="flex items-center justify-between gap-2 p-3 border-b border-hairline last:border-0">
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <IconTile icon={info.icon} className="bg-breeze text-forest" />
-                        <div className="min-w-0">
-                          <p className="text-[15px] font-semibold text-forest truncate">{l.name}</p>
-                          <p className="text-[13px] text-ink-40 mt-0.5 truncate">
-                            {info.label}{l.interestRatePercent ? ` · ${l.interestRatePercent}% interest` : ""}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <span className="text-[15px] font-semibold tabular-nums text-forest">{fmt(parseFloat(l.balanceUsd))}</span>
-                        {confirmDeleteLiab === l.id ? (
-                          <ConfirmRemove
-                            pending={delLiab.isPending}
-                            onConfirm={() => delLiab.mutate(l.id)}
-                            onCancel={() => setConfirmDeleteLiab(null)}
-                          />
-                        ) : (
-                          <button onClick={() => setConfirmDeleteLiab(l.id)}
-                            className="h-11 w-11 flex items-center justify-center rounded-full text-ink-40 hover:text-clay-ink hover:bg-paper transition-colors"
-                            aria-label={`Delete ${l.name}`}>
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+          </section>
         )}
+
+        {totalAssets > 0 && (
+          <SolNarration
+            line={`${fmt(totalAssets)} across ${assets.length} asset${assets.length !== 1 ? "s" : ""}. Cash and savings are ${cashPct}% of it.`}
+            detail="A cash buffer is usually sized in months of expenses — three to six is typical. Money beyond that has an opportunity cost, which is worth understanding as your net worth grows."
+            className="px-1 mb-0"
+          />
+        )}
+
+        {/* Assets */}
+        <section aria-label="Assets" className="space-y-3">
+          <div className="flex items-center justify-between gap-3 px-1">
+            <h2 className="font-sans text-[16px] font-semibold text-forest">
+              Assets
+              {assets.length > 0 && <span className="text-ink-40 font-medium tabular-nums"> · {fmt(totalAssets)}</span>}
+            </h2>
+            <button type="button" onClick={() => setShowAssetForm(true)} className={addLink}>
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              Add an asset
+            </button>
+          </div>
+
+          {assets.length === 0 ? (
+            <div className="bg-surface rounded-[24px] py-8 px-5 text-center">
+              <p className="text-[14px] font-semibold text-forest">No assets added yet</p>
+              <p className="text-[13px] text-ink-40 mt-1 text-pretty">Cash, savings, investments, business or property — track what you own to see your net worth.</p>
+            </div>
+          ) : (
+            <div className="bg-surface rounded-[24px] p-1">
+              {assets.map(a => {
+                const info = ASSET_CAT_INFO[a.category] ?? ASSET_CAT_FALLBACK;
+                return (
+                  <div key={a.id} className="flex items-center gap-3 p-3 border-b border-hairline last:border-0">
+                    <IconTile icon={info.icon} className={info.tile} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[15px] font-semibold text-forest truncate">{a.name}</p>
+                      <p className="text-[13px] text-ink-40 mt-0.5 truncate">{info.label}</p>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <span className="text-[15px] font-semibold tabular-nums text-forest">{fmt(parseFloat(a.valueUsd))}</span>
+                      {confirmDeleteAsset === a.id ? (
+                        <ConfirmRemove
+                          pending={delAsset.isPending}
+                          onConfirm={() => delAsset.mutate(a.id)}
+                          onCancel={() => setConfirmDeleteAsset(null)}
+                        />
+                      ) : (
+                        <button onClick={() => setConfirmDeleteAsset(a.id)}
+                          className="h-11 w-11 flex items-center justify-center rounded-full text-ink-40 hover:text-forest hover:bg-paper transition-colors"
+                          aria-label={`Delete ${a.name}`}>
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        {/* Liabilities */}
+        <section aria-label="Liabilities" className="space-y-3">
+          <div className="flex items-center justify-between gap-3 px-1">
+            <h2 className="font-sans text-[16px] font-semibold text-forest">
+              You owe
+              {liabilities.length > 0 && <span className="text-ink-40 font-medium tabular-nums"> · {fmt(totalLiabilities)}</span>}
+            </h2>
+            <button type="button" onClick={() => setShowLiabForm(true)} className={addLink}>
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              Add a liability
+            </button>
+          </div>
+
+          {liabilities.length === 0 ? (
+            <div className="bg-surface rounded-[24px] py-8 px-5 text-center">
+              <p className="text-[14px] font-semibold text-forest">No liabilities added yet</p>
+              <p className="text-[13px] text-ink-40 mt-1 text-pretty">Mortgage, loans or card balances — track what you owe for a complete picture.</p>
+            </div>
+          ) : (
+            <div className="bg-surface rounded-[24px] p-1">
+              {liabilities.map(l => {
+                const info = LIABILITY_CAT_INFO[l.category] ?? { label: l.category, icon: AlertCircle };
+                return (
+                  <div key={l.id} className="flex items-center gap-3 p-3 border-b border-hairline last:border-0">
+                    <IconTile icon={info.icon} className="bg-field text-forest" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[15px] font-semibold text-forest truncate">{l.name}</p>
+                      <p className="text-[13px] text-ink-40 mt-0.5 truncate">
+                        {info.label}{l.interestRatePercent ? ` · ${l.interestRatePercent}% interest` : ""}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <span className="text-[15px] font-semibold tabular-nums text-forest">-{fmt(parseFloat(l.balanceUsd))}</span>
+                      {confirmDeleteLiab === l.id ? (
+                        <ConfirmRemove
+                          pending={delLiab.isPending}
+                          onConfirm={() => delLiab.mutate(l.id)}
+                          onCancel={() => setConfirmDeleteLiab(null)}
+                        />
+                      ) : (
+                        <button onClick={() => setConfirmDeleteLiab(l.id)}
+                          className="h-11 w-11 flex items-center justify-center rounded-full text-ink-40 hover:text-forest hover:bg-paper transition-colors"
+                          aria-label={`Delete ${l.name}`}>
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
 
         <FreeTierBanner
           feature="Manual assets and liabilities only"

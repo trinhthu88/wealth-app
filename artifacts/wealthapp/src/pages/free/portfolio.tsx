@@ -8,8 +8,8 @@
 
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { Link } from "wouter";
 import AppShell from "@/components/AppShell";
-import FreeTierBanner from "@/components/FreeTierBanner";
 import Sol from "@/components/Sol";
 import SolNarration from "@/components/client/SolNarration";
 import BottomSheet from "@/components/client/BottomSheet";
@@ -33,15 +33,15 @@ interface Holding {
 
 const FREE_HOLDING_CAP = 2;
 
-// Icon tiles and allocation segments use the palette only. `tile` is the row's
-// icon tile; `seg` is the class's colour in the allocation bar + legend.
-const ASSET_CLASS_INFO: Record<string, { label: string; icon: React.ElementType; tile: string; seg: string }> = {
-  stock_etf: { label: "Stock / ETF",          icon: LineChartIcon, tile: "bg-field text-forest",  seg: "bg-forest" },
-  crypto:    { label: "Crypto",               icon: Bitcoin,       tile: "bg-breeze text-forest", seg: "bg-violet" },
-  cash:      { label: "Cash / Savings",       icon: PiggyBank,     tile: "bg-breeze text-forest", seg: "bg-breeze" },
-  property:  { label: "Property",             icon: Home,          tile: "bg-field text-forest",  seg: "bg-field" },
-  pension:   { label: "Pension / Retirement", icon: Landmark,      tile: "bg-breeze text-forest", seg: "bg-forest-700" },
-  other:     { label: "Other",                icon: HelpCircle,    tile: "bg-paper text-forest",  seg: "bg-hairline-2" },
+// Palette only. `tile` is the row's icon tile; `card`/`sub` style the
+// full-colour allocation tile (Investments Cobalt, Cash Sunset Pop, rest Breeze/Field).
+const ASSET_CLASS_INFO: Record<string, { label: string; icon: React.ElementType; tile: string; card: string; sub: string }> = {
+  stock_etf: { label: "Stock / ETF",          icon: LineChartIcon, tile: "bg-forest text-paper",  card: "bg-forest text-paper",  sub: "text-mint" },
+  crypto:    { label: "Crypto",               icon: Bitcoin,       tile: "bg-breeze text-forest", card: "bg-breeze text-forest", sub: "text-forest" },
+  cash:      { label: "Cash / Savings",       icon: PiggyBank,     tile: "bg-sun text-forest",    card: "bg-sun text-forest",    sub: "text-forest" },
+  property:  { label: "Property",             icon: Home,          tile: "bg-field text-forest",  card: "bg-field text-forest",  sub: "text-forest" },
+  pension:   { label: "Pension / Retirement", icon: Landmark,      tile: "bg-field text-forest",  card: "bg-field text-forest",  sub: "text-forest" },
+  other:     { label: "Other",                icon: HelpCircle,    tile: "bg-paper text-forest",  card: "bg-surface text-forest", sub: "text-ink-40" },
 };
 const ASSET_CLASSES = Object.keys(ASSET_CLASS_INFO);
 const TICKER_CLASSES = new Set(["stock_etf", "crypto"]);
@@ -128,6 +128,41 @@ export default function FreePortfolioPage() {
     <AppShell>
       <div className="space-y-4 pb-8">
 
+        <header className="px-1 pt-1">
+          <h1 className="font-display text-[36px] leading-[1.05] text-forest">Portfolio</h1>
+          <p className="mt-1 text-[14px] text-ink-40 leading-[1.5]">Holdings you track yourself</p>
+        </header>
+
+        {/* Cobalt hero */}
+        <section aria-label="Self-tracked value" className="bg-forest text-paper rounded-[28px] p-5 flex flex-col gap-3">
+          <span className="tala-eyebrow text-mint">Self-tracked value</span>
+          <span className="font-display tabular-nums text-[56px] leading-[0.9] tracking-[-0.045em] text-paper">
+            {isLoading ? "…" : totalValue > 0 ? fmt(totalValue) : "—"}
+          </span>
+          <span className="self-start inline-flex items-center rounded-full bg-field px-3 py-1.5 text-[12px] font-semibold tabular-nums text-forest">
+            {holdings.length} of {FREE_HOLDING_CAP} holdings used
+          </span>
+          <span className="text-[12px] text-mint">Values you enter yourself — they move when you update them</span>
+        </section>
+
+        {/* Allocation tiles */}
+        {allocation.length > 0 && (
+          <section
+            aria-label={`Allocation: ${allocation.map(a => `${a.label} ${Math.round(a.pct)}%`).join(", ")}`}
+            className="space-y-3"
+          >
+            <h2 className="font-sans text-[16px] font-semibold text-forest px-1">Allocation</h2>
+            <div className="grid grid-cols-2 gap-3">
+              {allocation.map(a => (
+                <div key={a.key} className={cn("rounded-[24px] p-4 flex flex-col gap-1.5 min-w-0", a.card)}>
+                  <span className="font-display tabular-nums text-[30px] leading-none tracking-[-0.03em]">{Math.round(a.pct)}%</span>
+                  <span className="text-[14px] font-semibold truncate">{a.label}</span>
+                  <span className={cn("text-[13px] tabular-nums", a.sub)}>{fmt(a.value)}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {!isLoading && topClass && totalValue > 0 && (
           <SolNarration
@@ -135,165 +170,119 @@ export default function FreePortfolioPage() {
               ? `${fmt(totalValue)} tracked here. ${topClass.label} is ${Math.round(topClass.pct)}% of it.`
               : `${fmt(totalValue)} tracked here, all of it in ${topClass.label.toLowerCase()}.`}
             detail="These are values you enter yourself, so they move only when you update them. Keeping them current is what makes the split above meaningful."
+            className="px-1 mb-0"
           />
         )}
 
-        <div className="px-1">
-          <h1 className="font-display text-[30px] leading-[1.1] text-forest">Portfolio</h1>
-          <p className="mt-1 text-[14px] text-ink-40 leading-[1.5]">
-            Self-tracked holdings · {holdings.length} of {FREE_HOLDING_CAP} used
-          </p>
-        </div>
-
-        {/* Focal number */}
-        <section aria-label="Self-tracked value" className="px-1 pt-2 space-y-2">
-          <p className="tala-eyebrow text-ink-40">Self-tracked value</p>
-          <p className="font-display tabular-nums text-[56px] leading-none tracking-[-0.04em] text-forest">
-            {totalValue > 0 ? fmt(totalValue) : "—"}
-          </p>
-        </section>
-
-        {/* Allocation */}
-        {allocation.length > 0 && (
-          <div className="bg-surface rounded-[24px] p-5">
-            <h2 className="font-sans text-[16px] font-semibold text-forest mb-3">Allocation</h2>
-            <div
-              className="flex h-3 w-full gap-1 overflow-hidden rounded-full"
-              role="img"
-              aria-label={`Allocation: ${allocation.map(a => `${a.label} ${Math.round(a.pct)}%`).join(", ")}`}
-            >
-              {allocation.map(a => (
-                <div key={a.key} className={cn("h-full rounded-full", a.seg)} style={{ width: `${a.pct}%` }} />
-              ))}
-            </div>
-            <div className="mt-4 space-y-2.5">
-              {allocation.map(a => (
-                <div key={a.key} className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className={cn("h-2.5 w-2.5 rounded-full shrink-0", a.seg)} aria-hidden="true" />
-                    <span className="text-[14px] text-forest truncate">{a.label}</span>
-                  </div>
-                  <div className="flex items-baseline gap-2 shrink-0">
-                    <span className="text-[14px] font-semibold tabular-nums text-forest">{Math.round(a.pct)}%</span>
-                    <span className="text-[13px] tabular-nums text-ink-40">{fmt(a.value)}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* Holdings */}
-        <div className="flex items-center justify-between gap-3 px-1 pt-1">
-          <h2 className="font-sans text-[16px] font-semibold text-forest">Holdings</h2>
-          {!atCap && holdings.length > 0 && (
-            <button
-              onClick={openAdd}
-              className="shrink-0 flex items-center gap-1.5 h-11 px-4 rounded-full bg-forest text-paper text-[14px] font-semibold hover:opacity-90 transition-opacity"
-            >
-              <Plus className="h-4 w-4" aria-hidden="true" />
-              Add holding
-            </button>
-          )}
-        </div>
-
-        {isLoading ? (
-          <div className="h-32 bg-surface animate-pulse rounded-[24px]" />
-        ) : holdings.length === 0 ? (
-          <div className="bg-surface rounded-[24px] py-8 px-5 flex flex-col items-center text-center">
-            <div className="w-10 h-10 rounded-[14px] bg-field text-forest flex items-center justify-center" aria-hidden="true">
-              <LineChartIcon className="h-[18px] w-[18px]" />
-            </div>
-            <p className="text-[14px] font-medium text-forest mt-3">No holdings tracked yet</p>
-            <p className="text-[13px] text-ink-40 mt-1 max-w-xs text-pretty">Add a stock, crypto, or cash position to get started.</p>
-            <button
-              onClick={openAdd}
-              className="mt-4 inline-flex items-center gap-1.5 h-11 px-5 rounded-full bg-forest text-paper text-[14px] font-semibold hover:opacity-90 transition-opacity"
-            >
-              <Plus className="h-4 w-4" aria-hidden="true" />
-              Add holding
-            </button>
+        <section aria-label="Holdings" className="space-y-3">
+          <div className="flex items-center justify-between gap-3 px-1">
+            <h2 className="font-sans text-[16px] font-semibold text-forest">
+              Holdings <span className="text-ink-40 font-medium tabular-nums">· {holdings.length} of {FREE_HOLDING_CAP}</span>
+            </h2>
+            {!atCap && holdings.length > 0 && (
+              <button
+                type="button"
+                onClick={openAdd}
+                className="inline-flex min-h-11 items-center gap-1 text-[14px] font-semibold text-forest underline underline-offset-4 hover:opacity-80"
+              >
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                Add a holding
+              </button>
+            )}
           </div>
-        ) : (
-          <div className="bg-surface rounded-[24px] p-1">
-            {holdings.map(h => {
-              const info = ASSET_CLASS_INFO[h.assetClass] ?? ASSET_CLASS_INFO.other;
-              return (
-                <div key={h.id} className="flex items-center justify-between gap-2 p-3 border-b border-hairline last:border-0">
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className={cn("w-10 h-10 rounded-[14px] shrink-0 flex items-center justify-center", info.tile)} aria-hidden="true">
+
+          {isLoading ? (
+            <div className="h-32 bg-surface animate-pulse rounded-[24px]" />
+          ) : holdings.length === 0 ? (
+            <div className="bg-surface rounded-[24px] py-8 px-5 flex flex-col items-center text-center">
+              <div className="w-11 h-11 rounded-[14px] bg-field text-forest flex items-center justify-center" aria-hidden="true">
+                <LineChartIcon className="h-[18px] w-[18px]" />
+              </div>
+              <p className="text-[14px] font-semibold text-forest mt-3">No holdings tracked yet</p>
+              <p className="text-[13px] text-ink-40 mt-1 max-w-xs text-pretty">Add a stock, crypto, or cash position to get started.</p>
+              <button
+                type="button"
+                onClick={openAdd}
+                className="mt-4 inline-flex items-center gap-1.5 h-11 px-5 rounded-full bg-forest text-paper text-[14px] font-semibold hover:opacity-90 transition-opacity"
+              >
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                Add holding
+              </button>
+            </div>
+          ) : (
+            <div className="bg-surface rounded-[24px] p-1">
+              {holdings.map(h => {
+                const info = ASSET_CLASS_INFO[h.assetClass] ?? ASSET_CLASS_INFO.other;
+                return (
+                  <div key={h.id} className="flex items-center gap-3 p-3 border-b border-hairline last:border-0">
+                    <div className={cn("w-11 h-11 rounded-[14px] shrink-0 flex items-center justify-center", info.tile)} aria-hidden="true">
                       <info.icon className="h-[18px] w-[18px]" />
                     </div>
-                    <div className="min-w-0">
+                    <div className="flex-1 min-w-0">
                       <p className="text-[15px] font-semibold text-forest truncate">{h.assetName}</p>
-                      <p className="text-[13px] text-ink-40 mt-0.5 truncate">{info.label}{h.tickerSymbol ? ` · ${h.tickerSymbol}` : ""}</p>
+                      <p className="text-[13px] text-ink-40 mt-0.5 truncate">{h.tickerSymbol ? `${h.tickerSymbol} · ` : ""}{info.label}</p>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <span className="text-[15px] font-semibold tabular-nums text-forest">{fmt(parseFloat(h.currentValueUsd))}</span>
+                      {confirmDeleteId === h.id ? (
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => deleteHolding.mutate(h.id)} disabled={deleteHolding.isPending}
+                            className="h-11 px-4 rounded-full bg-sun text-forest text-[13px] font-semibold disabled:opacity-60">
+                            {deleteHolding.isPending ? "…" : "Remove"}
+                          </button>
+                          <button onClick={() => setConfirmDeleteId(null)}
+                            className="h-11 px-3 rounded-full text-[13px] font-medium text-ink-40 hover:text-forest">
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <button onClick={() => openEdit(h)}
+                            className="h-11 w-11 flex items-center justify-center rounded-full text-ink-40 hover:text-forest hover:bg-paper transition-colors"
+                            aria-label={`Edit ${h.assetName}`}>
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                          <button onClick={() => setConfirmDeleteId(h.id)}
+                            className="h-11 w-11 flex items-center justify-center rounded-full text-ink-40 hover:text-forest hover:bg-paper transition-colors"
+                            aria-label={`Delete ${h.assetName}`}>
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <span className="text-[15px] font-semibold tabular-nums text-forest">{fmt(parseFloat(h.currentValueUsd))}</span>
-                    {confirmDeleteId === h.id ? (
-                      <div className="flex items-center gap-1">
-                        <button onClick={() => deleteHolding.mutate(h.id)} disabled={deleteHolding.isPending}
-                          className="h-11 px-4 rounded-full bg-sun text-forest text-[13px] font-semibold disabled:opacity-60">
-                          {deleteHolding.isPending ? "…" : "Remove"}
-                        </button>
-                        <button onClick={() => setConfirmDeleteId(null)}
-                          className="h-11 px-3 rounded-full text-[13px] font-medium text-ink-40 hover:text-forest">
-                          Cancel
-                        </button>
-                      </div>
-                    ) : (
-                      <>
-                        <button onClick={() => openEdit(h)}
-                          className="h-11 w-11 flex items-center justify-center rounded-full text-ink-40 hover:text-forest hover:bg-paper transition-colors"
-                          aria-label={`Edit ${h.assetName}`}>
-                          <Pencil className="h-4 w-4" />
-                        </button>
-                        <button onClick={() => setConfirmDeleteId(h.id)}
-                          className="h-11 w-11 flex items-center justify-center rounded-full text-ink-40 hover:text-clay-ink hover:bg-paper transition-colors"
-                          aria-label={`Delete ${h.assetName}`}>
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {atCap && (
-          <p className="px-1 text-[13px] text-ink-40 leading-[1.5]">
-            You're using both free holdings. Edit one to track something else.
-          </p>
-        )}
-
-        {/* Upgrade to advised — Track B CTA style, always shown */}
-        <div className="bg-breeze rounded-[24px] p-5">
-          <div className="flex items-start gap-3 mb-4">
-            <Sol size="sm" animate="breathe" />
-            <div className="min-w-0">
-              <div className="text-[16px] font-semibold text-forest mb-1">Live prices and performance</div>
-              <div className="text-[14px] text-forest text-pretty leading-snug">
-                Live prices, performance tracking, and more asset types unlock when you become a client — property, pensions, and multi-currency accounts included.
-              </div>
+                );
+              })}
             </div>
-          </div>
-          <a
-            href="/book"
-            onClick={() => track("upgrade_cta_clicked", { location: "portfolio_locked_card" })}
-            className="bg-forest text-paper rounded-full h-11 px-5 text-[14px] font-semibold inline-flex items-center hover:opacity-90 transition-opacity"
-          >
-            See what's included
-          </a>
-        </div>
+          )}
 
-        <FreeTierBanner
-          feature={`Track up to ${FREE_HOLDING_CAP} holdings manually`}
-          benefit="Investment clients get live prices, performance tracking, and unlimited asset types across property, pensions, and multi-currency accounts."
-          storageKey="portfolio"
-        />
+          {atCap && (
+            <p className="px-1 text-[13px] text-ink-40 leading-[1.5]">
+              You're using both free holdings. Edit one to track something else.
+            </p>
+          )}
+        </section>
+
+        {/* Sol tip → Advisor tab */}
+        <section aria-label="Sol tip" className="bg-breeze rounded-[24px] p-4 flex items-center gap-3 text-forest">
+          <div className="shrink-0">
+            <Sol size="sm" animate="breathe" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[14px] font-semibold leading-[1.4]">Live prices and performance</p>
+            <p className="text-[13px] leading-[1.45] text-forest/80 text-pretty mt-0.5">
+              Advised clients see live prices and every account in one place.
+            </p>
+          </div>
+          <Link
+            href="/free/advisor"
+            onClick={() => track("upgrade_cta_clicked", { location: "portfolio_locked_card" })}
+            className="shrink-0 inline-flex h-11 items-center rounded-full bg-forest px-4 text-[13px] font-semibold text-paper whitespace-nowrap hover:opacity-90 transition-opacity"
+          >
+            See how
+          </Link>
+        </section>
       </div>
 
       {/* Add/Edit holding sheet */}
