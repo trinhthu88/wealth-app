@@ -1,2 +1,3 @@
 - [Workflow termination signals](workflow-termination-signals.md) — exit 143 in managed artifact logs can indicate an external stop, not an application startup crash.
 - [Shared net-worth calculation](shared-net-worth-calculation.md) — keep the API and nightly job on one implementation without cross-importing the API artifact.
+- [Lemon Squeezy test routing](lemon-squeezy-test-routing.md) — verify checkout redirects and the test webhook target development before starting a test purchase.
