@@ -178,10 +178,16 @@ export function membershipGraceUntil(currentPeriodEnd: Date | null): Date | null
   return currentPeriodEnd ? new Date(currentPeriodEnd.getTime() + GRACE_DAYS * 86_400_000) : null;
 }
 
-/** Active for entitlement purposes: trialing, active, or past_due inside the grace window. */
+/**
+ * Active for entitlement purposes: trialing, active, past_due inside the grace window, or canceled
+ * with paid time left. A canceled member keeps what they paid for, with no grace on top, so a
+ * canceled status is over at graceUntil minus the grace days.
+ */
 export function isMembershipActive(status: MembershipStatus | null, graceUntil: Date | null, now: Date = new Date()): boolean {
   if (status === "trialing" || status === "active") return true;
-  return status === "past_due" && !!graceUntil && now <= graceUntil;
+  if (!graceUntil) return false;
+  if (status === "past_due") return now <= graceUntil;
+  return status === "canceled" && now.getTime() <= graceUntil.getTime() - GRACE_DAYS * 86_400_000;
 }
 
 /**

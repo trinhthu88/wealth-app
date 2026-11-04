@@ -1,23 +1,22 @@
 import { Router, type IRouter } from "express";
-import type Stripe from "stripe";
 import { eq } from "drizzle-orm";
 import { z } from "zod/v4";
 import { db, membershipCheckoutSessionsTable, membershipSettingsTable, membershipsTable, profilesTable } from "@workspace/db";
 import { MEMBERSHIP_PLANS, TRIAL_DAYS, isTrialEligible, type MembershipStatus } from "@workspace/tier-policy";
 import { requireAuth, requireRole } from "../middlewares/requireAuth";
 import { logger } from "../lib/logger";
-import { handleStripeEvent, isRowActive } from "../lib/membershipStore";
-import { getBillingPrices, getConfiguredPrices, priceIdForPlan, priceProblem } from "../lib/membershipPrices";
-import { getStripe } from "../lib/stripe";
+import { handleProviderEvent, isRowActive } from "../lib/membershipStore";
+import { getBillingPrices, getConfiguredPrices, priceIdForPlan } from "../lib/membershipPrices";
+import { PriceNotFoundError, getPaymentProvider, type ProviderEvent } from "../lib/payments";
 
 const router: IRouter = Router();
 const checkoutBody = z.object({ plan: z.enum(MEMBERSHIP_PLANS) });
 const settingsBody = z.object({ monthlyPriceId: z.string().trim().min(1), annualPriceId: z.string().trim().min(1) });
 const adminGuard = [requireAuth, requireRole("super_admin")];
 
-// Amounts come from Stripe, so the frontend never holds one.
+// Amounts come from the provider, so the frontend never holds one.
 router.get("/billing/prices", async (_req, res): Promise<void> => {
-  if (!process.env.STRIPE_SECRET_KEY) {
+  if (!getPaymentProvider().isConfigured()) {
     res.status(503).json({ error: "Membership prices aren't available right now." });
     return;
   }
@@ -30,26 +29,20 @@ router.get("/billing/prices", async (_req, res): Promise<void> => {
     }
     res.json(prices);
   } catch (err) {
-    logger.error({ err }, "Reading membership prices from Stripe failed");
+    logger.error({ err }, "Reading membership prices from the payment provider failed");
     res.status(503).json({ error: "Membership prices aren't available right now." });
   }
 });
 
 router.get("/admin/membership/prices", ...adminGuard, async (_req, res): Promise<void> => {
-  if (!process.env.STRIPE_SECRET_KEY) { res.status(503).json({ error: "Stripe isn't configured." }); return; }
+  const provider = getPaymentProvider();
+  if (!provider.isConfigured()) { res.status(503).json({ error: "The payment provider isn't configured." }); return; }
   try {
-    const prices = await getStripe().prices.list({ active: true, type: "recurring", limit: 100, expand: ["data.product"] });
-    res.json(prices.data.map((price) => ({
-      id: price.id,
-      nickname: price.nickname,
-      productName: typeof price.product === "object" && "name" in price.product ? price.product.name : null,
-      unitAmount: price.unit_amount,
-      currency: price.currency,
-      interval: price.recurring?.interval ?? null,
-    })));
+    const prices = await provider.listPrices();
+    res.json(prices.map(({ name, ...price }) => ({ ...price, nickname: name })));
   } catch (err) {
-    logger.error({ err }, "Listing Stripe prices failed");
-    res.status(502).json({ error: "We couldn't reach Stripe." });
+    logger.error({ err }, "Listing the payment provider's prices failed");
+    res.status(502).json({ error: "We couldn't reach the payment provider." });
   }
 });
 
@@ -60,6 +53,7 @@ router.get("/admin/membership/settings", ...adminGuard, async (_req, res): Promi
     monthlyPriceId: configured?.monthlyPriceId ?? null,
     annualPriceId: configured?.annualPriceId ?? null,
     source: configured?.source ?? null,
+    provider: getPaymentProvider().name,
     updatedBy: row?.updatedBy ?? null,
     updatedAt: row?.updatedAt ?? null,
   });
@@ -69,22 +63,23 @@ router.put("/admin/membership/settings", ...adminGuard, async (req, res): Promis
   const parsed = settingsBody.safeParse(req.body ?? {});
   if (!parsed.success) { res.status(400).json({ error: "monthlyPriceId and annualPriceId are required" }); return; }
   const { monthlyPriceId, annualPriceId } = parsed.data;
-  if (!process.env.STRIPE_SECRET_KEY) { res.status(503).json({ error: "Stripe isn't configured." }); return; }
+  const provider = getPaymentProvider();
+  if (!provider.isConfigured()) { res.status(503).json({ error: "The payment provider isn't configured." }); return; }
 
-  const stripe = getStripe();
   let problem: string | null;
   try {
-    const [monthly, annual] = await Promise.all(
-      [monthlyPriceId, annualPriceId].map((id) => stripe.prices.retrieve(id, { expand: ["product"] })),
-    );
-    problem = priceProblem(monthly, "month") ?? priceProblem(annual, "year");
+    const [monthlyProblem, annualProblem] = await Promise.all([
+      provider.priceProblem(monthlyPriceId, "month"),
+      provider.priceProblem(annualPriceId, "year"),
+    ]);
+    problem = monthlyProblem ?? annualProblem;
   } catch (err) {
-    if ((err as { code?: string }).code === "resource_missing") {
-      res.status(400).json({ error: "Stripe has no price with that id." });
+    if (err instanceof PriceNotFoundError) {
+      res.status(400).json({ error: "The payment provider has no price with that id." });
       return;
     }
-    logger.error({ err }, "Verifying Stripe prices failed");
-    res.status(502).json({ error: "We couldn't reach Stripe, so nothing was saved." });
+    logger.error({ err }, "Verifying the payment provider's prices failed");
+    res.status(502).json({ error: "We couldn't reach the payment provider, so nothing was saved." });
     return;
   }
   if (problem) { res.status(400).json({ error: problem }); return; }
@@ -128,86 +123,75 @@ router.post("/membership/checkout", requireAuth, async (req, res): Promise<void>
   // Read fresh, not from the display cache: this is the price the member is charged.
   const configured = await getConfiguredPrices();
   const price = configured && priceIdForPlan(configured, plan);
-  if (!price || !process.env.STRIPE_SECRET_KEY) {
-    logger.error("Stripe is not configured for membership checkout");
+  const provider = getPaymentProvider();
+  if (!price || !provider.isConfigured()) {
+    logger.error("The payment provider is not configured for membership checkout");
     res.status(503).json({ error: "Membership sign-up isn't available right now." });
     return;
   }
-  const stripe = getStripe();
 
-  if (open && open.expiresAt > new Date()) {
-    const session = await stripe.checkout.sessions.retrieve(open.sessionId);
-    if (session.status === "open") {
+  try {
+    if (open && open.expiresAt > new Date() && await provider.isCheckoutOpen(open.sessionId)) {
       if (open.plan === plan && open.priceId === price) { res.json({ url: open.url }); return; }
       // Changing plan, or an admin changing the price, closes the other session, so a user can't
       // complete both or pay an amount the app no longer sells.
-      await stripe.checkout.sessions.expire(open.sessionId);
+      await provider.closeCheckout(open.sessionId);
     }
+
+    // DECISION: see isTrialEligible. The screens read the same rule through entitlements.
+    const trial = isTrialEligible((membership?.status ?? null) as MembershipStatus | null);
+    const checkout = await provider.createCheckout({
+      userId,
+      email: profile.email,
+      priceId: price,
+      trialDays: trial ? TRIAL_DAYS : 0,
+      customerId: membership?.provider === provider.name ? membership.providerCustomerId : null,
+      // Two clicks racing past the lookup above carry the same key and get one session.
+      idempotencyKey: `membership-checkout:${userId}:${price}:${open?.sessionId ?? "first"}`,
+    });
+
+    const record = { sessionId: checkout.sessionId, plan, priceId: price, url: checkout.url, expiresAt: checkout.expiresAt };
+    await db.insert(membershipCheckoutSessionsTable).values({ userId, ...record })
+      .onConflictDoUpdate({ target: membershipCheckoutSessionsTable.userId, set: record });
+    res.json({ url: checkout.url });
+  } catch (err) {
+    logger.error({ err }, "Creating a membership checkout failed");
+    res.status(503).json({ error: "Membership sign-up isn't available right now." });
   }
-
-  // DECISION: see isTrialEligible. The screens read the same rule through entitlements.
-  const trial = isTrialEligible((membership?.status ?? null) as MembershipStatus | null);
-  const session = await stripe.checkout.sessions.create({
-    mode: "subscription",
-    line_items: [{ price, quantity: 1 }],
-    ...(membership?.providerCustomerId ? { customer: membership.providerCustomerId } : { customer_email: profile.email }),
-    client_reference_id: userId,
-    payment_method_collection: "always",
-    subscription_data: {
-      metadata: { userId },
-      ...(trial ? { trial_period_days: TRIAL_DAYS } : {}),
-    },
-    success_url: `${process.env.APP_URL}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${process.env.APP_URL}/billing/cancel`,
-    allow_promotion_codes: true,
-  }, {
-    // Two clicks racing past the lookup above carry the same key and get one session.
-    idempotencyKey: `membership-checkout:${userId}:${price}:${open?.sessionId ?? "first"}`,
-  });
-
-  const record = {
-    sessionId: session.id,
-    plan,
-    priceId: price,
-    url: session.url!,
-    expiresAt: new Date(session.expires_at * 1000),
-  };
-  await db.insert(membershipCheckoutSessionsTable).values({ userId, ...record })
-    .onConflictDoUpdate({ target: membershipCheckoutSessionsTable.userId, set: record });
-  res.json({ url: session.url });
 });
 
 router.post("/membership/portal", requireAuth, async (req, res): Promise<void> => {
-  const [membership] = await db.select({ customer: membershipsTable.providerCustomerId }).from(membershipsTable)
-    .where(eq(membershipsTable.userId, (req as any).userId));
-  if (!membership?.customer) { res.status(404).json({ error: "No membership to manage." }); return; }
-  const session = await getStripe().billingPortal.sessions.create({
-    customer: membership.customer,
-    return_url: `${process.env.APP_URL}/dashboard`,
-  });
-  res.json({ url: session.url });
+  const provider = getPaymentProvider();
+  const [membership] = await db.select({ customer: membershipsTable.providerCustomerId, provider: membershipsTable.provider })
+    .from(membershipsTable).where(eq(membershipsTable.userId, (req as any).userId));
+  // A customer id from another provider means nothing to this one.
+  if (!membership?.customer || membership.provider !== provider.name) {
+    res.status(404).json({ error: "No membership to manage." });
+    return;
+  }
+  try {
+    res.json({ url: await provider.portalUrl(membership.customer) });
+  } catch (err) {
+    logger.error({ err }, "Opening the billing portal failed");
+    res.status(502).json({ error: "We couldn't open your billing page just now." });
+  }
 });
 
-// /billing/webhook is the path Stripe is configured with today. It stays until the endpoint
-// has been moved in the Stripe dashboard, so no event is lost during the cutover.
-router.post(["/webhooks/stripe", "/billing/webhook"], async (req, res): Promise<void> => {
-  const stripe = getStripe();
-  let event: Stripe.Event;
+// /webhooks/payments is the endpoint. The Stripe paths stay as aliases until that provider is removed.
+router.post(["/webhooks/payments", "/webhooks/stripe", "/billing/webhook"], async (req, res): Promise<void> => {
+  const provider = getPaymentProvider();
+  let event: ProviderEvent;
   try {
-    event = stripe.webhooks.constructEvent(
-      req.body, // The raw Buffer; see the express.raw() mount in app.ts.
-      req.headers["stripe-signature"] as string,
-      process.env.STRIPE_WEBHOOK_SECRET!,
-    );
+    event = provider.verifyWebhook(req.body, req.headers); // The raw Buffer; see the express.raw() mount in app.ts.
   } catch {
     res.status(400).json({ error: "Webhook signature verification failed" });
     return;
   }
   try {
-    await handleStripeEvent(event, stripe);
+    await handleProviderEvent(event, provider);
     res.json({ received: true });
   } catch (err) {
-    logger.error({ err, eventId: event.id, eventType: event.type }, "Stripe webhook failed");
+    logger.error({ err, eventId: event.id, eventType: event.type }, "Payment webhook failed");
     res.status(500).json({ error: "Webhook handling failed" });
   }
 });

@@ -53,7 +53,7 @@ function Current({ label, price, per }: { label: string; price?: BillingPrice; p
       </p>
       {price && <p className="mt-1 break-all text-[12px] text-ink-40">{price.priceId}</p>}
       {price && !price.active && (
-        <p className="mt-2 text-[13px] font-medium text-clay-ink">This price is no longer active in Stripe, so sign-up on this plan will fail. Choose another.</p>
+        <p className="mt-2 text-[13px] font-medium text-clay-ink">This price is no longer active with the payment provider, so sign-up on this plan will fail. Choose another.</p>
       )}
     </div>
   );
@@ -118,7 +118,7 @@ export default function AdminMembership() {
 
   return (
     <AppShell>
-      <PageHeader title="Membership" subtitle="Choose which Stripe prices the app sells. Amounts are set in Stripe." />
+      <PageHeader title="Membership" subtitle="Choose which prices the app sells. Amounts are set with the payment provider." />
       <div className="max-w-2xl space-y-6">
         {settings.data?.source === "env" && (
           <p role="status" className="rounded-[14px] bg-surface px-4 py-3 text-[14px] text-ink-60">
@@ -130,11 +130,11 @@ export default function AdminMembership() {
           <Current label="Monthly" price={current.data?.monthly} per="month" />
           <Current label="Annual" price={current.data?.annual} per="year" />
         </section>
-        {current.isError && <p className="text-[14px] text-clay-ink">We couldn't load the current prices from Stripe.</p>}
+        {current.isError && <p className="text-[14px] text-clay-ink">We couldn't load the current prices from the payment provider.</p>}
 
         <section aria-label="Choose prices" className="space-y-4 rounded-[20px] bg-surface p-5">
           {prices.isError ? (
-            <p className="text-[14px] text-clay-ink">We couldn't reach Stripe to list your prices. Check the Stripe keys, then reload.</p>
+            <p className="text-[14px] text-clay-ink">We couldn't reach the payment provider to list your prices. Check its keys, then reload.</p>
           ) : (
             <>
               <PriceSelect
@@ -146,7 +146,7 @@ export default function AdminMembership() {
                 options={(prices.data ?? []).filter((p) => p.interval === "year")}
               />
               <p className="text-[13px] text-ink-40">
-                Hint: the annual price usually gives {ANNUAL_MONTHS_FREE} months free. Members on an existing subscription stay on their current price; a new selection applies to new sign-ups.
+                Hint: the annual price usually gives {ANNUAL_MONTHS_FREE} months free. In Lemon Squeezy, each price is a variant with a 7-day free trial. Members on an existing subscription stay on their current price; a new selection applies to new sign-ups.
               </p>
               <Button
                 className="h-11 rounded-full bg-green px-6 text-surface hover:bg-green-300"

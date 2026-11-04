@@ -1,19 +1,20 @@
-import type Stripe from "stripe";
 import { and, asc, eq, ne, sql } from "drizzle-orm";
 import {
-  db, clientProfilesTable, leadsTable, membershipsTable, profilesTable, stripeWebhookEventsTable,
+  db, clientProfilesTable, leadsTable, membershipsTable, paymentWebhookEventsTable, profilesTable,
   type Membership,
 } from "@workspace/db";
 import {
   isMembershipActive, membershipGraceUntil, type MembershipPlan, type MembershipStatus,
 } from "@workspace/tier-policy";
 import { logger } from "./logger";
+import type { PaymentProvider, ProviderEvent } from "./payments";
 import { raiseCheckpoint, runCheckpointHook } from "./checkpointEngine";
 
 /**
  * The only runtime code that writes memberships. Two callers exist, as the addendum names:
- * handleStripeEvent (the webhook) and setCompedMembership (the super-admin route). Checkout
- * writes nothing here: a user is not a member until Stripe says so.
+ * handleProviderEvent (the webhook) and setCompedMembership (the super-admin route). Checkout
+ * writes nothing here: a user is not a member until the provider says so. Nothing here is specific
+ * to a provider.
  */
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -23,60 +24,9 @@ export function isRowActive(row: Pick<Membership, "status" | "currentPeriodEnd">
   return isMembershipActive(row.status as MembershipStatus, membershipGraceUntil(row.currentPeriodEnd), now);
 }
 
-function statusFromStripe(status: Stripe.Subscription.Status): MembershipStatus {
-  switch (status) {
-    case "trialing": return "trialing";
-    case "active": return "active";
-    case "past_due":
-    case "unpaid": return "past_due";
-    case "canceled":
-    case "paused": return "canceled";
-    default: return "none"; // incomplete, incomplete_expired: nothing was ever paid.
-  }
-}
-
-function planFromPrice(price: Stripe.Price | undefined): MembershipPlan | null {
-  if (!price) return null;
-  // By interval, not id: an admin can change the configured prices, and subscribers stay on old ones.
-  return price.recurring?.interval === "year" ? "member_annual" : "member_monthly";
-}
-
-const fromUnix = (seconds: number | null | undefined) => (seconds ? new Date(seconds * 1000) : null);
-
-/**
- * DECISION: while past_due, currentPeriodEnd stores the end of the last paid period. The grace
- * rule is currentPeriodEnd + 7 days, but Stripe rolls current_period_end forward as soon as the
- * renewal invoice is created, even if payment then fails, so using its value would give a monthly
- * member about 37 days and an annual member over a year. The new period's start is the date they
- * paid through, which is what the 7-day decision means.
- */
-function paidThrough(sub: Stripe.Subscription, status: MembershipStatus): Date | null {
-  const item = sub.items.data[0];
-  return fromUnix(status === "past_due" ? item?.current_period_start : item?.current_period_end);
-}
-
-function customerId(customer: Stripe.Subscription["customer"]): string {
-  return typeof customer === "string" ? customer : customer.id;
-}
-
-/** The subscription an event is about, whichever object Stripe delivered. */
-function subscriptionIdFor(event: Stripe.Event): string | null {
-  const idOf = (s: string | { id: string } | null | undefined) => (typeof s === "string" ? s : s?.id ?? null);
-  switch (event.type) {
-    case "checkout.session.completed": {
-      const session = event.data.object as Stripe.Checkout.Session;
-      return session.mode === "subscription" ? idOf(session.subscription) : null;
-    }
-    case "customer.subscription.updated":
-    case "customer.subscription.deleted":
-      return (event.data.object as Stripe.Subscription).id;
-    case "invoice.payment_failed": {
-      const invoice = event.data.object as Stripe.Invoice;
-      return idOf(invoice.parent?.subscription_details?.subscription);
-    }
-    default:
-      return null;
-  }
+function planFromInterval(interval: string | null): MembershipPlan | null {
+  if (!interval) return null;
+  return interval === "year" ? "member_annual" : "member_monthly";
 }
 
 /**
@@ -107,71 +57,75 @@ async function onActivated(tx: Tx, userId: string, role: string, isFirst: boolea
   }
 }
 
-async function afterCommit(userId: string, previousStatus: string | undefined, nextStatus: string): Promise<void> {
-  if (nextStatus === "canceled" && previousStatus !== "canceled") {
-    await raiseCheckpoint(userId, "C12_lapsed", {});
-  }
+/** The membership has just run out, as opposed to being cancelled with paid time still left. */
+function hasLapsed(previous: Pick<Membership, "status" | "cancelAtPeriodEnd"> | undefined, status: string, activeNow: boolean): boolean {
+  if (status !== "canceled" || activeNow) return false;
+  return previous?.status !== "canceled" || previous.cancelAtPeriodEnd;
+}
+
+async function afterCommit(userId: string, lapsed: boolean): Promise<void> {
+  if (lapsed) await raiseCheckpoint(userId, "C12_lapsed", {});
   await runCheckpointHook(userId);
 }
 
 /**
- * Applies one Stripe event. The subscription is re-read from Stripe rather than taken from the
- * payload, because Stripe does not guarantee delivery order: a late "active" must not resurrect a
- * canceled member. Throws on a transient failure, so the route answers 500 and Stripe retries.
+ * Applies one provider event. The subscription is re-read from the provider rather than taken from
+ * the payload, because delivery order isn't guaranteed: a late "active" must not resurrect a canceled
+ * member. Throws on a transient failure, so the route answers 500 and the provider retries.
  */
-export async function handleStripeEvent(event: Stripe.Event, stripe: Stripe): Promise<void> {
-  const subscriptionId = subscriptionIdFor(event);
-  if (!subscriptionId) return;
+export async function handleProviderEvent(event: ProviderEvent, provider: PaymentProvider): Promise<void> {
+  if (!event.subscriptionId) return;
 
-  const [seen] = await db.select({ id: stripeWebhookEventsTable.eventId }).from(stripeWebhookEventsTable)
-    .where(eq(stripeWebhookEventsTable.eventId, event.id));
+  const [seen] = await db.select({ id: paymentWebhookEventsTable.eventId }).from(paymentWebhookEventsTable)
+    .where(eq(paymentWebhookEventsTable.eventId, event.id));
   if (seen) return;
 
-  const sub = await stripe.subscriptions.retrieve(subscriptionId);
-  const customer = customerId(sub.customer);
-  let userId: string | undefined = sub.metadata?.userId;
+  const sub = await provider.fetchSubscription(event.subscriptionId);
+  let userId: string | null = event.userId ?? sub.userId;
   if (!userId) {
     const [byCustomer] = await db.select({ userId: membershipsTable.userId }).from(membershipsTable)
-      .where(eq(membershipsTable.providerCustomerId, customer));
-    userId = byCustomer?.userId;
+      .where(eq(membershipsTable.providerCustomerId, sub.customerId));
+    userId = byCustomer?.userId ?? null;
   }
   if (!userId) {
-    logger.warn({ eventId: event.id, eventType: event.type }, "Stripe event has no matching user");
+    logger.warn({ eventId: event.id, eventType: event.type }, "Payment event has no matching user");
     return;
   }
   const targetUserId = userId;
 
   const change = await db.transaction(async (tx) => {
-    const [fresh] = await tx.insert(stripeWebhookEventsTable).values({ eventId: event.id, type: event.type })
+    const [fresh] = await tx.insert(paymentWebhookEventsTable).values({ eventId: event.id, type: event.type })
       .onConflictDoNothing().returning();
     if (!fresh) return null;
 
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`membership:${targetUserId}`}))`);
     const [profile] = await tx.select({ role: profilesTable.role }).from(profilesTable).where(eq(profilesTable.id, targetUserId));
     if (!profile) {
-      logger.warn({ eventId: event.id }, "Stripe event names a user with no profile");
+      logger.warn({ eventId: event.id }, "Payment event names a user with no profile");
       return null;
     }
     const [existing] = await tx.select().from(membershipsTable).where(eq(membershipsTable.userId, targetUserId));
-    const status = statusFromStripe(sub.status);
-    const activeNow = isMembershipActive(status, membershipGraceUntil(paidThrough(sub, status)));
+    const { status } = sub;
+    // A provider that can't say while past_due leaves the date already stored standing.
+    const paidThrough = sub.paidThrough ?? (status === "past_due" ? existing?.currentPeriodEnd ?? null : null);
+    const activeNow = isMembershipActive(status, membershipGraceUntil(paidThrough));
 
     // An old subscription ending must not cancel a newer one, or a comped membership.
-    if (!activeNow && existing && isRowActive(existing)
+    if ((status === "canceled" || !activeNow) && existing && isRowActive(existing)
       && (existing.source === "comped" || (existing.providerSubscriptionId && existing.providerSubscriptionId !== sub.id))) {
       return null;
     }
 
     const values = {
-      provider: "stripe",
-      providerCustomerId: customer,
+      provider: provider.name,
+      providerCustomerId: sub.customerId,
       providerSubscriptionId: sub.id,
-      plan: planFromPrice(sub.items.data[0]?.price),
+      plan: planFromInterval(sub.interval) ?? existing?.plan ?? null,
       status,
-      currentPeriodEnd: paidThrough(sub, status),
-      trialEndsAt: fromUnix(sub.trial_end),
-      cancelAtPeriodEnd: sub.cancel_at_period_end,
-      source: "stripe",
+      currentPeriodEnd: paidThrough,
+      trialEndsAt: sub.trialEndsAt,
+      cancelAtPeriodEnd: sub.cancelAtPeriodEnd,
+      source: provider.name,
       reason: null,
       updatedAt: new Date(),
     };
@@ -182,17 +136,17 @@ export async function handleStripeEvent(event: Stripe.Event, stripe: Stripe): Pr
       const isFirst = !existing || existing.status === "none";
       await onActivated(tx, targetUserId, profile.role, isFirst, "self_serve_member");
     }
-    return { previous: existing?.status, next: status };
+    return { lapsed: hasLapsed(existing, status, activeNow) };
   });
 
-  if (change) await afterCommit(targetUserId, change.previous, change.next);
+  if (change) await afterCommit(targetUserId, change.lapsed);
 }
 
 export type CompResult = { ok: true; membership: Membership } | { ok: false; httpStatus: number; error: string };
 
-/** The super-admin route's write. Comps or revokes; never touches a paying member's Stripe record. */
+/** The super-admin route's write. Comps or revokes; never touches a paying member's provider record. */
 export async function setCompedMembership(userId: string, action: "comp" | "revoke", reason: string): Promise<CompResult> {
-  const outcome = await db.transaction(async (tx): Promise<CompResult & { previous?: string }> => {
+  const outcome = await db.transaction(async (tx): Promise<CompResult & { lapsed?: boolean }> => {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`membership:${userId}`}))`);
     const [profile] = await tx.select({ role: profilesTable.role }).from(profilesTable).where(eq(profilesTable.id, userId));
     if (!profile) return { ok: false, httpStatus: 404, error: "Not found" };
@@ -203,16 +157,16 @@ export async function setCompedMembership(userId: string, action: "comp" | "revo
 
     if (action === "revoke") {
       if (existing?.source !== "comped") {
-        return { ok: false, httpStatus: 409, error: "Only a comped membership can be revoked here. Cancel a paid one in Stripe." };
+        return { ok: false, httpStatus: 409, error: "Only a comped membership can be revoked here. Cancel a paid one with the payment provider." };
       }
       const [membership] = await tx.update(membershipsTable)
-        .set({ status: "canceled", reason, currentPeriodEnd: null, updatedAt: new Date() })
+        .set({ status: "canceled", reason, currentPeriodEnd: null, cancelAtPeriodEnd: false, updatedAt: new Date() })
         .where(eq(membershipsTable.userId, userId)).returning();
-      return { ok: true, membership, previous: existing.status };
+      return { ok: true, membership, lapsed: hasLapsed(existing, "canceled", false) };
     }
 
-    if (existing?.source === "stripe" && isRowActive(existing)) {
-      return { ok: false, httpStatus: 409, error: "This user is paying through Stripe. Cancel that subscription before comping." };
+    if (existing && existing.source !== "comped" && isRowActive(existing)) {
+      return { ok: false, httpStatus: 409, error: "This user has a paid membership. Cancel that subscription before comping." };
     }
     const values = {
       status: "active", source: "comped", reason, plan: null, currentPeriodEnd: null,
@@ -221,10 +175,10 @@ export async function setCompedMembership(userId: string, action: "comp" | "revo
     const [membership] = await tx.insert(membershipsTable).values({ userId, ...values })
       .onConflictDoUpdate({ target: membershipsTable.userId, set: values }).returning();
     await onActivated(tx, userId, profile.role, !existing || existing.status === "none", "comped_member");
-    return { ok: true, membership, previous: existing?.status };
+    return { ok: true, membership, lapsed: false };
   });
 
-  if (outcome.ok) await afterCommit(userId, outcome.previous, outcome.membership.status);
-  const { previous: _previous, ...result } = outcome;
+  if (outcome.ok) await afterCommit(userId, !!outcome.lapsed);
+  const { lapsed: _lapsed, ...result } = outcome;
   return result as CompResult;
 }
