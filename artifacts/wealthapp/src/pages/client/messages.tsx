@@ -36,7 +36,7 @@ export default function ClientMessages() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const { data: clientPreferences } = useQuery<ClientProfilePreferences>({
+  const { data: clientPreferences, isPending: clientPreferencesPending } = useQuery<ClientProfilePreferences>({
     queryKey: ["client-profile-me"],
     queryFn: () => apiFetch<ClientProfilePreferences>("/client-profile/me"),
   });
@@ -133,7 +133,7 @@ export default function ClientMessages() {
             <input
               type="checkbox"
               checked={clientPreferences?.shareBudgetWithAdvisor ?? false}
-              disabled={!clientPreferences || updateBudgetSharing.isPending}
+              disabled={clientPreferencesPending || updateBudgetSharing.isPending}
               onChange={event => updateBudgetSharing.mutate(event.target.checked)}
               className="h-5 w-5 shrink-0 accent-[var(--forest)]"
             />

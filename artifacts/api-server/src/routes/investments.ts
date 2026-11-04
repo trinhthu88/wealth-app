@@ -141,9 +141,7 @@ router.get("/client-profile/me", requireAuth, async (req, res): Promise<void> =>
   const userId = (req as any).userId;
   const [cp] = await db.select().from(clientProfilesTable).where(eq(clientProfilesTable.userId, userId));
   if (!cp) {
-    // Auto-create if investment_client
-    const [created] = await db.insert(clientProfilesTable).values({ userId }).returning();
-    res.json(created);
+    res.status(404).json({ error: "Client profile not found" });
     return;
   }
   res.json(cp);

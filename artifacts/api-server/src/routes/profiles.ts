@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import { clerkClient } from "@clerk/express";
 import { eq } from "drizzle-orm";
 import { db, profilesTable, clientProfilesTable, normalizeRiskProfile } from "@workspace/db";
 import { requireAuth } from "../middlewares/requireAuth";
@@ -6,16 +7,39 @@ import { parseDateOfBirth, setRiskProfile } from "../lib/profileFields";
 
 const router: IRouter = Router();
 
+/** The caller's primary email as Clerk knows it. Null when the account has none. */
+async function getClerkPrimaryEmail(userId: string): Promise<{ address: string; verified: boolean } | null> {
+  const user = await clerkClient.users.getUser(userId);
+  const primary = user.emailAddresses.find((e) => e.id === user.primaryEmailAddressId);
+  if (!primary) return null;
+  return { address: primary.emailAddress, verified: primary.verification?.status === "verified" };
+}
+
 router.post("/profiles/me/upsert", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
-  const { email, fullName } = req.body;
-  if (!email) {
-    res.status(400).json({ error: "email required" });
+  const fullName = req.body?.fullName;
+
+  // F-1: identity comes from Clerk. A body `email` is ignored, both for the
+  // super_admin check and for the stored address.
+  let clerkEmail: Awaited<ReturnType<typeof getClerkPrimaryEmail>>;
+  try {
+    clerkEmail = await getClerkPrimaryEmail(userId);
+  } catch (err) {
+    req.log.error({ err }, "Could not read the caller's email from Clerk");
+    res.status(502).json({ error: "Could not verify your account. Please try again." });
     return;
   }
+  if (!clerkEmail) {
+    res.status(400).json({ error: "Your account has no primary email address" });
+    return;
+  }
+  const email = clerkEmail.address;
 
+  // DECISION: super_admin also requires the primary address to be verified. Otherwise
+  // an instance that allows unverified sign-ups would reopen F-1: register with the
+  // admin's address, skip verification, get the role.
   const superAdminEmail = process.env.SUPER_ADMIN_EMAIL?.trim().toLowerCase();
-  const isSuperAdmin = superAdminEmail && email.trim().toLowerCase() === superAdminEmail;
+  const isSuperAdmin = !!superAdminEmail && clerkEmail.verified && email.trim().toLowerCase() === superAdminEmail;
 
   const existing = await db.select().from(profilesTable).where(eq(profilesTable.id, userId));
   if (existing.length > 0) {

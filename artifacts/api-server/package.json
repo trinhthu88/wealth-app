@@ -29,7 +29,8 @@
     "pg": "^8.20.0",
     "pino": "^9",
     "pino-http": "^10",
-    "stripe": "^22.6.0"
+    "stripe": "^22.6.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.10",

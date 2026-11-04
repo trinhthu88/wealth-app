@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, and, desc } from "drizzle-orm";
+import { z } from "zod/v4";
 import { db, budgetTransactionsTable, clientBudgetMonthsTable } from "@workspace/db";
 import { requireAuth, requireRole } from "../middlewares/requireAuth";
 
@@ -58,6 +59,18 @@ function toLegacyEntry(row: SharedBudgetMonth) {
     updatedAt: row.updatedAt,
   };
 }
+
+const updateTransactionBody = z.object({
+  periodMonth: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/),
+  description: z.string().trim().min(1).max(500),
+  amount: z.union([z.number(), z.string().trim().min(1)])
+    .transform(Number)
+    .refine((n) => Number.isFinite(n) && n > 0, "amount must be a positive number"),
+  type: z.enum(["income", "expense"]).default("expense"),
+  category: z.string().trim().min(1).max(100).default("other"),
+  transactionDate: z.iso.date(),
+  isRecurring: z.boolean().default(false),
+});
 
 // ── Budget entries ───────────────────────────────────────────────────────────
 
@@ -227,19 +240,17 @@ router.post("/budget/transactions", requireAuth, async (req, res): Promise<void>
 router.put("/budget/transactions/:id", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-  const { periodMonth, description, amount, type, category, transactionDate, isRecurring } = req.body;
-  if (!periodMonth || !description || amount == null || !transactionDate) {
-    res.status(400).json({ error: "periodMonth, description, amount, transactionDate required" });
+  // A malformed id cannot match a row; answer as not found rather than a Postgres error.
+  if (!z.uuid().safeParse(rawId).success) { res.status(404).json({ error: "Not found" }); return; }
+  const body = updateTransactionBody.safeParse(req.body);
+  if (!body.success) {
+    res.status(400).json({ error: "Invalid transaction", issues: z.flattenError(body.error).fieldErrors });
     return;
   }
+  const { amount, ...fields } = body.data;
   const [tx] = await db.update(budgetTransactionsTable).set({
-    periodMonth,
-    description,
+    ...fields,
     amount: String(amount),
-    type: type ?? "expense",
-    category: category ?? "other",
-    transactionDate,
-    isRecurring: isRecurring ?? false,
   }).where(and(
     eq(budgetTransactionsTable.id, rawId),
     eq(budgetTransactionsTable.userId, userId),
