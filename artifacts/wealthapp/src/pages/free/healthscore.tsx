@@ -1,10 +1,9 @@
 // ANIMATION RULES FOR THIS PAGE:
-// ✓ ALLOWED: Chart draw animation (Recharts default)
-// ✓ ALLOWED: Ring stroke draw-in and sub-score bar width transitions
+// ✓ ALLOWED: Ring stroke draw-in (HealthScoreRing) and history bar height transitions
 // ✗ BANNED:  Page-load stagger on sections
 // ✗ BANNED:  JetBrains Mono font
 // ✗ BANNED:  Inline style={{ color: '#hexcode' }} — use Tailwind tokens only
-// ✗ BANNED:  Page-level nav or bottom padding hacks — FreeAppShell owns the menu bar
+// ✗ BANNED:  Page-level nav, own back button or bottom padding hacks — FreeAppShell owns the menu bar and back pill
 
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
@@ -17,10 +16,10 @@ import { apiFetch } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
 import { track } from "@/lib/analytics";
 import { toast } from "sonner";
-import { RefreshCw, TrendingUp, ShieldAlert, CreditCard, Landmark, ArrowUpRight } from "lucide-react";
-import SolNarration from "@/components/client/SolNarration";
+import { RefreshCw, ArrowUp, ArrowDown, ArrowUpRight, Check, Lightbulb } from "lucide-react";
+import Sol from "@/components/Sol";
 import { cn } from "@/lib/utils";
-import { LineChart, Line, ResponsiveContainer, Tooltip } from "recharts";
+import { openSolChat } from "@/lib/solChat";
 import { useProfile } from "@/hooks/useProfile";
 import { generateWeeklyTip, getAgeBenchmarkSavingsRate } from "@/lib/tipEngine";
 import { getStreak, getRatesFromStorage } from "@/lib/milestones";
@@ -83,18 +82,39 @@ function investmentScore(investmentBalance: number): number {
   return 0;
 }
 
-// Status pills: Spring Field = good, Blue Breeze = fair, Sunset tint only for
-// "needs work" (attention).
-type Badge = { label: string; pill: string };
-const GOOD: Badge = { label: "Good",       pill: "bg-field text-forest" };
-const FAIR: Badge = { label: "Fair",       pill: "bg-breeze text-forest" };
-const WORK: Badge = { label: "Needs work", pill: "bg-sun-tint text-amber-ink" };
+// Status labels (read out with each sub-score tile).
+type Badge = { label: string };
+const GOOD: Badge = { label: "Good" };
+const FAIR: Badge = { label: "Fair" };
+const WORK: Badge = { label: "Needs work" };
+
+// Sub-score tile colour (approved design): full-strength Spring Field ≥70,
+// Blue Breeze 50–69, Sunset Pop <50. Text stays Cobalt on all three.
+function tileTone(score: number): string {
+  if (score >= 70) return "bg-field";
+  if (score >= 50) return "bg-breeze";
+  return "bg-sun";
+}
+
+// Page title from the score band.
+function bandTitle(score: number, hasScore: boolean): string {
+  if (!hasScore) return "Your health score";
+  if (score >= 85) return "In great shape";
+  if (score >= 70) return "In good shape";
+  if (score >= 50) return "Getting there";
+  if (score >= 30) return "Needs some work";
+  return "Needs attention";
+}
 
 function monthKey(d: Date) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; }
 
-function insightCardClass(text: string): string {
-  if (/on track|ahead|positive|grew|great|excellent/i.test(text)) return "bg-green-tint";
-  return "bg-surface";
+function isPositiveInsight(text: string): boolean {
+  return /on track|ahead|positive|grew|great|excellent/i.test(text);
+}
+
+function monthShort(dateStr: string): string {
+  const d = new Date(dateStr.length <= 10 ? `${dateStr.slice(0, 10)}T00:00:00` : dateStr);
+  return isNaN(d.getTime()) ? "" : d.toLocaleDateString("en-US", { month: "short" });
 }
 
 export default function HealthScorePage() {
@@ -239,7 +259,6 @@ export default function HealthScorePage() {
   const dimensions = [
     {
       label: "Savings rate",
-      icon: TrendingUp,
       score: srScore,
       badge: srBadge,
       detail: effectiveSavingsRate > 0 ? `${Math.round(effectiveSavingsRate)}% of income saved` : "No income data yet",
@@ -248,8 +267,7 @@ export default function HealthScorePage() {
       actionRoute: "/free/budget",
     },
     {
-      label: "Emergency fund",
-      icon: ShieldAlert,
+      label: "Safety net",
       score: efScore,
       badge: efBadge,
       detail: emergencyMonths >= 0.1
@@ -261,7 +279,6 @@ export default function HealthScorePage() {
     },
     {
       label: "Debt load",
-      icon: CreditCard,
       score: dlScore,
       badge: dlBadge,
       detail: totalDebt > 0
@@ -272,16 +289,15 @@ export default function HealthScorePage() {
       actionRoute: "/free/budget",
     },
     {
-      label: "Investment activity",
-      icon: Landmark,
+      label: "Investing",
       score: invScore,
       badge: invBadge,
       detail: investmentBalance > 0
         ? `${sym}${Math.round(investmentBalance).toLocaleString()} invested`
         : "Not started yet",
       tip: invTip,
-      actionLabel: "Talk to an advisor about investing",
-      actionRoute: "/book",
+      actionLabel: "Talk to an advisor",
+      actionRoute: "/free/advisor",
     },
   ];
 
@@ -340,140 +356,196 @@ export default function HealthScorePage() {
     return out;
   })();
 
-  const chartData = history.length > 1
-    ? history.map(h => ({ score: h.overallScore, date: h.scoreDate }))
-    : null;
+  // ── History: latest score per month, oldest → newest, last 3 months ──────
+  const monthlyHistory = useMemo(() => {
+    const byMonth = new Map<string, HealthScore>();
+    [...history]
+      .filter(h => typeof h.scoreDate === "string" && h.scoreDate.length >= 7)
+      .sort((a, b) => a.scoreDate.localeCompare(b.scoreDate))
+      .forEach(h => byMonth.set(h.scoreDate.slice(0, 7), h));
+    return Array.from(byMonth.values()).slice(-3);
+  }, [history]);
 
-  // ── Ring status + Sol line ────────────────────────────────────────────────
-  const statusText = overall >= 85 ? "Excellent" : overall >= 70 ? "Good shape" : overall >= 50 ? "Getting there" : overall >= 30 ? "Needs work" : overall > 0 ? "Action needed" : "Calculating...";
-  const statusPill = overall >= 70 ? "bg-field text-forest" : overall >= 40 ? "bg-breeze text-forest" : overall > 0 ? "bg-sun text-forest" : "bg-forest-700 text-paper";
+  // Change chip: today's score vs the latest score from an earlier month.
+  const scoreMonth = score?.scoreDate?.slice(0, 7) ?? currentMk;
+  const previous = [...monthlyHistory].reverse().find(h => h.scoreDate.slice(0, 7) < scoreMonth) ?? null;
+  const change = score && previous ? Math.round(overall - previous.overallScore) : null;
+  const sinceMonth = previous ? monthShort(previous.scoreDate) : "";
 
+  // ── Sol line ──────────────────────────────────────────────────────────────
   const weakest = dimensions.reduce((low, d) => (d.score < low.score ? d : low), dimensions[0]);
+  const allGood = weakest.score >= 70;
   const solLine = !score
     ? "Your score is being worked out from your budget, savings, debt and investments."
-    : weakest.score >= 70
+    : allGood
     ? `All four parts of your score are in good shape — ${overall} out of 100 overall.`
-    : `Your score is ${overall}. ${weakest.label} is the part holding it back most right now.`;
-  const solDetail = weakest.tip ?? "Your score blends savings rate, emergency fund, debt load and investing. It updates when you edit your plan, budget or asset data.";
+    : `${weakest.label} is the part pulling your score down most.`;
+  const solDetail = weakest.tip ?? "Your score blends savings rate, safety net, debt and investing. It updates when you edit your plan, budget or asset data.";
 
   // ── Loading ───────────────────────────────────────────────────────────────
   if (isLoading || (!score && calculate.isPending)) return (
     <AppShell>
-      <div className="space-y-4 pb-8">
-        <div className="h-72 bg-surface animate-pulse rounded-[28px]" />
-        {Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-20 bg-surface animate-pulse rounded-[24px]" />)}
+      <div className="space-y-[14px] pb-8">
+        <div className="h-20 bg-surface animate-pulse rounded-[24px]" />
+        <div className="h-[172px] bg-surface animate-pulse rounded-[28px]" />
+        <div className="grid grid-cols-2 gap-3">
+          {Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-32 bg-surface animate-pulse rounded-[24px]" />)}
+        </div>
       </div>
     </AppShell>
   );
 
   return (
     <AppShell>
-      <div className="pb-8 space-y-4">
+      <div className="space-y-[14px] pb-8">
 
-        <SolNarration line={solLine} detail={solDetail} />
-
-        <div>
-          <h1 className="font-display text-[30px] leading-[1.1] text-forest">Health score</h1>
-          <p className="text-[14px] text-ink-40 leading-[1.5] mt-1.5 text-pretty">
-            How your savings, safety net, debt and investing add up today.
+        {/* ── Title from the score band ─────────────────────────────────── */}
+        <div className="px-1 pt-1">
+          <h1 className="font-display text-[36px] leading-[1.05] text-forest text-balance">{bandTitle(overall, !!score)}</h1>
+          <p className="mt-1 text-[14px] leading-[1.5] text-ink-40 text-pretty">
+            How saving, safety net, debt and investing add up
           </p>
         </div>
 
-        {/* ── Hero ring (Cobalt) ───────────────────────────────────────── */}
-        <div className="bg-forest rounded-[28px] p-6 flex flex-col items-center text-center">
-          <div className="tala-eyebrow text-mint mb-4">Your score · out of 100</div>
+        {/* ── Hero (Cobalt) — ring + change chip ────────────────────────── */}
+        <section aria-label="Your score" className="flex items-center gap-[18px] rounded-[28px] bg-forest p-5 text-paper">
           <HealthScoreRing score={overall} size="lg" darkMode />
-          <span className={cn("mt-4 inline-block rounded-full px-3 py-1 text-[12px] font-semibold", statusPill)}>
-            {statusText}
-          </span>
-          <button
-            type="button"
-            className="mt-5 inline-flex items-center gap-2 h-11 rounded-full bg-forest-700 px-5 text-[14px] font-semibold text-paper transition-opacity hover:opacity-90 disabled:opacity-60"
-            onClick={() => calculate.mutate()} disabled={calculate.isPending}
-            aria-label="Recalculate financial health score"
-          >
-            <RefreshCw className={cn("h-4 w-4", calculate.isPending && "animate-spin")} aria-hidden="true" />
-            {calculate.isPending ? "Calculating…" : "Recalculate"}
-          </button>
-          <p className="text-[12px] text-mint mt-3 text-pretty">Updates when you edit your plan, budget, or asset data</p>
-        </div>
+          <div className="flex min-w-0 flex-1 flex-col items-start gap-2">
+            <span className="tala-eyebrow text-mint">Out of 100</span>
+            {change !== null && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-field px-3 py-1.5 text-[12px] font-semibold text-forest whitespace-nowrap">
+                {change > 0 && <ArrowUp className="h-3.5 w-3.5" aria-hidden="true" />}
+                {change < 0 && <ArrowDown className="h-3.5 w-3.5" aria-hidden="true" />}
+                {change === 0
+                  ? `Same as ${sinceMonth}`
+                  : <><span className="sr-only">{change > 0 ? "Up" : "Down"}</span>{Math.abs(change)} since {sinceMonth}</>}
+              </span>
+            )}
+            <span className="text-[13px] leading-[1.45] text-mint text-pretty">
+              Updates when you change your budget, goal or net worth.
+            </span>
+            <button
+              type="button"
+              className="inline-flex h-11 items-center gap-2 rounded-full border-[1.5px] border-paper/80 px-4 text-[13px] font-semibold text-paper transition-opacity hover:opacity-90 disabled:opacity-60"
+              onClick={() => calculate.mutate()} disabled={calculate.isPending}
+              aria-label="Recalculate financial health score"
+            >
+              <RefreshCw className={cn("h-4 w-4", calculate.isPending && "animate-spin")} aria-hidden="true" />
+              {calculate.isPending ? "Calculating…" : "Recalculate"}
+            </button>
+          </div>
+        </section>
 
-        {/* ── Four sub-scores ──────────────────────────────────────────── */}
+        {/* ── Four sub-scores (2×2) ─────────────────────────────────────── */}
         {score && (
-          <section className="space-y-3">
-            <h2 className="font-sans text-[16px] font-semibold text-forest">What makes up your score</h2>
-            {dimensions.map((dim) => {
-              const badge = dim.badge;
-              const barPct = Math.min(100, dim.score);
-              const fill = dim.score < 40 ? "bg-sun" : "bg-forest";
-              return (
-                <div key={dim.label} className="bg-surface rounded-[24px] p-5">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-[14px] bg-paper text-forest flex-none flex items-center justify-center" aria-hidden="true">
-                      <dim.icon className="w-5 h-5" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-[15px] font-semibold text-forest leading-[1.3]">{dim.label}</h3>
-                      <p className="text-[13px] text-ink-40 mt-0.5">{dim.detail}</p>
-                    </div>
-                    <div className="flex flex-col items-end gap-1 flex-none">
-                      <span className="font-display tabular-nums text-[24px] leading-none text-forest">{dim.score}</span>
-                      <span className={cn("text-[11px] font-semibold rounded-full px-2 py-0.5", badge.pill)}>{badge.label}</span>
-                    </div>
-                  </div>
-                  <div
-                    className="mt-4 h-2 rounded-full bg-track overflow-hidden"
-                    role="progressbar"
-                    aria-valuenow={barPct}
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    aria-label={`${dim.label}: ${dim.score} out of 100, ${badge.label}`}
-                  >
-                    <div className={cn("h-full rounded-full transition-[width] duration-500 ease-out", fill)} style={{ width: `${barPct}%` }} />
-                  </div>
-
-                  {/* Inline tip for scores below 70, always paired with a next-step action */}
-                  {dim.tip && (
-                    <div className="mt-4 rounded-[16px] bg-paper p-4">
-                      <p className="text-[14px] text-ink-40 leading-[1.5] text-pretty">{dim.tip}</p>
-                      <Link
-                        href={dim.actionRoute}
-                        className="inline-flex items-center gap-2 min-h-11 text-[14px] font-semibold text-green"
-                      >
-                        {dim.actionLabel}
-                        <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </section>
-        )}
-
-        {/* ── What would improve this — one clear next action ─────────────── */}
-        {score && (
-          <section>
-            <h2 className="font-sans text-[16px] font-semibold text-forest mb-3">What would improve this</h2>
-            <WeeklyTipCard tip={weeklyTip} />
-          </section>
-        )}
-
-        {/* ── Personalised insights ──────────────────────────────────────── */}
-        {score && insights.length > 0 && (
-          <section>
-            <h2 className="font-sans text-[16px] font-semibold text-forest mb-3">Personalised insights</h2>
-            <div className="space-y-3">
-              {insights.map((text, i) => (
-                <div key={i} className={cn("rounded-[24px] p-4 text-[14px] leading-[1.5] text-forest text-pretty", insightCardClass(text))}>
-                  {text}
+          <section aria-label="What makes up your score" className="space-y-2.5">
+            <h2 className="font-sans text-[16px] font-semibold text-forest px-1 pt-1">What makes it up</h2>
+            <div className="grid grid-cols-2 gap-3">
+              {dimensions.map(dim => (
+                <div
+                  key={dim.label}
+                  className={cn("flex flex-col gap-1.5 rounded-[24px] p-4 text-forest", tileTone(dim.score))}
+                  aria-label={`${dim.label}: ${dim.score} out of 100, ${dim.badge.label}. ${dim.detail}`}
+                  role="group"
+                >
+                  <span className="font-display tabular-nums text-[34px] leading-none tracking-[-0.03em]" aria-hidden="true">{dim.score}</span>
+                  <span className="text-[14px] font-semibold" aria-hidden="true">{dim.label}</span>
+                  <span className="text-[13px] leading-[1.4] text-pretty" aria-hidden="true">{dim.detail}</span>
                 </div>
               ))}
             </div>
           </section>
         )}
 
-        {/* ── Peer benchmark (only when age is known) ─────────────────────── */}
+        {/* ── Sol tip ───────────────────────────────────────────────────── */}
+        <section aria-label="Sol" className="flex items-start gap-3 rounded-[24px] bg-breeze p-4 text-forest">
+          <Sol size="sm" animate="breathe" />
+          <div className="flex min-w-0 flex-col gap-2">
+            <p className="text-[14px] font-semibold leading-[1.5] text-pretty">{solLine}</p>
+            <p className="text-[13px] leading-[1.5] text-pretty">{solDetail}</p>
+            {score && !allGood ? (
+              <Link
+                href={weakest.actionRoute}
+                className="inline-flex h-11 items-center gap-1.5 self-start rounded-full bg-forest px-4 text-[13px] font-semibold text-paper transition-opacity hover:opacity-90"
+              >
+                {weakest.actionLabel}
+                <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
+            ) : score ? (
+              <button
+                type="button"
+                onClick={openSolChat}
+                className="inline-flex h-11 items-center self-start rounded-full bg-forest px-4 text-[13px] font-semibold text-paper transition-opacity hover:opacity-90"
+              >
+                Ask Sol
+              </button>
+            ) : null}
+          </div>
+        </section>
+
+        {/* ── Score history (bars) ──────────────────────────────────────── */}
+        <section aria-label="Score history" className="flex flex-col gap-2.5 rounded-[24px] bg-surface p-4">
+          <h2 className="font-sans text-[16px] font-semibold text-forest">
+            {monthlyHistory.length > 1 ? `Last ${monthlyHistory.length} months` : "Score history"}
+          </h2>
+          {monthlyHistory.length > 1 ? (
+            <div
+              className="flex h-[112px] items-end gap-2.5"
+              role="img"
+              aria-label={`Health score by month: ${monthlyHistory.map(h => `${monthShort(h.scoreDate)} ${Math.round(h.overallScore)}`).join(", ")}`}
+            >
+              {monthlyHistory.map((h, i) => {
+                const latest = i === monthlyHistory.length - 1;
+                const pct = Math.max(6, Math.min(100, h.overallScore));
+                return (
+                  <div key={h.scoreDate} className="flex h-full flex-1 flex-col items-center justify-end gap-1.5" aria-hidden="true">
+                    <span className="text-[13px] font-semibold tabular-nums text-forest">{Math.round(h.overallScore)}</span>
+                    <span
+                      className={cn("w-full rounded-[10px] transition-[height] duration-500 ease-out", latest ? "bg-forest" : "bg-breeze")}
+                      style={{ height: `${(pct / 100) * 64}px` }}
+                    />
+                    <span className="text-[12px] text-ink-40">{monthShort(h.scoreDate)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-[14px] leading-[1.5] text-ink-40 text-pretty">Check back next month to see your score trend.</p>
+          )}
+        </section>
+
+        {/* ── This week's tip — one clear next action ───────────────────── */}
+        {score && (
+          <section aria-label="This week's tip" className="space-y-2.5">
+            <h2 className="font-sans text-[16px] font-semibold text-forest px-1 pt-1">What would improve this</h2>
+            <WeeklyTipCard tip={weeklyTip} />
+          </section>
+        )}
+
+        {/* ── Personalised insights ─────────────────────────────────────── */}
+        {score && insights.length > 0 && (
+          <section aria-label="Personalised insights" className="space-y-2.5">
+            <h2 className="font-sans text-[16px] font-semibold text-forest px-1 pt-1">Personalised insights</h2>
+            <div className="flex flex-col rounded-[24px] bg-surface p-1">
+              {insights.map((text, i) => {
+                const positive = isPositiveInsight(text);
+                return (
+                  <div key={i} className="flex items-center gap-3 border-b border-hairline p-3 last:border-0">
+                    <span
+                      className={cn("flex h-10 w-10 flex-none items-center justify-center rounded-[12px] text-forest", positive ? "bg-field" : "bg-paper")}
+                      aria-hidden="true"
+                    >
+                      {positive ? <Check className="h-4 w-4" /> : <Lightbulb className="h-4 w-4" />}
+                    </span>
+                    <p className="min-w-0 flex-1 text-[14px] leading-[1.45] text-forest text-pretty">{text}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* ── Peer benchmark (only when age is known) ───────────────────── */}
         {score && profileAge != null && (effectiveSavingsRate > 0 || overall > 0) && (
           <BenchmarkCard
             userSavingsRate={effectiveSavingsRate}
@@ -481,27 +553,6 @@ export default function HealthScorePage() {
             age={profileAge}
           />
         )}
-
-        {/* ── Score history ─────────────────────────────────────────────── */}
-        <section>
-          <h2 className="font-sans text-[16px] font-semibold text-forest mb-3">Score history</h2>
-          {chartData ? (
-            <div className="bg-surface rounded-[24px] p-5">
-              <div role="img" aria-label={`Health score history: latest score ${chartData[chartData.length - 1]?.score ?? "unavailable"} out of 100`}>
-                <ResponsiveContainer width="100%" height={100}>
-                  <LineChart data={chartData}>
-                    <Tooltip formatter={(v) => [`${v}`, "Score"]} labelFormatter={(l) => new Date(l).toLocaleDateString("en-US", { month: "short" })} />
-                    <Line type="monotone" dataKey="score" stroke="var(--forest)" strokeWidth={2} dot={{ fill: "var(--forest)", r: 4 }} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          ) : (
-            <div className="bg-surface rounded-[24px] p-5 text-center">
-              <p className="text-[14px] text-ink-40">Check back next month to see your score trend</p>
-            </div>
-          )}
-        </section>
 
       </div>
     </AppShell>

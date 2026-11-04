@@ -9,15 +9,16 @@ interface Props {
   tip: Tip;
 }
 
-// Calm icon tiles: Spring Field / Blue Breeze for information, Sunset Pop
-// tint only for a goal that needs attention.
+// Full-strength icon tiles (approved design): Spring Field for wins, Blue
+// Breeze for information, Sunset Pop for a goal that needs attention. Text on
+// every tile stays Cobalt.
 const TYPE_ICON_TILE: Record<string, string> = {
-  goal_alert: "bg-sun-tint text-amber-ink",
-  benchmark: "bg-breeze text-forest",
-  expat_tip: "bg-breeze text-forest",
-  score_tip: "bg-field text-forest",
-  milestone: "bg-field text-forest",
-  market_context: "bg-breeze text-forest",
+  goal_alert: "bg-sun",
+  benchmark: "bg-breeze",
+  expat_tip: "bg-breeze",
+  score_tip: "bg-field",
+  milestone: "bg-field",
+  market_context: "bg-breeze",
 };
 
 const TYPE_ICON: Record<string, LucideIcon> = {
@@ -65,40 +66,39 @@ export default function WeeklyTipCard({ tip }: Props) {
     setDismissed(true);
   }
 
-  const iconTile = TYPE_ICON_TILE[tip.type] ?? "bg-breeze text-forest";
+  const iconTile = TYPE_ICON_TILE[tip.type] ?? "bg-breeze";
   const Icon = TYPE_ICON[tip.type] ?? Lightbulb;
   const typeLabel = TYPE_LABEL[tip.type] ?? "Insight";
+  // Free users meet an advisor on the Advisor tab, not the old booking page.
+  const actionHref = tip.actionRoute === "/book" ? "/free/advisor" : tip.actionRoute;
 
   return (
-    <div className="bg-surface rounded-[24px] p-5 relative">
+    <section aria-label={typeLabel} className="relative flex items-start gap-3 rounded-[24px] bg-surface p-4 pr-12">
+      <div className={cn("flex h-11 w-11 flex-none items-center justify-center rounded-[14px] text-forest", iconTile)} aria-hidden="true">
+        <Icon className="h-5 w-5" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="tala-eyebrow text-ink-40">{typeLabel}</div>
+        <h3 className="mt-1 text-[14px] font-semibold leading-[1.4] text-forest text-pretty">{tip.title}</h3>
+        <p className="mt-1 text-[13px] leading-[1.5] text-ink-40 text-pretty">{tip.body}</p>
+        {tip.actionLabel && actionHref && (
+          <Link
+            href={actionHref}
+            className="mt-3 inline-flex h-11 items-center gap-1.5 rounded-full bg-forest px-4 text-[13px] font-semibold text-paper transition-opacity hover:opacity-90"
+          >
+            {tip.actionLabel}
+            <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+          </Link>
+        )}
+      </div>
       <button
         type="button"
         onClick={dismiss}
-        className="absolute top-2 right-2 h-11 w-11 rounded-full flex items-center justify-center text-ink-30 hover:text-forest transition-colors"
+        className="absolute right-1 top-1 flex h-11 w-11 items-center justify-center rounded-full text-ink-30 transition-colors hover:text-forest"
         aria-label="Dismiss this week's tip"
       >
         <X className="h-4 w-4" />
       </button>
-
-      <div className="flex items-start gap-3 pr-8">
-        <div className={cn("w-10 h-10 rounded-[14px] flex items-center justify-center flex-none", iconTile)} aria-hidden="true">
-          <Icon className="h-5 w-5" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="tala-eyebrow text-ink-40">{typeLabel}</div>
-          <h3 className="text-[15px] font-semibold text-forest mt-1 leading-[1.35]">{tip.title}</h3>
-          <p className="text-[14px] text-ink-40 leading-[1.5] text-pretty mt-1">{tip.body}</p>
-          {tip.actionLabel && tip.actionRoute && (
-            <Link
-              href={tip.actionRoute}
-              className="inline-flex items-center gap-2 min-h-11 text-[14px] font-semibold text-green mt-1"
-            >
-              {tip.actionLabel}
-              <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
-            </Link>
-          )}
-        </div>
-      </div>
-    </div>
+    </section>
   );
 }

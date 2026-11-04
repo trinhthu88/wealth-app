@@ -7,8 +7,9 @@ interface Props {
   darkMode?: boolean;
 }
 
-const SIZES = { sm: 56, md: 100, lg: 160 };
-const STROKE = { sm: 5, md: 8, lg: 10 };
+// lg matches the free Health score hero (132px ring, 12px stroke).
+const SIZES = { sm: 56, md: 100, lg: 132 };
+const STROKE = { sm: 5, md: 8, lg: 12 };
 // Fraunces light (font-display + tabular-nums forces weight 300).
 const NUM_SIZE = { sm: "text-[18px]", md: "text-[30px]", lg: "text-[52px]" };
 
@@ -34,11 +35,12 @@ export default function HealthScoreRing({ score, size = "md", animate = true, da
     return () => clearTimeout(timeout);
   }, [score, animate, circ, offset]);
 
-  // Cobalt ring on the soft track; Sunset Pop only when the score needs
-  // attention. On a Cobalt hero card (darkMode) the ring is Spring Field.
-  const needsAttention = clamped > 0 && clamped < 40;
-  const color = needsAttention ? "var(--sun)" : darkMode ? "var(--field)" : "var(--forest)";
-  const trackColor = darkMode ? "var(--track-dark)" : "var(--track)";
+  // Light surfaces: Cobalt ring on the soft track, Sunset Pop only when the
+  // score needs attention. On a Cobalt hero card (darkMode) the ring is always
+  // Spring Field on a translucent white track, as in the approved design.
+  const needsAttention = !darkMode && clamped > 0 && clamped < 40;
+  const color = darkMode ? "var(--field)" : needsAttention ? "var(--sun)" : "var(--forest)";
+  const trackColor = darkMode ? "rgba(255, 255, 255, 0.16)" : "var(--track)";
 
   return (
     <div
@@ -64,7 +66,7 @@ export default function HealthScoreRing({ score, size = "md", animate = true, da
       </svg>
       <div className="absolute inset-0 flex items-center justify-center" aria-hidden="true">
         <span
-          className={`font-display tabular-nums leading-none tracking-[-0.04em] ${NUM_SIZE[size]} ${darkMode ? "text-paper" : "text-forest"}`}
+          className={`font-display tabular-nums leading-none tracking-[-0.05em] ${NUM_SIZE[size]} ${darkMode ? "text-paper" : "text-forest"}`}
         >
           {Math.round(clamped)}
         </span>
