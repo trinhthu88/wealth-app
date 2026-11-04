@@ -13,7 +13,7 @@ Run these in order on each environment, including production:
 3. `pnpm --filter @workspace/scripts run migrate-free-tier-to-client` is a dry run. Read the counts it logs.
 4. `pnpm --filter @workspace/scripts run migrate-free-tier-to-client --apply` copies the data and sets `onboarding_stage`. It is safe to run again.
 5. `pnpm --filter @workspace/scripts run backfill-memberships` is a dry run. Read the counts it logs.
-6. `pnpm --filter @workspace/scripts run backfill-memberships --apply` carries live `subscriptions` rows over to `memberships`. Add `--comp-existing-clients` only if decision 1 below goes that way. **Run this before the new code serves users**, or every current client drops to free limits.
+6. `pnpm --filter @workspace/scripts run backfill-memberships --apply --comp-existing-clients` carries live `subscriptions` rows over to `memberships` and comps every other current client. **Run this before the new code serves users**, or those clients drop to free limits.
 
 Then in Stripe and the environment:
 
@@ -26,11 +26,9 @@ The dev database has had steps 1 and 2 for Phase 5, and steps 3 and 4 for the ea
 
 ## Decisions for the product owner
 
-1. **What happens to current clients who don't pay?** Every `investment_client` without a live subscription has no membership, so the new rule puts them on free limits at deploy. Their data and advisor stay, but they can't add to it, and `/client/plan` closes. `backfill-memberships --comp-existing-clients` comps them all instead. Nothing does this by default.
-2. **The monthly price is still $4.99.** The addendum says one price, without an amount. `MONTHLY_CENTS` in `routes/membership.ts` is the display price and the Stripe price must match it; annual follows at 10 ×. The old annual price was $41.92.
-3. **Track B clients see fewer prompts.** Their conversion CTAs used to show on their own conditions and now appear only when a checkpoint is open, as the brief asks. The "Upgrade to Advised" dashboard card is now C8.
+1. **Track B clients see fewer prompts.** Their conversion CTAs used to show on their own conditions and now appear only when a checkpoint is open, as the brief asks. The "Upgrade to Advised" dashboard card is now C8.
 
-Settled in Phase 5: paid sign-up stays (the addendum), `/client/*` screens now keep advisors out, and users who finished the old onboarding no longer repeat it.
+Settled: paid sign-up stays (the addendum), `/client/*` screens keep advisors out, and users who finished the old onboarding don't repeat it. Current clients without a live subscription are comped at launch, and the prices are $4.99 monthly and $49.90 annual (product owner, 2026-11-04). `MONTHLY_CENTS` in `routes/membership.ts` is the display price, so the Stripe prices must match it.
 
 ## What shipped
 
@@ -68,6 +66,14 @@ Settled in Phase 5: paid sign-up stays (the addendum), `/client/*` screens now k
 - `/client/*` screens are allow-listed to `free_user`, `investment_client` and `super_admin`. A test fails if a new client screen skips it. This is a screen rule: `/api/client/*` answers an advisor with their own empty data, as it did before.
 - `migrate-free-tier-to-client` sets `onboarding_stage = complete` for users with `onboardingComplete` true or pathway step 6 completed, including those with no pathway rows.
 
+### Phase 6: access fixes from the audit
+- F-2: the advisor statement routes 404 unless the plan belongs to `:clientId`.
+- F-7: `PUT /leads/:id` and `POST /leads/:id/convert` use `requireAdvisorOwnsLeadById()`.
+- F-6: public `POST /leads` drops `status` and `notes`, validates with Zod and is limited to 10 per IP per 15 minutes. The advisor page uses the new `POST /advisor/leads`.
+- F-8: package transactions and snapshots take the owner from the package.
+- F-9: `GET /blog/:slug` serves published posts only.
+- `PATCH /goals/:id/status` already passed the goals cap on reopening; this phase adds a test.
+
 ### Metrics
 - `pnpm --filter @workspace/scripts run funnel-report` (add `--weeks=<n>`, default 12). "Promoted within 30 days" uses the lead's `updatedAt` as the promotion date, so a later edit to a promoted lead can drop it from that count.
 
@@ -90,6 +96,7 @@ Settled in Phase 5: paid sign-up stays (the addendum), `/client/*` screens now k
 | Unused components | `FreeTierBanner`, `GhostGoalCard`, `InvestableSurplusCard`, `shared/GoalCard`, `WeeklyTipCard`, `BottomNav`, `PlanPicker` and `lib/tipEngine` may be unused now. |
 | `PUT /client-profile/me` | Still creates a row for any role. The toggle on the messages page depends on it. |
 | Other localStorage keys | Track A's own CTAs and the off-track Sol card still store dismissals locally. They are not checkpoints. |
+| Rate limit across instances | The `POST /leads` count is held in memory and the deployment is autoscale, so each instance counts separately and the real limit is 10 × instances. A shared store would make it exact. It also assumes one proxy hop (`trust proxy` in `app.ts`), which needs checking on the deployed app: too few hops would put every visitor in one bucket. |
 | OpenAPI spec | New routes are not in `lib/api-spec`. They use `apiFetch`, like most client routes. |
 
 ## Where Phase 5 departs from the addendum

@@ -28,7 +28,10 @@ async function cleanupUser(userId: string) {
   await db.delete(profilesTable).where(eq(profilesTable.id, userId));
 }
 
+const superAdminId = `super-admin-test-${RUN_ID}`;
+
 beforeAll(async () => {
+  await db.insert(profilesTable).values({ id: superAdminId, email: `${superAdminId}@test.local`, role: "super_admin" });
   await db.insert(profilesTable).values({
     id: advisorId, email: `advisor-${RUN_ID}@test.local`, fullName: "Advisor", role: "advisor",
   });
@@ -36,6 +39,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await db.delete(profilesTable).where(eq(profilesTable.id, advisorId));
+  await db.delete(profilesTable).where(eq(profilesTable.id, superAdminId));
 });
 
 describe("lead promotion (PUT /leads/:id → status: client)", () => {
@@ -60,7 +64,7 @@ describe("lead promotion (PUT /leads/:id → status: client)", () => {
       email: `${userId}@test.local`, userId, status: "unassigned",
     }).returning();
 
-    const res = await request(app).put(`/api/leads/${lead.id}`).set(asUser(advisorId)).send({ status: "client" }).expect(409);
+    const res = await request(app).put(`/api/leads/${lead.id}`).set(asUser(superAdminId)).send({ status: "client" }).expect(409);
     expect(res.body.error).toMatch(/assign this lead/i);
 
     await cleanupUser(userId);

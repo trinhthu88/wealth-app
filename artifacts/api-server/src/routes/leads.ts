@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
+import { rateLimit } from "express-rate-limit";
 import { z } from "zod/v4";
 import { CHECKPOINT_CODES } from "@workspace/tier-policy";
 import { db, leadsTable, membershipsTable, profilesTable, leadStatusSchema, normalizeRiskProfile } from "@workspace/db";
@@ -59,15 +60,58 @@ router.post("/leads/from-interest", requireAuth, async (req, res): Promise<void>
   res.status(created ? 201 : 200).json(withPerson);
 });
 
-router.post("/leads", async (req, res): Promise<void> => {
-  const { email, firstName, source, quizResult, healthScore, status, notes } = req.body;
-  if (!email) { res.status(400).json({ error: "email required" }); return; }
-  const parsedStatus = status === undefined ? undefined : leadStatusSchema.safeParse(status);
-  if (parsedStatus && !parsedStatus.success) { res.status(400).json({ error: "Invalid lead status" }); return; }
+// The public quiz funnel. Anyone can call this, so it takes only what a visitor can know about
+// themselves: status is always unassigned and notes are staff's. Unknown fields are dropped.
+const publicLeadBody = z.object({
+  email: z.email().max(254),
+  firstName: z.string().trim().max(200).nullish(),
+  source: z.string().trim().max(200).nullish(),
+  quizResult: z.string().max(5000).nullish(),
+  healthScore: z.number().int().min(0).max(100).nullish(),
+});
+
+const publicLeadLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  message: { error: "Too many requests. Please try again later." },
+});
+
+router.post("/leads", publicLeadLimit, async (req, res): Promise<void> => {
+  const body = publicLeadBody.safeParse(req.body ?? {});
+  if (!body.success) { res.status(400).json({ error: "A valid email is required" }); return; }
+  const { email, firstName, source, quizResult, healthScore } = body.data;
   const [lead] = await db.insert(leadsTable).values({
     email, firstName: firstName ?? null, source: source ?? null,
     quizResult: quizResult ?? null, healthScore: healthScore ?? null,
-    status: parsedStatus?.success ? parsedStatus.data : "unassigned", notes: notes ?? null,
+    status: "unassigned",
+  }).returning();
+  res.status(201).json(lead);
+});
+
+// The advisor leads page's "Add lead", with the fields the public route refuses.
+const staffLeadBody = z.object({
+  email: z.email().max(254),
+  firstName: z.string().trim().max(200).nullish(),
+  source: z.string().trim().max(200).nullish(),
+  status: leadStatusSchema.optional(),
+  notes: z.string().max(5000).nullish(),
+});
+
+router.post("/advisor/leads", ...leadGuard, async (req, res): Promise<void> => {
+  const body = staffLeadBody.safeParse(req.body ?? {});
+  if (!body.success) { res.status(400).json({ error: "A valid email and lead status are required" }); return; }
+  const { email, firstName, source, status, notes } = body.data;
+  // DECISION: a lead an advisor adds is assigned to them. The list and every write are scoped to
+  // the assigned advisor, so an unassigned one would vanish from the page that just created it.
+  // That follows the assign route's rule: an assigned lead is no longer "unassigned".
+  const isAdvisor = (req as any).userRole === "advisor";
+  const nextStatus = status ?? "unassigned";
+  const [lead] = await db.insert(leadsTable).values({
+    email, firstName: firstName ?? null, source: source ?? null, notes: notes ?? null,
+    assignedAdvisorId: isAdvisor ? (req as any).userId : null,
+    status: isAdvisor && nextStatus === "unassigned" ? "active" : nextStatus,
   }).returning();
   res.status(201).json(lead);
 });
@@ -87,7 +131,7 @@ function pickLeadAdvisorEditableFields(body: Record<string, unknown>): Record<st
   return result;
 }
 
-router.put("/leads/:id", ...leadGuard, async (req, res): Promise<void> => {
+router.put("/leads/:id", ...leadGuard, requireAdvisorOwnsLeadById(), async (req, res): Promise<void> => {
   const userId = (req as any).userId as string;
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const updates = pickLeadAdvisorEditableFields(req.body ?? {});
@@ -155,7 +199,7 @@ router.put("/leads/:id/assign", ...superAdminGuard, async (req, res): Promise<vo
 // authenticated interest CTA, see leads.userId's comment) already has a real
 // account, and goes through the lead-status-to-"client" promotion transaction
 // instead (see the lead-detail Profile tab), never through here.
-router.post("/leads/:id/convert", ...leadGuard, async (req, res): Promise<void> => {
+router.post("/leads/:id/convert", ...leadGuard, requireAdvisorOwnsLeadById(), async (req, res): Promise<void> => {
   const userId = (req as any).userId;
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const { password, riskProfile } = req.body;

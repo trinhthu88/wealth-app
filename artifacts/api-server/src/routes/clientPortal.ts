@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, desc, and, ne, sql, count, or, gte } from "drizzle-orm";
+import { z } from "zod/v4";
 import {
   CompleteClientOnboardingBody,
   GetClientSetupChecklistResponse,
@@ -445,9 +446,22 @@ router.get("/advisor/clients/:id/advised-plans", requireAuth, requireRole("advis
   res.json(plans);
 });
 
+/**
+ * Passing requireAdvisorOwnsClientOrLead proves the advisor owns :clientId, not :planId, so
+ * statement routes must also check the plan is that client's. Otherwise an advisor could read or
+ * write another client's statements by naming their own client with someone else's plan.
+ */
+async function planBelongsToClient(planId: string, clientId: string): Promise<boolean> {
+  if (!z.uuid().safeParse(planId).success) return false;
+  const [plan] = await db.select({ userId: advisedPlansTable.userId }).from(advisedPlansTable)
+    .where(eq(advisedPlansTable.id, planId));
+  return plan?.userId === clientId;
+}
+
 // ── Advisor: get statements for a plan ───────────────────────────────────
 router.get("/advisor/clients/:clientId/advised-plans/:planId/statements", requireAuth, requireRole("advisor", "super_admin"), requireAdvisorOwnsClientOrLead("clientId"), async (req, res): Promise<void> => {
   const planId = req.params.planId as string;
+  if (!(await planBelongsToClient(planId, req.params.clientId as string))) { res.status(404).json({ error: "Not found" }); return; }
   const stmts = await db.select().from(advisedPlanStatementsTable)
     .where(eq(advisedPlanStatementsTable.advisedPlanId, planId))
     .orderBy(desc(advisedPlanStatementsTable.periodEnd));
@@ -495,6 +509,7 @@ router.post("/advisor/clients/:clientId/advised-plans/:planId/statements", requi
   const advisorId = (req as any).userId;
   const planId = req.params.planId as string;
   const clientId = req.params.clientId as string;
+  if (!(await planBelongsToClient(planId, clientId))) { res.status(404).json({ error: "Not found" }); return; }
   const {
     periodStart, periodEnd, statementDate, entryMode,
     openingValue, closingValue, contributions, extraAllocations,

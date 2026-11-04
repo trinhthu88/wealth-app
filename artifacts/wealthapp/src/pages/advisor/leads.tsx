@@ -38,7 +38,7 @@ export default function AdvisorLeads() {
   const { data: leads = [], isLoading } = useQuery<Lead[]>({ queryKey: ["leads"], queryFn: () => apiFetch<Lead[]>("/leads") });
 
   const add = useMutation({
-    mutationFn: (d: typeof form) => apiFetch("/leads", { method: "POST", body: JSON.stringify(d) }),
+    mutationFn: (d: typeof form) => apiFetch("/advisor/leads", { method: "POST", body: JSON.stringify(d) }),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["leads"] }); setOpen(false); toast.success("Lead added"); },
   });
 

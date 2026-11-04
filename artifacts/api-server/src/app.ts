@@ -11,6 +11,11 @@ import { logger } from "./lib/logger";
 
 const app: Express = express();
 
+// One proxy sits in front of the app, so req.ip is the visitor's address, not the proxy's. Without
+// this the per-IP limit on POST /leads would put every visitor in one bucket. Trusting more
+// hops than exist would let a caller choose their own IP with X-Forwarded-For.
+app.set("trust proxy", 1);
+
 app.use(
   pinoHttp({
     logger,

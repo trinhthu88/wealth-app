@@ -43,10 +43,11 @@ describe("shared status enum validation", () => {
 
   it("rejects unknown lead lifecycle values before inserting a lead", async () => {
     const response = await request(app)
-      .post("/api/leads")
+      .post("/api/advisor/leads")
+      .set("x-test-user-id", ADMIN_ID)
       .send({ email: "enum-test@example.test", status: "prospect" })
       .expect(400);
 
-    expect(response.body.error).toBe("Invalid lead status");
+    expect(response.body.error).toMatch(/lead status/);
   });
 });
