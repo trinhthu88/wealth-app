@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
-import { X, ChevronRight, Lightbulb } from "lucide-react";
+import { X, ArrowUpRight, Lightbulb, Users, Globe, Gauge, Award, LineChart, AlertCircle } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Tip } from "@/lib/tipEngine";
 
@@ -8,31 +9,33 @@ interface Props {
   tip: Tip;
 }
 
-const TYPE_COLORS: Record<string, string> = {
-  goal_alert: "border-l-red-400",
-  benchmark: "border-l-blue-400",
-  expat_tip: "border-l-purple-400",
-  score_tip: "border-l-amber-400",
-  milestone: "border-l-emerald-400",
-  market_context: "border-l-teal-400",
+// Calm icon tiles: Spring Field / Blue Breeze for information, Sunset Pop
+// tint only for a goal that needs attention.
+const TYPE_ICON_TILE: Record<string, string> = {
+  goal_alert: "bg-sun-tint text-amber-ink",
+  benchmark: "bg-breeze text-forest",
+  expat_tip: "bg-breeze text-forest",
+  score_tip: "bg-field text-forest",
+  milestone: "bg-field text-forest",
+  market_context: "bg-breeze text-forest",
 };
 
-const TYPE_ICON_BG: Record<string, string> = {
-  goal_alert: "bg-red-100 text-red-600",
-  benchmark: "bg-blue-100 text-blue-600",
-  expat_tip: "bg-purple-100 text-purple-600",
-  score_tip: "bg-amber-100 text-amber-600",
-  milestone: "bg-emerald-100 text-emerald-600",
-  market_context: "bg-teal-100 text-teal-600",
+const TYPE_ICON: Record<string, LucideIcon> = {
+  goal_alert: AlertCircle,
+  benchmark: Users,
+  expat_tip: Globe,
+  score_tip: Gauge,
+  milestone: Award,
+  market_context: LineChart,
 };
 
 const TYPE_LABEL: Record<string, string> = {
-  goal_alert: "GOAL ALERT",
-  benchmark: "PEER BENCHMARK",
-  expat_tip: "EXPAT TIP",
-  score_tip: "SCORE TIP",
-  milestone: "MILESTONE",
-  market_context: "MARKET INSIGHT",
+  goal_alert: "Goal alert",
+  benchmark: "Peer benchmark",
+  expat_tip: "Expat tip",
+  score_tip: "Score tip",
+  milestone: "Milestone",
+  market_context: "Market insight",
 };
 
 const LS_KEY = "wealthapp_tip_dismissed_v1";
@@ -62,41 +65,36 @@ export default function WeeklyTipCard({ tip }: Props) {
     setDismissed(true);
   }
 
-  const borderColor = TYPE_COLORS[tip.type] ?? "border-l-teal-400";
-  const iconBg = TYPE_ICON_BG[tip.type] ?? "bg-teal-100 text-teal-600";
-  const typeLabel = TYPE_LABEL[tip.type] ?? "INSIGHT";
+  const iconTile = TYPE_ICON_TILE[tip.type] ?? "bg-breeze text-forest";
+  const Icon = TYPE_ICON[tip.type] ?? Lightbulb;
+  const typeLabel = TYPE_LABEL[tip.type] ?? "Insight";
 
   return (
-    <div
-      className={cn(
-        "bg-card border border-border rounded-2xl p-4 border-l-4 relative",
-        borderColor,
-      )}
-    >
+    <div className="bg-surface rounded-[24px] p-5 relative">
       <button
+        type="button"
         onClick={dismiss}
-        className="absolute top-3 right-3 text-muted-foreground hover:text-foreground"
+        className="absolute top-2 right-2 h-11 w-11 rounded-full flex items-center justify-center text-ink-30 hover:text-forest transition-colors"
+        aria-label="Dismiss this week's tip"
       >
         <X className="h-4 w-4" />
       </button>
 
-      <div className="flex items-start gap-3 pr-6">
-        <div className={cn("h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0", iconBg)}>
-          <Lightbulb className="h-4 w-4" />
+      <div className="flex items-start gap-3 pr-8">
+        <div className={cn("w-10 h-10 rounded-[14px] flex items-center justify-center flex-none", iconTile)} aria-hidden="true">
+          <Icon className="h-5 w-5" />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-[10px] font-semibold tracking-wider text-muted-foreground mb-0.5">
-            {typeLabel}
-          </div>
-          <div className="font-semibold text-sm mb-1">{tip.title}</div>
-          <p className="text-sm text-muted-foreground leading-relaxed">{tip.body}</p>
+          <div className="tala-eyebrow text-ink-40">{typeLabel}</div>
+          <h3 className="text-[15px] font-semibold text-forest mt-1 leading-[1.35]">{tip.title}</h3>
+          <p className="text-[14px] text-ink-40 leading-[1.5] text-pretty mt-1">{tip.body}</p>
           {tip.actionLabel && tip.actionRoute && (
             <Link
               href={tip.actionRoute}
-              className="inline-flex items-center gap-1 text-sm font-medium text-primary mt-2 hover:underline"
+              className="inline-flex items-center gap-2 min-h-11 text-[14px] font-semibold text-green mt-1"
             >
               {tip.actionLabel}
-              <ChevronRight className="h-3.5 w-3.5" />
+              <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
             </Link>
           )}
         </div>

@@ -4,24 +4,28 @@
 // ✗ BANNED:  JetBrains Mono font
 // ✗ BANNED:  Cream/warm palette (#F1F4FE, #F1F4FE, #8F98C8)
 // ✗ BANNED:  Inline style={{ color: '#hexcode' }} — use Tailwind tokens only
-// ✗ BANNED:  Double bottom nav — AppShell is the ONLY nav
+// ✓ This is the dark Cobalt "long view" screen: the shell paints bg-forest behind it
+// ✗ BANNED:  Page-level nav — the shell's menu bar and section tabs are the ONLY nav
 // ✗ BANNED:  The onboarding wizard itself — that lives at /free/onboarding
 
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { motion } from "framer-motion";
 import AppShell from "@/components/AppShell";
-import BottomNav from "@/components/BottomNav";
 import { apiFetch } from "@/lib/api";
 import { useProfile } from "@/hooks/useProfile";
 import { track } from "@/lib/analytics";
+import { useState } from "react";
+import Sol from "@/components/Sol";
+import BottomSheet from "@/components/client/BottomSheet";
+import PlanPicker from "@/components/PlanPicker";
 import { cn } from "@/lib/utils";
-import { Check, Edit2, Map, Phone } from "lucide-react";
+import { ArrowUpRight, Check, PencilLine } from "lucide-react";
 
 interface Step { stepNumber: number; stepName: string; status: string; formData: Record<string, unknown>; }
 
 export default function PathwayPage() {
   const { profile } = useProfile();
+  const [plansOpen, setPlansOpen] = useState(false);
 
   const { data: progress = [], isLoading } = useQuery<Step[]>({
     queryKey: ["pathway"],
@@ -36,45 +40,64 @@ export default function PathwayPage() {
     return (
       <AppShell>
         <div className="flex items-center justify-center py-24">
-          <div className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+          <div className="h-8 w-8 rounded-full border-2 border-field border-t-transparent animate-spin" />
         </div>
-        <BottomNav />
       </AppShell>
     );
   }
+
+  const steps = [1, 2, 3, 4, 5, 6].map(n => ({
+    n,
+    done: progress.find(s => s.stepNumber === n)?.status === "completed",
+  }));
 
   // Setup not finished yet: point back to the standalone onboarding flow instead
   // of re-running the wizard inline here.
   if (!allDone) {
     return (
       <AppShell>
-        <div className="pb-24 md:pb-0 space-y-5">
-          <div>
-            <h1 className="text-forest text-[22px] font-bold tracking-[-0.02em]">My Pathway</h1>
-            <p className="text-sm text-ink-40 mt-1">Your financial setup isn't finished yet.</p>
+        <div className="space-y-5 pb-8">
+          <div className="flex items-start gap-3 px-1">
+            <div className="shrink-0 mt-0.5"><Sol size="sm" animate="breathe" /></div>
+            <div className="pt-0.5 min-w-0">
+              <div className="tala-eyebrow text-mint">Sol</div>
+              <p className="text-[16px] font-medium leading-[1.4] text-paper mt-1 text-pretty">
+                {completedCount === 0
+                  ? "Six short steps and I can show you the whole picture."
+                  : `${6 - completedCount} ${6 - completedCount === 1 ? "step" : "steps"} left before your pathway is complete.`}
+              </p>
+            </div>
           </div>
 
-          <div className="bg-surface rounded-[20px] p-6 shadow-[0_4px_14px_rgba(15,23,42,0.06)] text-center">
-            <div className="w-14 h-14 rounded-full bg-green-tint flex items-center justify-center mx-auto mb-4">
-              <Map className="h-6 w-6 text-green" />
+          <div>
+            <h1 className="font-display text-[30px] leading-[1.1] text-paper">Your pathway</h1>
+            <p className="text-[14px] text-mint mt-1.5">The long view of your money, one step at a time.</p>
+          </div>
+
+          <div className="rounded-[28px] bg-forest-700 p-6">
+            <div className="tala-eyebrow text-mint">Setup progress</div>
+            <div className="font-display tabular-nums text-[56px] leading-none tracking-[-0.04em] text-paper mt-3">
+              {completedCount}<span className="text-[24px] text-mint"> / 6</span>
             </div>
-            <h2 className="font-display text-[18px] font-bold text-forest mb-1.5">
-              {completedCount} of 6 steps complete
-            </h2>
-            <div className="h-2 rounded-full bg-hairline overflow-hidden my-4 max-w-xs mx-auto">
-              <div className="h-full rounded-full bg-green transition-[width] duration-300 ease-in-out" style={{ width: `${pct}%` }} />
+            <div className="flex gap-1.5 mt-5" aria-hidden="true">
+              {steps.map(st => (
+                <div key={st.n} className={cn("h-2 flex-1 rounded-full", st.done ? "bg-field" : "bg-track-dark")} />
+              ))}
             </div>
-            <p className="text-sm text-ink-60 mb-5">
-              Finish setup to unlock your Health Score, budget insights, and personalised goals.
+            <p className="text-[14px] text-mint leading-[1.5] mt-4 text-pretty">
+              Finish setup to unlock your Health score, budget insights and personalised goals.
             </p>
-            <Link href="/free/onboarding">
-              <span className="inline-flex items-center justify-center w-full max-w-xs rounded-xl bg-green text-white text-[15px] font-semibold py-3 hover:bg-forest-700 transition-colors cursor-pointer">
-                {completedCount === 0 ? "Start your financial pathway →" : "Continue setup →"}
+            <Link
+              href="/free/onboarding"
+              className="mt-5 inline-flex h-11 w-full items-center justify-between rounded-full bg-field pl-5 pr-1.5 text-[14px] font-semibold text-forest transition-opacity hover:opacity-90"
+            >
+              {completedCount === 0 ? "Start your pathway" : "Continue setup"}
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-forest text-paper">
+                <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
               </span>
             </Link>
           </div>
         </div>
-        <BottomNav />
       </AppShell>
     );
   }
@@ -97,48 +120,75 @@ export default function PathwayPage() {
 
   return (
     <AppShell>
-      <div className="pb-24 md:pb-0 space-y-5">
-        <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}>
-          <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-forest text-[22px] font-bold tracking-[-0.02em]">My Pathway</h1>
-            <span className="text-[11px] font-semibold text-green flex items-center gap-1 bg-green-tint rounded-full px-2 py-0.5">
-              <Check className="h-3 w-3" />Complete
-            </span>
+      <div className="space-y-5 pb-8">
+        <div className="flex items-start gap-3 px-1">
+          <div className="shrink-0 mt-0.5"><Sol size="sm" animate="breathe" /></div>
+          <div className="pt-0.5 min-w-0">
+            <div className="tala-eyebrow text-mint">Sol</div>
+            <p className="text-[16px] font-medium leading-[1.4] text-paper mt-1 text-pretty">
+              {income > 0
+                ? `You keep ${srPct}% of what you earn. That number shapes every step below.`
+                : "Your pathway is complete. Tap any step to update it as life changes."}
+            </p>
           </div>
-          <p className="text-sm text-ink-40">Tap any section to update your answers.</p>
-        </motion.div>
-
-        <div className="space-y-3">
-          {recap.map(item => (
-            <Link key={item.step} href={`/free/onboarding?step=${item.step}`}>
-              <span className="w-full bg-surface rounded-[16px] border border-hairline px-4 py-3.5 flex items-center justify-between text-left hover:border-green/40 transition-colors cursor-pointer">
-                <span>
-                  <span className="block text-[11px] text-ink-40 font-medium mb-0.5">{item.label}</span>
-                  <span className="block text-[14px] font-semibold text-forest">{item.value}</span>
-                </span>
-                <Edit2 className="h-4 w-4 text-ink-40 shrink-0 ml-3" />
-              </span>
-            </Link>
-          ))}
         </div>
 
+        <div className="flex items-end justify-between gap-3">
+          <div>
+            <h1 className="font-display text-[30px] leading-[1.1] text-paper">Your pathway</h1>
+            <p className="text-[14px] text-mint mt-1.5">Tap any step to update your answers.</p>
+          </div>
+          <span className="mb-1 inline-flex flex-none items-center gap-1 rounded-full bg-field px-2.5 py-1 text-[12px] font-semibold text-forest">
+            <Check className="h-3.5 w-3.5" aria-hidden="true" />Complete
+          </span>
+        </div>
+
+        <ol className="relative space-y-2.5">
+          <span className="absolute left-[19px] top-5 bottom-5 w-px bg-track-dark" aria-hidden="true" />
+          {recap.map(item => (
+            <li key={item.step} className="relative">
+              <Link
+                href={`/free/onboarding?step=${item.step}`}
+                className="flex items-center gap-3.5 rounded-[22px] bg-forest-700 py-3.5 pl-0 pr-3 transition-colors hover:bg-forest-700/80"
+              >
+                <span className="relative z-10 flex h-10 w-10 flex-none items-center justify-center rounded-full bg-field text-[13px] font-semibold text-forest">
+                  {item.step}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="tala-eyebrow block text-mint">{item.label}</span>
+                  <span className="mt-1 block text-[15px] font-semibold leading-snug text-paper text-pretty">{item.value}</span>
+                </span>
+                <PencilLine className="h-4 w-4 flex-none text-mint" aria-label="Edit" />
+              </Link>
+            </li>
+          ))}
+        </ol>
+
         {profile?.role === "free_user" && (
-          <div className={cn("bg-forest rounded-2xl p-5 text-paper")}>
-            <h4 className="text-[15px] font-semibold mb-2">Want a deeper plan?</h4>
-            <p className="text-[14px] text-mint leading-relaxed mb-4 text-pretty">
-              An advisor can turn this pathway into a full financial plan with portfolio tracking and scenario modelling.
-            </p>
-            <a
-              href="mailto:hello@tala.app?subject=Upgrade"
-              onClick={() => track("upgrade_cta_clicked", { location: "pathway_recap" })}
-              className="flex items-center justify-center gap-2 w-full h-12 rounded-xl bg-green text-white text-[15px] font-semibold hover:bg-forest-700 transition-colors"
+          <div className="rounded-[24px] bg-field p-5">
+            <div className="flex items-start gap-3">
+              <Sol size="sm" animate="none" />
+              <div className="min-w-0">
+                <h3 className="text-[16px] font-semibold text-forest">Want a deeper plan?</h3>
+                <p className="mt-1 text-[14px] leading-[1.5] text-forest text-pretty">
+                  An advisor can turn this pathway into a full plan, with a managed portfolio and what-if scenarios.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => { track("upgrade_cta_clicked", { location: "pathway_recap" }); setPlansOpen(true); }}
+              className="mt-4 inline-flex h-11 items-center rounded-full bg-forest px-5 text-[14px] font-semibold text-paper transition-opacity hover:opacity-90"
             >
-              <Phone className="h-4 w-4" />Talk to an advisor
-            </a>
+              Talk to an advisor
+            </button>
           </div>
         )}
       </div>
-      <BottomNav />
+
+      <BottomSheet isOpen={plansOpen} onClose={() => setPlansOpen(false)} title="Choose your plan">
+        <PlanPicker />
+      </BottomSheet>
     </AppShell>
   );
 }

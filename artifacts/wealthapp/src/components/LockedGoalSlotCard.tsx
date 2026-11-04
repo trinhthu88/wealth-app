@@ -1,5 +1,5 @@
-import { Lock } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ArrowUpRight, Lock } from "lucide-react";
+import Sol from "@/components/Sol";
 import { track } from "@/lib/analytics";
 
 /**
@@ -9,19 +9,25 @@ import { track } from "@/lib/analytics";
  */
 export default function LockedGoalSlotCard() {
   return (
-    <div className="rounded-2xl p-5 grayscale opacity-70 bg-hairline border-[1.5px] border-dashed border-hairline">
+    <div className="rounded-[24px] p-5 bg-breeze text-forest">
       <div className="flex items-start gap-3">
-        <div className="flex-shrink-0 flex items-center justify-center rounded-xl w-10 h-10 bg-green-tint">
-          <Lock className="h-4 w-4 text-green" />
+        <div className="shrink-0">
+          <Sol size="sm" animate="breathe" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-[13px] font-semibold text-forest leading-[1.4]">
-            Your 2nd goal slot
+          <div className="tala-eyebrow text-forest/70 flex items-center gap-1.5">
+            <Lock className="h-3 w-3" aria-hidden="true" />Your 2nd goal slot
+          </div>
+          <p className="text-[16px] font-medium leading-[1.4] mt-1 text-pretty">
+            The free plan tracks one goal. Upgrading lets you track as many as you need, side by side.
           </p>
-          <p className="text-xs text-ink-40 mt-0.5">Free plan is limited to 1 goal. Upgrade to track as many as you need.</p>
-          <Button variant="outline" size="sm" className="mt-3 text-xs border-primary text-primary hover:bg-primary/5" asChild>
-            <a href="/book" onClick={() => track("upgrade_cta_clicked", { location: "locked_goal_slot_card" })}>Unlock with upgrade →</a>
-          </Button>
+          <a
+            href="/book"
+            onClick={() => track("upgrade_cta_clicked", { location: "locked_goal_slot_card" })}
+            className="mt-4 inline-flex items-center gap-1.5 h-11 rounded-full bg-forest px-5 text-[14px] font-semibold text-paper transition-opacity hover:opacity-90"
+          >
+            Unlock with upgrade <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+          </a>
         </div>
       </div>
     </div>

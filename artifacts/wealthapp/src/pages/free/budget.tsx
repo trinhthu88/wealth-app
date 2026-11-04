@@ -1,21 +1,20 @@
 // ANIMATION RULES FOR THIS PAGE:
-// ✓ ALLOWED: Chart draw animation (Recharts default)
-// ✓ ALLOWED: BottomSheet spring animation
+// ✓ ALLOWED: Chart / progress-bar width transitions
+// ✓ ALLOWED: Expand/collapse of the transaction form and budget-plan rows
 // ✗ BANNED:  Page-load stagger on sections
 // ✗ BANNED:  JetBrains Mono font
-// ✗ BANNED:  Cream/warm palette (#F1F4FE, #F1F4FE, #8F98C8)
+// ✗ BANNED:  Tailwind default palette (emerald/red/slate…) — design tokens only
 // ✗ BANNED:  Inline style={{ color: '#hexcode' }} — use Tailwind tokens only
-// ✗ BANNED:  Double bottom nav — AppShell is the ONLY nav
+// ✗ BANNED:  Own bottom nav / back nav / bottom padding hacks — FreeAppShell owns nav + menu-bar padding
 
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import AppShell from "@/components/AppShell";
 import FreeTierBanner from "@/components/FreeTierBanner";
+import SolNarration from "@/components/client/SolNarration";
 import CurrencyField from "@/components/shared/CurrencyField";
 import InvestableSurplusCard from "@/components/shared/InvestableSurplusCard";
-import BottomNav from "@/components/BottomNav";
-import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
 import { track } from "@/lib/analytics";
@@ -310,123 +309,185 @@ export default function BudgetPage() {
   const prevMonth = () => { const d = new Date(viewDate); d.setMonth(d.getMonth() - 1); setViewDate(d); };
   const nextMonth = () => { const d = new Date(viewDate); d.setMonth(d.getMonth() + 1); if (d <= now) setViewDate(d); };
 
+
   const fmt = (n: number) => `${sym}${Math.abs(n).toLocaleString()}`;
   const catIcon = (cat: string) => {
     const CatIcon = TX_CATS.find(c => c.value === cat)?.icon || MoreHorizontal;
-    return <CatIcon className="w-4 h-4 text-muted-foreground" />;
+    return <CatIcon className="w-4 h-4" />;
   };
   const catLabel = (cat: string) => TX_CATS.find(c => c.value === cat)?.label ?? cat;
 
   const grouped = groupByDate(transactions);
 
-  const CAT_COLORS: Record<string, string> = {
-    housing: "var(--forest-700)", food: "var(--green)", transport: "var(--sun)",
-    utilities: "var(--ink-40)", entertainment: "var(--clay)", other: "var(--ink-40)",
-    income: "var(--green)",
+  // Category dot colours (visual only) — design tokens, Sunset Pop reserved for over-budget.
+  const CAT_DOTS: Record<string, string> = {
+    housing: "bg-forest", food: "bg-breeze", transport: "bg-field",
+    utilities: "bg-violet", entertainment: "bg-forest-700", other: "bg-ink-30",
+    income: "bg-field",
   };
 
   const isBusy = addTx.isPending || editTx.isPending;
 
+  // Sol's one observation, from real numbers only.
+  const biggestExpense = (txExpenses > 0
+    ? catTotals.filter(c => c.value !== "income").map(c => ({ label: c.label, value: c.total }))
+    : CATS.map(c => ({ label: c.label, value: form[c.key] }))
+  ).sort((a, b) => b.value - a.value)[0];
+  const monthName = viewDate.toLocaleDateString("en-US", { month: "long" });
+  const solLine = totalIncome > 0
+    ? saved >= 0
+      ? `You kept ${savingsRate.toFixed(0)}% of income in ${monthName}.${biggestExpense && biggestExpense.value > 0 ? ` ${biggestExpense.label} is your biggest category at ${fmt(biggestExpense.value)}.` : ""}`
+      : `Spending is ${fmt(saved)} above income in ${monthName}.${biggestExpense && biggestExpense.value > 0 ? ` ${biggestExpense.label} is the largest share at ${fmt(biggestExpense.value)}.` : ""}`
+    : null;
+
+  // Split bar: share of income spent vs kept (visual only).
+  const spentW = totalIncome > 0 ? Math.max(0, Math.min(100, (totalExpenses / totalIncome) * 100)) : 0;
+  const keptW = Math.max(0, 100 - spentW);
+  const atCurrentMonth = mk >= monthKey(now);
+
+  const inputCls = "w-full h-11 rounded-2xl bg-paper px-4 text-[14px] text-forest border outline-none transition-colors placeholder:text-ink-30 focus:border-green";
+  const primaryBtn = "h-11 w-full rounded-full bg-forest px-5 text-[14px] font-semibold text-paper transition-opacity hover:opacity-90 disabled:opacity-60";
+
   return (
     <AppShell>
-      <div className="pb-20 md:pb-0">
+      <div className="space-y-4 pb-8">
 
-        <FreeTierBanner
-          feature="Basic income and expense tracking"
-          benefit="Investment clients get investment contribution sync, goal funding analysis, and 12-month history charts."
-          storageKey="budget"
-        />
+        {solLine && (
+          <SolNarration
+            className="mb-0"
+            line={solLine}
+            detail="A savings rate near 20–30% is strong by most standards. Small month-to-month drift in one category matters far less than the rate holding steady over time."
+          />
+        )}
 
-        {/* Dark navy header */}
-        <div className="-mx-4 -mt-4 md:-mx-6 md:-mt-6 bg-forest p-[20px_22px_48px]">
-          <div className="flex items-center justify-between mb-5">
-            <h1 className="text-[22px] font-bold text-white tracking-[-0.02em]">
-              Budget
-            </h1>
-            <div className="flex items-center gap-2 rounded-[10px] p-[7px_14px]" style={{ background: "rgba(255,255,255,0.1)" }}>
-              <button onClick={prevMonth}><ChevronLeft className="h-4 w-4 text-white" /></button>
-              <span className="text-white text-[13px] font-medium">{monthLabel(viewDate)}</span>
-              <button onClick={nextMonth} disabled={mk >= monthKey(now)}>
-                <ChevronRight className={`h-4 w-4 text-white ${mk >= monthKey(now) ? "opacity-30" : ""}`} />
-              </button>
-            </div>
+        {/* Title + month switcher */}
+        <div className="flex flex-wrap items-end justify-between gap-3 px-1">
+          <div className="min-w-0">
+            <h1 className="font-display text-[30px] leading-[1.1] text-forest">Budget</h1>
+            <p className="mt-1 text-[14px] text-ink-40">Track what comes in and what goes out.</p>
           </div>
-          <div className="grid grid-cols-2 gap-5 mb-3">
-            <div>
-              <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.5)" }}>Income</p>
-              <p className="text-[24px] font-bold text-white mt-0.5">
-                {totalIncome > 0 ? fmt(totalIncome) : "—"}
-              </p>
-            </div>
-            <div>
-              <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.5)" }}>Expenses</p>
-              <p className="text-[24px] font-bold text-white mt-0.5">
-                {totalExpenses > 0 ? fmt(totalExpenses) : "—"}
-              </p>
-            </div>
+          <div className="flex items-center rounded-full bg-surface p-0.5" role="group" aria-label="Choose month">
+            <button
+              type="button"
+              onClick={prevMonth}
+              aria-label="Previous month"
+              className="flex h-11 w-11 items-center justify-center rounded-full text-forest transition-colors hover:bg-paper"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <span className="min-w-[116px] text-center text-[13px] font-semibold text-forest tabular-nums">{monthLabel(viewDate)}</span>
+            <button
+              type="button"
+              onClick={nextMonth}
+              disabled={atCurrentMonth}
+              aria-label="Next month"
+              className="flex h-11 w-11 items-center justify-center rounded-full text-forest transition-colors hover:bg-paper disabled:opacity-30 disabled:hover:bg-transparent"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
           </div>
-          {totalIncome > 0 && (
-            <p className="text-sun text-[13px] font-medium">
-              Saved {fmt(Math.max(0, saved))} · {savingsRate.toFixed(0)}% rate
-            </p>
-          )}
         </div>
 
-        {/* Cream content area */}
-        <div className="-mx-4 md:-mx-6 bg-paper rounded-t-[24px] -mt-6 p-[22px_16px_0] min-h-full">
-        <div className="space-y-4">
-
-        {totalIncome > 0 && <InvestableSurplusCard surplus={saved} currency={currency} />}
+        {/* Hero — the one focal number */}
+        <section aria-label={`Kept in ${monthLabel(viewDate)}`} className="bg-forest rounded-[28px] p-5 flex flex-col gap-3.5">
+          <p className="tala-eyebrow text-mint">Kept in {monthName}</p>
+          <div className="flex items-end justify-between gap-2">
+            <span className="font-display tabular-nums text-[56px] leading-[0.9] tracking-[-0.04em] text-paper min-w-0 truncate">
+              {totalIncome > 0 ? `${saved < 0 ? "−" : ""}${fmt(saved)}` : "—"}
+            </span>
+            {totalIncome > 0 && (
+              saved >= 0 ? (
+                <span className="shrink-0 rounded-full bg-field px-[11px] py-1.5 text-[12px] font-semibold text-forest whitespace-nowrap">
+                  {savingsRate.toFixed(0)}% savings rate
+                </span>
+              ) : (
+                <span className="shrink-0 rounded-full bg-sun-tint px-[11px] py-1.5 text-[12px] font-semibold text-amber-ink whitespace-nowrap">
+                  Over income
+                </span>
+              )
+            )}
+          </div>
+          {totalIncome > 0 && (
+            <div
+              role="img"
+              aria-label={`Of ${fmt(totalIncome)} income: ${fmt(totalExpenses)} spent, ${fmt(Math.max(0, saved))} kept`}
+              className="flex h-2.5 gap-0.5 overflow-hidden rounded-full bg-white/10"
+            >
+              {spentW > 0 && <span className={cn("h-full", saved < 0 ? "bg-sun" : "bg-breeze")} style={{ width: `${spentW}%` }} />}
+              {keptW > 0 && <span className="h-full bg-field" style={{ width: `${keptW}%` }} />}
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-2">
+            <div className="flex flex-col gap-[3px]">
+              <div className="text-[12px] text-mint">Income</div>
+              <div className="text-[16px] font-semibold text-paper tabular-nums">{totalIncome > 0 ? fmt(totalIncome) : "—"}</div>
+            </div>
+            <div className="flex flex-col gap-[3px]">
+              <div className="flex items-center gap-[5px] text-[12px] text-mint">
+                <span className={cn("h-2 w-2 rounded-[2px]", saved < 0 ? "bg-sun" : "bg-breeze")} aria-hidden="true" />Spent
+              </div>
+              <div className="text-[16px] font-semibold text-paper tabular-nums">{totalExpenses > 0 ? fmt(totalExpenses) : "—"}</div>
+            </div>
+          </div>
+        </section>
 
         {/* Carry-forward banner */}
         <AnimatePresence>
           {carryPending?.pending && !carryForwardDismissed && (
             <motion.div
               initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, height: 0, marginTop: 0 }}
-              className="flex items-center justify-between gap-3 rounded-[16px] p-4 bg-green-tint border border-green/25"
+              className="flex items-center gap-3 rounded-[24px] bg-green-tint p-4"
             >
-              <div className="flex items-start gap-2.5 flex-1 min-w-0">
-                <RefreshCw className="h-4 w-4 mt-0.5 flex-shrink-0 text-green" />
-                <p className="text-[13px] font-medium text-green">
-                  {carryPending.count} recurring items from {prevMonthName(mk)} — copy them over?
-                </p>
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] bg-paper text-forest" aria-hidden="true">
+                <RefreshCw className="h-4 w-4" />
+              </span>
+              <p className="flex-1 min-w-0 text-[14px] font-medium leading-[1.4] text-forest text-pretty">
+                {carryPending.count} recurring items from {prevMonthName(mk)} — copy them over?
+              </p>
+              <div className="flex shrink-0 items-center gap-1">
                 <button
+                  type="button"
                   onClick={() => carryForward.mutate()} disabled={carryForward.isPending}
-                  className="rounded-full transition-colors bg-green text-white text-xs font-semibold px-3.5 py-1.5 min-h-8"
+                  className="h-11 rounded-full bg-forest px-4 text-[13px] font-semibold text-paper transition-opacity hover:opacity-90 disabled:opacity-60"
                 >
                   {carryForward.isPending ? "…" : "Yes, copy"}
                 </button>
-                <button onClick={() => setCarryForwardDismissed(true)} className="flex items-center justify-center text-ink-40 min-w-9 min-h-9" aria-label="Dismiss"><X className="h-4 w-4" /></button>
+                <button
+                  type="button"
+                  onClick={() => setCarryForwardDismissed(true)}
+                  className="flex h-11 w-11 items-center justify-center rounded-full text-forest/60 transition-colors hover:bg-forest/10 hover:text-forest"
+                  aria-label="Dismiss"
+                >
+                  <X className="h-4 w-4" />
+                </button>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Primary action buttons */}
+        {/* Primary action tiles */}
         <div className="grid grid-cols-2 gap-3">
           <button
+            type="button"
             onClick={() => openTxForm("income")}
-            className="rounded-[20px] p-4 text-left active:scale-95 transition-transform bg-green-tint border border-green/25"
+            className="rounded-[24px] bg-field p-4 text-left transition-opacity hover:opacity-90"
           >
-            <div className="flex items-center gap-2 mb-1.5">
-              <span className="text-lg"></span>
-              <Plus className="h-3.5 w-3.5 text-green" />
-            </div>
-            <p className="text-[13px] font-semibold text-green">Log Income</p>
-            <p className="text-[11px] text-green mt-0.5">Salary, freelance, etc.</p>
+            <span className="mb-3 flex h-10 w-10 items-center justify-center rounded-[14px] bg-paper text-forest" aria-hidden="true">
+              <Plus className="h-4 w-4" />
+            </span>
+            <p className="text-[14px] font-semibold text-forest">Log income</p>
+            <p className="mt-0.5 text-[12px] text-forest/70">Salary, freelance, etc.</p>
           </button>
           <button
+            type="button"
             onClick={() => openTxForm("expense")}
-            className="rounded-[20px] p-4 text-left active:scale-95 transition-transform bg-clay-tint border border-clay/25"
+            className="rounded-[24px] bg-breeze p-4 text-left transition-opacity hover:opacity-90"
           >
-            <div className="flex items-center gap-2 mb-1.5">
-              <span className="text-lg"></span>
-              <Plus className="h-3.5 w-3.5 text-clay" />
-            </div>
-            <p className="text-[13px] font-semibold text-clay">Log Expense</p>
-            <p className="text-[11px] text-clay mt-0.5">Food, rent, bills, etc.</p>
+            <span className="mb-3 flex h-10 w-10 items-center justify-center rounded-[14px] bg-paper text-forest" aria-hidden="true">
+              <Plus className="h-4 w-4" />
+            </span>
+            <p className="text-[14px] font-semibold text-forest">Log expense</p>
+            <p className="mt-0.5 text-[12px] text-forest/70">Food, rent, bills, etc.</p>
           </button>
         </div>
 
@@ -435,15 +496,22 @@ export default function BudgetPage() {
           {showTxForm && (
             <motion.div
               initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-              className="bg-card border border-card-border rounded-2xl p-4 space-y-3"
+              className="bg-surface rounded-[24px] p-5 space-y-3"
             >
               <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold">
+                <h3 className="text-[15px] font-semibold text-forest">
                   {editingTxId
-                    ? (txType === "income" ? "Edit Income" : "Edit Expense")
-                    : (txType === "income" ? "Log Income" : "Log Expense")}
-                </p>
-                <button onClick={closeTxForm} className="flex items-center justify-center text-muted-foreground hover:text-foreground" aria-label="Close form" style={{ minWidth: 36, minHeight: 36 }}><X className="h-4 w-4" /></button>
+                    ? (txType === "income" ? "Edit income" : "Edit expense")
+                    : (txType === "income" ? "Log income" : "Log expense")}
+                </h3>
+                <button
+                  type="button"
+                  onClick={closeTxForm}
+                  className="-mr-2 flex h-11 w-11 items-center justify-center rounded-full text-ink-40 transition-colors hover:bg-paper hover:text-forest"
+                  aria-label="Close form"
+                >
+                  <X className="h-4 w-4" />
+                </button>
               </div>
 
               <div>
@@ -454,19 +522,17 @@ export default function BudgetPage() {
                     setTxForm(f => ({ ...f, description: e.target.value }));
                     if (txErrors.description) setTxErrors(e => ({ ...e, description: undefined }));
                   }}
-                  className={cn(
-                    "w-full border rounded-xl px-4 py-2.5 text-sm bg-background outline-none focus:ring-2 focus:ring-primary",
-                    txErrors.description ? "border-red-400" : "border-border"
-                  )}
+                  className={cn(inputCls, txErrors.description ? "border-clay" : "border-hairline-2")}
+                  aria-invalid={!!txErrors.description}
                   autoFocus
                 />
-                {txErrors.description && <p className="text-xs text-red-500 mt-1 ml-1">{txErrors.description}</p>}
+                {txErrors.description && <p className="mt-1 ml-1 text-[12px] text-clay-ink">{txErrors.description}</p>}
               </div>
 
               <div className="flex gap-2">
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{sym}</span>
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[14px] text-ink-40">{sym}</span>
                     <input
                       type="number" placeholder="0"
                       value={txForm.amount}
@@ -474,64 +540,74 @@ export default function BudgetPage() {
                         setTxForm(f => ({ ...f, amount: e.target.value }));
                         if (txErrors.amount) setTxErrors(e => ({ ...e, amount: undefined }));
                       }}
-                      className={cn(
-                        "w-full border rounded-xl pl-8 pr-4 py-2.5 text-sm bg-background outline-none focus:ring-2 focus:ring-primary",
-                        txErrors.amount ? "border-red-400" : "border-border"
-                      )}
+                      className={cn(inputCls, "pl-8 tabular-nums", txErrors.amount ? "border-clay" : "border-hairline-2")}
+                      aria-invalid={!!txErrors.amount}
                     />
                   </div>
-                  {txErrors.amount && <p className="text-xs text-red-500 mt-1 ml-1">{txErrors.amount}</p>}
+                  {txErrors.amount && <p className="mt-1 ml-1 text-[12px] text-clay-ink">{txErrors.amount}</p>}
                 </div>
                 <input
                   type="date" value={txForm.transactionDate}
                   onChange={e => setTxForm(f => ({ ...f, transactionDate: e.target.value }))}
-                  className="flex-1 border border-border rounded-xl px-3 py-2.5 text-sm bg-background outline-none focus:ring-2 focus:ring-primary"
+                  className={cn(inputCls, "flex-1 min-w-0 px-3 border-hairline-2")}
                 />
               </div>
 
               {txType === "expense" && (
                 <div className="flex flex-wrap gap-2">
                   {TX_CATS.filter(c => c.value !== "income").map(c => (
-                    <button key={c.value} onClick={() => setTxForm(f => ({ ...f, category: c.value }))}
-                      className={cn("rounded-full px-3 text-xs border transition-colors flex items-center gap-1.5",
-                        txForm.category === c.value ? "bg-primary/10 border-primary text-primary" : "border-border text-muted-foreground hover:border-primary/50")}
-                      style={{ minHeight: 36 }}>
-                      <c.icon className="w-3.5 h-3.5" /> {c.label}
+                    <button
+                      type="button"
+                      key={c.value}
+                      onClick={() => setTxForm(f => ({ ...f, category: c.value }))}
+                      aria-pressed={txForm.category === c.value}
+                      className={cn(
+                        "flex h-10 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-medium transition-colors",
+                        txForm.category === c.value ? "bg-forest text-paper" : "bg-paper text-forest hover:bg-green-tint"
+                      )}
+                    >
+                      <c.icon className="h-3.5 w-3.5" /> {c.label}
                     </button>
                   ))}
                 </div>
               )}
 
-              <label className="flex items-center gap-2.5 text-sm cursor-pointer select-none py-1">
+              <label className="flex cursor-pointer select-none items-center gap-3 py-1 text-[14px]">
                 <div
                   onClick={() => setTxForm(f => ({ ...f, isRecurring: !f.isRecurring }))}
-                  className={cn("relative w-9 h-5 rounded-full transition-colors cursor-pointer flex-shrink-0",
-                    txForm.isRecurring ? "bg-primary" : "bg-muted-foreground/30")}
+                  className={cn("relative h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors",
+                    txForm.isRecurring ? "bg-forest" : "bg-track")}
                 >
-                  <div className={cn("absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform",
+                  <div className={cn("absolute top-0.5 h-4 w-4 rounded-full bg-paper shadow-[0_1px_3px_rgba(12,33,164,0.2)] transition-transform",
                     txForm.isRecurring ? "translate-x-4" : "translate-x-0.5")} />
                 </div>
                 <div>
-                  <span className="font-medium">Recurring</span>
+                  <span className="font-medium text-forest">Recurring</span>
                   {txForm.isRecurring
-                    ? <span className="text-xs text-primary ml-2 inline-flex items-center gap-1"><RefreshCw className="w-3 h-3" /> Copies automatically next month</span>
-                    : <span className="text-xs text-muted-foreground ml-2">One-off entry</span>}
+                    ? <span className="ml-2 inline-flex items-center gap-1 text-[12px] text-forest"><RefreshCw className="h-3 w-3" /> Copies automatically next month</span>
+                    : <span className="ml-2 text-[12px] text-ink-40">One-off entry</span>}
                 </div>
               </label>
 
-              <Button className="w-full" size="sm" onClick={submitTxForm} disabled={isBusy}>
-                {isBusy ? "Saving…" : editingTxId ? "Update Transaction" : `Save ${txType === "income" ? "Income" : "Expense"}`}
-              </Button>
+              <button type="button" className={primaryBtn} onClick={submitTxForm} disabled={isBusy}>
+                {isBusy ? "Saving…" : editingTxId ? "Update transaction" : `Save ${txType === "income" ? "income" : "expense"}`}
+              </button>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Daily / Monthly tab toggle */}
-        <div className="flex gap-1 bg-muted rounded-xl p-1">
+        {/* Daily / Monthly toggle */}
+        <div className="flex gap-1 rounded-full bg-surface p-1" role="tablist" aria-label="Budget view">
           {(["daily", "monthly"] as const).map(v => (
-            <button key={v} onClick={() => setView(v)}
-              className={cn("flex-1 py-1.5 text-xs font-medium rounded-lg transition-all capitalize",
-                view === v ? "bg-white shadow text-foreground" : "text-muted-foreground hover:text-foreground")}>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={view === v}
+              key={v}
+              onClick={() => setView(v)}
+              className={cn("h-11 flex-1 rounded-full text-[13px] font-semibold transition-colors",
+                view === v ? "bg-field text-forest" : "text-ink-40 hover:text-forest")}
+            >
               {v === "daily" ? "Daily transactions" : "Monthly breakdown"}
             </button>
           ))}
@@ -541,7 +617,7 @@ export default function BudgetPage() {
         {view === "daily" && (
           <>
             {txLoading ? (
-              <div className="space-y-2">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-14 bg-muted animate-pulse rounded-xl" />)}</div>
+              <div className="space-y-2">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-16 animate-pulse rounded-[24px] bg-surface" />)}</div>
             ) : grouped.length > 0 ? (
               <div className="space-y-3">
                 {grouped.map(([date, txs]) => {
@@ -549,66 +625,71 @@ export default function BudgetPage() {
                   const dayExpense = txs.filter(t => t.type === "expense").reduce((s, t) => s + parseFloat(t.amount), 0);
                   const parsedDate = new Date(date + "T00:00:00");
                   return (
-                    <div key={date} className="bg-card border border-card-border rounded-2xl overflow-hidden">
-                      <div className="flex items-center justify-between px-4 py-2.5 bg-muted/40 border-b border-border">
-                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{todayLabel(parsedDate)}</p>
-                        <div className="flex gap-3 text-xs">
-                          {dayIncome > 0 && <span className="text-emerald-600 font-medium">+{fmt(dayIncome)}</span>}
-                          {dayExpense > 0 && <span className="text-red-500 font-medium">-{fmt(dayExpense)}</span>}
+                    <div key={date} className="overflow-hidden rounded-[24px] bg-surface p-1">
+                      <div className="flex items-center justify-between px-3 pt-2.5 pb-1.5">
+                        <p className="tala-eyebrow text-ink-40">{todayLabel(parsedDate)}</p>
+                        <div className="flex gap-3 text-[12px] font-semibold tabular-nums">
+                          {dayIncome > 0 && <span className="text-forest">+{fmt(dayIncome)}</span>}
+                          {dayExpense > 0 && <span className="text-ink-40">−{fmt(dayExpense)}</span>}
                         </div>
                       </div>
-                      {txs.map((tx) => (
-                        <div key={tx.id} className="flex items-center gap-3 px-4 py-3 border-t border-border first:border-0">
-                          <span className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-muted/50">
+                      {txs.map((tx, i) => (
+                        <div key={tx.id} className={cn("flex min-h-[64px] items-center gap-3 p-3", i < txs.length - 1 && "border-b border-hairline")}>
+                          <span
+                            className={cn("flex h-10 w-10 flex-none items-center justify-center rounded-[14px] text-forest", tx.type === "income" ? "bg-field" : "bg-paper")}
+                            aria-hidden="true"
+                          >
                             {catIcon(tx.category)}
                           </span>
-                          <div className="flex-1 min-w-0">
+                          <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-1.5">
-                              <p className="text-sm font-medium truncate">{tx.description}</p>
+                              <p className="truncate text-[14px] font-medium text-forest">{tx.description}</p>
                               {tx.isRecurring && (
-                                <span className="flex-shrink-0 flex items-center justify-center bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium">
-                                  <RefreshCw className="w-3 h-3" />
+                                <span className="flex flex-shrink-0 items-center justify-center rounded-full bg-green-tint px-1.5 py-0.5 text-forest" aria-label="Recurring">
+                                  <RefreshCw className="h-3 w-3" />
                                 </span>
                               )}
                             </div>
-                            <p className="text-xs text-muted-foreground">{catLabel(tx.category)}</p>
+                            <p className="text-[12px] text-ink-40">{catLabel(tx.category)}</p>
                           </div>
-                          <span className={`flex-shrink-0 text-sm font-bold ${tx.type === "income" ? "text-green" : "text-clay"}`}>
-                            {tx.type === "income" ? "+" : "-"}{sym}{parseFloat(tx.amount).toLocaleString()}
+                          <span className="flex-shrink-0 text-[15px] font-semibold tabular-nums text-forest">
+                            {tx.type === "income" ? "+" : "−"}{sym}{parseFloat(tx.amount).toLocaleString()}
                           </span>
 
                           {/* Edit & Delete controls */}
                           {confirmDeleteId === tx.id ? (
-                            <div className="flex items-center gap-1 flex-shrink-0">
+                            <div className="flex flex-shrink-0 items-center gap-1">
                               <button
+                                type="button"
                                 onClick={() => deleteTx.mutate(tx.id)}
                                 disabled={deleteTx.isPending}
-                                className="text-xs text-white font-medium px-2 py-1 rounded-lg bg-clay"
+                                className="h-9 rounded-full bg-sun-tint px-3 text-[12px] font-semibold text-amber-ink disabled:opacity-60"
                               >
                                 {deleteTx.isPending ? "…" : "Delete"}
                               </button>
                               <button
+                                type="button"
                                 onClick={() => setConfirmDeleteId(null)}
-                                className="text-xs text-muted-foreground px-2 py-1 rounded-lg hover:bg-muted"
+                                className="h-9 rounded-full px-3 text-[12px] font-medium text-ink-40 hover:bg-paper hover:text-forest"
                               >
                                 Cancel
                               </button>
                             </div>
                           ) : (
-                            <div className="flex items-center gap-1 flex-shrink-0">
+                            <div className="flex flex-shrink-0 items-center">
                               <button
+                                type="button"
                                 onClick={() => openEditForm(tx)}
-                                className="flex items-center justify-center text-muted-foreground hover:text-primary transition-colors"
+                                className="flex h-9 w-9 items-center justify-center rounded-full text-ink-40 transition-colors hover:bg-paper hover:text-forest"
                                 aria-label={`Edit ${tx.description}`}
-                                style={{ minWidth: 36, minHeight: 36 }}
                               >
                                 <Pencil className="h-3.5 w-3.5" />
                               </button>
                               <button
+                                type="button"
                                 onClick={() => setConfirmDeleteId(tx.id)}
-                                className="flex items-center justify-center text-muted-foreground hover:text-red-500 transition-colors"
+                                className="flex h-9 w-9 items-center justify-center rounded-full text-ink-40 transition-colors hover:bg-paper hover:text-clay-ink"
                                 aria-label={`Delete ${tx.description}`}
-                                style={{ minWidth: 36, minHeight: 36 }}
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
                               </button>
@@ -621,10 +702,12 @@ export default function BudgetPage() {
                 })}
               </div>
             ) : (
-              <div className="rounded-2xl border border-dashed border-border p-8 text-center">
-                <p className="text-2xl mb-2"></p>
-                <p className="text-sm font-medium mb-1">No transactions yet for {monthLabel(viewDate)}</p>
-                <p className="text-xs text-muted-foreground">Tap "Log Income" or "Log Expense" above to start tracking.</p>
+              <div className="flex flex-col items-center rounded-[24px] bg-surface p-6 text-center">
+                <span className="mb-3 flex h-10 w-10 items-center justify-center rounded-[14px] bg-breeze text-forest" aria-hidden="true">
+                  <Wallet className="h-4 w-4" />
+                </span>
+                <h3 className="text-[15px] font-semibold text-forest">No transactions yet for {monthLabel(viewDate)}</h3>
+                <p className="mt-1 text-[14px] leading-[1.5] text-ink-40 text-pretty">Tap “Log income” or “Log expense” above to start tracking.</p>
               </div>
             )}
           </>
@@ -632,126 +715,157 @@ export default function BudgetPage() {
 
         {/* MONTHLY VIEW */}
         {view === "monthly" && (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {catTotals.length > 0 ? (
-              <div className="bg-card border border-card-border rounded-2xl overflow-hidden">
-                <p className="text-xs font-medium text-muted-foreground px-4 pt-3 pb-1 uppercase tracking-wide">Spending by category</p>
-                {catTotals.map(c => {
-                  const isIncome = c.value === "income";
-                  const pct = totalExpenses > 0 && !isIncome ? (c.total / totalExpenses) * 100 : 0;
-                  const dotColor = CAT_COLORS[c.value] ?? "var(--ink-40)";
-                  const budgetAmt = !isIncome ? (form as any)[c.value] as number ?? 0 : 0;
-                  const variance = !isIncome && budgetAmt > 0 ? c.total - budgetAmt : null;
-                  return (
-                    <div key={c.value} className="p-[12px_18px] border-b border-hairline">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: dotColor }} />
-                          <span className="text-[13px] font-medium text-forest">{c.label}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {variance !== null && (
-                            <span className={`text-[11px] font-medium ${variance > 0 ? "text-clay" : "text-green"}`}>
-                              {variance > 0 ? `+${sym}${Math.round(variance).toLocaleString()} over` : `-${sym}${Math.abs(Math.round(variance)).toLocaleString()} under`}
+              <section aria-label="Spending by category" className="rounded-[24px] bg-surface p-5">
+                <h3 className="text-[15px] font-semibold text-forest">Spending by category</h3>
+                <div className="mt-2">
+                  {catTotals.map((c, i) => {
+                    const isIncome = c.value === "income";
+                    const pct = totalExpenses > 0 && !isIncome ? (c.total / totalExpenses) * 100 : 0;
+                    const dotCls = CAT_DOTS[c.value] ?? "bg-ink-30";
+                    const budgetAmt = !isIncome ? (form as any)[c.value] as number ?? 0 : 0;
+                    const variance = !isIncome && budgetAmt > 0 ? c.total - budgetAmt : null;
+                    const over = variance !== null && variance > 0;
+                    return (
+                      <div key={c.value} className={cn("py-3", i < catTotals.length - 1 && "border-b border-hairline")}>
+                        <div className="mb-2 flex items-center justify-between gap-2">
+                          <div className="flex min-w-0 items-center gap-2">
+                            <span className={cn("h-2 w-2 flex-shrink-0 rounded-full", dotCls)} aria-hidden="true" />
+                            <span className="truncate text-[14px] font-medium text-forest">{c.label}</span>
+                          </div>
+                          <div className="flex flex-shrink-0 items-center gap-2">
+                            {variance !== null && (
+                              over ? (
+                                <span className="rounded-full bg-sun-tint px-2 py-[3px] text-[11px] font-semibold text-amber-ink whitespace-nowrap">
+                                  +{sym}{Math.round(variance).toLocaleString()} over
+                                </span>
+                              ) : (
+                                <span className="text-[12px] font-medium text-ink-40 whitespace-nowrap">
+                                  {sym}{Math.abs(Math.round(variance)).toLocaleString()} under
+                                </span>
+                              )
+                            )}
+                            {!isIncome && variance === null && totalExpenses > 0 && (
+                              <span className="text-[12px] text-ink-40 tabular-nums">{pct.toFixed(0)}%</span>
+                            )}
+                            <span className="text-[15px] font-semibold text-forest tabular-nums">
+                              {isIncome ? "+" : ""}{sym}{c.total.toLocaleString()}
                             </span>
-                          )}
-                          {!isIncome && variance === null && totalExpenses > 0 && (
-                            <span className="text-[11px] text-ink-40">{pct.toFixed(0)}%</span>
-                          )}
-                          <span className={`text-[13px] font-semibold ${isIncome ? "text-green" : "text-forest"}`}>
-                            {isIncome ? "+" : ""}{sym}{c.total.toLocaleString()}
-                          </span>
+                          </div>
                         </div>
+                        {!isIncome && (
+                          <div className="relative h-2 overflow-hidden rounded-full bg-track">
+                            {budgetAmt > 0 && (
+                              <div className="absolute h-full rounded-full bg-breeze" style={{ width: `${Math.min(100, (budgetAmt / Math.max(budgetAmt, c.total)) * 100)}%` }} />
+                            )}
+                            <div
+                              className={cn("absolute h-full rounded-full transition-[width] duration-[400ms] ease-out", over ? "bg-sun" : "bg-forest")}
+                              style={{ width: `${Math.min(100, budgetAmt > 0 ? (c.total / Math.max(budgetAmt, c.total)) * 100 : pct)}%` }}
+                            />
+                          </div>
+                        )}
                       </div>
-                      {!isIncome && (
-                        <div className="relative h-1.5 rounded-full bg-hairline overflow-hidden">
-                          {budgetAmt > 0 && (
-                            <div className="absolute h-full rounded-full bg-track" style={{ width: `${Math.min(100, (budgetAmt / Math.max(budgetAmt, c.total)) * 100)}%` }} />
-                          )}
-                          <div className="absolute h-full rounded-full" style={{ background: variance !== null && variance > 0 ? "var(--clay)" : dotColor, width: `${Math.min(100, budgetAmt > 0 ? (c.total / Math.max(budgetAmt, c.total)) * 100 : pct)}%`, transition: "width 0.4s ease" }} />
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              </section>
             ) : (
-              <div className="rounded-2xl border border-dashed border-border p-5 text-center">
-                <p className="text-xs text-muted-foreground">Log transactions to see your monthly breakdown by category.</p>
+              <div className="rounded-[24px] bg-surface p-5 text-center">
+                <p className="text-[14px] leading-[1.5] text-ink-40 text-pretty">Log transactions to see your monthly breakdown by category.</p>
               </div>
             )}
 
-            {/* Monthly estimates (collapsible) */}
-            <div className="bg-card border border-card-border rounded-2xl overflow-hidden">
+            {/* Monthly budget plan (collapsible) */}
+            <section aria-label="Monthly budget plan" className="overflow-hidden rounded-[24px] bg-surface">
               <button
+                type="button"
                 onClick={() => setShowEstimates(v => !v)}
-                className="w-full flex items-center justify-between px-4 py-3.5 text-left"
+                aria-expanded={showEstimates}
+                className="flex min-h-[64px] w-full items-center justify-between gap-3 p-5 text-left"
               >
                 <div>
-                  <p className="text-sm font-semibold">Monthly budget plan</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Set target amounts per category</p>
+                  <h3 className="text-[15px] font-semibold text-forest">Monthly budget plan</h3>
+                  <p className="mt-0.5 text-[13px] text-ink-40">Set target amounts per category</p>
                 </div>
-                {showEstimates ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-paper text-forest" aria-hidden="true">
+                  {showEstimates ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </span>
               </button>
 
               <AnimatePresence>
                 {showEstimates && (
-                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden border-t border-border">
-                    <div className={cn("border-b border-border", editingIncome && "bg-muted/30")}>
-                      <button onClick={() => setEditingIncome(v => !v)} className="w-full flex items-center justify-between px-4 py-3.5 text-left">
-                        <div className="flex items-center gap-3"><span className="text-lg"></span><span className="font-medium text-sm">Income</span></div>
-                        <div className="flex items-center gap-2">
-                          <span className={cn("text-sm font-semibold", form.income > 0 ? "text-emerald-600" : "text-muted-foreground")}>
-                            {form.income > 0 ? `${sym}${form.income.toLocaleString()}` : "Set amount"}
-                          </span>
-                          {editingIncome ? <Check className="h-4 w-4 text-primary" /> : <Pencil className="h-4 w-4 text-muted-foreground" />}
-                        </div>
-                      </button>
-                      <AnimatePresence>
-                        {editingIncome && (
-                          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                            <div className="px-4 pb-4"><CurrencyField editable value={form.income} onChange={v => setForm(f => ({ ...f, income: v }))} currency={currency} /></div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-
-                    {CATS.map((cat) => (
-                      <div key={cat.key} className={cn("border-b border-border last:border-0", editingCat === cat.key && "bg-muted/30")}>
-                        <button onClick={() => setEditingCat(editingCat === cat.key ? null : cat.key)} className="w-full flex items-center justify-between px-4 py-3.5 text-left">
-                          <div className="flex items-center gap-3"><cat.icon className="w-5 h-5 text-muted-foreground" /><span className="font-medium text-sm">{cat.label}</span></div>
+                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                    <div className="px-1">
+                      <div className={cn("rounded-2xl border-b border-hairline", editingIncome && "bg-paper/60")}>
+                        <button type="button" onClick={() => setEditingIncome(v => !v)} className="flex min-h-[64px] w-full items-center justify-between gap-3 p-3 text-left">
+                          <div className="flex items-center gap-3">
+                            <span className="flex h-10 w-10 flex-none items-center justify-center rounded-[14px] bg-field text-forest" aria-hidden="true"><Wallet className="h-4 w-4" /></span>
+                            <span className="text-[14px] font-medium text-forest">Income</span>
+                          </div>
                           <div className="flex items-center gap-2">
-                            <span className={cn("text-sm font-semibold", form[cat.key] > 0 ? "text-red-500" : "text-muted-foreground")}>
-                              {form[cat.key] > 0 ? `${sym}${form[cat.key].toLocaleString()}` : "—"}
+                            <span className={cn("text-[15px] font-semibold tabular-nums", form.income > 0 ? "text-forest" : "text-ink-40")}>
+                              {form.income > 0 ? `${sym}${form.income.toLocaleString()}` : "Set amount"}
                             </span>
-                            {editingCat === cat.key ? <Check className="h-4 w-4 text-primary" /> : <Pencil className="h-4 w-4 text-muted-foreground" />}
+                            {editingIncome ? <Check className="h-4 w-4 text-forest" /> : <Pencil className="h-4 w-4 text-ink-40" />}
                           </div>
                         </button>
                         <AnimatePresence>
-                          {editingCat === cat.key && (
+                          {editingIncome && (
                             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                              <div className="px-4 pb-4"><CurrencyField editable value={form[cat.key]} onChange={v => setForm(f => ({ ...f, [cat.key]: v }))} currency={currency} /></div>
+                              <div className="px-3 pb-4"><CurrencyField editable value={form.income} onChange={v => setForm(f => ({ ...f, income: v }))} currency={currency} /></div>
                             </motion.div>
                           )}
                         </AnimatePresence>
                       </div>
-                    ))}
 
-                    <div className="px-4 py-3.5">
-                      <Button className="w-full" size="sm" onClick={() => saveEstimates.mutate()} disabled={saveEstimates.isPending}>
+                      {CATS.map((cat, i) => (
+                        <div key={cat.key} className={cn("rounded-2xl", i < CATS.length - 1 && "border-b border-hairline", editingCat === cat.key && "bg-paper/60")}>
+                          <button type="button" onClick={() => setEditingCat(editingCat === cat.key ? null : cat.key)} className="flex min-h-[64px] w-full items-center justify-between gap-3 p-3 text-left">
+                            <div className="flex items-center gap-3">
+                              <span className={cn("flex h-10 w-10 flex-none items-center justify-center rounded-[14px] text-forest", i % 2 === 0 ? "bg-breeze" : "bg-paper")} aria-hidden="true">
+                                <cat.icon className="h-4 w-4" />
+                              </span>
+                              <span className="text-[14px] font-medium text-forest">{cat.label}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className={cn("text-[15px] font-semibold tabular-nums", form[cat.key] > 0 ? "text-forest" : "text-ink-40")}>
+                                {form[cat.key] > 0 ? `${sym}${form[cat.key].toLocaleString()}` : "—"}
+                              </span>
+                              {editingCat === cat.key ? <Check className="h-4 w-4 text-forest" /> : <Pencil className="h-4 w-4 text-ink-40" />}
+                            </div>
+                          </button>
+                          <AnimatePresence>
+                            {editingCat === cat.key && (
+                              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                                <div className="px-3 pb-4"><CurrencyField editable value={form[cat.key]} onChange={v => setForm(f => ({ ...f, [cat.key]: v }))} currency={currency} /></div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="p-5 pt-3">
+                      <button type="button" className={primaryBtn} onClick={() => saveEstimates.mutate()} disabled={saveEstimates.isPending}>
                         {saveEstimates.isPending ? "Saving…" : "Save budget plan"}
-                      </Button>
+                      </button>
                     </div>
                   </motion.div>
                 )}
               </AnimatePresence>
-            </div>
+            </section>
           </div>
         )}
-        </div>
-        </div>
+
+        {totalIncome > 0 && <InvestableSurplusCard surplus={saved} currency={currency} />}
+
+        <FreeTierBanner
+          feature="Basic income and expense tracking"
+          benefit="Investment clients get investment contribution sync, goal funding analysis, and 12-month history charts."
+          storageKey="budget"
+        />
       </div>
-      <BottomNav />
     </AppShell>
   );
 }

@@ -3,23 +3,26 @@
 // ✓ ALLOWED: BottomSheet spring animation
 // ✗ BANNED:  Page-load stagger on sections
 // ✗ BANNED:  JetBrains Mono font
-// ✗ BANNED:  Cream/warm palette (#F1F4FE, #F1F4FE, #8F98C8)
+// ✗ BANNED:  Off-palette colours — use the theme tokens (see index.css)
 // ✗ BANNED:  Inline style={{ color: '#hexcode' }} — use Tailwind tokens only
-// ✗ BANNED:  Double bottom nav — AppShell is the ONLY nav
+// ✗ BANNED:  Own nav / bottom padding hacks — FreeAppShell owns the menu bar and section tabs
 
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { motion, AnimatePresence } from "framer-motion";
 import AppShell from "@/components/AppShell";
 import FreeTierBanner from "@/components/FreeTierBanner";
-import BottomNav from "@/components/BottomNav";
-import { Button } from "@/components/ui/button";
+import SolNarration from "@/components/client/SolNarration";
+import BottomSheet from "@/components/client/BottomSheet";
 import CurrencyField from "@/components/shared/CurrencyField";
 import { apiFetch } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
-import { Plus, Trash2, X, ChevronDown, Landmark, PiggyBank, TrendingUp, Briefcase, Home, FileText, CreditCard, Wallet, AlertCircle, Car, GraduationCap } from "lucide-react";
+import { cn } from "@/lib/utils";
+import {
+  Plus, Trash2, Landmark, PiggyBank, TrendingUp, TrendingDown, Briefcase, Home, FileText,
+  CreditCard, Wallet, AlertCircle, Car, GraduationCap, Minus,
+} from "lucide-react";
 import { toast } from "sonner";
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { useProfile } from "@/hooks/useProfile";
 
 interface Asset { id: string; name: string; category: string; valueUsd: string; currencyOriginal: string; }
@@ -28,19 +31,17 @@ interface NetWorthSnapshot { id: string; snapshotDate: string; netWorthUsd: stri
 
 const FREE_HISTORY_MONTHS = 3;
 
-// Free-tier: exactly 5 asset categories.
-// The design system's palette is brand-semantic (green/sun/clay + neutrals), not a
-// general-purpose categorical palette, so these 5 distinct hues are the closest
-// available tokens rather than a precise one-to-one mapping — flagged for review.
-const ASSET_CAT_INFO: Record<string, { label: string; icon: React.ElementType; color: string; bg: string }> = {
-  cash:        { label: "Cash",        icon: Landmark, color: "var(--green)", bg: "rgba(12,33,164,0.15)" },
-  savings:     { label: "Savings",     icon: PiggyBank, color: "var(--sun)", bg: "rgba(255,137,31,0.15)" },
-  investment:  { label: "Investment",  icon: TrendingUp, color: "var(--forest-700)", bg: "rgba(26,48,184,0.15)" },
-  business:    { label: "Business",    icon: Briefcase, color: "var(--clay-ink)", bg: "rgba(163,69,42,0.15)" },
-  real_estate: { label: "Real Estate", icon: Home, color: "var(--ink-60)", bg: "rgba(74,85,144,0.15)" },
+// Free-tier: exactly 5 asset categories. Icon tiles cycle the calm palette
+// (Spring Field / Blue Breeze / Soft Cloud) — Cobalt stays on text and actions.
+const ASSET_CAT_INFO: Record<string, { label: string; icon: React.ElementType; tile: string }> = {
+  cash:        { label: "Cash",        icon: Landmark,   tile: "bg-breeze text-forest" },
+  savings:     { label: "Savings",     icon: PiggyBank,  tile: "bg-breeze text-forest" },
+  investment:  { label: "Investment",  icon: TrendingUp, tile: "bg-field text-forest" },
+  business:    { label: "Business",    icon: Briefcase,  tile: "bg-field text-forest" },
+  real_estate: { label: "Real Estate", icon: Home,       tile: "bg-paper text-forest" },
 };
 // Fallback for any legacy categories still in DB
-const ASSET_CAT_FALLBACK = { label: "Other", icon: FileText, color: "var(--ink-40)", bg: "rgba(122,139,130,0.12)" };
+const ASSET_CAT_FALLBACK = { label: "Other", icon: FileText, tile: "bg-paper text-forest" };
 
 const LIABILITY_CAT_INFO: Record<string, { label: string; icon: React.ElementType }> = {
   mortgage:     { label: "Mortgage",        icon: Home },
@@ -53,6 +54,7 @@ const LIABILITY_CAT_INFO: Record<string, { label: string; icon: React.ElementTyp
 
 const ASSET_CATS = Object.keys(ASSET_CAT_INFO); // exactly the 5 free-tier categories
 const LIABILITY_CATS = Object.keys(LIABILITY_CAT_INFO);
+const CASH_CATS = new Set(["cash", "savings"]);
 
 type AssetForm = { name: string; category: string; valueUsd: string; currencyOriginal: string };
 type LiabForm  = { name: string; category: string; balanceUsd: string; interestRatePercent: string };
@@ -61,6 +63,61 @@ function fmt(n: number) {
   if (Math.abs(n) >= 1_000_000) return (n < 0 ? "-$" : "$") + (Math.abs(n) / 1_000_000).toFixed(1) + "M";
   if (Math.abs(n) >= 1000) return (n < 0 ? "-$" : "$") + Math.round(Math.abs(n) / 1000) + "k";
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
+}
+
+const inputClass =
+  "w-full h-11 rounded-2xl bg-surface px-4 text-[14px] text-forest placeholder:text-ink-30 border border-hairline-2 outline-none focus:border-green transition-colors";
+const labelClass = "block text-[13px] font-medium text-forest mb-1.5";
+const primaryBtn =
+  "w-full h-11 rounded-full bg-forest px-5 text-[14px] font-semibold text-paper hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity";
+
+function IconTile({ icon: Icon, className }: { icon: React.ElementType; className: string }) {
+  return (
+    <div className={cn("w-10 h-10 rounded-[14px] shrink-0 flex items-center justify-center", className)} aria-hidden="true">
+      <Icon className="h-[18px] w-[18px]" />
+    </div>
+  );
+}
+
+function ConfirmRemove({ pending, onConfirm, onCancel }: { pending: boolean; onConfirm: () => void; onCancel: () => void }) {
+  return (
+    <div className="flex items-center gap-1">
+      <button onClick={onConfirm} disabled={pending}
+        className="h-11 px-4 rounded-full bg-sun text-forest text-[13px] font-semibold disabled:opacity-60">
+        {pending ? "…" : "Remove"}
+      </button>
+      <button onClick={onCancel}
+        className="h-11 px-3 rounded-full text-[13px] font-medium text-ink-40 hover:text-forest">
+        Cancel
+      </button>
+    </div>
+  );
+}
+
+function CategoryChips<T extends string>({ options, value, onChange }: {
+  options: { value: T; label: string; icon: React.ElementType }[];
+  value: string;
+  onChange: (v: T) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {options.map(o => (
+        <button
+          key={o.value}
+          type="button"
+          onClick={() => onChange(o.value)}
+          aria-pressed={value === o.value}
+          className={cn(
+            "h-10 px-3.5 rounded-full text-[13px] font-medium transition-colors flex items-center gap-1.5",
+            value === o.value ? "bg-forest text-paper" : "bg-surface text-forest hover:bg-breeze",
+          )}
+        >
+          <o.icon className="w-4 h-4" />
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
 }
 
 export default function NetWorthPage() {
@@ -137,398 +194,379 @@ export default function NetWorthPage() {
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["liabilities"] }); setConfirmDeleteLiab(null); },
   });
 
-  const chartData = [
-    { name: "Assets",       value: totalAssets,      fill: "var(--green)" },
-    { name: "Liabilities",  value: totalLiabilities, fill: "var(--clay)" },
-    { name: "Net Worth",    value: Math.abs(netWorth), fill: netWorth >= 0 ? "var(--forest)" : "var(--sun)" },
-  ];
+  const hasItems = assets.length > 0 || liabilities.length > 0;
+  const cashTotal = assets.filter(a => CASH_CATS.has(a.category)).reduce((s, a) => s + parseFloat(a.valueUsd), 0);
+  const cashPct = totalAssets > 0 ? Math.round((cashTotal / totalAssets) * 100) : 0;
 
-  const netWorthColor = netWorth > 0 ? "var(--green)" : netWorth < 0 ? "var(--clay)" : "var(--ink-40)";
+  const categoryTotals = ASSET_CATS
+    .map(key => ({ key, ...ASSET_CAT_INFO[key], total: assets.filter(a => a.category === key).reduce((s, a) => s + parseFloat(a.valueUsd), 0) }))
+    .filter(c => c.total > 0);
+
+  let deltaNode: React.ReactNode = null;
+  if (netWorthDelta !== null) {
+    const DeltaIcon = netWorthDelta === 0 ? Minus : netWorthDelta > 0 ? TrendingUp : TrendingDown;
+    deltaNode = (
+      <span className={cn(
+        "inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[13px] font-semibold tabular-nums",
+        netWorthDelta >= 0 ? "bg-field text-forest" : "bg-sun-tint text-amber-ink",
+      )}>
+        <DeltaIcon className="h-3.5 w-3.5" aria-hidden="true" />
+        {netWorthDelta === 0 ? "No change" : `${netWorthDelta > 0 ? "+" : "-"}${fmt(Math.abs(netWorthDelta))}`} this month
+      </span>
+    );
+  }
 
   return (
     <AppShell>
-      <div className="pb-24 md:pb-0">
+      <div className="space-y-4 pb-8">
+
+
+        {totalAssets > 0 && (
+          <SolNarration
+            line={`${fmt(totalAssets)} across ${assets.length} asset${assets.length !== 1 ? "s" : ""}. Cash and savings are ${cashPct}% of it.`}
+            detail="A cash buffer is usually sized in months of expenses — three to six is typical. Money beyond that has an opportunity cost, which is worth understanding as your net worth grows."
+          />
+        )}
+
+        <div className="px-1">
+          <h1 className="font-display text-[30px] leading-[1.1] text-forest">Net worth</h1>
+          <p className="mt-1 text-[14px] text-ink-40 leading-[1.5]">What you own, minus what you owe.</p>
+        </div>
+
+        {/* Focal number */}
+        <section aria-label="Net worth" className="px-1 pt-2 space-y-3">
+          <p className="tala-eyebrow text-ink-40">Net worth</p>
+          <p className={cn(
+            "font-display tabular-nums text-[56px] leading-none tracking-[-0.04em]",
+            netWorth < 0 ? "text-clay-ink" : "text-forest",
+          )}>
+            {hasItems ? fmt(netWorth) : "—"}
+          </p>
+          {deltaNode && <div>{deltaNode}</div>}
+          <div className="flex gap-6 pt-1">
+            <div>
+              <p className="tala-eyebrow text-ink-30">Assets</p>
+              <p className="text-[16px] font-semibold tabular-nums text-forest mt-1">{totalAssets > 0 ? fmt(totalAssets) : "—"}</p>
+            </div>
+            <div>
+              <p className="tala-eyebrow text-ink-30">Liabilities</p>
+              <p className="text-[16px] font-semibold tabular-nums text-forest mt-1">{totalLiabilities > 0 ? fmt(totalLiabilities) : "—"}</p>
+            </div>
+          </div>
+        </section>
+
+        {netWorth < 0 && (
+          <div className="rounded-[24px] p-4 flex items-start gap-3 bg-sun-tint">
+            <AlertCircle className="h-5 w-5 shrink-0 text-amber-ink mt-px" aria-hidden="true" />
+            <p className="text-[14px] text-amber-ink leading-[1.5]">Your liabilities currently exceed your assets.</p>
+          </div>
+        )}
+
+        {/* Trend */}
+        {trendData.length >= 2 ? (
+          <div
+            className="bg-surface rounded-[24px] p-5"
+            role="img"
+            aria-label={`Net worth trend: latest ${fmt(trendData[trendData.length - 1].value)}`}
+          >
+            <h2 className="font-sans text-[16px] font-semibold text-forest mb-3">Trend</h2>
+            <div className="h-[160px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={trendData} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
+                  <defs>
+                    <linearGradient id="free-nw-fill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="var(--forest)" stopOpacity={0.18} />
+                      <stop offset="100%" stopColor="var(--forest)" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--hairline)" vertical={false} />
+                  <XAxis dataKey="label" tick={{ fontSize: 11, fill: "var(--ink-30)" }} axisLine={false} tickLine={false} />
+                  <YAxis hide domain={["dataMin", "dataMax"]} />
+                  <Tooltip
+                    cursor={{ stroke: "var(--hairline-2)" }}
+                    content={({ active, payload }) => {
+                      if (!active || !payload?.length) return null;
+                      const d = payload[0].payload as { label: string; value: number };
+                      return (
+                        <div className="bg-paper rounded-[14px] px-3 py-2 shadow-[0_8px_24px_rgba(12,33,164,0.12)] text-[12px]">
+                          <p className="font-semibold text-forest">{d.label}</p>
+                          <p className="text-ink-40">Net worth <span className="font-semibold tabular-nums text-forest">{fmt(d.value)}</span></p>
+                        </div>
+                      );
+                    }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="value"
+                    stroke="var(--forest)"
+                    strokeWidth={2.5}
+                    fill="url(#free-nw-fill)"
+                    dot={false}
+                    activeDot={{ r: 4, fill: "var(--forest)" }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+            {isFreeUser && snapshots.length > FREE_HISTORY_MONTHS && (
+              <p className="text-[12px] text-ink-30 mt-3">History beyond {FREE_HISTORY_MONTHS} months is available to clients.</p>
+            )}
+          </div>
+        ) : hasItems ? (
+          <div className="bg-surface rounded-[24px] p-5 flex items-center gap-3">
+            <IconTile icon={TrendingUp} className="bg-field text-forest" />
+            <p className="text-[14px] text-ink-40 leading-[1.5] text-pretty">
+              Your trend appears here once there are two monthly snapshots to compare.
+            </p>
+          </div>
+        ) : null}
+
+        {/* Assets / liabilities switch */}
+        <div className="flex gap-1 rounded-full bg-surface p-1" role="tablist" aria-label="Net worth items">
+          {(["assets", "liabilities"] as const).map(t => (
+            <button
+              key={t}
+              type="button"
+              role="tab"
+              aria-selected={tab === t}
+              onClick={() => setTab(t)}
+              className={cn(
+                "min-h-11 flex-1 rounded-full px-4 text-[13px] font-semibold transition-colors",
+                tab === t ? "bg-forest text-paper" : "text-ink-40 hover:text-forest",
+              )}
+            >
+              {t === "assets" ? `Assets (${assets.length})` : `Liabilities (${liabilities.length})`}
+            </button>
+          ))}
+        </div>
+
+        {/* Assets tab */}
+        {tab === "assets" && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3 px-1">
+              <div className="flex items-baseline gap-2 min-w-0">
+                <h2 className="font-sans text-[16px] font-semibold text-forest">Assets</h2>
+                {assets.length > 0 && (
+                  <span className="text-[15px] font-semibold tabular-nums text-ink-40">{fmt(totalAssets)}</span>
+                )}
+              </div>
+              <button
+                onClick={() => setShowAssetForm(true)}
+                className="shrink-0 flex items-center gap-1.5 h-11 px-4 rounded-full bg-forest text-paper text-[14px] font-semibold hover:opacity-90 transition-opacity"
+              >
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                Add asset
+              </button>
+            </div>
+
+            {assets.length === 0 ? (
+              <div className="bg-surface rounded-[24px] py-10 px-5 text-center">
+                <p className="text-[14px] font-medium text-forest">No assets added yet</p>
+                <p className="text-[13px] text-ink-40 mt-1">Cash, savings, investments, business or property — track what you own to see your net worth.</p>
+              </div>
+            ) : (
+              <div className="bg-surface rounded-[24px] p-1">
+                {assets.map(a => {
+                  const info = ASSET_CAT_INFO[a.category] ?? ASSET_CAT_FALLBACK;
+                  return (
+                    <div key={a.id} className="flex items-center justify-between gap-2 p-3 border-b border-hairline last:border-0">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <IconTile icon={info.icon} className={info.tile} />
+                        <div className="min-w-0">
+                          <p className="text-[15px] font-semibold text-forest truncate">{a.name}</p>
+                          <p className="text-[13px] text-ink-40 mt-0.5 truncate">{info.label}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-[15px] font-semibold tabular-nums text-forest">{fmt(parseFloat(a.valueUsd))}</span>
+                        {confirmDeleteAsset === a.id ? (
+                          <ConfirmRemove
+                            pending={delAsset.isPending}
+                            onConfirm={() => delAsset.mutate(a.id)}
+                            onCancel={() => setConfirmDeleteAsset(null)}
+                          />
+                        ) : (
+                          <button onClick={() => setConfirmDeleteAsset(a.id)}
+                            className="h-11 w-11 flex items-center justify-center rounded-full text-ink-40 hover:text-clay-ink hover:bg-paper transition-colors"
+                            aria-label={`Delete ${a.name}`}>
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Category totals breakdown */}
+            {categoryTotals.length > 0 && (
+              <div className="bg-surface rounded-[24px] p-5">
+                <h3 className="text-[15px] font-semibold text-forest mb-3">By category</h3>
+                <div className="space-y-3">
+                  {categoryTotals.map(c => {
+                    const pct = totalAssets > 0 ? (c.total / totalAssets) * 100 : 0;
+                    return (
+                      <div key={c.key}>
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <c.icon className="w-4 h-4 text-ink-40 shrink-0" aria-hidden="true" />
+                            <span className="text-[14px] text-forest truncate">{c.label}</span>
+                          </div>
+                          <span className="text-[14px] font-semibold tabular-nums text-forest">{fmt(c.total)}</span>
+                        </div>
+                        <div className="mt-2 h-2 rounded-full bg-track overflow-hidden">
+                          <div className="h-full rounded-full bg-forest" style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Liabilities tab */}
+        {tab === "liabilities" && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3 px-1">
+              <div className="flex items-baseline gap-2 min-w-0">
+                <h2 className="font-sans text-[16px] font-semibold text-forest">Liabilities</h2>
+                {liabilities.length > 0 && (
+                  <span className="text-[15px] font-semibold tabular-nums text-ink-40">{fmt(totalLiabilities)}</span>
+                )}
+              </div>
+              <button
+                onClick={() => setShowLiabForm(true)}
+                className="shrink-0 flex items-center gap-1.5 h-11 px-4 rounded-full bg-forest text-paper text-[14px] font-semibold hover:opacity-90 transition-opacity"
+              >
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                Add liability
+              </button>
+            </div>
+
+            {liabilities.length === 0 ? (
+              <div className="bg-surface rounded-[24px] py-10 px-5 text-center">
+                <p className="text-[14px] font-medium text-forest">No liabilities added yet</p>
+                <p className="text-[13px] text-ink-40 mt-1">Mortgage, loans or card balances — track what you owe for a complete picture.</p>
+              </div>
+            ) : (
+              <div className="bg-surface rounded-[24px] p-1">
+                {liabilities.map(l => {
+                  const info = LIABILITY_CAT_INFO[l.category] ?? { label: l.category, icon: AlertCircle };
+                  return (
+                    <div key={l.id} className="flex items-center justify-between gap-2 p-3 border-b border-hairline last:border-0">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <IconTile icon={info.icon} className="bg-breeze text-forest" />
+                        <div className="min-w-0">
+                          <p className="text-[15px] font-semibold text-forest truncate">{l.name}</p>
+                          <p className="text-[13px] text-ink-40 mt-0.5 truncate">
+                            {info.label}{l.interestRatePercent ? ` · ${l.interestRatePercent}% interest` : ""}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-[15px] font-semibold tabular-nums text-forest">{fmt(parseFloat(l.balanceUsd))}</span>
+                        {confirmDeleteLiab === l.id ? (
+                          <ConfirmRemove
+                            pending={delLiab.isPending}
+                            onConfirm={() => delLiab.mutate(l.id)}
+                            onCancel={() => setConfirmDeleteLiab(null)}
+                          />
+                        ) : (
+                          <button onClick={() => setConfirmDeleteLiab(l.id)}
+                            className="h-11 w-11 flex items-center justify-center rounded-full text-ink-40 hover:text-clay-ink hover:bg-paper transition-colors"
+                            aria-label={`Delete ${l.name}`}>
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
         <FreeTierBanner
           feature="Manual assets and liabilities only"
           benefit="Investment clients get their full advised portfolio auto-synced into net worth."
           storageKey="networth"
         />
-
-        {/* Dark navy header */}
-        <div className="-mx-4 -mt-4 md:-mx-6 md:-mt-6 bg-forest p-[20px_22px_48px]">
-          <h1 className="text-[22px] font-bold text-white tracking-[-0.02em] mb-5">
-            Net Worth
-          </h1>
-          <div className="grid grid-cols-2 gap-5 mb-3">
-            <div>
-              <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.5)" }}>Total assets</p>
-              <p className="text-[22px] font-bold text-white mt-0.5">
-                {totalAssets > 0 ? fmt(totalAssets) : "—"}
-              </p>
-            </div>
-            <div>
-              <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.5)" }}>Total liabilities</p>
-              <p className="text-[22px] font-bold text-white mt-0.5">
-                {totalLiabilities > 0 ? fmt(totalLiabilities) : "—"}
-              </p>
-            </div>
-          </div>
-          {(totalAssets > 0 || totalLiabilities > 0) && (
-            <p className={`text-[13px] font-medium ${netWorth >= 0 ? "text-sun" : "text-clay"}`}>
-              Net worth {fmt(netWorth)}{netWorth < 0 ? " — liabilities exceed assets" : ""}
-            </p>
-          )}
-        </div>
-
-        {/* Cream content area */}
-        <div className="-mx-4 md:-mx-6 bg-paper rounded-t-[24px] -mt-6 p-[22px_16px_0] min-h-full">
-          <div className="space-y-4">
-
-            {/* Trend */}
-            {trendData.length >= 2 && (
-              <div className="bg-surface rounded-[20px] p-[18px] shadow-[0_4px_14px_rgba(12,33,164,.06)]">
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-[11px] tracking-[0.11em] uppercase text-ink-40">History</p>
-                  {netWorthDelta !== null && netWorthDelta !== 0 && (
-                    <span className={`text-[13px] font-semibold ${netWorthDelta > 0 ? "text-green" : "text-clay"}`}>
-                      {netWorthDelta > 0 ? "+" : "-"}{fmt(Math.abs(netWorthDelta))} this month
-                    </span>
-                  )}
-                </div>
-                <ResponsiveContainer width="100%" height={120}>
-                  <LineChart data={trendData}>
-                    <XAxis dataKey="label" tick={{ fontSize: 11, fill: "var(--ink-40)" }} axisLine={false} tickLine={false} />
-                    <YAxis hide />
-                    <Tooltip formatter={(v: number) => [fmt(v), "Net worth"]} />
-                    <Line type="monotone" dataKey="value" stroke="var(--green)" strokeWidth={2} dot={{ fill: "var(--green)", r: 3 }} />
-                  </LineChart>
-                </ResponsiveContainer>
-                {isFreeUser && snapshots.length > FREE_HISTORY_MONTHS && (
-                  <p className="text-[11px] text-ink-40 mt-2 text-center">History beyond {FREE_HISTORY_MONTHS} months is available to clients.</p>
-                )}
-              </div>
-            )}
-
-            {/* Chart */}
-            {(assets.length > 0 || liabilities.length > 0) && (
-              <div className="bg-surface rounded-[20px] p-[18px] shadow-[0_4px_14px_rgba(12,33,164,.06)]">
-                <p className="text-[11px] tracking-[0.11em] uppercase text-ink-40 mb-3">
-                  Overview
-                </p>
-                {netWorth < 0 && (
-                  <div className="rounded-[12px] px-3 py-2 mb-3 flex items-center gap-2 bg-clay-tint border border-clay/20">
-                    <AlertCircle className="h-4 w-4 shrink-0 text-clay-ink" aria-hidden="true" />
-                    <p className="text-xs text-clay-ink">Your liabilities currently exceed your assets.</p>
-                  </div>
-                )}
-                <div role="img" aria-label={`Net worth breakdown: assets ${fmt(totalAssets)}, liabilities ${fmt(totalLiabilities)}, net worth ${fmt(netWorth)}`}>
-                  <ResponsiveContainer width="100%" height={160}>
-                    <BarChart data={chartData} barSize={40}>
-                      <XAxis dataKey="name" tick={{ fontSize: 11, fill: "var(--ink-40)" }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fontSize: 10, fill: "var(--ink-40)" }} tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} axisLine={false} tickLine={false} />
-                      <Tooltip formatter={(v: number) => [fmt(v), ""]} cursor={{ fill: "rgba(12,33,164,0.04)" }} />
-                      <Bar dataKey="value" radius={[6, 6, 0, 0]}>
-                        {chartData.map((d, i) => <Cell key={i} fill={d.fill} />)}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            )}
-
-            {/* Tab toggle */}
-            <div className="flex gap-1 rounded-xl p-1 bg-hairline">
-              {(["assets", "liabilities"] as const).map(t => (
-                <button key={t} onClick={() => setTab(t)}
-                  className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all capitalize ${
-                    tab === t ? "bg-surface text-forest shadow-[0_1px_4px_rgba(12,33,164,.08)]" : "bg-transparent text-ink-40"
-                  }`}>
-                  {t === "assets" ? `Assets (${assets.length})` : `Liabilities (${liabilities.length})`}
-                </button>
-              ))}
-            </div>
-
-            {/* Assets tab */}
-            {tab === "assets" && (
-              <div className="space-y-3">
-                <button
-                  onClick={() => setShowAssetForm(true)}
-                  className="w-full rounded-[20px] p-4 text-left active:scale-95 transition-transform bg-green-tint border border-green/25"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg"></span>
-                    <Plus className="h-3.5 w-3.5 text-green" />
-                    <p className="text-[13px] font-semibold text-green">Add an asset</p>
-                  </div>
-                  <p className="text-[11px] text-green mt-1">Cash, savings, investments, business, property</p>
-                </button>
-
-                {assets.length === 0 ? (
-                  <div className="rounded-[20px] text-center py-8 border-[1.5px] border-dashed border-hairline">
-                    <p className="text-[13px] text-ink-40">No assets added yet.</p>
-                    <p className="text-xs text-ink-40 mt-1">Track what you own to see your net worth.</p>
-                  </div>
-                ) : (
-                  <div className="bg-surface rounded-[20px] overflow-hidden shadow-[0_4px_14px_rgba(12,33,164,.06)]">
-                    {assets.map((a, idx) => {
-                      const info = ASSET_CAT_INFO[a.category] ?? ASSET_CAT_FALLBACK;
-                      return (
-                        <div key={a.id} className={`p-[14px_18px] ${idx < assets.length - 1 ? "border-b border-hairline" : ""}`}>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                              <div className="flex-shrink-0 flex items-center justify-center rounded-xl w-[38px] h-[38px]" style={{ background: info.bg }}>
-                                <info.icon className="w-5 h-5" style={{ color: info.color }} />
-                              </div>
-                              <div className="min-w-0">
-                                <p className="text-[13px] font-semibold text-forest truncate">{a.name}</p>
-                                <p className="text-[11px] text-ink-40 mt-px">{info.label}</p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2 flex-shrink-0">
-                              <p className="text-sm font-bold" style={{ color: info.color }}>
-                                {fmt(parseFloat(a.valueUsd))}
-                              </p>
-                              {confirmDeleteAsset === a.id ? (
-                                <div className="flex items-center gap-1">
-                                  <button onClick={() => delAsset.mutate(a.id)} disabled={delAsset.isPending}
-                                    className="text-xs text-white font-medium px-2 py-1 rounded-lg bg-clay min-h-8">
-                                    {delAsset.isPending ? "…" : "Delete"}
-                                  </button>
-                                  <button onClick={() => setConfirmDeleteAsset(null)}
-                                    className="text-xs text-muted-foreground px-2 py-1 rounded-lg hover:bg-muted min-h-8">
-                                    Cancel
-                                  </button>
-                                </div>
-                              ) : (
-                                <button onClick={() => setConfirmDeleteAsset(a.id)}
-                                  className="flex items-center justify-center text-muted-foreground hover:text-red-500 transition-colors min-w-9 min-h-9"
-                                  aria-label={`Delete ${a.name}`}>
-                                  <Trash2 className="h-4 w-4" />
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Category totals breakdown */}
-            {tab === "assets" && assets.length > 0 && (() => {
-              const totals = ASSET_CATS
-                .map(key => ({ key, ...ASSET_CAT_INFO[key], total: assets.filter(a => a.category === key).reduce((s, a) => s + parseFloat(a.valueUsd), 0) }))
-                .filter(c => c.total > 0);
-              if (totals.length === 0) return null;
-              return (
-                <div className="bg-surface rounded-[20px] overflow-hidden shadow-[0_4px_14px_rgba(12,33,164,.06)]">
-                  <p className="text-[11px] tracking-[0.11em] uppercase text-ink-40 p-[14px_18px_8px]">
-                    By category
-                  </p>
-                  {totals.map((c, idx) => (
-                    <div key={c.key} className="p-[10px_18px] border-t border-hairline">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: c.color }} />
-                          <c.icon className="w-4 h-4 text-muted-foreground" />
-                          <span className="text-[13px] text-forest">{c.label}</span>
-                        </div>
-                        <span className="text-[13px] font-semibold" style={{ color: c.color }}>
-                          {fmt(c.total)}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              );
-            })()}
-
-            {/* Liabilities tab */}
-            {tab === "liabilities" && (
-              <div className="space-y-3">
-                <button
-                  onClick={() => setShowLiabForm(true)}
-                  className="w-full rounded-[20px] p-4 text-left active:scale-95 transition-transform bg-clay-tint border border-clay/25"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg"></span>
-                    <Plus className="h-3.5 w-3.5 text-clay" />
-                    <p className="text-[13px] font-semibold text-clay-ink">Add a liability</p>
-                  </div>
-                  <p className="text-[11px] text-clay mt-1">Mortgage, loans, credit card debt…</p>
-                </button>
-
-                {liabilities.length === 0 ? (
-                  <div className="rounded-[20px] text-center py-8 border-[1.5px] border-dashed border-hairline">
-                    <p className="text-[13px] text-ink-40">No liabilities added yet.</p>
-                    <p className="text-xs text-ink-40 mt-1">Track what you owe for a complete picture.</p>
-                  </div>
-                ) : (
-                  <div className="bg-surface rounded-[20px] overflow-hidden shadow-[0_4px_14px_rgba(12,33,164,.06)]">
-                    {liabilities.map((l, idx) => {
-                      const info = LIABILITY_CAT_INFO[l.category] ?? { label: l.category, icon: AlertCircle };
-                      return (
-                        <div key={l.id} className={`p-[14px_18px] ${idx < liabilities.length - 1 ? "border-b border-hairline" : ""}`}>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                              <div className="flex-shrink-0 flex items-center justify-center rounded-xl w-[38px] h-[38px] bg-clay-tint">
-                                <info.icon className="w-5 h-5 text-clay" />
-                              </div>
-                              <div className="min-w-0">
-                                <p className="text-[13px] font-semibold text-forest truncate">{l.name}</p>
-                                <p className="text-[11px] text-ink-40 mt-px">
-                                  {info.label}{l.interestRatePercent ? ` · ${l.interestRatePercent}% interest` : ""}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2 flex-shrink-0">
-                              <p className="text-sm font-bold text-clay">
-                                {fmt(parseFloat(l.balanceUsd))}
-                              </p>
-                              {confirmDeleteLiab === l.id ? (
-                                <div className="flex items-center gap-1">
-                                  <button onClick={() => delLiab.mutate(l.id)} disabled={delLiab.isPending}
-                                    className="text-xs text-white font-medium px-2 py-1 rounded-lg bg-clay min-h-8">
-                                    {delLiab.isPending ? "…" : "Delete"}
-                                  </button>
-                                  <button onClick={() => setConfirmDeleteLiab(null)}
-                                    className="text-xs text-muted-foreground px-2 py-1 rounded-lg hover:bg-muted min-h-8">
-                                    Cancel
-                                  </button>
-                                </div>
-                              ) : (
-                                <button onClick={() => setConfirmDeleteLiab(l.id)}
-                                  className="flex items-center justify-center text-muted-foreground hover:text-red-500 transition-colors min-w-9 min-h-9"
-                                  aria-label={`Delete ${l.name}`}>
-                                  <Trash2 className="h-4 w-4" />
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
-
-          </div>
-        </div>
       </div>
 
       {/* Add Asset bottom sheet */}
-      <AnimatePresence>
-        {showAssetForm && (
-          <>
-            <motion.div className="fixed inset-0 bg-black/30 z-40" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowAssetForm(false)} />
-            <motion.div
-              className="fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl shadow-2xl bg-surface p-[24px_24px_40px]"
-              initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            >
-              <div className="flex items-center justify-between mb-5">
-                <h3 className="text-lg font-bold text-forest">Add an asset</h3>
-                <button onClick={() => setShowAssetForm(false)} className="flex items-center justify-center text-muted-foreground hover:text-foreground" aria-label="Close" style={{ minWidth: 36, minHeight: 36 }}>
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium block mb-1.5">Asset name</label>
-                  <input
-                    value={aForm.name} onChange={e => setAForm(f => ({ ...f, name: e.target.value }))}
-                    placeholder="e.g. DBS Savings Account"
-                    className="w-full border border-border rounded-xl px-4 py-2.5 text-sm bg-background outline-none focus:ring-2 focus:ring-primary"
-                    autoFocus
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium block mb-1.5">Category</label>
-                  <div className="relative">
-                    <select
-                      value={aForm.category} onChange={e => setAForm(f => ({ ...f, category: e.target.value }))}
-                      className="w-full border border-border rounded-xl px-4 py-2.5 text-sm bg-background outline-none focus:ring-2 focus:ring-primary appearance-none pr-10"
-                    >
-                      {ASSET_CATS.map(c => <option key={c} value={c}>{ASSET_CAT_INFO[c].label}</option>)}
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                  </div>
-                </div>
-                <CurrencyField editable value={aValue} onChange={setAValue} currency={currency} label="Value (USD)" />
-              </div>
-              <Button
-                className="w-full mt-6" onClick={() => addAsset.mutate()}
-                disabled={!aForm.name || aValue <= 0 || addAsset.isPending}
-              >
-                {addAsset.isPending ? "Saving…" : "Add asset"}
-              </Button>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+      <BottomSheet isOpen={showAssetForm} onClose={() => setShowAssetForm(false)} title="Add an asset">
+        <div className="space-y-5 pb-4">
+          <div>
+            <label className={labelClass} htmlFor="free-asset-name">Asset name</label>
+            <input
+              id="free-asset-name"
+              value={aForm.name} onChange={e => setAForm(f => ({ ...f, name: e.target.value }))}
+              placeholder="e.g. DBS Savings Account"
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <span className={labelClass}>Category</span>
+            <CategoryChips
+              options={ASSET_CATS.map(c => ({ value: c, label: ASSET_CAT_INFO[c].label, icon: ASSET_CAT_INFO[c].icon }))}
+              value={aForm.category}
+              onChange={v => setAForm(f => ({ ...f, category: v }))}
+            />
+          </div>
+          <CurrencyField editable value={aValue} onChange={setAValue} currency={currency} label="Value (USD)" />
+          <button
+            className={primaryBtn} onClick={() => addAsset.mutate()}
+            disabled={!aForm.name || aValue <= 0 || addAsset.isPending}
+          >
+            {addAsset.isPending ? "Saving…" : "Add asset"}
+          </button>
+        </div>
+      </BottomSheet>
 
       {/* Add Liability bottom sheet */}
-      <AnimatePresence>
-        {showLiabForm && (
-          <>
-            <motion.div className="fixed inset-0 bg-black/30 z-40" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowLiabForm(false)} />
-            <motion.div
-              className="fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl shadow-2xl bg-surface p-[24px_24px_40px]"
-              initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            >
-              <div className="flex items-center justify-between mb-5">
-                <h3 className="text-lg font-bold text-forest">Add a liability</h3>
-                <button onClick={() => setShowLiabForm(false)} className="flex items-center justify-center text-muted-foreground hover:text-foreground" aria-label="Close" style={{ minWidth: 36, minHeight: 36 }}>
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium block mb-1.5">Liability name</label>
-                  <input
-                    value={lForm.name} onChange={e => setLForm(f => ({ ...f, name: e.target.value }))}
-                    placeholder="e.g. Home Mortgage"
-                    className="w-full border border-border rounded-xl px-4 py-2.5 text-sm bg-background outline-none focus:ring-2 focus:ring-primary"
-                    autoFocus
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium block mb-1.5">Category</label>
-                  <div className="relative">
-                    <select
-                      value={lForm.category} onChange={e => setLForm(f => ({ ...f, category: e.target.value }))}
-                      className="w-full border border-border rounded-xl px-4 py-2.5 text-sm bg-background outline-none focus:ring-2 focus:ring-primary appearance-none pr-10"
-                    >
-                      {LIABILITY_CATS.map(c => <option key={c} value={c}>{LIABILITY_CAT_INFO[c]?.label ?? c}</option>)}
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                  </div>
-                </div>
-                <CurrencyField editable value={lValue} onChange={setLValue} currency={currency} label="Balance (USD)" />
-                <div>
-                  <label className="text-sm font-medium block mb-1.5">Interest rate % <span className="text-muted-foreground font-normal">(optional)</span></label>
-                  <input
-                    type="number" step="0.1" placeholder="e.g. 3.5"
-                    value={lForm.interestRatePercent} onChange={e => setLForm(f => ({ ...f, interestRatePercent: e.target.value }))}
-                    className="w-full border border-border rounded-xl px-4 py-2.5 text-sm bg-background outline-none focus:ring-2 focus:ring-primary"
-                  />
-                </div>
-              </div>
-              <Button
-                className="w-full mt-6" onClick={() => addLiab.mutate()}
-                disabled={!lForm.name || lValue <= 0 || addLiab.isPending}
-              >
-                {addLiab.isPending ? "Saving…" : "Add liability"}
-              </Button>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+      <BottomSheet isOpen={showLiabForm} onClose={() => setShowLiabForm(false)} title="Add a liability">
+        <div className="space-y-5 pb-4">
+          <div>
+            <label className={labelClass} htmlFor="free-liab-name">Liability name</label>
+            <input
+              id="free-liab-name"
+              value={lForm.name} onChange={e => setLForm(f => ({ ...f, name: e.target.value }))}
+              placeholder="e.g. Home Mortgage"
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <span className={labelClass}>Category</span>
+            <CategoryChips
+              options={LIABILITY_CATS.map(c => ({ value: c, label: LIABILITY_CAT_INFO[c]?.label ?? c, icon: LIABILITY_CAT_INFO[c]?.icon ?? AlertCircle }))}
+              value={lForm.category}
+              onChange={v => setLForm(f => ({ ...f, category: v }))}
+            />
+          </div>
+          <CurrencyField editable value={lValue} onChange={setLValue} currency={currency} label="Balance (USD)" />
+          <div>
+            <label className={labelClass} htmlFor="free-liab-rate">
+              Interest rate % <span className="text-ink-40 font-normal">(optional)</span>
+            </label>
+            <input
+              id="free-liab-rate"
+              type="number" step="0.1" placeholder="e.g. 3.5"
+              value={lForm.interestRatePercent} onChange={e => setLForm(f => ({ ...f, interestRatePercent: e.target.value }))}
+              className={inputClass}
+            />
+          </div>
+          <button
+            className={primaryBtn} onClick={() => addLiab.mutate()}
+            disabled={!lForm.name || lValue <= 0 || addLiab.isPending}
+          >
+            {addLiab.isPending ? "Saving…" : "Add liability"}
+          </button>
+        </div>
+      </BottomSheet>
 
-      <BottomNav />
     </AppShell>
   );
 }

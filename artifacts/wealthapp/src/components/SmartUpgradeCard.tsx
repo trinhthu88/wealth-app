@@ -39,28 +39,29 @@ export default function SmartUpgradeCard({ condition, insightText, ctaText, ctaT
   }
 
   return (
-    <div className="relative bg-primary/5 border border-primary/20 rounded-xl p-4">
+    <div className="relative rounded-[24px] bg-breeze p-5 pr-14">
       <button
         onClick={handleDismiss}
-        className="absolute top-2 right-2 text-muted-foreground hover:text-foreground"
+        className="absolute right-2 top-2 inline-flex h-11 w-11 items-center justify-center rounded-full text-forest transition-colors hover:bg-forest/10"
         aria-label="Dismiss"
       >
-        <X className="h-4 w-4" />
+        <X className="h-4 w-4" aria-hidden="true" />
       </button>
-      <div className="flex gap-3 pr-6 items-start">
-        <Sol size="xs" animate="idle" showFace className="shrink-0 mt-0.5" />
-        <div>
-          <p className="text-sm text-foreground leading-snug">{insightText}</p>
-          <button
-            type="button"
-            onClick={handleCtaClick}
-            disabled={manageSubscription.isPending}
-            className="text-xs text-primary font-medium mt-1.5 inline-block hover:underline disabled:opacity-60"
-          >
-            {isSubscribed ? "Manage subscription" : ctaText} →
-          </button>
+      <div className="flex items-start gap-3">
+        <Sol size="sm" animate="none" className="shrink-0" />
+        <div className="min-w-0">
+          <div className="tala-eyebrow text-forest">Sol noticed</div>
+          <p className="mt-1 text-[14px] leading-[1.5] text-forest text-pretty">{insightText}</p>
         </div>
       </div>
+      <button
+        type="button"
+        onClick={handleCtaClick}
+        disabled={manageSubscription.isPending}
+        className="mt-4 inline-flex h-11 items-center rounded-full bg-forest px-5 text-[14px] font-semibold text-paper transition-opacity hover:opacity-90 disabled:opacity-60"
+      >
+        {isSubscribed ? "Manage subscription" : ctaText}
+      </button>
 
       <BottomSheet isOpen={sheetOpen} onClose={() => setSheetOpen(false)} title="Choose your plan">
         <PlanPicker />

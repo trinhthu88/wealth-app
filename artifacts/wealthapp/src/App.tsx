@@ -318,6 +318,8 @@ function ClientRouteLayer() {
   const [location] = useLocation();
   const { profile } = useProfile();
   const isClientPage = location.startsWith("/client/");
+  // Free screens inside the app shell (onboarding is a standalone flow).
+  const isFreeShellPage = location.startsWith("/free/") && !location.startsWith("/free/onboarding");
 
   return (
     <>
@@ -325,6 +327,7 @@ function ClientRouteLayer() {
       {profile?.role === "investment_client" && isClientPage && (
         <FloatingSolChat isOnboarding={location.split(/[?#]/, 1)[0] === "/client/onboarding"} />
       )}
+      {profile?.role === "free_user" && isFreeShellPage && <FloatingSolChat />}
     </>
   );
 }
