@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
-import { X, ChevronRight, Lightbulb } from "lucide-react";
+import { X, ArrowUpRight, Lightbulb, Users, Globe, Gauge, Award, LineChart, AlertCircle } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Tip } from "@/lib/tipEngine";
 
@@ -8,31 +9,34 @@ interface Props {
   tip: Tip;
 }
 
-const TYPE_COLORS: Record<string, string> = {
-  goal_alert: "border-l-red-400",
-  benchmark: "border-l-blue-400",
-  expat_tip: "border-l-purple-400",
-  score_tip: "border-l-amber-400",
-  milestone: "border-l-emerald-400",
-  market_context: "border-l-teal-400",
+// Full-strength icon tiles (approved design): Spring Field for wins, Blue
+// Breeze for information, Sunset Pop for a goal that needs attention. Text on
+// every tile stays Cobalt.
+const TYPE_ICON_TILE: Record<string, string> = {
+  goal_alert: "bg-sun",
+  benchmark: "bg-breeze",
+  expat_tip: "bg-breeze",
+  score_tip: "bg-field",
+  milestone: "bg-field",
+  market_context: "bg-breeze",
 };
 
-const TYPE_ICON_BG: Record<string, string> = {
-  goal_alert: "bg-red-100 text-red-600",
-  benchmark: "bg-blue-100 text-blue-600",
-  expat_tip: "bg-purple-100 text-purple-600",
-  score_tip: "bg-amber-100 text-amber-600",
-  milestone: "bg-emerald-100 text-emerald-600",
-  market_context: "bg-teal-100 text-teal-600",
+const TYPE_ICON: Record<string, LucideIcon> = {
+  goal_alert: AlertCircle,
+  benchmark: Users,
+  expat_tip: Globe,
+  score_tip: Gauge,
+  milestone: Award,
+  market_context: LineChart,
 };
 
 const TYPE_LABEL: Record<string, string> = {
-  goal_alert: "GOAL ALERT",
-  benchmark: "PEER BENCHMARK",
-  expat_tip: "EXPAT TIP",
-  score_tip: "SCORE TIP",
-  milestone: "MILESTONE",
-  market_context: "MARKET INSIGHT",
+  goal_alert: "Goal alert",
+  benchmark: "Peer benchmark",
+  expat_tip: "Expat tip",
+  score_tip: "Score tip",
+  milestone: "Milestone",
+  market_context: "Market insight",
 };
 
 const LS_KEY = "wealthapp_tip_dismissed_v1";
@@ -62,45 +66,39 @@ export default function WeeklyTipCard({ tip }: Props) {
     setDismissed(true);
   }
 
-  const borderColor = TYPE_COLORS[tip.type] ?? "border-l-teal-400";
-  const iconBg = TYPE_ICON_BG[tip.type] ?? "bg-teal-100 text-teal-600";
-  const typeLabel = TYPE_LABEL[tip.type] ?? "INSIGHT";
+  const iconTile = TYPE_ICON_TILE[tip.type] ?? "bg-breeze";
+  const Icon = TYPE_ICON[tip.type] ?? Lightbulb;
+  const typeLabel = TYPE_LABEL[tip.type] ?? "Insight";
+  // Free users meet an advisor on the Advisor tab, not the old booking page.
+  const actionHref = tip.actionRoute === "/book" ? "/free/advisor" : tip.actionRoute;
 
   return (
-    <div
-      className={cn(
-        "bg-card border border-border rounded-2xl p-4 border-l-4 relative",
-        borderColor,
-      )}
-    >
+    <section aria-label={typeLabel} className="relative flex items-start gap-3 rounded-[24px] bg-surface p-4 pr-12">
+      <div className={cn("flex h-11 w-11 flex-none items-center justify-center rounded-[14px] text-forest", iconTile)} aria-hidden="true">
+        <Icon className="h-5 w-5" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="tala-eyebrow text-ink-40">{typeLabel}</div>
+        <h3 className="mt-1 text-[14px] font-semibold leading-[1.4] text-forest text-pretty">{tip.title}</h3>
+        <p className="mt-1 text-[13px] leading-[1.5] text-ink-40 text-pretty">{tip.body}</p>
+        {tip.actionLabel && actionHref && (
+          <Link
+            href={actionHref}
+            className="mt-3 inline-flex h-11 items-center gap-1.5 rounded-full bg-forest px-4 text-[13px] font-semibold text-paper transition-opacity hover:opacity-90"
+          >
+            {tip.actionLabel}
+            <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+          </Link>
+        )}
+      </div>
       <button
+        type="button"
         onClick={dismiss}
-        className="absolute top-3 right-3 text-muted-foreground hover:text-foreground"
+        className="absolute right-1 top-1 flex h-11 w-11 items-center justify-center rounded-full text-ink-30 transition-colors hover:text-forest"
+        aria-label="Dismiss this week's tip"
       >
         <X className="h-4 w-4" />
       </button>
-
-      <div className="flex items-start gap-3 pr-6">
-        <div className={cn("h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0", iconBg)}>
-          <Lightbulb className="h-4 w-4" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="text-[10px] font-semibold tracking-wider text-muted-foreground mb-0.5">
-            {typeLabel}
-          </div>
-          <div className="font-semibold text-sm mb-1">{tip.title}</div>
-          <p className="text-sm text-muted-foreground leading-relaxed">{tip.body}</p>
-          {tip.actionLabel && tip.actionRoute && (
-            <Link
-              href={tip.actionRoute}
-              className="inline-flex items-center gap-1 text-sm font-medium text-primary mt-2 hover:underline"
-            >
-              {tip.actionLabel}
-              <ChevronRight className="h-3.5 w-3.5" />
-            </Link>
-          )}
-        </div>
-      </div>
-    </div>
+    </section>
   );
 }

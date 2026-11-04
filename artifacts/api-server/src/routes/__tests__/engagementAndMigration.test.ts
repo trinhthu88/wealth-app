@@ -171,10 +171,32 @@ describe("engagement routes", () => {
 });
 
 describe("retired routes", () => {
-  it("the pathway wizard routes are gone", async () => {
-    const u = await makeUser();
-    await request(app).get("/api/pathway").set(asUser(u)).expect(404);
-    await request(app).put("/api/pathway/1").set(asUser(u)).send({ stepName: "x", status: "completed" }).expect(404);
+  it("keeps pathway progress available only to free users", async () => {
+    const freeUser = await makeUser("free_user");
+    await request(app).get("/api/pathway").set(asUser(freeUser)).expect(200).expect([]);
+    const saved = await request(app)
+      .put("/api/pathway/1")
+      .set(asUser(freeUser))
+      .send({ stepName: "about", status: "completed", formData: { age: 30 } })
+      .expect(201);
+    expect(saved.body).toMatchObject({
+      userId: freeUser,
+      stepNumber: 1,
+      stepName: "about",
+      status: "completed",
+      formData: { age: 30 },
+    });
+    const progress = await request(app).get("/api/pathway").set(asUser(freeUser)).expect(200);
+    expect(progress.body).toHaveLength(1);
+    expect(progress.body[0]).toMatchObject({ stepNumber: 1, stepName: "about" });
+
+    const investmentClient = await makeUser("investment_client");
+    await request(app).get("/api/pathway").set(asUser(investmentClient)).expect(403);
+    await request(app)
+      .put("/api/pathway/1")
+      .set(asUser(investmentClient))
+      .send({ stepName: "about", status: "completed" })
+      .expect(403);
   });
 });
 

@@ -7,6 +7,7 @@ import { useFocusTrap } from "@/hooks/useFocusTrap";
 import { track } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 import Sol from "./Sol";
+import FreeAppShell from "./free/FreeAppShell";
 import {
   CreditCard, Menu, X, LayoutDashboard, Map, DollarSign, Target, TrendingUp, Heart,
   Users, ClipboardList, Star, BookOpen, Building2, ChevronLeft, ChevronRight,
@@ -69,6 +70,13 @@ function NavLink({ item, collapsed }: { item: NavItem; collapsed: boolean }) {
 }
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
+  const [onFreeRoute] = useRoute("/free/:rest*");
+  // Free-plan screens get the redesigned shell: floating Cobalt menu bar with Sol.
+  if (onFreeRoute) return <FreeAppShell>{children}</FreeAppShell>;
+  return <StaffAppShell>{children}</StaffAppShell>;
+}
+
+function StaffAppShell({ children }: { children: React.ReactNode }) {
   const { profile } = useProfile();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);

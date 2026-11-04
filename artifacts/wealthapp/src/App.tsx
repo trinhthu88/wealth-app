@@ -26,6 +26,17 @@ const ToolsPage = lazy(() => import("@/pages/tools"));
 const BillingSuccess = lazy(() => import("@/pages/billing/success"));
 const BillingCancel = lazy(() => import("@/pages/billing/cancel"));
 
+const FreeDashboard = lazy(() => import("@/pages/free/dashboard"));
+const PathwayPage = lazy(() => import("@/pages/free/pathway"));
+const FreeOnboardingPage = lazy(() => import("@/pages/free/onboarding"));
+const BudgetPage = lazy(() => import("@/pages/free/budget"));
+const GoalsPage = lazy(() => import("@/pages/free/goals"));
+const NetWorthPage = lazy(() => import("@/pages/free/networth"));
+const HealthScorePage = lazy(() => import("@/pages/free/healthscore"));
+const MilestonesPage = lazy(() => import("@/pages/free/milestones"));
+const FreePortfolioPage = lazy(() => import("@/pages/free/portfolio"));
+const FreeSettingsPage = lazy(() => import("@/pages/free/settings"));
+const FreeAdvisorPage = lazy(() => import("@/pages/free/advisor"));
 
 const ClientDashboard = lazy(() => import("@/pages/client/ClientDashboard"));
 const ClientPortfolio = lazy(() => import("@/pages/client/ClientPortfolio"));
@@ -243,8 +254,19 @@ function AppRoutes() {
 
       <Route path="/dashboard"><RoleRedirect /></Route>
 
+      <Route path="/free/dashboard"><ProtectedRoute component={FreeDashboard} role={["free_user"]} /></Route>
+      <Route path="/free/onboarding"><ProtectedRoute component={FreeOnboardingPage} role={["free_user"]} /></Route>
+      <Route path="/free/pathway"><ProtectedRoute component={PathwayPage} role={["free_user"]} /></Route>
+      <Route path="/free/budget"><ProtectedRoute component={BudgetPage} role={["free_user"]} /></Route>
+      <Route path="/free/goals"><ProtectedRoute component={GoalsPage} role={["free_user"]} /></Route>
+      <Route path="/free/networth"><ProtectedRoute component={NetWorthPage} role={["free_user"]} /></Route>
+      <Route path="/free/health-score"><ProtectedRoute component={HealthScorePage} role={["free_user"]} /></Route>
+      <Route path="/free/milestones"><ProtectedRoute component={MilestonesPage} role={["free_user"]} /></Route>
+      <Route path="/free/portfolio"><ProtectedRoute component={FreePortfolioPage} role={["free_user"]} /></Route>
+      <Route path="/free/settings"><ProtectedRoute component={FreeSettingsPage} role={["free_user"]} /></Route>
+      <Route path="/free/advisor"><ProtectedRoute component={FreeAdvisorPage} role={["free_user"]} /></Route>
 
-      {/* The free pages are gone; old links land on the right client screen. */}
+      {/* Unknown legacy free links return to the role-aware dashboard. */}
       <Route path="/free/*?"><Redirect to="/dashboard" /></Route>
 
       <Route path="/client/activate"><ProtectedRoute component={ActivateMembership} role={CLIENT_SCREEN_ROLES} /></Route>
@@ -311,6 +333,8 @@ function ClientRouteLayer() {
   const [location] = useLocation();
   const { profile } = useProfile();
   const isClientPage = location.startsWith("/client/");
+  // Free screens inside the app shell (onboarding is a standalone flow).
+  const isFreeShellPage = location.startsWith("/free/") && !location.startsWith("/free/onboarding");
 
   return (
     <>
@@ -318,6 +342,7 @@ function ClientRouteLayer() {
       {(profile?.role === "investment_client" || profile?.role === "free_user") && isClientPage && (
         <FloatingSolChat isOnboarding={location.split(/[?#]/, 1)[0] === "/client/onboarding"} />
       )}
+      {profile?.role === "free_user" && isFreeShellPage && <FloatingSolChat />}
     </>
   );
 }

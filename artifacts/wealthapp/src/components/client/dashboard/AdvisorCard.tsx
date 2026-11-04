@@ -11,7 +11,7 @@ export default function AdvisorCard() {
   if (!entitlements) return null;
 
   const { advisor } = entitlements;
-  const state = advisorCardState(entitlements.tier, entitlements.leadStatus, !!advisor, entitlements.membership.pendingPayment);
+  const state = advisorCardState(entitlements.tier, entitlements.leadStatus, !!advisor, entitlements.membership?.pendingPayment ?? false);
   const advisorName = advisor?.name ?? "Your advisor";
   const firstName = advisorName.split(" ")[0];
   const initials = advisorName.split(" ").map((part) => part[0]).join("");

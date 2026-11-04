@@ -19,10 +19,10 @@ describe("resolveRoleRedirectPath", () => {
     expect(resolveRoleRedirectPath("advisor", "not_started")).toBe("/advisor/dashboard");
   });
 
-  it("sends a free_user to the client screens, onboarding first", () => {
-    expect(resolveRoleRedirectPath("free_user", "not_started")).toBe("/client/onboarding");
-    expect(resolveRoleRedirectPath("free_user", "profile")).toBe("/client/onboarding");
-    expect(resolveRoleRedirectPath("free_user", "complete")).toBe("/client/dashboard");
+  it("sends a free_user to the free redesign, onboarding first", () => {
+    expect(resolveRoleRedirectPath("free_user", "not_started")).toBe("/free/onboarding");
+    expect(resolveRoleRedirectPath("free_user", "profile")).toBe("/free/onboarding");
+    expect(resolveRoleRedirectPath("free_user", "complete")).toBe("/free/dashboard");
   });
 });
 

@@ -14,7 +14,8 @@ export default function MembershipCard() {
   const { checkpoint, dismiss } = useCheckpoint(MEMBERSHIP_CHECKPOINTS);
   const manage = useManageSubscription();
   if (!entitlements) return null;
-  const manageable = !!entitlements.membership.manageUrl;
+  const membership = entitlements.membership;
+  const manageable = !!membership?.manageUrl;
 
   if (checkpoint?.code === "C11_trial_ending") {
     const copy = checkpointCopy(checkpoint.code, checkpoint.snapshot);
@@ -44,7 +45,7 @@ export default function MembershipCard() {
     );
   }
 
-  if (!manageable || !entitlements.membership.isActive) return null;
+  if (!manageable || !membership?.isActive) return null;
   return (
     <div className="px-1 text-right" data-testid="membership-manage">
       <button type="button" className={QUIET} disabled={manage.isPending} onClick={() => manage.mutate()}>Manage membership</button>

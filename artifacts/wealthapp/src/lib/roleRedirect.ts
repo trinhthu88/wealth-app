@@ -16,6 +16,9 @@ export function resolveRoleRedirectPath(
   // A promoted client's next sign-in lands on the activation screen. "Not now" goes straight to
   // /client/dashboard, so this doesn't trap them.
   if (pendingPayment) return "/client/activate";
+  if (role === "free_user") {
+    return onboardingStage === "complete" ? "/free/dashboard" : "/free/onboarding";
+  }
   // DECISION: the brief says onboardingTrackComplete, but that column is deprecated;
   // client_profiles.onboarding_stage owns onboarding state, so both tiers read it.
   return onboardingStage === "complete" ? "/client/dashboard" : "/client/onboarding";

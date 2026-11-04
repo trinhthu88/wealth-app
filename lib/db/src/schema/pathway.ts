@@ -2,9 +2,8 @@ import { pgTable, text, integer, timestamp, uuid, jsonb } from "drizzle-orm/pg-c
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
-// Deprecated: the wizard is gone. Source for scripts/src/migrate-free-tier-to-client.ts, and
-// retained for the same reason as budget_entries (see schema/budget.ts). The legacy POST
-// /health-score still reads it.
+// Retained for free-tier pathway progress and migration history. Investment-client onboarding
+// uses client_profiles.onboarding_stage instead. The legacy POST /health-score also reads it.
 export const pathwayProgressTable = pgTable("pathway_progress", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: text("user_id").notNull(),
