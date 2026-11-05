@@ -1,9 +1,9 @@
-import { computeAndSnapshotAllInvestmentClients } from "@workspace/net-worth";
+import { computeAndSnapshotEligibleUsers } from "@workspace/net-worth";
 import { pool } from "@workspace/db";
 
 try {
-  const count = await computeAndSnapshotAllInvestmentClients();
-  console.log(`Updated today's net-worth snapshot for ${count} investment client(s).`);
+  const count = await computeAndSnapshotEligibleUsers();
+  console.log(`Updated today's net-worth snapshot for ${count} eligible user(s).`);
 } finally {
   await pool.end();
 }

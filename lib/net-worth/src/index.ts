@@ -227,10 +227,28 @@ export async function computeNetWorth(
   };
 }
 
-export async function computeAndSnapshotAllInvestmentClients(): Promise<number> {
-  const clients = await db.select({ id: profilesTable.id })
-    .from(profilesTable)
-    .where(eq(profilesTable.role, "investment_client"));
-  for (const client of clients) await computeNetWorth(client.id, { currency: "USD" });
-  return clients.length;
+export async function getNetWorthSnapshotUserIds(): Promise<string[]> {
+  const [investmentClients, assetOwners, liabilityOwners, holdingOwners] = await Promise.all([
+    db.select({ id: profilesTable.id })
+      .from(profilesTable)
+      .where(eq(profilesTable.role, "investment_client")),
+    db.selectDistinct({ id: assetsTable.userId }).from(assetsTable),
+    db.selectDistinct({ id: liabilitiesTable.userId }).from(liabilitiesTable),
+    db.selectDistinct({ id: clientHoldingsTable.userId }).from(clientHoldingsTable),
+  ]);
+  return [...new Set([
+    ...investmentClients.map((client) => client.id),
+    ...assetOwners.map((owner) => owner.id),
+    ...liabilityOwners.map((owner) => owner.id),
+    ...holdingOwners.map((owner) => owner.id),
+  ])];
 }
+
+export async function computeAndSnapshotEligibleUsers(): Promise<number> {
+  const userIds = await getNetWorthSnapshotUserIds();
+  for (const userId of userIds) await computeNetWorth(userId, { currency: "USD" });
+  return userIds.length;
+}
+
+/** @deprecated Use computeAndSnapshotEligibleUsers; retained for existing callers. */
+export const computeAndSnapshotAllInvestmentClients = computeAndSnapshotEligibleUsers;

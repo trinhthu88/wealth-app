@@ -1,6 +1,8 @@
 export {
   computeAndSnapshotAllInvestmentClients,
+  computeAndSnapshotEligibleUsers,
   computeNetWorth,
+  getNetWorthSnapshotUserIds,
   TICKER_BASED_TYPES,
   valueOfHolding,
 } from "@workspace/net-worth";
