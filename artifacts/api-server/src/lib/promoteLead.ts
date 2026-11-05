@@ -3,6 +3,7 @@ import {
   db, profilesTable, clientProfilesTable, leadsTable, advisorAssignmentsTable, membershipsTable,
 } from "@workspace/db";
 import { isRowActive } from "./membershipStore";
+import { activateDraftGoalsForUser } from "./goalDraftActivation";
 
 export type PromoteLeadResult =
   | { ok: true; profile: typeof profilesTable.$inferSelect; clientProfile: typeof clientProfilesTable.$inferSelect }
@@ -104,5 +105,6 @@ export async function promoteLeadToClient(
     return { updatedProfile: nextProfile, clientProfile: nextCp };
   });
 
+  await activateDraftGoalsForUser(userId);
   return { ok: true, profile: updatedProfile, clientProfile };
 }

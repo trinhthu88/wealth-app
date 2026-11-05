@@ -26,7 +26,7 @@ export interface EnsureOffTrackTaskResult {
 export async function ensureOffTrackTask(userId: string, goalId: string): Promise<EnsureOffTrackTaskResult> {
   const [goal] = await db.select().from(financialGoalsTable)
     .where(and(eq(financialGoalsTable.id, goalId), eq(financialGoalsTable.userId, userId)));
-  if (!goal) return { created: false, status: "no_target" };
+  if (!goal || goal.status !== "active") return { created: false, status: "no_target" };
 
   const progress = await computeGoalFundingSummary(userId, goal);
 

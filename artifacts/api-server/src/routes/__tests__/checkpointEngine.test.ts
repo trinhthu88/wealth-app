@@ -78,14 +78,17 @@ describe("C2 and C5 fire from the refused attempt", () => {
     expect((await rowsOf(u)).filter((r) => r.code === "C2_goal_slot")).toHaveLength(1);
   });
 
-  it("the Add button's empty attempt fires C2 at the cap and creates nothing under it", async () => {
+  it("valid cap-refused goals are saved as drafts, while empty requests fail validation", async () => {
     const u = await makeUser();
     await request(app).post("/api/goals").set(asUser(u)).send({}).expect(400);
     expect(await rowsOf(u)).toHaveLength(0);
     await request(app).post("/api/goals").set(asUser(u)).send(goal).expect(201);
-    await request(app).post("/api/goals").set(asUser(u)).send({}).expect(403);
+    await request(app).post("/api/goals").set(asUser(u)).send({}).expect(400);
+    await request(app).post("/api/goals").set(asUser(u)).send(goal).expect(403);
     expect(await openCode(u)).toBe("C2_goal_slot");
-    expect(await db.select().from(financialGoalsTable).where(eq(financialGoalsTable.userId, u))).toHaveLength(1);
+    const goals = await db.select().from(financialGoalsTable).where(eq(financialGoalsTable.userId, u));
+    expect(goals).toHaveLength(2);
+    expect(goals.filter((item) => item.status === "draft")).toHaveLength(1);
   });
 
   it("C5 fires on a sixth holding", async () => {

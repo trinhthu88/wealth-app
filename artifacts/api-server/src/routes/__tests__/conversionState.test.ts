@@ -13,6 +13,7 @@ const {
   conversationsTable, messagesTable, documentsTable, financialGoalsTable, advisorAssignmentsTable,
 } = await import("@workspace/db");
 const { eq, inArray } = await import("drizzle-orm");
+const { setCompedMembership } = await import("../../lib/membershipStore");
 
 const RUN_ID = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const created: string[] = [];
@@ -168,13 +169,14 @@ describe("lead status drives conversion state and the after_assign gate", () => 
 
     // Promotion alone changes nothing until the membership is active.
     expect((await entitlements(u)).tier).toBe("free");
-    await grantMembership(u);
+    const membership = await setCompedMembership(u, "comp", "conversion state test");
+    expect(membership.ok).toBe(true);
 
     const e = await entitlements(u);
     expect(e).toMatchObject({ tier: "track_b", advisor: { id: advisor } });
     expect(e.gates).toMatchObject({ goals: "full", plan: "full", messages: "full" });
     const goals = await request(app).get("/api/goals").set(asUser(u)).expect(200);
-    expect(goals.body.map((g: any) => g.title)).toEqual(["House"]);
+    expect(goals.body.map((g: any) => g.title)).toEqual(["House", "Second"]);
     await request(app).post("/api/goals").set(asUser(u)).send({ title: "Second", goalType: "house" }).expect(201);
   });
 });

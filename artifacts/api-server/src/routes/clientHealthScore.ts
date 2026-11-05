@@ -108,7 +108,7 @@ router.get("/client/health-score", requireAuth, async (req, res): Promise<void> 
     computeNetWorth(userId, { currency: "USD" }),
   ]);
 
-  const activeGoals = goals.filter(g => g.status !== "completed" && g.status !== "cancelled");
+  const activeGoals = goals.filter(g => g.status === "active");
   const hasAnyData = budgetMonths.length > 0 || activeGoals.length > 0 || holdings.length > 0 || plans.length > 0;
   if (!hasAnyData) { res.json(null); return; }
 

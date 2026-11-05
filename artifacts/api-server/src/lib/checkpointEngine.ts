@@ -42,7 +42,9 @@ async function loadExisting(userId: string): Promise<ExistingCheckpoint[]> {
 }
 
 async function loadGoals(userId: string): Promise<CheckpointContext["goals"]> {
-  const goals = await db.select().from(financialGoalsTable).where(eq(financialGoalsTable.userId, userId));
+  const goals = (await db.select().from(financialGoalsTable)
+    .where(eq(financialGoalsTable.userId, userId)))
+    .filter(goal => goal.status !== "draft");
   return Promise.all(goals.map(async (goal) => {
     if (goal.status === "active") await recordSnapshotIfStale(userId, goal.id);
     const [summary, snapshots] = await Promise.all([

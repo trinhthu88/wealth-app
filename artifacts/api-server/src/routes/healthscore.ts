@@ -107,7 +107,9 @@ router.post("/health-score", requireAuth, async (req, res): Promise<void> => {
     liability.currencyOriginal,
     rates,
   );
-  const goalSummaries = await Promise.all(goals.map(goal => computeGoalFundingSummary(userId, goal)));
+  const goalSummaries = await Promise.all(
+    goals.filter(goal => goal.status === "active").map(goal => computeGoalFundingSummary(userId, goal)),
+  );
 
   // ── Shared values ──────────────────────────────────────────────────────────
   // Free-tier budgets use the same table as investment-client budgets. Their

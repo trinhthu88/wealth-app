@@ -3,7 +3,7 @@ import { z } from "zod/v4";
 export const roleValues = ["free_user", "investment_client", "advisor", "super_admin"] as const;
 export const roleSchema = z.enum(roleValues);
 
-export const goalLifecycleValues = ["active", "completed", "cancelled"] as const;
+export const goalLifecycleValues = ["active", "completed", "cancelled", "draft"] as const;
 export const goalLifecycleSchema = z.enum(goalLifecycleValues);
 
 export const advisedPlanStatusValues = ["scenario", "inforce", "matured", "surrender"] as const;

@@ -47,11 +47,11 @@ export async function toolGetNetWorthSummary(userId: string) {
   };
 }
 
-async function toolGetGoalProgress(userId: string, input: { goalId?: string }) {
+export async function toolGetGoalProgress(userId: string, input: { goalId?: string }) {
   const allGoals = await db.select().from(financialGoalsTable).where(eq(financialGoalsTable.userId, userId));
-  const scoped = input.goalId
-    ? allGoals.filter(g => g.id === input.goalId)
-    : allGoals.filter(g => g.status !== "completed" && g.status !== "cancelled");
+  const scoped = allGoals.filter(g =>
+    g.status !== "draft" && (input.goalId ? g.id === input.goalId : g.status === "active"),
+  );
   if (scoped.length === 0) return { goals: [] };
 
   const goals = await Promise.all(scoped.map(async g => {

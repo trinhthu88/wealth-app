@@ -9,6 +9,7 @@ import {
 import { logger } from "./logger";
 import type { PaymentProvider, ProviderEvent } from "./payments";
 import { raiseCheckpoint, runCheckpointHook } from "./checkpointEngine";
+import { activateDraftGoalsForUser } from "./goalDraftActivation";
 
 /**
  * The only runtime code that writes memberships. Two callers exist, as the addendum names:
@@ -63,8 +64,9 @@ function hasLapsed(previous: Pick<Membership, "status" | "cancelAtPeriodEnd"> | 
   return previous?.status !== "canceled" || previous.cancelAtPeriodEnd;
 }
 
-async function afterCommit(userId: string, lapsed: boolean): Promise<void> {
+async function afterCommit(userId: string, lapsed: boolean, activateDrafts: boolean): Promise<void> {
   if (lapsed) await raiseCheckpoint(userId, "C12_lapsed", {});
+  if (activateDrafts) await activateDraftGoalsForUser(userId);
   await runCheckpointHook(userId);
 }
 
@@ -136,17 +138,17 @@ export async function handleProviderEvent(event: ProviderEvent, provider: Paymen
       const isFirst = !existing || existing.status === "none";
       await onActivated(tx, targetUserId, profile.role, isFirst, "self_serve_member");
     }
-    return { lapsed: hasLapsed(existing, status, activeNow) };
+    return { lapsed: hasLapsed(existing, status, activeNow), activateDrafts: activeNow };
   });
 
-  if (change) await afterCommit(targetUserId, change.lapsed);
+  if (change) await afterCommit(targetUserId, change.lapsed, change.activateDrafts);
 }
 
 export type CompResult = { ok: true; membership: Membership } | { ok: false; httpStatus: number; error: string };
 
 /** The super-admin route's write. Comps or revokes; never touches a paying member's provider record. */
 export async function setCompedMembership(userId: string, action: "comp" | "revoke", reason: string): Promise<CompResult> {
-  const outcome = await db.transaction(async (tx): Promise<CompResult & { lapsed?: boolean }> => {
+  const outcome = await db.transaction(async (tx): Promise<CompResult & { lapsed?: boolean; activateDrafts?: boolean }> => {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`membership:${userId}`}))`);
     const [profile] = await tx.select({ role: profilesTable.role }).from(profilesTable).where(eq(profilesTable.id, userId));
     if (!profile) return { ok: false, httpStatus: 404, error: "Not found" };
@@ -162,7 +164,7 @@ export async function setCompedMembership(userId: string, action: "comp" | "revo
       const [membership] = await tx.update(membershipsTable)
         .set({ status: "canceled", reason, currentPeriodEnd: null, cancelAtPeriodEnd: false, updatedAt: new Date() })
         .where(eq(membershipsTable.userId, userId)).returning();
-      return { ok: true, membership, lapsed: hasLapsed(existing, "canceled", false) };
+      return { ok: true, membership, lapsed: hasLapsed(existing, "canceled", false), activateDrafts: false };
     }
 
     if (existing && existing.source !== "comped" && isRowActive(existing)) {
@@ -175,10 +177,10 @@ export async function setCompedMembership(userId: string, action: "comp" | "revo
     const [membership] = await tx.insert(membershipsTable).values({ userId, ...values })
       .onConflictDoUpdate({ target: membershipsTable.userId, set: values }).returning();
     await onActivated(tx, userId, profile.role, !existing || existing.status === "none", "comped_member");
-    return { ok: true, membership, lapsed: false };
+    return { ok: true, membership, lapsed: false, activateDrafts: true };
   });
 
-  if (outcome.ok) await afterCommit(userId, !!outcome.lapsed);
-  const { lapsed: _lapsed, ...result } = outcome;
+  if (outcome.ok) await afterCommit(userId, !!outcome.lapsed, !!outcome.activateDrafts);
+  const { lapsed: _lapsed, activateDrafts: _activateDrafts, ...result } = outcome;
   return result as CompResult;
 }

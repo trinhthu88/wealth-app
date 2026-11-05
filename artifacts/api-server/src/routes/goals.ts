@@ -1,13 +1,61 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import { eq, and } from "drizzle-orm";
-import { db, financialGoalsTable, profilesTable, goalHoldingLinksTable, goalLifecycleSchema } from "@workspace/db";
-import { requireAuth, requireRole, requireAdvisorOwnsClient, requireAdvisorOwnsLead, requireAllowance, checkAllowanceFor } from "../middlewares/requireAuth";
+import { eq, and, asc, desc } from "drizzle-orm";
+import { z } from "zod/v4";
+import { db, financialGoalsTable, profilesTable, goalHoldingLinksTable } from "@workspace/db";
+import { requireAuth, requireRole, requireAdvisorOwnsClient, requireAdvisorOwnsLead, checkAllowanceFor } from "../middlewares/requireAuth";
 import { getRemainingPct } from "../lib/goalAllocation";
 import { computeGoalFundingSummary, getProgressMovement } from "../lib/goalProgressSnapshot";
 import { ensureOffTrackTask } from "../lib/offTrackTasks";
 import { runCheckpointHook } from "../lib/checkpointEngine";
 
 const router: IRouter = Router();
+
+const clientGoalStatusSchema = z.enum(["active", "completed", "cancelled"]);
+const amountInputSchema = z.union([
+  z.number().finite().nonnegative(),
+  z.string().trim().min(1).refine((value) => Number.isFinite(Number(value)) && Number(value) >= 0, "Must be a non-negative amount"),
+  z.null(),
+]).optional();
+const targetDateInputSchema = z.string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .refine((value) => {
+    const parsed = new Date(`${value}T00:00:00.000Z`);
+    return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+  })
+  .nullable()
+  .optional();
+const createGoalBodySchema = z.object({
+  title: z.string().trim().min(1).max(200),
+  goalType: z.string().trim().min(1).max(80),
+  targetAmount: amountInputSchema,
+  currentAmount: amountInputSchema,
+  monthlyContribution: amountInputSchema,
+  targetDate: targetDateInputSchema,
+  currency: z.string().trim().regex(/^[A-Z]{3}$/).optional(),
+  priority: z.enum(["high", "medium", "low"]).optional(),
+  status: z.literal("active").optional(),
+  notes: z.string().trim().max(2000).nullable().optional(),
+}).strict();
+
+function goalInsertValues(
+  userId: string,
+  goal: z.infer<typeof createGoalBodySchema>,
+  status: "active" | "draft",
+) {
+  return {
+    userId,
+    title: goal.title,
+    goalType: goal.goalType,
+    targetAmount: goal.targetAmount == null ? null : String(goal.targetAmount),
+    currentAmount: goal.currentAmount == null ? "0" : String(goal.currentAmount),
+    monthlyContribution: goal.monthlyContribution == null ? "0" : String(goal.monthlyContribution),
+    targetDate: goal.targetDate ?? null,
+    currency: goal.currency ?? "USD",
+    priority: goal.priority ?? "medium",
+    status,
+    notes: goal.notes ?? null,
+  };
+}
 
 // A finished goal does not use a slot, so turning one back to active has to pass the
 // same cap as creating one; otherwise completing and reopening would bypass it.
@@ -23,8 +71,12 @@ async function reactivationAllowed(req: Request, res: Response, goalId: string, 
 // advisor-owns-lead route below — goals exist on a userId regardless of the
 // account's current role, so all three read the exact same rows.
 async function getGoalsForUser(userId: string) {
-  const goals = await db.select().from(financialGoalsTable).where(eq(financialGoalsTable.userId, userId));
-  return Promise.all(goals.map(goal => computeGoalFundingSummary(userId, goal)));
+  const goals = await db.select().from(financialGoalsTable)
+    .where(eq(financialGoalsTable.userId, userId))
+    .orderBy(asc(financialGoalsTable.createdAt));
+  return Promise.all(goals
+    .filter(goal => goal.status !== "draft")
+    .map(goal => computeGoalFundingSummary(userId, goal)));
 }
 
 router.get("/goals", requireAuth, async (req, res): Promise<void> => {
@@ -32,24 +84,44 @@ router.get("/goals", requireAuth, async (req, res): Promise<void> => {
   res.json(await getGoalsForUser(userId));
 });
 
-router.post("/goals", requireAuth, requireAllowance("goals"), async (req, res): Promise<void> => {
+router.get("/goals/drafts", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
-  const { title, goalType, targetAmount, currentAmount, monthlyContribution, targetDate, currency, priority, status, notes } = req.body;
-  if (!title || !goalType) {
-    res.status(400).json({ error: "title and goalType required" });
+  const drafts = await db.select({
+    id: financialGoalsTable.id,
+    title: financialGoalsTable.title,
+    goalType: financialGoalsTable.goalType,
+    targetAmount: financialGoalsTable.targetAmount,
+    targetDate: financialGoalsTable.targetDate,
+    currency: financialGoalsTable.currency,
+    priority: financialGoalsTable.priority,
+    createdAt: financialGoalsTable.createdAt,
+  }).from(financialGoalsTable)
+    .where(and(eq(financialGoalsTable.userId, userId), eq(financialGoalsTable.status, "draft")))
+    .orderBy(desc(financialGoalsTable.createdAt));
+  res.json(drafts);
+});
+
+router.post("/goals", requireAuth, async (req, res): Promise<void> => {
+  const userId = (req as any).userId;
+  const parsed = createGoalBodySchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid goal payload", details: parsed.error.issues });
     return;
   }
-  const parsedStatus = status === undefined ? undefined : goalLifecycleSchema.safeParse(status);
-  if (parsedStatus && !parsedStatus.success) { res.status(400).json({ error: "Invalid goal lifecycle status" }); return; }
 
-  const [goal] = await db.insert(financialGoalsTable).values({
-    userId, title, goalType,
-    targetAmount: targetAmount?.toString() ?? null,
-    currentAmount: currentAmount?.toString() ?? "0",
-    monthlyContribution: monthlyContribution?.toString() ?? "0",
-    targetDate: targetDate ?? null, currency: currency ?? "USD",
-    priority: priority ?? "medium", status: parsedStatus?.success ? parsedStatus.data : "active", notes: notes ?? null,
-  }).returning();
+  const allowed = await checkAllowanceFor(req, res, "goals", {
+    onDenied: async () => {
+      const [draft] = await db.insert(financialGoalsTable)
+        .values(goalInsertValues(userId, parsed.data, "draft"))
+        .returning({ id: financialGoalsTable.id });
+      return { draftSaved: true, draftGoalId: draft.id };
+    },
+  });
+  if (!allowed) return;
+
+  const [goal] = await db.insert(financialGoalsTable)
+    .values(goalInsertValues(userId, parsed.data, "active"))
+    .returning();
   await runCheckpointHook(userId);
   res.status(201).json(goal);
 });
@@ -58,7 +130,7 @@ router.put("/goals/:id", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const { title, goalType, targetAmount, currentAmount, monthlyContribution, targetDate, currency, priority, status, notes } = req.body;
-  const parsedStatus = status === undefined ? undefined : goalLifecycleSchema.safeParse(status);
+  const parsedStatus = status === undefined ? undefined : clientGoalStatusSchema.safeParse(status);
   if (parsedStatus && !parsedStatus.success) { res.status(400).json({ error: "Invalid goal lifecycle status" }); return; }
   if (!(await reactivationAllowed(req, res, rawId, userId, status))) return;
   const hasField = (field: string) => Object.prototype.hasOwnProperty.call(req.body, field);
@@ -282,7 +354,7 @@ router.patch("/goals/:id/status", requireAuth, async (req, res): Promise<void> =
   const userId = (req as any).userId;
   const rawId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const { status } = req.body;
-  const parsedStatus = goalLifecycleSchema.safeParse(status);
+  const parsedStatus = clientGoalStatusSchema.safeParse(status);
   if (!parsedStatus.success) { res.status(400).json({ error: "Invalid goal lifecycle status" }); return; }
   if (!(await reactivationAllowed(req, res, rawId, userId, parsedStatus.data))) return;
   const [updated] = await db.update(financialGoalsTable).set({ status: parsedStatus.data, updatedAt: new Date() })

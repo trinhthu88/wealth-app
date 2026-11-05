@@ -6,7 +6,7 @@ import SolNarration from "@/components/client/SolNarration";
 import GoalsSummaryBar from "@/components/client/goals/GoalsSummaryBar";
 import AddGoalSheet from "@/components/client/goals/AddGoalSheet";
 import { gateMessage } from "@workspace/tier-policy";
-import { useCapAttempt, useCapability } from "@/hooks/useEntitlements";
+import { useCapability } from "@/hooks/useEntitlements";
 import LockedGoalSlotCard from "@/components/LockedGoalSlotCard";
 import { CapNotice } from "@/components/client/Gated";
 import EditGoalSheet from "@/components/client/goals/EditGoalSheet";
@@ -344,7 +344,7 @@ function GoalCardInline({ goal, index, plans, holdings, allLinks, allGoals, solS
 
 export default function ClientGoals() {
   const {
-    activeGoals, completedGoals, allGoals, goalsOnTrack, goalsAtRisk, goalsOffTrack,
+    activeGoals, completedGoals, draftGoals, allGoals, goalsOnTrack, goalsAtRisk, goalsOffTrack,
     loading, plans, holdings, allLinks,
     addGoal, updateGoal, deleteGoal, markComplete, reopenGoal,
     addHoldingLink, removeHoldingLink,
@@ -362,7 +362,6 @@ export default function ClientGoals() {
     if (params.get("newGoal") === "true") setShowAdd(true);
   }, []);
   const goalCap = useCapability("goals");
-  const capAttempt = useCapAttempt("/goals");
   const goalCapMessage = goalCap.atCap ? gateMessage("goals", goalCap.limits?.goals ?? null) : null;
 
   const totalActive = activeGoals.length;
@@ -419,17 +418,16 @@ export default function ClientGoals() {
         <div className="flex items-center justify-between gap-3 pt-1 mb-[4px]">
           <h1 className="font-display text-[34px] leading-[1.05] text-forest">Goals</h1>
           <button
-            onClick={() => (goalCap.atCap ? capAttempt.mutate() : setShowAdd(true))}
-            aria-disabled={goalCap.atCap}
+            onClick={() => setShowAdd(true)}
             title={goalCapMessage ?? undefined}
-            className="w-11 h-11 shrink-0 rounded-full bg-forest text-paper flex items-center justify-center cursor-pointer aria-disabled:cursor-not-allowed aria-disabled:opacity-40 hover:bg-forest-700 transition-colors"
+            className="w-11 h-11 shrink-0 rounded-full bg-forest text-paper flex items-center justify-center cursor-pointer hover:bg-forest-700 transition-colors"
             aria-label="Add goal"
           >
             <Plus className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
         {goalCapMessage && <CapNotice message={goalCapMessage} />}
-        <LockedGoalSlotCard />
+        {draftGoals.length === 0 && <LockedGoalSlotCard />}
 
         <>
             {targetGoal && targetGoal.progressPct != null && (
@@ -547,6 +545,38 @@ export default function ClientGoals() {
                   </div>
                 )}
               </div>
+            )}
+
+            {draftGoals.length > 0 && (
+              <section
+                aria-labelledby="waiting-membership-title"
+                className="space-y-3 rounded-[28px] bg-surface p-5"
+              >
+                <div>
+                  <h2 id="waiting-membership-title" className="text-[17px] font-semibold text-forest">
+                    Waiting for membership
+                  </h2>
+                  <p className="mt-1 text-[13px] text-ink-40">
+                    Your saved goal{draftGoals.length === 1 ? " is" : "s are"} ready to activate when membership opens another goal slot.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  {draftGoals.map(goal => (
+                    <div key={goal.id} className="rounded-[18px] bg-field/70 px-4 py-3">
+                      <p className="text-[15px] font-semibold text-forest">{goal.title}</p>
+                      <p className="mt-0.5 text-[13px] text-ink-40">
+                        {goal.targetAmount
+                          ? `${goal.currency} ${Number(goal.targetAmount).toLocaleString()} target`
+                          : "Target not set"}
+                        {goal.targetDate
+                          ? ` · by ${new Date(`${goal.targetDate}T00:00:00`).toLocaleDateString("en-US", { month: "short", year: "numeric" })}`
+                          : ""}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+                <LockedGoalSlotCard />
+              </section>
             )}
 
             {/* Plan ahead */}

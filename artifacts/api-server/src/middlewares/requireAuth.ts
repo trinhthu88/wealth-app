@@ -36,6 +36,12 @@ export function requireRole(...roles: string[]) {
   };
 }
 
+export interface AllowanceCheckOptions {
+  scenarioType?: string;
+  /** Runs before the standard 403 response, allowing a refused goal to be saved as a draft. */
+  onDenied?: () => Promise<Record<string, unknown>>;
+}
+
 /**
  * Checks the caller against the tier policy. Answers true when the capability may
  * proceed; otherwise sends 403 { code: "LIMIT", capability, limit, checkpoint } and
@@ -46,7 +52,7 @@ export async function checkAllowanceFor(
   req: Request,
   res: Response,
   capability: Capability,
-  options: { scenarioType?: string } = {},
+  options: AllowanceCheckOptions = {},
 ): Promise<boolean> {
   const { getEntitlementContext } = await import("../lib/entitlements");
   const { tier, usage, leadStatus } = await getEntitlementContext(req);
@@ -62,12 +68,14 @@ export async function checkAllowanceFor(
       used: capability === "goals" ? usage.goals : usage.holdings,
     });
   }
+  const extra = await options.onDenied?.();
   res.status(403).json({
     code: "LIMIT",
     capability,
     limit: result.limit,
     checkpoint: result.checkpoint,
     error: gateMessage(capability, result.limit),
+    ...extra,
   });
   return false;
 }

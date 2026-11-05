@@ -26,7 +26,7 @@ describe("shared status enum validation", () => {
       .send({ title: "Goal", goalType: "custom", status: "on_track" })
       .expect(400);
 
-    expect(response.body.error).toBe("Invalid goal lifecycle status");
+    expect(response.body.error).toBe("Invalid goal payload");
   });
 
   it("rejects unknown client lifecycle values on the admin user route", async () => {

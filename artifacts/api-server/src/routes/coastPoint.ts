@@ -42,7 +42,11 @@ router.get("/client/plan/coast-point", requireAuth, requireAllowance("coastPoint
   const extraMonthly = Math.max(0, parseFloat(String(req.query.extraMonthly ?? "0")) || 0);
 
   const candidates = await db.select().from(financialGoalsTable)
-    .where(and(eq(financialGoalsTable.userId, userId), inArray(financialGoalsTable.goalType, RETIREMENT_GOAL_TYPES)));
+    .where(and(
+      eq(financialGoalsTable.userId, userId),
+      eq(financialGoalsTable.status, "active"),
+      inArray(financialGoalsTable.goalType, RETIREMENT_GOAL_TYPES),
+    ));
   const goal = pickRetirementGoal(candidates);
 
   if (!goal || !goal.targetAmount || !goal.targetDate) {

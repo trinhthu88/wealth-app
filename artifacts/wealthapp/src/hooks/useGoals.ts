@@ -47,6 +47,17 @@ export interface RawGoal {
   projectedCompletionDate: string | null;
 }
 
+export interface RawGoalDraft {
+  id: string;
+  title: string;
+  goalType: string;
+  targetAmount: string | null;
+  targetDate: string | null;
+  currency: string;
+  priority: string;
+  createdAt: string;
+}
+
 export interface GoalHoldingLink {
   id: string;
   goalId: string;
@@ -85,13 +96,19 @@ export function useGoals() {
   const { holdings } = useClientHoldings();
 
   const goalsQuery = useQuery<RawGoal[]>({
-    queryKey: ["client-goals"],
+    queryKey: ["client-goals", user?.id],
     queryFn: () => apiFetch("/goals"),
     enabled,
   });
 
+  const draftsQuery = useQuery<RawGoalDraft[]>({
+    queryKey: ["client-goal-drafts", user?.id],
+    queryFn: () => apiFetch("/goals/drafts"),
+    enabled,
+  });
+
   const linksQuery = useQuery<GoalHoldingLink[]>({
-    queryKey: ["client-goal-links"],
+    queryKey: ["client-goal-links", user?.id],
     queryFn: async () => {
       const goals = goalsQuery.data ?? [];
       if (goals.length === 0) return [];
@@ -110,6 +127,7 @@ export function useGoals() {
   });
 
   const rawGoals = goalsQuery.data ?? [];
+  const draftGoals = draftsQuery.data ?? [];
   const allLinks = linksQuery.data ?? [];
 
   // Build a plan/holding lookup map
@@ -127,7 +145,7 @@ export function useGoals() {
   const enrichedGoals = rawGoals.map(enrichGoal);
 
   const activeGoals = enrichedGoals
-    .filter(g => g.status !== "completed" && g.status !== "cancelled")
+    .filter(g => g.status === "active")
     .sort((a, b) => {
       const pa = priorityToNum(a.priority);
       const pb = priorityToNum(b.priority);
@@ -145,29 +163,49 @@ export function useGoals() {
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["client-goals"] });
+    qc.invalidateQueries({ queryKey: ["client-goal-drafts"] });
     qc.invalidateQueries({ queryKey: ["client-goal-links"] });
     qc.invalidateQueries({ queryKey: ["dashboard-goals"] });
     invalidateEntitlements(qc);
   };
 
   const addGoalMut = useMutation({
-    mutationFn: (data: {
+    mutationFn: async (data: {
       title: string; goalType: string; targetAmount?: number | null;
       targetDate?: string | null; priority?: string; notes?: string | null;
-    }) => apiFetch("/goals", {
-      method: "POST",
-      body: JSON.stringify({
-        title: data.title,
-        goalType: data.goalType,
-        targetAmount: data.targetAmount != null && data.targetAmount > 0 ? String(data.targetAmount) : null,
-        targetDate: data.targetDate ?? null,
-        priority: data.priority ?? "medium",
-        status: "active",
-        notes: data.notes ?? null,
-      }),
-    }),
-    onSuccess: (_data, variables) => {
+    }) => {
+      try {
+        await apiFetch("/goals", {
+          method: "POST",
+          body: JSON.stringify({
+            title: data.title,
+            goalType: data.goalType,
+            targetAmount: data.targetAmount != null && data.targetAmount > 0 ? String(data.targetAmount) : null,
+            targetDate: data.targetDate ?? null,
+            priority: data.priority ?? "medium",
+            status: "active",
+            notes: data.notes ?? null,
+          }),
+        });
+        return { draftSaved: false };
+      } catch (error) {
+        if (
+          error &&
+          typeof error === "object" &&
+          "draftSaved" in error &&
+          (error as { draftSaved?: unknown }).draftSaved === true
+        ) {
+          return { draftSaved: true };
+        }
+        throw error;
+      }
+    },
+    onSuccess: (result, variables) => {
       invalidate();
+      if (result.draftSaved) {
+        toast.success("Goal saved under Waiting for membership");
+        return;
+      }
       track("goal_created", { goalType: variables.goalType });
       toast.success("Goal added");
     },
@@ -238,11 +276,12 @@ export function useGoals() {
   return {
     activeGoals,
     completedGoals,
+    draftGoals,
     allGoals: enrichedGoals,
     goalsOnTrack,
     goalsAtRisk,
     goalsOffTrack,
-    loading: goalsQuery.isLoading,
+    loading: goalsQuery.isLoading || draftsQuery.isLoading,
     plans,
     holdings,
     allLinks,
