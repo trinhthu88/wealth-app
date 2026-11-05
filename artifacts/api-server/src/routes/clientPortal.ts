@@ -24,8 +24,8 @@ import { computeNetWorth } from "../lib/netWorthService";
 import { getCurrentAdvisorIdForClient } from "../lib/currentAdvisor";
 import { parseDateOfBirth } from "../lib/profileFields";
 import { getEntitlementContext } from "../lib/entitlements";
-import { runCheckpointHook } from "../lib/checkpointEngine";
-import { earliestBudgetMonth } from "@workspace/tier-policy";
+import { raiseCheckpoint, runCheckpointHook } from "../lib/checkpointEngine";
+import { checkAllowance, earliestBudgetMonth } from "@workspace/tier-policy";
 
 const router: IRouter = Router();
 
@@ -1004,6 +1004,11 @@ router.post("/client/budget", requireAuth, async (req, res): Promise<void> => {
   const ownedHoldings = await db.select({ id: clientHoldingsTable.id }).from(clientHoldingsTable)
     .where(and(eq(clientHoldingsTable.userId, userId), eq(clientHoldingsTable.isActive, true)));
   const ownedHoldingIds = new Set(ownedHoldings.map(h => h.id));
+  const entitlementContext = await getEntitlementContext(req);
+  const holdingsAllowance = checkAllowance(
+    entitlementContext.tier, "holdings", entitlementContext.usage, entitlementContext.leadStatus,
+  );
+  const isAtHoldingsCap = !holdingsAllowance.allowed;
 
   const selfHoldingEntries = contributions.filter(
     (c: any) => c?.source_type === "self_holding" && ownedHoldingIds.has(c.source_id),
@@ -1035,11 +1040,19 @@ router.post("/client/budget", requireAuth, async (req, res): Promise<void> => {
     eq(clientHoldingTransactionsTable.source, "surplus_sweep"),
   ));
   if (netSurplus > 0) {
-    const targetHoldingId = existingSweep?.holdingId ?? (await getOrCreateDefaultCashHolding(db, userId)).id;
-    await upsertMonthlyHoldingLedgerEntry(db, {
-      holdingId: targetHoldingId, userId, source: "surplus_sweep", sourceMonth: month,
-      amount: netSurplus, description: `Unattributed surplus — ${month}`,
-    });
+    if (existingSweep || !isAtHoldingsCap) {
+      const targetHoldingId = existingSweep?.holdingId ?? (await getOrCreateDefaultCashHolding(db, userId)).id;
+      await upsertMonthlyHoldingLedgerEntry(db, {
+        holdingId: targetHoldingId, userId, source: "surplus_sweep", sourceMonth: month,
+        amount: netSurplus, description: `Unattributed surplus — ${month}`,
+      });
+    } else {
+      const netWorth = await computeNetWorth(userId, { currency: "USD" });
+      await raiseCheckpoint(userId, "C5_investable", {
+        portfolioValue: Math.round(netWorth.portfolio.selfManaged),
+        holdingCount: ownedHoldings.length,
+      });
+    }
   } else if (existingSweep) {
     await upsertMonthlyHoldingLedgerEntry(db, {
       holdingId: existingSweep.holdingId, userId, source: "surplus_sweep", sourceMonth: month, amount: 0,

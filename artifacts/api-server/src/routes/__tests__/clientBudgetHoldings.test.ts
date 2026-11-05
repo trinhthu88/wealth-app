@@ -14,11 +14,13 @@ vi.mock("@clerk/express", () => ({
 const { default: app } = await import("../../app");
 const {
   db, profilesTable, clientHoldingsTable, clientBudgetMonthsTable, clientHoldingTransactionsTable,
+  conversionCheckpointsTable, netWorthSnapshotsTable,
 } = await import("@workspace/db");
 const { eq, and } = await import("drizzle-orm");
 
 const RUN_ID = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const userId = `holdings-budget-user-test-${RUN_ID}`;
+const capUserId = `holdings-budget-cap-user-test-${RUN_ID}`;
 const month = new Date().toISOString().slice(0, 7) + "-01";
 
 function asUser(id: string) {
@@ -39,6 +41,9 @@ beforeAll(async () => {
   await db.insert(profilesTable).values({
     id: userId, email: `holdings-budget-${RUN_ID}@test.local`, fullName: "Holdings Budget User", role: "investment_client",
   });
+  await db.insert(profilesTable).values({
+    id: capUserId, email: `holdings-budget-cap-${RUN_ID}@test.local`, fullName: "Capped Free User", role: "free_user",
+  });
 });
 
 afterAll(async () => {
@@ -46,6 +51,12 @@ afterAll(async () => {
   await db.delete(clientHoldingsTable).where(eq(clientHoldingsTable.userId, userId));
   await db.delete(clientBudgetMonthsTable).where(eq(clientBudgetMonthsTable.userId, userId));
   await db.delete(profilesTable).where(eq(profilesTable.id, userId));
+  await db.delete(conversionCheckpointsTable).where(eq(conversionCheckpointsTable.userId, capUserId));
+  await db.delete(netWorthSnapshotsTable).where(eq(netWorthSnapshotsTable.userId, capUserId));
+  await db.delete(clientHoldingTransactionsTable).where(eq(clientHoldingTransactionsTable.userId, capUserId));
+  await db.delete(clientHoldingsTable).where(eq(clientHoldingsTable.userId, capUserId));
+  await db.delete(clientBudgetMonthsTable).where(eq(clientBudgetMonthsTable.userId, capUserId));
+  await db.delete(profilesTable).where(eq(profilesTable.id, capUserId));
 });
 
 describe("POST /client/budget attributes contributions to holdings and sweeps unattributed surplus", () => {
@@ -134,6 +145,40 @@ describe("POST /client/budget attributes contributions to holdings and sweeps un
 
     const row = await ledgerRow(stockHoldingId, "budget_contribution");
     expect(row).toBeFalsy();
+  });
+
+  it("does not create a surplus holding at the free holdings cap and raises C5", async () => {
+    await db.insert(clientHoldingsTable).values(
+      Array.from({ length: 5 }, (_, index) => ({
+        userId: capUserId,
+        holdingType: "cash",
+        label: `Existing cash ${index + 1}`,
+        currentBalance: "100",
+        isActive: true,
+      })),
+    );
+
+    const response = await request(app)
+      .post("/api/client/budget")
+      .set(asUser(capUserId))
+      .send({ month, primaryIncome: "1000" })
+      .expect(200);
+
+    expect(Number(response.body.netSurplus)).toBe(1000);
+    const holdings = await db.select().from(clientHoldingsTable).where(eq(clientHoldingsTable.userId, capUserId));
+    expect(holdings).toHaveLength(5);
+    expect(holdings.some((holding) => holding.label === "Surplus (auto)")).toBe(false);
+
+    const [savedBudget] = await db.select().from(clientBudgetMonthsTable)
+      .where(and(eq(clientBudgetMonthsTable.userId, capUserId), eq(clientBudgetMonthsTable.month, month)));
+    expect(Number(savedBudget.netSurplus)).toBe(1000);
+
+    const [checkpoint] = await db.select().from(conversionCheckpointsTable)
+      .where(and(
+        eq(conversionCheckpointsTable.userId, capUserId),
+        eq(conversionCheckpointsTable.code, "C5_investable"),
+      ));
+    expect(checkpoint?.snapshot).toMatchObject({ holdingCount: 5, portfolioValue: 500 });
   });
 });
 
