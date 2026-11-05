@@ -35,6 +35,16 @@ Then in Lemon Squeezy and the environment:
 
 `old=new` copies a development account into a live account with a different email. Copy everyone in one run where possible. A side reference (advisor, who entered a statement) to someone not in the run is linked to their live account by email, or cleared if they are not on the live site. It refuses to write into a live account that already has its own data, so a second run cannot duplicate anything, and it never grants super_admin. When one machine cannot reach both databases, use `--export=account-copy/bundle.json` on the development side and `--import=…` on the live side; the file holds personal data, is git-ignored, and should be deleted after the import.
 
+## Running production jobs inside the deployment
+
+Replit's live database accepts connections only from the deployed app, so the production steps (membership constraints, the free-tier migration, the membership backfill, copying accounts) run inside the deployment. `scripts/run-production-tasks.mjs` starts in the background next to the API server (see `artifacts/api-server/.replit-artifact/artifact.toml`) and does nothing unless `PRODUCTION_TASKS` is set. Output appears in the deployment log, prefixed `[production-tasks]`.
+
+1. For the account copy: export the bundle in the workspace, from the development database, to `account-copy/bundle.json` (git-ignored, but included in the deployed files):
+   `SOURCE_DATABASE_URL=$DATABASE_URL pnpm --filter @workspace/scripts run copy-accounts-to-live -- --accounts "…" --export=../account-copy/bundle.json`
+2. Deployment secrets: `PRODUCTION_TASKS=membership-constraints,free-tier-migration,backfill-memberships,copy-accounts` and `ACCOUNT_COPY_FILE=account-copy/bundle.json`. Redeploy, then read the dry-run counts in the deployment log.
+3. Add `PRODUCTION_TASKS_APPLY=true` and redeploy. Jobs run in order and stop at the first failure; the backfill then comps existing clients. A database lock lets only one instance run them.
+4. Remove `PRODUCTION_TASKS`, `PRODUCTION_TASKS_APPLY` and `ACCOUNT_COPY_FILE`, delete `account-copy/`, and redeploy, so the personal data file leaves the deployed image.
+
 ## Decisions for the product owner
 
 1. **Any live Stripe subscribers need a plan before this deploys.** The backfill carries them over as Stripe memberships, but with `PAYMENT_PROVIDER=lemonsqueezy` their Stripe webhooks are refused and they can't reach a billing portal, so their membership would stay active with nothing updating it. `paidBackfilled` in the dry run shows how many there are.
