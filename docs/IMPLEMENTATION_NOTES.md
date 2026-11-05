@@ -45,6 +45,14 @@ Replit's live database accepts connections only from the deployed app, so the pr
 3. Add `PRODUCTION_TASKS_APPLY=true` and redeploy. Jobs run in order and stop at the first failure; the backfill then comps existing clients. A database lock lets only one instance run them.
 4. Remove `PRODUCTION_TASKS`, `PRODUCTION_TASKS_APPLY` and `ACCOUNT_COPY_FILE`, delete `account-copy/`, and redeploy, so the personal data file leaves the deployed image.
 
+### Reconnecting people to their old live profile
+
+When someone's sign-in was replaced, signing in again creates a new, empty profile and their old one (with its data and role) is orphaned. The `relink-profiles` job (`scripts/src/relink-live-profiles.ts`) moves every reference from the old profile to the profile of their current sign-in, copies the old profile's details and role, and removes the old row. It runs for everyone in one transaction and changes nothing if any account is unclear: no current sign-in profile, two old profiles with data, or a current profile that already has data of its own. Super admin is never copied from an old row; it follows `SUPER_ADMIN_EMAIL`. Repeating it is harmless.
+
+1. Each person signs in on the live site once.
+2. Deployment secrets: `PRODUCTION_TASKS=relink-profiles,membership-constraints,free-tier-migration,backfill-memberships` and `RELINK_ACCOUNTS="a@x.com, b@x.com, old@demo.example=new+alias@gmail.com"` (`old=new` when the old profile carries a different email). Redeploy and read the dry run in the log: each old profile's contents, then each person's role, goals and holdings against the free limits, and Track A or B.
+3. Add `PRODUCTION_TASKS_APPLY=true`, redeploy, then remove all three secrets and redeploy again.
+
 ## Decisions for the product owner
 
 1. **Any live Stripe subscribers need a plan before this deploys.** The backfill carries them over as Stripe memberships, but with `PAYMENT_PROVIDER=lemonsqueezy` their Stripe webhooks are refused and they can't reach a billing portal, so their membership would stay active with nothing updating it. `paidBackfilled` in the dry run shows how many there are.

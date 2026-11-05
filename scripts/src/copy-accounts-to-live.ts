@@ -175,6 +175,60 @@ export interface CopyReport {
   clearedReferences: number;
   /** Side references to people not in this run, linked to their live account by email. */
   linkedReferences: number;
+  /** Older profiles that share an email with a copied account and were left untouched. */
+  notes: string[];
+}
+
+/**
+ * The live sign-in ids for an email, from the Clerk instance the live site uses, or null when this
+ * process has no Clerk key (only the deployment has the live one).
+ */
+async function clerkIdsFor(email: string): Promise<string[] | null> {
+  const key = process.env.CLERK_SECRET_KEY;
+  if (!key) return null;
+  const base = process.env.CLERK_API_URL ?? "https://api.clerk.com/v1";
+  const res = await fetch(`${base}/users?email_address=${encodeURIComponent(email)}&limit=10`, {
+    headers: { Authorization: `Bearer ${key}` },
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!res.ok) throw new Error(`Could not check ${email} with the sign-in service (HTTP ${res.status}).`);
+  const users = (await res.json()) as Array<{ id: string }>;
+  return users.map((u) => u.id);
+}
+
+/**
+ * One live profile per email: the one the person actually signs into. Profiles can repeat an email
+ * when an old sign-in was replaced; those are left untouched and reported. Refuses when it can't
+ * tell which profile is the live one.
+ */
+async function resolveLiveProfiles(client: pg.ClientBase, emails: string[]): Promise<{ byEmail: Map<string, Row>; notes: string[] }> {
+  const { rows } = await client.query(`select id, lower(email) as email, role from profiles where lower(email) = any($1)`, [emails]);
+  const byEmail = new Map<string, Row>();
+  const notes: string[] = [];
+  const problems: string[] = [];
+  for (const email of emails) {
+    const candidates = rows.filter((r) => r.email === email);
+    if (candidates.length === 0) { problems.push(`${email} has not signed up on the live site yet`); continue; }
+    const signIns = await clerkIdsFor(email);
+    if (signIns === null) {
+      if (candidates.length === 1) { byEmail.set(email, candidates[0]); continue; }
+      problems.push(`${email} has ${candidates.length} live profiles and there is no sign-in key here to tell which is current; run this inside the deployment`);
+      continue;
+    }
+    const current = candidates.filter((c) => signIns.includes(c.id as string));
+    if (current.length !== 1) {
+      problems.push(current.length === 0
+        ? `${email} has no live profile that matches a current sign-in; sign in on the live site once, then run again`
+        : `${email} has ${current.length} profiles that match current sign-ins`);
+      continue;
+    }
+    byEmail.set(email, current[0]);
+    for (const old of candidates.filter((c) => c !== current[0])) {
+      notes.push(`${email}: one older profile (role ${old.role}) is not a current sign-in and was left untouched`);
+    }
+  }
+  if (problems.length) throw new Error(`Nothing was copied. ${problems.join("; ")}.`);
+  return { byEmail, notes };
 }
 
 /** Writes a bundle into the target database, in one transaction; rolled back unless apply. */
@@ -182,12 +236,7 @@ export async function importBundle(target: pg.Pool, bundle: Bundle, apply: boole
   const client = await target.connect();
   try {
     await client.query("begin");
-    const { rows: live } = await client.query(`select id, email, role from profiles where lower(email) = any($1)`, [bundle.accounts.map((a) => a.targetEmail)]);
-    const liveByEmail = new Map(live.map((p) => [String(p.email).toLowerCase(), p]));
-    const notSignedUp = bundle.accounts.filter((a) => !liveByEmail.has(a.targetEmail)).map((a) => a.targetEmail);
-    if (notSignedUp.length) {
-      throw new Error(`These people must sign up on the live site first: ${notSignedUp.join(", ")}`);
-    }
+    const { byEmail: liveByEmail, notes } = await resolveLiveProfiles(client, bundle.accounts.map((a) => a.targetEmail));
 
     const idMap = new Map(bundle.accounts.map((a) => [a.sourceId, liveByEmail.get(a.targetEmail)!.id as string]));
     const liveIds = [...idMap.values()];
@@ -196,7 +245,10 @@ export async function importBundle(target: pg.Pool, bundle: Bundle, apply: boole
     const { rows: liveOthers } = otherEmails.length
       ? await client.query(`select id, lower(email) as email from profiles where lower(email) = any($1)`, [otherEmails])
       : { rows: [] as Array<{ id: string; email: string }> };
-    const liveIdByEmail = new Map(liveOthers.map((r) => [r.email as string, r.id as string]));
+    // Only an email with exactly one live profile is linked; anything ambiguous is cleared instead.
+    const counts = new Map<string, number>();
+    for (const r of liveOthers) counts.set(r.email as string, (counts.get(r.email as string) ?? 0) + 1);
+    const liveIdByEmail = new Map(liveOthers.filter((r) => counts.get(r.email as string) === 1).map((r) => [r.email as string, r.id as string]));
     const linkedOthers = new Map<string, string>();
     for (const o of bundle.otherSourceUsers) if (liveIdByEmail.has(o.email)) linkedOthers.set(o.id, liveIdByEmail.get(o.email)!);
     const others = new Set(bundle.otherSourceUsers.map((o) => o.id));
@@ -282,7 +334,7 @@ export async function importBundle(target: pg.Pool, bundle: Bundle, apply: boole
     }
 
     await client.query(apply ? "commit" : "rollback");
-    return { applied: apply, accounts, copied, clearedReferences, linkedReferences };
+    return { applied: apply, accounts, copied, clearedReferences, linkedReferences, notes };
   } catch (err) {
     await client.query("rollback").catch(() => {});
     throw err;
@@ -333,6 +385,7 @@ async function main() {
     console.log(`  copied: ${Object.entries(report.copied).filter(([, n]) => n).map(([t, n]) => `${t}=${n}`).join(" ") || "nothing"}`);
     console.log(`  references linked to people already on the live site: ${report.linkedReferences}`);
     console.log(`  references to people not on the live site, cleared: ${report.clearedReferences}`);
+    for (const note of report.notes) console.log(`  note: ${note}`);
     if (!report.applied) console.log("Nothing was changed. Run again with --apply to copy.");
   } finally {
     await target.end();

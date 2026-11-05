@@ -30,7 +30,8 @@
     "backfill-memberships": "tsx ./src/backfill-memberships.ts",
     "apply-membership-constraints": "tsx ./src/apply-membership-constraints.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "copy-accounts-to-live": "tsx ./src/copy-accounts-to-live.ts"
+    "copy-accounts-to-live": "tsx ./src/copy-accounts-to-live.ts",
+    "relink-live-profiles": "tsx ./src/relink-live-profiles.ts"
   },
   "devDependencies": {
     "@types/node": "catalog:",
