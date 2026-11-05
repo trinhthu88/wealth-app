@@ -86,6 +86,7 @@ beforeEach(() => {
 
 afterAll(async () => {
   await cleanupDemoUsers();
+  await db.delete((schema as any).advisorTasksTable).where(eq((schema as any).advisorTasksTable.advisorId, admin));
   await db.delete(profilesTable).where(inArray(profilesTable.id, [admin, notAdmin]));
   delete process.env.DEMO_ACCOUNTS_ENABLED;
   delete process.env.DEMO_ACCOUNTS_EMAIL;
@@ -111,15 +112,17 @@ describe("demo accounts", () => {
   it("creates four accounts, each on the right tier, and re-running keeps their data", async () => {
     const res = await request(app).post("/api/admin/demo-accounts").set(asUser(admin)).expect(200);
     expect(res.headers["cache-control"]).toBe("no-store");
-    const byKey = Object.fromEntries(res.body.accounts.map((a: any) => [a.key, a]));
-    expect(Object.keys(byKey).sort()).toEqual(["advisor", "free", "trackA", "trackB"]);
+    const byKind = Object.fromEntries(res.body.accounts.map((a: any) => [a.kind, a]));
+    expect(Object.keys(byKind).sort()).toEqual(["advisor", "free", "trackA", "trackB"]);
     for (const a of res.body.accounts) {
       expect(a.created).toBe(true);
       expect(a.password).toMatch(/.{16,}/);
-      expect(a.email).toBe(`owner-${RUN}+tala-demo-${a.key.toLowerCase()}@example.com`);
+      expect(a.email).toBe(`owner-${RUN}+tala-demo-${a.kind.toLowerCase()}@example.com`);
     }
+    expect(byKind.advisor.seeded).toBe(false);
+    expect(byKind.free.seeded && byKind.trackA.seeded && byKind.trackB.seeded).toBe(true);
 
-    const idOf = (key: string) => clerkUsers.get(byKey[key].email)!.id;
+    const idOf = (kind: string) => clerkUsers.get(byKind[kind].email)!.id;
     const roles = await db.select({ id: profilesTable.id, role: profilesTable.role }).from(profilesTable)
       .where(inArray(profilesTable.id, ["advisor", "free", "trackB", "trackA"].map(idOf)));
     expect(Object.fromEntries(roles.map((r) => [r.id, r.role]))).toEqual({
@@ -127,9 +130,9 @@ describe("demo accounts", () => {
     });
 
     const tiers: Record<string, string> = {};
-    for (const key of ["free", "trackB", "trackA"]) {
-      const ent = await request(app).get("/api/me/entitlements").set(asUser(idOf(key))).expect(200);
-      tiers[key] = ent.body.tier;
+    for (const kind of ["free", "trackB", "trackA"]) {
+      const ent = await request(app).get("/api/me/entitlements").set(asUser(idOf(kind))).expect(200);
+      tiers[kind] = ent.body.tier;
     }
     expect(tiers).toEqual({ free: "free", trackB: "track_b", trackA: "track_a" });
 
@@ -139,27 +142,86 @@ describe("demo accounts", () => {
     expect(freeGoals).toHaveLength(1);
     expect(freeHoldings.length).toBeLessThanOrEqual(5);
 
-    for (const key of ["trackB", "trackA"]) {
-      const [m] = await db.select().from(membershipsTable).where(eq(membershipsTable.userId, idOf(key)));
+    for (const kind of ["trackB", "trackA"]) {
+      const [m] = await db.select().from(membershipsTable).where(eq(membershipsTable.userId, idOf(kind)));
       expect(m).toMatchObject({ status: "active", source: "comped" });
-      const [cp] = await db.select().from(clientProfilesTable).where(eq(clientProfilesTable.userId, idOf(key)));
+      const [cp] = await db.select().from(clientProfilesTable).where(eq(clientProfilesTable.userId, idOf(kind)));
       expect(cp.advisorId).toBe(idOf("advisor"));
     }
     const plans = await db.select().from(advisedPlansTable).where(eq(advisedPlansTable.userId, idOf("trackA")));
     expect(plans.map((p) => p.status)).toEqual(["inforce"]);
 
-    const before = await db.select().from(clientBudgetMonthsTable).where(inArray(clientBudgetMonthsTable.userId, [idOf("free"), idOf("trackB"), idOf("trackA")]));
+    const clientIds = [idOf("free"), idOf("trackB"), idOf("trackA")];
+    const before = await db.select().from(clientBudgetMonthsTable).where(inArray(clientBudgetMonthsTable.userId, clientIds));
     const again = await request(app).post("/api/admin/demo-accounts").set(asUser(admin)).expect(200);
     for (const a of again.body.accounts) {
       expect(a.created).toBe(false);
-      expect(a.password).not.toBe(byKey[a.key].password);
+      expect(a.seeded).toBe(false);
+      expect(a.password).not.toBe(byKind[a.kind].password);
     }
-    const after = await db.select().from(clientBudgetMonthsTable).where(inArray(clientBudgetMonthsTable.userId, [idOf("free"), idOf("trackB"), idOf("trackA")]));
+    const after = await db.select().from(clientBudgetMonthsTable).where(inArray(clientBudgetMonthsTable.userId, clientIds));
     expect(after).toHaveLength(before.length);
 
     const status = await request(app).get("/api/admin/demo-accounts").set(asUser(admin)).expect(200);
     expect(status.body.accounts.every((a: any) => a.exists)).toBe(true);
     await cleanupDemoUsers();
+  });
+
+  it("uses the DEMO_ACCOUNTS list, keeps the owner's login as it is, and keeps existing data", async () => {
+    const ownerEmail = `${admin}@test.local`;
+    clerkUsers.set(ownerEmail, { id: admin, password: "owner-own-password" });
+    const freeEmail = `contact-${RUN}@example.com`;
+    // A free user who already signed up and has a goal of their own.
+    const freeId = `demo_clerk_existing_${RUN}`;
+    clerkUsers.set(freeEmail, { id: freeId, password: null });
+    await db.insert(profilesTable).values({ id: freeId, email: freeEmail, fullName: "Existing Contact", role: "free_user" });
+    await db.insert(financialGoalsTable).values({ userId: freeId, title: "My own goal", goalType: "custom", targetAmount: "1000", status: "active" });
+
+    process.env.DEMO_ACCOUNTS = [
+      `advisor:${ownerEmail}`,
+      `free:${freeEmail}`,
+      `trackA:tracka-one-${RUN}@example.com:Trang Tran`,
+      `trackA:elena-${RUN}@demo.example`,
+      `trackB:james-${RUN}@demo.example:James Whitfield`,
+    ].join(", ");
+    try {
+      const res = await request(app).post("/api/admin/demo-accounts").set(asUser(admin)).expect(200);
+      const byEmail = Object.fromEntries(res.body.accounts.map((a: any) => [a.email, a]));
+      expect(res.body.accounts).toHaveLength(5);
+
+      expect(byEmail[ownerEmail]).toMatchObject({ role: "super_admin", password: null, passwordNote: "own_login", created: false });
+      const [owner] = await db.select().from(profilesTable).where(eq(profilesTable.id, admin));
+      expect(owner.role).toBe("super_admin");
+      expect(clerkUsers.get(ownerEmail)!.password).toBe("owner-own-password");
+
+      expect(byEmail[freeEmail]).toMatchObject({ created: false, seeded: false, fullName: "Existing Contact" });
+      const goals = await db.select().from(financialGoalsTable).where(eq(financialGoalsTable.userId, freeId));
+      expect(goals.map((g) => g.title)).toEqual(["My own goal"]);
+
+      const trang = byEmail[`tracka-one-${RUN}@example.com`];
+      expect(trang).toMatchObject({ fullName: "Trang Tran", role: "investment_client", seeded: true });
+      expect(byEmail[`elena-${RUN}@demo.example`].fullName).toBe("Elena Novak");
+      const trangId = clerkUsers.get(trang.email)!.id;
+      const [cp] = await db.select().from(clientProfilesTable).where(eq(clientProfilesTable.userId, trangId));
+      expect(cp.advisorId).toBe(admin);
+      const ent = await request(app).get("/api/me/entitlements").set(asUser(trangId)).expect(200);
+      expect(ent.body.tier).toBe("track_a");
+    } finally {
+      delete process.env.DEMO_ACCOUNTS;
+      clerkUsers.delete(ownerEmail);
+      await cleanupDemoUsers();
+    }
+  });
+
+  it("reports a configuration error instead of crashing", async () => {
+    process.env.DEMO_ACCOUNTS = "free:contact@example.com, trackA:a@example.com";
+    try {
+      const status = await request(app).get("/api/admin/demo-accounts").set(asUser(admin)).expect(200);
+      expect(status.body).toMatchObject({ enabled: false, configError: expect.stringContaining("exactly one advisor") });
+      await request(app).post("/api/admin/demo-accounts").set(asUser(admin)).expect(404);
+    } finally {
+      delete process.env.DEMO_ACCOUNTS;
+    }
   });
 
   it("falls back to email codes when the Clerk instance has passwords turned off", async () => {

@@ -9,7 +9,7 @@ import { requireAuth, requireRole } from "../middlewares/requireAuth";
 import { createUserWithProfile } from "../lib/createUserWithProfile";
 import { computeNetWorth } from "../lib/netWorthService";
 import { setCompedMembership } from "../lib/membershipStore";
-import { DEMO_ACCOUNTS, createDemoAccounts, demoAccountsEnabled, demoEmail } from "../lib/demoAccounts";
+import { createDemoAccounts, demoAccountsEnabled, demoSlots } from "../lib/demoAccounts";
 import { z } from "zod/v4";
 
 const router: IRouter = Router();
@@ -319,16 +319,18 @@ router.delete("/admin/advised-strategy-returns/:id", ...adminGuard, async (req, 
   res.sendStatus(204);
 });
 
-// Demo logins for showing the app on the live site. Off unless DEMO_ACCOUNTS_ENABLED=true and
-// DEMO_ACCOUNTS_EMAIL is set; the page shows the button only when this says enabled.
+// Demo logins for showing the app on the live site; see lib/demoAccounts for the settings. The page
+// shows the panel only when this says enabled, and shows a configuration error when there is one.
 router.get("/admin/demo-accounts", ...adminGuard, async (_req, res): Promise<void> => {
-  if (!demoAccountsEnabled()) { res.json({ enabled: false, accounts: [] }); return; }
-  const emails = DEMO_ACCOUNTS.map((a) => demoEmail(a.tag));
+  if (process.env.DEMO_ACCOUNTS_ENABLED !== "true") { res.json({ enabled: false, accounts: [] }); return; }
+  const config = demoSlots();
+  if ("error" in config) { res.json({ enabled: false, accounts: [], configError: config.error }); return; }
+  const emails = config.slots.map((s) => s.email);
   const existing = await db.select({ email: profilesTable.email }).from(profilesTable).where(inArray(profilesTable.email, emails));
-  const have = new Set(existing.map((p) => p.email));
+  const have = new Set(existing.map((p) => p.email.toLowerCase()));
   res.json({
     enabled: true,
-    accounts: DEMO_ACCOUNTS.map((a) => ({ key: a.key, label: a.label, role: a.role, email: demoEmail(a.tag), exists: have.has(demoEmail(a.tag)) })),
+    accounts: config.slots.map((s) => ({ key: s.key, kind: s.kind, label: s.label, role: s.role, email: s.email, exists: have.has(s.email) })),
   });
 });
 

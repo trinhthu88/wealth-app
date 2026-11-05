@@ -11,45 +11,101 @@ import { runCheckpointHook } from "./checkpointEngine";
 import { logger } from "./logger";
 
 /**
- * One set of demo logins for showing the app to colleagues on the live site: a free user, a
- * Track B client, a Track A client and the advisor they share. Users are created through the
- * deployment's own Clerk instance, so they sign in on the live URL. Off unless
- * DEMO_ACCOUNTS_ENABLED=true and DEMO_ACCOUNTS_EMAIL names a real mailbox; the four logins are
- * plus-addresses of it, so any email code Clerk sends reaches that inbox.
+ * Demo logins for showing the app to colleagues on the live site. Users are created (or picked up,
+ * if they already signed up) through the deployment's own Clerk instance, so they sign in on the
+ * live URL, and each empty account gets sample data for its kind.
+ *
+ * Which accounts: DEMO_ACCOUNTS lists them as `kind:email[:Full Name]`, comma separated, with
+ * kind one of advisor, free, trackA, trackB and exactly one advisor, for example
+ *   advisor:owner@company.com, free:contact@company.com, trackA:elena@demo.example:Elena Novak
+ * Without DEMO_ACCOUNTS, DEMO_ACCOUNTS_EMAIL gives the default four as plus-addresses of one inbox.
+ * Off unless DEMO_ACCOUNTS_ENABLED=true and one of the two is valid.
+ *
+ * A super admin listed here keeps their role and password: they are the owner's own login and act
+ * as the advisor of record when listed as the advisor.
  */
-export const DEMO_ACCOUNTS = [
-  { key: "advisor", tag: "advisor", role: "advisor", label: "Advisor", firstName: "Minh", lastName: "Tran" },
-  { key: "free", tag: "free", role: "free_user", label: "Free plan", firstName: "Sofia", lastName: "Chen" },
-  { key: "trackB", tag: "trackb", role: "investment_client", label: "Client, self-managed (Track B)", firstName: "James", lastName: "Whitfield" },
-  { key: "trackA", tag: "tracka", role: "investment_client", label: "Client, advised (Track A)", firstName: "Elena", lastName: "Novak" },
-] as const;
-export type DemoKey = (typeof DEMO_ACCOUNTS)[number]["key"];
+export const DEMO_KINDS = ["advisor", "free", "trackA", "trackB"] as const;
+export type DemoKind = (typeof DEMO_KINDS)[number];
 
-const EMAIL = /^[^\s@+]+@[^\s@]+\.[^\s@]+$/;
+const ROLE: Record<DemoKind, string> = { advisor: "advisor", free: "free_user", trackA: "investment_client", trackB: "investment_client" };
+const LABEL: Record<DemoKind, string> = {
+  advisor: "Advisor", free: "Free plan", trackB: "Client, self-managed (Track B)", trackA: "Client, advised (Track A)",
+};
+const PERSONA: Record<DemoKind, [string, string]> = {
+  advisor: ["Minh", "Tran"], free: ["Sofia", "Chen"], trackB: ["James", "Whitfield"], trackA: ["Elena", "Novak"],
+};
+
+export interface DemoSlot {
+  key: string;
+  kind: DemoKind;
+  role: string;
+  label: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+}
+
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function baseEmail(): string | null {
   const value = process.env.DEMO_ACCOUNTS_EMAIL?.trim().toLowerCase() ?? "";
-  return EMAIL.test(value) ? value : null;
+  return EMAIL.test(value) && !value.includes("+") ? value : null;
+}
+
+function slot(kind: DemoKind, email: string, index: number, name?: string): DemoSlot {
+  const [first, ...rest] = (name?.trim() || PERSONA[kind].join(" ")).split(/\s+/);
+  return {
+    key: `${kind}-${index}`, kind, role: ROLE[kind], label: LABEL[kind], email,
+    firstName: first, lastName: rest.join(" "),
+  };
+}
+
+/** The configured accounts, or an error saying what is wrong with the configuration. */
+export function demoSlots(): { slots: DemoSlot[] } | { error: string } {
+  const list = process.env.DEMO_ACCOUNTS?.trim();
+  if (list) {
+    const slots: DemoSlot[] = [];
+    const seen = new Set<string>();
+    for (const [index, raw] of list.split(",").map((s) => s.trim()).filter(Boolean).entries()) {
+      const [kind, email, ...name] = raw.split(":").map((s) => s.trim());
+      if (!DEMO_KINDS.includes(kind as DemoKind)) return { error: `Unknown kind "${kind}" in DEMO_ACCOUNTS; use advisor, free, trackA or trackB.` };
+      const address = (email ?? "").toLowerCase();
+      if (!EMAIL.test(address)) return { error: `"${email ?? ""}" in DEMO_ACCOUNTS is not an email address.` };
+      if (seen.has(address)) return { error: `${address} is listed twice in DEMO_ACCOUNTS.` };
+      seen.add(address);
+      slots.push(slot(kind as DemoKind, address, index, name.join(":")));
+    }
+    const advisors = slots.filter((s) => s.kind === "advisor").length;
+    if (advisors !== 1) return { error: `DEMO_ACCOUNTS needs exactly one advisor; it has ${advisors}.` };
+    return { slots };
+  }
+  const base = baseEmail();
+  if (!base) return { error: "Set DEMO_ACCOUNTS, or DEMO_ACCOUNTS_EMAIL to one inbox." };
+  const [local, domain] = base.split("@");
+  return {
+    slots: (["advisor", "free", "trackB", "trackA"] as const).map((kind, i) =>
+      slot(kind, `${local}+tala-demo-${kind.toLowerCase()}@${domain}`, i)),
+  };
 }
 
 export function demoAccountsEnabled(): boolean {
-  return process.env.DEMO_ACCOUNTS_ENABLED === "true" && baseEmail() !== null;
-}
-
-export function demoEmail(tag: string): string {
-  const [local, domain] = baseEmail()!.split("@");
-  return `${local}+tala-demo-${tag}@${domain}`;
+  return process.env.DEMO_ACCOUNTS_ENABLED === "true" && "slots" in demoSlots();
 }
 
 export interface DemoAccountResult {
-  key: DemoKey;
+  key: string;
+  kind: DemoKind;
   label: string;
   role: string;
   fullName: string;
   email: string;
-  /** Shown once to the super admin who ran this; never stored or logged. Null when Clerk only allows email codes. */
+  /** Shown once to the super admin who ran this; never stored or logged. Null when not set (see passwordNote). */
   password: string | null;
+  /** Why there is no password: the owner's own super-admin login, or a Clerk instance with passwords off. */
+  passwordNote: "own_login" | "email_code" | null;
   created: boolean;
+  /** Whether sample data was added this time; an account that already has data keeps it. */
+  seeded: boolean;
 }
 
 function newPassword(): string {
@@ -61,28 +117,45 @@ function isPasswordRejection(err: unknown): boolean {
   return errors.some((e) => /password/i.test(`${e.code ?? ""} ${e.message ?? ""}`));
 }
 
-/** Finds or creates the Clerk user and sets a fresh password. Falls back to email codes when passwords are off. */
-async function upsertClerkUser(email: string, firstName: string, lastName: string): Promise<{ id: string; password: string | null }> {
+type ClerkOutcome = { id: string; created: boolean; password: string | null; passwordNote: DemoAccountResult["passwordNote"] };
+
+/**
+ * Finds or creates the Clerk user. Sets a fresh password unless keepPassword (the owner's own
+ * login). Falls back to email codes when the instance has passwords off.
+ */
+async function upsertClerkUser(email: string, firstName: string, lastName: string, keepPassword: (clerkId: string) => Promise<boolean>): Promise<ClerkOutcome> {
   const found = await clerkClient.users.getUserList({ emailAddress: [email], limit: 1 });
   const existing = found.data[0];
   const password = newPassword();
   if (existing) {
+    if (await keepPassword(existing.id)) return { id: existing.id, created: false, password: null, passwordNote: "own_login" };
     try {
       await clerkClient.users.updateUser(existing.id, { password, skipPasswordChecks: true });
-      return { id: existing.id, password };
+      return { id: existing.id, created: false, password, passwordNote: null };
     } catch (err) {
-      if (isPasswordRejection(err)) return { id: existing.id, password: null };
+      if (isPasswordRejection(err)) return { id: existing.id, created: false, password: null, passwordNote: "email_code" };
       throw err;
     }
   }
   try {
     const user = await clerkClient.users.createUser({ emailAddress: [email], firstName, lastName, password, skipPasswordChecks: true });
-    return { id: user.id, password };
+    return { id: user.id, created: true, password, passwordNote: null };
   } catch (err) {
     if (!isPasswordRejection(err)) throw err;
     const user = await clerkClient.users.createUser({ emailAddress: [email], firstName, lastName });
-    return { id: user.id, password: null };
+    return { id: user.id, created: true, password: null, passwordNote: "email_code" };
   }
+}
+
+/** Whether the account has anything a demo seed would otherwise duplicate. */
+async function hasData(userId: string): Promise<boolean> {
+  const [[goal], [holding], [month], [plan]] = await Promise.all([
+    db.select({ id: financialGoalsTable.id }).from(financialGoalsTable).where(eq(financialGoalsTable.userId, userId)).limit(1),
+    db.select({ id: clientHoldingsTable.id }).from(clientHoldingsTable).where(eq(clientHoldingsTable.userId, userId)).limit(1),
+    db.select({ id: clientBudgetMonthsTable.id }).from(clientBudgetMonthsTable).where(eq(clientBudgetMonthsTable.userId, userId)).limit(1),
+    db.select({ id: advisedPlansTable.id }).from(advisedPlansTable).where(eq(advisedPlansTable.userId, userId)).limit(1),
+  ]);
+  return !!(goal || holding || month || plan);
 }
 
 /** First day of the month n months before now, as YYYY-MM-01. */
@@ -168,11 +241,11 @@ async function seedTrackB(userId: string, advisorId: string, now: Date) {
   }
 }
 
-async function seedTrackA(userId: string, advisorId: string, now: Date) {
+async function seedTrackA(userId: string, advisorId: string, now: Date, names: { client: string; advisor: string; policy: number }) {
   await seedClientProfile(userId, advisorId, "growth", daysAgo(600, now));
   const [plan] = await db.insert(advisedPlansTable).values({
     userId, advisorId, providerName: "Friends Provident International", productCode: "RSP-GROWTH-25",
-    productName: "Reserve Savings Plan", policyNumber: "FPI-88213", planType: "rsp", currency: "USD", termYears: 25,
+    productName: "Reserve Savings Plan", policyNumber: `FPI-${88213 + names.policy}`, planType: "rsp", currency: "USD", termYears: 25,
     annualPremium: "14400", initialPremium: "5000", effectiveDate: daysAgo(600, now), maturityDate: yearsAhead(23, now),
     status: "inforce", latestAccountValue: "38740", latestNetContribution: "31200", latestStatementDate: daysAgo(40, now),
     nickname: "Global Growth Plan", isVisibleToClient: true,
@@ -200,53 +273,80 @@ async function seedTrackA(userId: string, advisorId: string, now: Date) {
   }
   const [conversation] = await db.insert(conversationsTable).values({ clientId: userId, advisorId }).returning();
   await db.insert(messagesTable).values([
-    { conversationId: conversation.id, senderId: advisorId, senderRole: "advisor", content: "Hi Elena, your latest statement is in. The plan is on track; let's review the bond allocation at our next meeting.", sentAt: new Date(now.getTime() - 3 * 86_400_000) },
-    { conversationId: conversation.id, senderId: userId, senderRole: "client", content: "Thanks Minh, next Tuesday works for me.", sentAt: new Date(now.getTime() - 2 * 86_400_000) },
+    { conversationId: conversation.id, senderId: advisorId, senderRole: "advisor", content: `Hi ${names.client}, your latest statement is in. The plan is on track; let's review the bond allocation at our next meeting.`, sentAt: new Date(now.getTime() - 3 * 86_400_000) },
+    { conversationId: conversation.id, senderId: userId, senderRole: "client", content: `Thanks ${names.advisor}, next Tuesday works for me.`, sentAt: new Date(now.getTime() - 2 * 86_400_000) },
   ]);
 }
 
 /**
- * Creates the four demo users, or, when they exist, gives each a fresh password and leaves their
- * data as it is. Idempotent: running it again never duplicates rows.
+ * Creates the configured demo users, or picks them up when they exist: an empty account gets
+ * sample data for its kind, an account with data keeps it. Clients are linked to the advisor and
+ * comped. Each login except the owner's own super-admin login gets a fresh password. Idempotent:
+ * running it again never duplicates rows.
  */
 export async function createDemoAccounts(now: Date = new Date()): Promise<DemoAccountResult[]> {
-  const results: DemoAccountResult[] = [];
-  const ids: Partial<Record<DemoKey, string>> = {};
+  const config = demoSlots();
+  if ("error" in config) throw new Error(config.error);
+  const { slots } = config;
 
-  for (const account of DEMO_ACCOUNTS) {
-    const email = demoEmail(account.tag);
-    const fullName = `${account.firstName} ${account.lastName}`;
-    const { id, password } = await upsertClerkUser(email, account.firstName, account.lastName);
-    ids[account.key] = id;
-
-    const [existing] = await db.select({ id: profilesTable.id }).from(profilesTable).where(eq(profilesTable.id, id));
-    if (!existing) {
+  const accounts: Array<{ slot: DemoSlot; id: string; result: DemoAccountResult; seed: boolean }> = [];
+  for (const s of slots) {
+    const isSuperAdmin = async (clerkId: string) => {
+      const [p] = await db.select({ role: profilesTable.role }).from(profilesTable).where(eq(profilesTable.id, clerkId));
+      return p?.role === "super_admin";
+    };
+    const clerk = await upsertClerkUser(s.email, s.firstName, s.lastName, isSuperAdmin);
+    const [profile] = await db.select().from(profilesTable).where(eq(profilesTable.id, clerk.id));
+    let role = s.role;
+    let fullName = `${s.firstName} ${s.lastName}`.trim();
+    if (!profile) {
       // Backdated so the client wealth score is past its three-month gate on day one of the demo.
       await db.insert(profilesTable).values({
-        id, email, fullName, role: account.role, onboardingComplete: true, createdAt: new Date(now.getTime() - 200 * 86_400_000),
+        id: clerk.id, email: s.email, fullName, role, onboardingComplete: true, createdAt: new Date(now.getTime() - 200 * 86_400_000),
       });
+    } else {
+      fullName = profile.fullName ?? fullName;
+      // Never demote the owner. Anyone else takes the role their slot names.
+      if (profile.role === "super_admin") role = "super_admin";
+      else if (profile.role !== role) await db.update(profilesTable).set({ role, updatedAt: new Date() }).where(eq(profilesTable.id, clerk.id));
     }
-    results.push({ key: account.key, label: account.label, role: account.role, fullName, email, password, created: !existing });
+    const seed = s.kind !== "advisor" && !(await hasData(clerk.id));
+    accounts.push({
+      slot: s, id: clerk.id, seed,
+      result: {
+        key: s.key, kind: s.kind, label: s.label, role, fullName, email: s.email,
+        password: clerk.password, passwordNote: clerk.passwordNote, created: clerk.created, seeded: seed,
+      },
+    });
   }
 
-  const advisorId = ids.advisor!;
-  const created = new Set(results.filter((r) => r.created).map((r) => r.key));
-  if (created.has("free")) await seedFree(ids.free!, now);
-  if (created.has("trackB")) await seedTrackB(ids.trackB!, advisorId, now);
-  if (created.has("trackA")) await seedTrackA(ids.trackA!, advisorId, now);
-  for (const key of ["trackB", "trackA"] as const) {
-    if (!created.has(key)) continue;
-    const outcome = await setCompedMembership(ids[key]!, "comp", "Demo account");
-    if (!outcome.ok) throw new Error(`Could not comp the ${key} demo membership: ${outcome.error}`);
+  const advisor = accounts.find((a) => a.slot.kind === "advisor")!;
+  const advisorFirst = advisor.result.fullName.split(/\s+/)[0] || "your advisor";
+  let trackAIndex = 0;
+  for (const a of accounts) {
+    const clientFirst = a.result.fullName.split(/\s+/)[0] || "there";
+    if (a.slot.kind === "free" && a.seed) {
+      await seedFree(a.id, now);
+      try { await runCheckpointHook(a.id); } catch (err) { logger.warn({ err }, "Demo free user checkpoint hook failed"); }
+    }
+    if (a.slot.kind === "trackB" || a.slot.kind === "trackA") {
+      if (a.seed && a.slot.kind === "trackB") await seedTrackB(a.id, advisor.id, now);
+      if (a.seed && a.slot.kind === "trackA") await seedTrackA(a.id, advisor.id, now, { client: clientFirst, advisor: advisorFirst, policy: trackAIndex });
+      if (a.slot.kind === "trackA") trackAIndex++;
+      // Linked to the advisor and comped whether or not the account was seeded now.
+      await db.update(clientProfilesTable).set({ advisorId: advisor.id, updatedAt: new Date() }).where(eq(clientProfilesTable.userId, a.id));
+      if (!a.seed) {
+        await db.insert(clientProfilesTable).values({ userId: a.id, advisorId: advisor.id, status: "active", onboardingTrackComplete: true, onboardingStage: "complete" })
+          .onConflictDoNothing();
+      }
+      const outcome = await setCompedMembership(a.id, "comp", "Demo account");
+      if (!outcome.ok && outcome.httpStatus !== 409) throw new Error(`Could not comp ${a.slot.email}: ${outcome.error}`);
+      if (a.seed) {
+        await db.insert(advisorTasksTable).values(a.slot.kind === "trackA"
+          ? { advisorId: advisor.id, clientId: a.id, title: `Quarterly review with ${a.result.fullName}`, description: "Go through the latest statement and the bond allocation.", dueDate: daysAgo(-7, now), priority: "high", status: "todo" }
+          : { advisorId: advisor.id, clientId: a.id, title: `Discuss an advised plan with ${a.result.fullName}`, description: "Large monthly surplus; show the Track A comparison.", dueDate: daysAgo(-14, now), priority: "medium", status: "todo" });
+      }
+    }
   }
-  if (created.has("trackA") || created.has("trackB")) {
-    await db.insert(advisorTasksTable).values([
-      ...(created.has("trackA") ? [{ advisorId, clientId: ids.trackA!, title: "Quarterly review with Elena Novak", description: "Go through the latest statement and the bond allocation.", dueDate: daysAgo(-7, now), priority: "high", status: "todo" }] : []),
-      ...(created.has("trackB") ? [{ advisorId, clientId: ids.trackB!, title: "Discuss an advised plan with James Whitfield", description: "Large monthly surplus; show the Track A comparison.", dueDate: daysAgo(-14, now), priority: "medium", status: "todo" }] : []),
-    ]);
-  }
-  if (created.has("free")) {
-    try { await runCheckpointHook(ids.free!); } catch (err) { logger.warn({ err }, "Demo free user checkpoint hook failed"); }
-  }
-  return results;
+  return accounts.map((a) => a.result);
 }

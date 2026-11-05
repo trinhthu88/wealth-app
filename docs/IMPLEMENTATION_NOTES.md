@@ -28,7 +28,7 @@ Then in Lemon Squeezy and the environment:
 
 `POST /api/admin/demo-accounts` (super admin only, button on `/admin/users`) creates four logins through the deployment's own Clerk instance: free user, Track B client, Track A client (with an in-force advised plan) and their advisor, each with sample data in the current tables. Clients are comped through `setCompedMembership` with reason "Demo account". Re-running gives each login a fresh password and keeps the data. Passwords appear once in the response and are never stored or logged.
 
-It is off unless `DEMO_ACCOUNTS_ENABLED=true` and `DEMO_ACCOUNTS_EMAIL` is a real mailbox; logins are its plus-addresses (`name+tala-demo-free@domain`), so if the Clerk instance has passwords off, email codes reach that inbox. Set both on the deployment for a demo and unset them afterwards. Payments can stay off (`PAYMENT_PROVIDER` unset) during a demo; "Become a member" then says it isn't available.
+Which logins: `DEMO_ACCOUNTS` lists them as `kind:email[:Full Name]` (kinds advisor, free, trackA, trackB; exactly one advisor). Accounts that already exist are picked up: an empty one gets sample data, one with data keeps it, and a super admin keeps their role and password. Without `DEMO_ACCOUNTS`, it is off unless `DEMO_ACCOUNTS_ENABLED=true` and `DEMO_ACCOUNTS_EMAIL` is a real mailbox; logins are its plus-addresses (`name+tala-demo-free@domain`), so if the Clerk instance has passwords off, email codes reach that inbox. Set both on the deployment for a demo and unset them afterwards. Payments can stay off (`PAYMENT_PROVIDER` unset) during a demo; "Become a member" then says it isn't available.
 
 ## Decisions for the product owner
 

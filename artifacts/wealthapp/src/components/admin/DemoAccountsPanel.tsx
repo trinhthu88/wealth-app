@@ -20,7 +20,9 @@ interface DemoAccountLogin {
   fullName: string;
   email: string;
   password: string | null;
+  passwordNote: "own_login" | "email_code" | null;
   created: boolean;
+  seeded: boolean;
 }
 
 async function copy(text: string) {
@@ -39,7 +41,7 @@ async function copy(text: string) {
 export default function DemoAccountsPanel() {
   const [logins, setLogins] = useState<DemoAccountLogin[] | null>(null);
 
-  const { data } = useQuery<{ enabled: boolean; accounts: DemoAccountStatus[] }>({
+  const { data } = useQuery<{ enabled: boolean; accounts: DemoAccountStatus[]; configError?: string }>({
     queryKey: ["admin-demo-accounts"],
     queryFn: () => apiFetch("/admin/demo-accounts"),
   });
@@ -55,6 +57,14 @@ export default function DemoAccountsPanel() {
     onError: (e: any) => toast.error(e?.message ?? "Couldn't create the demo accounts"),
   });
 
+  if (data?.configError) {
+    return (
+      <section className="bg-surface rounded-[24px] p-5 mb-6 border border-hairline" role="alert">
+        <h2 className="font-display text-[18px] font-semibold text-forest">Demo accounts are not set up correctly</h2>
+        <p className="text-[14px] text-ink-40 mt-1 max-w-prose">{data.configError} Fix the deployment setting and redeploy.</p>
+      </section>
+    );
+  }
   if (!data?.enabled) return null;
   const allExist = data.accounts.every((a) => a.exists);
 
@@ -67,8 +77,8 @@ export default function DemoAccountsPanel() {
           </h2>
           <p className="text-[14px] text-ink-40 mt-1 max-w-prose">
             {allExist
-              ? "The four demo logins exist. Generating new passwords keeps their data and replaces the old passwords."
-              : "Creates a free user, a self-managed client, an advised client and their advisor, with sample data, for showing the app to colleagues."}
+              ? `The ${data.accounts.length} demo logins exist. Generating new passwords keeps their data and replaces the old passwords.`
+              : `Sets up ${data.accounts.length} demo logins with sample data for showing the app to colleagues. Accounts that already have data keep it.`}
           </p>
         </div>
         <Button className="rounded-full px-5 bg-forest text-paper hover:bg-forest-700" disabled={run.isPending} onClick={() => run.mutate()}>
@@ -94,7 +104,10 @@ export default function DemoAccountsPanel() {
                 <tr key={l.key} className="border-t border-hairline">
                   <td className="py-2 pr-4 text-forest">
                     <div className="font-semibold">{l.label}</div>
-                    <div className="text-ink-40 text-[13px]">{l.fullName}</div>
+                    <div className="text-ink-40 text-[13px]">
+                      {l.fullName}
+                      {l.seeded ? " · sample data added" : l.created ? "" : " · existing data kept"}
+                    </div>
                   </td>
                   <td className="py-2 pr-4">
                     <button className="inline-flex items-center gap-1 text-forest hover:underline" onClick={() => copy(l.email)}>
@@ -106,8 +119,10 @@ export default function DemoAccountsPanel() {
                       <button className="inline-flex items-center gap-1 font-mono text-forest hover:underline" onClick={() => copy(l.password!)}>
                         <span className="select-all">{l.password}</span> <Copy className="h-3.5 w-3.5 shrink-0" />
                       </button>
+                    ) : l.passwordNote === "own_login" ? (
+                      <span className="text-ink-40">Your own login, password unchanged</span>
                     ) : (
-                      <span className="text-ink-40">Signs in with an email code, sent to your inbox</span>
+                      <span className="text-ink-40">Signs in with an email code sent to this address</span>
                     )}
                   </td>
                 </tr>
