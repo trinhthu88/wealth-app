@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import request from "supertest";
+import { entitlementsFor } from "@workspace/tier-policy";
 import { grantMembership } from "./helpers/membership";
 
 vi.mock("@clerk/express", () => ({
@@ -18,6 +19,7 @@ const RUN_ID = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const newClientId = `user_test_new_${RUN_ID}`;
 const emptyClientId = `user_test_empty_${RUN_ID}`;
 const scoredClientId = `user_test_scored_${RUN_ID}`;
+const freeClientId = `user_test_free_${RUN_ID}`;
 
 function asUser(userId: string) {
   return { "x-test-user-id": userId };
@@ -32,6 +34,7 @@ beforeAll(async () => {
     { id: newClientId, email: `health-new-${RUN_ID}@test.local`, role: "investment_client" },
     { id: emptyClientId, email: `health-empty-${RUN_ID}@test.local`, role: "investment_client", createdAt: ESTABLISHED_CREATED_AT },
     { id: scoredClientId, email: `health-scored-${RUN_ID}@test.local`, role: "investment_client", createdAt: ESTABLISHED_CREATED_AT },
+    { id: freeClientId, email: `health-free-${RUN_ID}@test.local`, role: "free_user", createdAt: ESTABLISHED_CREATED_AT },
   ]);
   await grantMembership(newClientId, emptyClientId, scoredClientId);
 
@@ -62,12 +65,22 @@ beforeAll(async () => {
   await db.insert(liabilitiesTable).values({
     userId: scoredClientId, name: "Test loan", category: "other", balanceUsd: "2000",
   });
+
+  await db.insert(healthScoresTable).values({
+    userId: freeClientId, scoreDate: new Date().toISOString().slice(0, 10), tier: "client",
+    overallScore: 42, savingsScore: 12, goalsScore: 40, netWorthScore: 25, budgetScore: 20, debtToAssetScore: 75,
+    details: {
+      weights: {},
+      dimensions: { savingsConsistency: 12, investmentGrowth: 25, goalProgress: 40, debtToAsset: 75, budgetSurplus: 20 },
+    },
+  });
 });
 
 afterAll(async () => {
   await db.delete(healthScoresTable).where(eq(healthScoresTable.userId, scoredClientId));
   await db.delete(healthScoresTable).where(eq(healthScoresTable.userId, emptyClientId));
   await db.delete(healthScoresTable).where(eq(healthScoresTable.userId, newClientId));
+  await db.delete(healthScoresTable).where(eq(healthScoresTable.userId, freeClientId));
   await db.delete(clientBudgetMonthsTable).where(eq(clientBudgetMonthsTable.userId, scoredClientId));
   await db.delete(clientHoldingsTable).where(eq(clientHoldingsTable.userId, scoredClientId));
   await db.delete(financialGoalsTable).where(eq(financialGoalsTable.userId, scoredClientId));
@@ -75,6 +88,7 @@ afterAll(async () => {
   await db.delete(profilesTable).where(eq(profilesTable.id, scoredClientId));
   await db.delete(profilesTable).where(eq(profilesTable.id, emptyClientId));
   await db.delete(profilesTable).where(eq(profilesTable.id, newClientId));
+  await db.delete(profilesTable).where(eq(profilesTable.id, freeClientId));
 });
 
 describe("GET /client/health-score", () => {
@@ -116,6 +130,34 @@ describe("GET /client/health-score", () => {
       expect(dimensions[key]).toBeGreaterThanOrEqual(0);
       expect(dimensions[key]).toBeLessThanOrEqual(100);
     }
+  });
+
+  it("returns only the score and weakest insight for a free user", async () => {
+    const res = await request(app).get("/api/client/health-score").set(asUser(freeClientId)).expect(200);
+    expect(res.body).toEqual({
+      overallScore: 42,
+      gated: false,
+      topInsight: {
+        name: "Savings consistency",
+        score: 12,
+        hint: "Log a budget each month and work toward a positive surplus.",
+      },
+    });
+    expect(res.body.details).toBeUndefined();
+    expect(res.body.savingsScore).toBeUndefined();
+    expect(res.body.goalsScore).toBeUndefined();
+    expect(res.body.netWorthScore).toBeUndefined();
+    expect(res.body.budgetScore).toBeUndefined();
+    expect(res.body.debtToAssetScore).toBeUndefined();
+  });
+
+  it("omits health-score history for a free user and gates breakdown through entitlements", async () => {
+    const history = await request(app).get("/api/client/health-score/history").set(asUser(freeClientId)).expect(200);
+    expect(history.body).toEqual([]);
+
+    const usage = { goals: 0, holdings: 0, solMessagesToday: 0 };
+    expect(entitlementsFor("free", usage, null, null).gates.scoreBreakdown).toBe("limited");
+    expect(entitlementsFor("track_b", usage, null, null).gates.scoreBreakdown).toBe("full");
   });
 
   it("returns the same cached row on a second call the same day rather than recomputing", async () => {

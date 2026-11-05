@@ -91,6 +91,7 @@ export const CAPABILITIES = [
   "goals",
   "holdings",
   "scenarios",
+  "scoreBreakdown",
   "sol",
   "coastPoint",
   "advisedPlans",
@@ -105,6 +106,7 @@ const CAPABILITY_CHECKPOINT: Record<Capability, CheckpointCode> = {
   goals: "C2_goal_slot",
   holdings: "C5_investable",
   scenarios: "C3_off_track",
+  scoreBreakdown: "C7_direct",
   sol: "C7_direct",
   coastPoint: "C10_coast_point",
   advisedPlans: "C8_plan_preview",
@@ -234,6 +236,7 @@ function capUsage(usage: Usage, capability: Capability): number {
 
 function gateFor(tier: Tier, capability: Capability, leadStatus: string | null): Gate {
   const limits = TIER_LIMITS[tier];
+  if (capability === "scoreBreakdown") return tier === "free" ? "limited" : "full";
   if (capability === "scenarios") return limits.scenarioTypes.length < ALL_SCENARIO_TYPES.length ? "limited" : "full";
   if (capability === "goals" || capability === "holdings" || capability === "sol") {
     return tier === "free" ? "limited" : "full";
@@ -324,6 +327,8 @@ export function gateMessage(capability: Capability, limit: number | null): strin
       return `The free plan tracks ${limit} holdings. Membership removes the limit.`;
     case "scenarios":
       return "The free plan includes the increase monthly scenario. Membership opens all six.";
+    case "scoreBreakdown":
+      return "Membership unlocks the full score breakdown.";
     case "sol":
       return `You've used today's ${limit} messages with Sol. They reset tomorrow, and membership gives you more.`;
     case "coastPoint":

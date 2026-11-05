@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useUser } from "@clerk/react";
 import { apiFetch } from "@/lib/api";
+import { useEntitlements } from "./useEntitlements";
 
 export interface WealthScoreDimensions {
   savingsConsistency: number;
@@ -18,12 +19,26 @@ export interface WealthScoreRow {
   gated: false;
 }
 
+export interface WealthScoreTopInsight {
+  name: string;
+  score: number;
+  hint: string;
+}
+
+export interface WealthScoreFree {
+  overallScore: number;
+  gated: false;
+  topInsight: WealthScoreTopInsight;
+}
+
+export type UngatedWealthScore = WealthScoreRow | WealthScoreFree;
+
 export interface WealthScoreGated {
   gated: true;
   monthsActive: number;
 }
 
-export type WealthScoreResponse = WealthScoreRow | WealthScoreGated | null;
+export type WealthScoreResponse = WealthScoreRow | WealthScoreFree | WealthScoreGated | null;
 
 export interface WealthScoreHistoryRow {
   id: string;
@@ -33,23 +48,25 @@ export interface WealthScoreHistoryRow {
 
 export function useWealthScore() {
   const { user, isLoaded } = useUser();
+  const { entitlements, isLoading: entitlementsLoading } = useEntitlements();
   const enabled = isLoaded && !!user;
+  const scoreBreakdownGate = entitlements?.gates.scoreBreakdown ?? null;
 
   const scoreQuery = useQuery<WealthScoreResponse>({
-    queryKey: ["client-wealth-score"],
+    queryKey: ["client-wealth-score", user?.id],
     queryFn: () => apiFetch<WealthScoreResponse>("/client/health-score").catch(() => null),
     enabled,
   });
 
   const historyQuery = useQuery<WealthScoreHistoryRow[]>({
-    queryKey: ["client-wealth-score", "history"],
+    queryKey: ["client-wealth-score", "history", user?.id],
     queryFn: () => apiFetch<WealthScoreHistoryRow[]>("/client/health-score/history").catch(() => []),
-    enabled,
+    enabled: enabled && scoreBreakdownGate === "full",
   });
 
   const score = scoreQuery.data;
   const isGated = !!score && "gated" in score && score.gated === true;
-  const row = score && !isGated ? (score as WealthScoreRow) : null;
+  const row: UngatedWealthScore | null = score && !isGated ? (score as UngatedWealthScore) : null;
 
   // History is ordered scoreDate desc — take the most recent 6 and reverse to
   // chronological order for the sparkline.
@@ -66,12 +83,13 @@ export function useWealthScore() {
   const trendDelta = row && priorScore != null ? row.overallScore - priorScore : null;
 
   return {
-    isLoading: scoreQuery.isLoading || historyQuery.isLoading,
+    isLoading: scoreQuery.isLoading || entitlementsLoading || (scoreBreakdownGate === "full" && historyQuery.isLoading),
     isGated,
     monthsActive: isGated ? (score as WealthScoreGated).monthsActive : null,
     row,
-    hasData: score !== null,
+    hasData: row !== null,
     sparklineData,
-    trendDelta,
+    trendDelta: scoreBreakdownGate === "full" ? trendDelta : null,
+    scoreBreakdownGate,
   };
 }

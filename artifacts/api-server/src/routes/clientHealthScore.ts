@@ -28,6 +28,37 @@ const router: IRouter = Router();
 //   - Budget Surplus (10%): average savings_rate_pct over the last 3 months.
 const WEIGHTS = { savingsConsistency: 0.25, investmentGrowth: 0.25, goalProgress: 0.20, debtToAsset: 0.20, budgetSurplus: 0.10 };
 const clamp = (v: number, lo = 0, hi = 100) => Math.min(hi, Math.max(lo, v));
+type ScoreDimensionKey = "savingsConsistency" | "investmentGrowth" | "goalProgress" | "debtToAsset" | "budgetSurplus";
+const FREE_INSIGHT_META: { key: ScoreDimensionKey; name: string; hint: string }[] = [
+  { key: "savingsConsistency", name: "Savings consistency", hint: "Log a budget each month and work toward a positive surplus." },
+  { key: "investmentGrowth", name: "Investment growth", hint: "Review your investment contributions and holdings." },
+  { key: "goalProgress", name: "Goal progress", hint: "Check your active goal and adjust its amount or timeline." },
+  { key: "debtToAsset", name: "Debt-to-asset ratio", hint: "Compare your debts with your assets and review repayments." },
+  { key: "budgetSurplus", name: "Budget surplus", hint: "Review spending to see whether more can go toward savings." },
+];
+
+function freeScoreSummary(score: typeof healthScoresTable.$inferSelect) {
+  const details = score.details as { dimensions?: Partial<Record<ScoreDimensionKey, number>> } | null;
+  const numeric = (value: unknown) => {
+    const parsed = typeof value === "number" ? value : Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+  const dimensions: Record<ScoreDimensionKey, number> = {
+    savingsConsistency: numeric(details?.dimensions?.savingsConsistency ?? score.savingsScore),
+    investmentGrowth: numeric(details?.dimensions?.investmentGrowth ?? score.netWorthScore),
+    goalProgress: numeric(details?.dimensions?.goalProgress ?? score.goalsScore),
+    debtToAsset: numeric(details?.dimensions?.debtToAsset ?? score.debtToAssetScore),
+    budgetSurplus: numeric(details?.dimensions?.budgetSurplus ?? score.budgetScore),
+  };
+  const weakest = FREE_INSIGHT_META.reduce((low, item) =>
+    dimensions[item.key] < dimensions[low.key] ? item : low,
+  );
+  return {
+    overallScore: score.overallScore,
+    gated: false as const,
+    topInsight: { name: weakest.name, score: dimensions[weakest.key], hint: weakest.hint },
+  };
+}
 
 const TICKER_TYPES = new Set(["stock_etf", "etf", "mutual_fund", "commodity", "bond"]);
 function holdingCostBasis(h: typeof clientHoldingsTable.$inferSelect): number {
@@ -61,7 +92,10 @@ router.get("/client/health-score", requireAuth, async (req, res): Promise<void> 
     ))
     .orderBy(desc(healthScoresTable.createdAt))
     .limit(1);
-  if (existingToday?.details) { res.json({ ...existingToday, gated: false }); return; }
+  if (existingToday?.details) {
+    res.json(tier === "free" ? freeScoreSummary(existingToday) : { ...existingToday, gated: false });
+    return;
+  }
 
   const [budgetMonths, holdings, plans, goals, netWorth] = await Promise.all([
     db.select().from(clientBudgetMonthsTable)
@@ -160,11 +194,13 @@ router.get("/client/health-score", requireAuth, async (req, res): Promise<void> 
     .returning();
 
   await runCheckpointHook(userId);
-  res.json({ ...score, gated: false });
+  res.json(tier === "free" ? freeScoreSummary(score) : { ...score, gated: false });
 });
 
 router.get("/client/health-score/history", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
+  const { tier } = await getEntitlementContext(req);
+  if (tier === "free") { res.json([]); return; }
   const scores = await db.select().from(healthScoresTable)
     .where(and(eq(healthScoresTable.userId, userId), eq(healthScoresTable.tier, "client")))
     .orderBy(desc(healthScoresTable.scoreDate))

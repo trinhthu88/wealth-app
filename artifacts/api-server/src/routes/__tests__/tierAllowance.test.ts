@@ -294,7 +294,7 @@ describe("GET /me/entitlements", () => {
       },
       usage: { goals: 1, holdings: 1, solMessagesToday: 2 },
       gates: {
-        goals: "limited", holdings: "limited", scenarios: "limited", sol: "limited", coastPoint: "preview",
+        goals: "limited", holdings: "limited", scenarios: "limited", scoreBreakdown: "limited", sol: "limited", coastPoint: "preview",
         advisedPlans: "preview", messages: "after_assign", documents: "after_assign", plan: "locked",
       },
       atCap: { goals: true, holdings: false, sol: false },

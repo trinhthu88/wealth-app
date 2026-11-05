@@ -5,6 +5,7 @@ const TITLES: Record<Capability, string> = {
   goals: "Goals",
   holdings: "Holdings",
   scenarios: "Scenarios",
+  scoreBreakdown: "Wealth score",
   sol: "Sol",
   coastPoint: "Coast point",
   advisedPlans: "Advised plans",

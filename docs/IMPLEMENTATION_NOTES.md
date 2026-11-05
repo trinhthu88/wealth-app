@@ -94,6 +94,9 @@ Found by the browser test and fixed:
 - A canceled membership now runs to its paid-through date. C12 fires when it actually runs out, not when the member cancels.
 - The Phase 5 and 7 scenarios run against both providers, through fakes of each, with `PAYMENT_PROVIDER` set to either value.
 
+### Phase 9: free-user completion (in progress)
+- A1: Free users receive their overall score and weakest sub-score insight only; the score-breakdown capability is limited by entitlements, and free score history is omitted.
+
 ### Metrics
 - `pnpm --filter @workspace/scripts run funnel-report` (add `--weeks=<n>`, default 12). "Promoted within 30 days" uses the lead's `updatedAt` as the promotion date, so a later edit to a promoted lead can drop it from that count.
 
@@ -103,7 +106,6 @@ Found by the browser test and fixed:
 |---|---|
 | Lead detail reuses client screens | The brief asks for the client screens in read-only mode. The client pages fetch their own `/client/*` data, so reuse needs them to accept a data source. This branch adds read-only panels beside the existing summary instead. |
 | Advised plan preview | The sample plan built from the user's surplus is not built. C8 shows an offer card. `advisedPlans` is served in entitlements but not enforced on `/client/advised-plans*`, which only return the caller's own plans. |
-| Score breakdown gating | "Score + top insight" for free is not enforced. A free user gets the full score response. The addendum lists "full score breakdown" as a membership unlock and also says no new gates, so the locked copy leaves it out rather than promise something free users already have. |
 | Comp controls in the UI | `PUT /admin/users/:id/membership` works and the badge shows, but `/admin/clients` has no button yet, so comping takes an API call. |
 | Trial-ending and lapse emails | C11 and C12 appear on the dashboard only, as the addendum says. Someone who doesn't sign in during the two-day window sees no C11, and is charged. Stripe's own trial reminder email can cover this. |
 | Removing `subscriptions` | Nothing writes it now. Delete it after production has run `backfill-memberships`, along with the `/billing/webhook` alias. |

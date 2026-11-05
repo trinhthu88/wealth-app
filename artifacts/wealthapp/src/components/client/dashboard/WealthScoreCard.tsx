@@ -5,6 +5,7 @@ import BottomSheet from "@/components/client/BottomSheet";
 import Sol from "@/components/Sol";
 import { ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { UNLOCKS } from "@workspace/tier-policy";
 
 const DIMENSION_META: { key: keyof WealthScoreDimensions; label: string; tip: string }[] = [
   {
@@ -64,7 +65,7 @@ function AnimatedBar({ value, color }: { value: number; color: string }) {
 }
 
 export default function WealthScoreCard() {
-  const { isLoading, isGated, hasData, row, trendDelta } = useWealthScore();
+  const { isLoading, isGated, hasData, row, trendDelta, scoreBreakdownGate } = useWealthScore();
   const [detailOpen, setDetailOpen] = useState(false);
 
   if (isLoading) {
@@ -82,7 +83,7 @@ export default function WealthScoreCard() {
     );
   }
 
-  if (!hasData || !row?.details) {
+  if (!hasData || !row) {
     return (
       <div className="bg-surface rounded-[24px] p-5">
         <div className="text-[16px] font-semibold text-forest mb-1">Wealth Score</div>
@@ -93,9 +94,12 @@ export default function WealthScoreCard() {
     );
   }
 
-  const { dimensions } = row.details;
+  const dimensions = "details" in row ? row.details?.dimensions : undefined;
+  const canSeeBreakdown = scoreBreakdownGate === "full" && !!dimensions;
   const tier = tierFor(row.overallScore);
-  const lowest = DIMENSION_META.reduce((low, d) => (dimensions[d.key] < dimensions[low.key] ? d : low), DIMENSION_META[0]);
+  const lowest = dimensions
+    ? DIMENSION_META.reduce((low, d) => (dimensions[d.key] < dimensions[low.key] ? d : low), DIMENSION_META[0])
+    : null;
 
   return (
     <>
@@ -109,7 +113,7 @@ export default function WealthScoreCard() {
         <div className="min-w-0 flex-1">
           <div className="tala-eyebrow text-ink-40">Wealth Score</div>
           <span className={cn("inline-block mt-1.5 rounded-full px-2.5 py-1 text-[12px] font-semibold", tier.pill)}>{tier.label}</span>
-          {trendDelta != null && trendDelta !== 0 && (
+          {canSeeBreakdown && trendDelta != null && trendDelta !== 0 && (
             <div className={cn("text-[13px] font-medium mt-1.5 tabular-nums", trendDelta > 0 ? "text-forest" : "text-clay-ink")}>
               {trendDelta > 0 ? "↑" : "↓"} {trendDelta > 0 ? "+" : ""}{trendDelta} vs last month
             </div>
@@ -126,7 +130,7 @@ export default function WealthScoreCard() {
             <WealthScoreRing score={row.overallScore} size={100} />
             <div>
               <span className={cn("inline-block rounded-full px-2.5 py-1 text-[12px] font-semibold", tier.pill)}>{tier.label}</span>
-              {trendDelta != null && trendDelta !== 0 && (
+              {canSeeBreakdown && trendDelta != null && trendDelta !== 0 && (
                 <div className={cn("text-[13px] font-medium mt-1.5 tabular-nums", trendDelta > 0 ? "text-forest" : "text-clay-ink")}>
                   {trendDelta > 0 ? "↑" : "↓"} {trendDelta > 0 ? "+" : ""}{trendDelta} vs last month
                 </div>
@@ -134,23 +138,46 @@ export default function WealthScoreCard() {
             </div>
           </div>
 
-          <div className="space-y-3">
-            {DIMENSION_META.map(d => {
-              const value = dimensions[d.key];
-              return (
-                <div key={d.key} className="flex items-center gap-3">
-                  <span className="text-[13px] text-ink-40 w-[150px] shrink-0">{d.label}</span>
-                  <AnimatedBar value={value} color={barColor(d.key, value)} />
-                  <span className="text-[13px] font-semibold text-forest tabular-nums w-[36px] text-right shrink-0">{Math.round(value)}%</span>
+          {canSeeBreakdown && dimensions && (
+            <>
+              <div className="space-y-3">
+                {DIMENSION_META.map(d => {
+                  const value = dimensions[d.key];
+                  return (
+                    <div key={d.key} className="flex items-center gap-3">
+                      <span className="text-[13px] text-ink-40 w-[150px] shrink-0">{d.label}</span>
+                      <AnimatedBar value={value} color={barColor(d.key, value)} />
+                      <span className="text-[13px] font-semibold text-forest tabular-nums w-[36px] text-right shrink-0">{Math.round(value)}%</span>
+                    </div>
+                  );
+                })}
+              </div>
+              {lowest && (
+                <div className="bg-breeze rounded-[24px] p-4 flex items-start gap-3">
+                  <Sol size="xs" animate="breathe" />
+                  <p className="text-[14px] text-forest leading-relaxed text-pretty">{lowest.tip}</p>
                 </div>
-              );
-            })}
-          </div>
+              )}
+            </>
+          )}
 
-          <div className="bg-breeze rounded-[24px] p-4 flex items-start gap-3">
-            <Sol size="xs" animate="breathe" />
-            <p className="text-[14px] text-forest leading-relaxed text-pretty">{lowest.tip}</p>
-          </div>
+          {!canSeeBreakdown && "topInsight" in row && (
+            <div className="bg-breeze rounded-[24px] p-4">
+              <div className="text-[12px] font-semibold uppercase tracking-wide text-forest/70">Top insight</div>
+              <div className="mt-1 flex items-baseline justify-between gap-3">
+                <span className="text-[14px] font-semibold text-forest">{row.topInsight.name}</span>
+                <span className="text-[14px] font-semibold text-forest tabular-nums">{row.topInsight.score}%</span>
+              </div>
+              <p className="mt-2 text-[14px] text-forest leading-relaxed text-pretty">{row.topInsight.hint}</p>
+            </div>
+          )}
+
+          {scoreBreakdownGate === "limited" && (
+            <div className="rounded-[20px] border border-forest/10 p-4">
+              <p className="text-[14px] font-semibold text-forest">Membership unlocks the full breakdown.</p>
+              <p className="mt-1 text-[13px] text-ink-40 leading-relaxed">{UNLOCKS.membership}.</p>
+            </div>
+          )}
         </div>
       </BottomSheet>
     </>
