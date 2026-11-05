@@ -95,7 +95,8 @@ export async function relink(pool: pg.Pool, pairs: Pair[], apply: boolean): Prom
         continue;
       }
       const cur = current[0];
-      const old = profiles.filter((p) => p.id !== cur.id && String(p.email).toLowerCase() === oldEmail && !oldSignIns.includes(p.id));
+      // Under either address: an old demo profile may already carry the new address.
+      const old = profiles.filter((p) => p.id !== cur.id && !signIns.includes(p.id) && !oldSignIns.includes(p.id));
       const withData: Array<{ profile: Record<string, unknown>; counts: Record<string, number> }> = [];
       for (const p of old) {
         const counts = await rowCounts(client, cols, p.id);
