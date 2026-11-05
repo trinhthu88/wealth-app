@@ -24,11 +24,16 @@ Then in Lemon Squeezy and the environment:
 9. Select the variants at `/admin/membership`. Lemon Squeezy has no env fallback, so sign-up answers 503 until this is done.
 10. Point the Lemon Squeezy webhook at `/api/webhooks/payments`, with the events in `replit.md`.
 
-## Demo accounts on the live site
+## Copying development accounts to the live site
 
-`POST /api/admin/demo-accounts` (super admin only, button on `/admin/users`) creates four logins through the deployment's own Clerk instance: free user, Track B client, Track A client (with an in-force advised plan) and their advisor, each with sample data in the current tables. Clients are comped through `setCompedMembership` with reason "Demo account". Re-running gives each login a fresh password and keeps the data. Passwords appear once in the response and are never stored or logged.
+`scripts/src/copy-accounts-to-live.ts` copies chosen accounts' data from the development database into the live one, so people keep the data they built while testing. It creates no sign-ins: each person signs up on the live site first, and the copy attaches their development data to that live account by email.
 
-It is off unless `DEMO_ACCOUNTS_ENABLED=true` and `DEMO_ACCOUNTS_EMAIL` is a real mailbox; logins are its plus-addresses (`name+tala-demo-free@domain`), so if the Clerk instance has passwords off, email codes reach that inbox. Set both on the deployment for a demo and unset them afterwards. Payments can stay off (`PAYMENT_PROVIDER` unset) during a demo; "Become a member" then says it isn't available.
+1. Each person signs up on the live site with the email they will use there.
+2. Dry run, which copies inside a transaction and rolls back, so every reference is checked:
+   `SOURCE_DATABASE_URL=<development> TARGET_DATABASE_URL=<live> pnpm --filter @workspace/scripts run copy-accounts-to-live -- --accounts "a@x.com, b@x.com, old@demo.example=new@x.com"`
+3. Read the counts, then run the same command with `--apply`.
+
+`old=new` copies a development account into a live account with a different email. Copy everyone in one run where possible. A side reference (advisor, who entered a statement) to someone not in the run is linked to their live account by email, or cleared if they are not on the live site. It refuses to write into a live account that already has its own data, so a second run cannot duplicate anything, and it never grants super_admin. When one machine cannot reach both databases, use `--export=account-copy/bundle.json` on the development side and `--import=…` on the live side; the file holds personal data, is git-ignored, and should be deleted after the import.
 
 ## Decisions for the product owner
 

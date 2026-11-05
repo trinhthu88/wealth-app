@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import AppShell from "@/components/AppShell";
 import PageHeader from "@/components/PageHeader";
-import DemoAccountsPanel from "@/components/admin/DemoAccountsPanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
@@ -103,8 +102,6 @@ export default function AdminUsers() {
           </Button>
         }
       />
-
-      <DemoAccountsPanel />
 
       {/* Create User Modal */}
       {showCreate && (
