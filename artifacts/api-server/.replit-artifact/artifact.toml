@@ -21,9 +21,10 @@ args = ["pnpm", "--filter", "@workspace/api-server", "run", "build"]
 NODE_ENV = "production"
 
 [services.production.run]
-# We don't run through pnpm to make startup faster in production. One-off maintenance jobs run in the
-# background next to the server and do nothing unless PRODUCTION_TASKS is set (scripts/run-production-tasks.mjs).
-args = ["bash", "-c", "node scripts/run-production-tasks.mjs & exec node --enable-source-maps artifacts/api-server/dist/index.mjs"]
+# We don't run through pnpm to make startup faster in production. One-off maintenance jobs are started
+# by a request to POST /api/internal/production-tasks (see routes/productionTasks.ts), not at startup:
+# Autoscale gives an instance CPU only while it serves requests, so background jobs stalled.
+args = ["node", "--enable-source-maps", "artifacts/api-server/dist/index.mjs"]
 
 [services.production.run.env]
 PORT = "8080"

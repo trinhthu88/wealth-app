@@ -37,21 +37,34 @@ Then in Lemon Squeezy and the environment:
 
 ## Running production jobs inside the deployment
 
-Replit's live database accepts connections only from the deployed app, so the production steps (membership constraints, the free-tier migration, the membership backfill, copying accounts) run inside the deployment. `scripts/run-production-tasks.mjs` starts in the background next to the API server (see `artifacts/api-server/.replit-artifact/artifact.toml`) and does nothing unless `PRODUCTION_TASKS` is set. Output appears in the deployment log, prefixed `[production-tasks]`.
+Replit's live database accepts connections only from the deployed app, so the production steps (membership constraints, the free-tier migration, the membership backfill, relinking profiles, the demo accounts) run inside the deployment, in `scripts/run-production-tasks.mjs`.
 
-1. For the account copy: export the bundle in the workspace, from the development database, to `account-copy/bundle.json` (git-ignored, but included in the deployed files):
-   `SOURCE_DATABASE_URL=$DATABASE_URL pnpm --filter @workspace/scripts run copy-accounts-to-live -- --accounts "…" --export=../account-copy/bundle.json`
-2. Deployment secrets: `PRODUCTION_TASKS=membership-constraints,free-tier-migration,backfill-memberships,copy-accounts` and `ACCOUNT_COPY_FILE=account-copy/bundle.json`. Redeploy, then read the dry-run counts in the deployment log.
-3. Add `PRODUCTION_TASKS_APPLY=true` and redeploy. Jobs run in order and stop at the first failure; the backfill then comps existing clients. A database lock lets only one instance run them.
-4. Remove `PRODUCTION_TASKS`, `PRODUCTION_TASKS_APPLY` and `ACCOUNT_COPY_FILE`, delete `account-copy/`, and redeploy, so the personal data file leaves the deployed image.
+They are started by a request, not at startup. Autoscale gives an instance CPU only while it serves a request, and with several instances a background job can sit on one that gets no traffic; jobs started next to the server crawled and stalled. `POST /api/internal/production-tasks` (`artifacts/api-server/src/routes/productionTasks.ts`) runs the jobs for the length of the request and streams their output back. Without `PRODUCTION_TASKS_TOKEN` (at least 32 characters), or with the wrong `x-production-token`, the route answers 404.
+
+1. Secrets:
+   - `PRODUCTION_TASKS_TOKEN`: make one in the Shell with `openssl rand -hex 24`.
+   - `PRODUCTION_TASKS`: the jobs, for example `membership-constraints,free-tier-migration,backfill-memberships,seed-demo`.
+   - Each job's own secrets.
+   Then republish.
+2. From the Replit Shell, which has the same secrets:
+   `curl -N -X POST -H "x-production-token: $PRODUCTION_TASKS_TOKEN" https://wealth-master-build.replit.app/api/internal/production-tasks`
+   Without `PRODUCTION_TASKS_APPLY=true` this is a dry run.
+3. Add `PRODUCTION_TASKS_APPLY=true`, republish, and run the same command. Jobs run in order and stop at the first failure; each is safe to repeat. A database lock lets only one run at a time.
+4. Remove `PRODUCTION_TASKS`, `PRODUCTION_TASKS_APPLY`, the jobs' own secrets and `PRODUCTION_TASKS_TOKEN`, then republish.
+
+For the account copy, export the bundle in the workspace from the development database to `account-copy/bundle.json`. It is git-ignored but included in the deployed files:
+
+`SOURCE_DATABASE_URL=$DATABASE_URL pnpm --filter @workspace/scripts run copy-accounts-to-live -- --accounts "…" --export=../account-copy/bundle.json`
+
+Set `ACCOUNT_COPY_FILE=account-copy/bundle.json`, run `copy-accounts`, then delete `account-copy/`.
 
 ### Reconnecting people to their old live profile
 
 When someone's sign-in was replaced, signing in again creates a new, empty profile and their old one (with its data and role) is orphaned. The `relink-profiles` job (`scripts/src/relink-live-profiles.ts`) moves every reference from the old profile to the profile of their current sign-in, copies the old profile's details and role, and removes the old row. It runs for everyone in one transaction and changes nothing if any account is unclear: no current sign-in profile, two old profiles with data, or a current profile that already has data of its own. Super admin is never copied from an old row; it follows `SUPER_ADMIN_EMAIL`. Repeating it is harmless.
 
 1. Each person signs in on the live site once.
-2. Deployment secrets: `PRODUCTION_TASKS=relink-profiles,membership-constraints,free-tier-migration,backfill-memberships` and `RELINK_ACCOUNTS="a@x.com, b@x.com, old@demo.example=new+alias@gmail.com"` (`old=new` when the old profile carries a different email). Redeploy and read the dry run in the log: each old profile's contents, then each person's role, goals and holdings against the free limits, and Track A or B.
-3. Add `PRODUCTION_TASKS_APPLY=true`, redeploy, then remove all three secrets and redeploy again.
+2. Deployment secrets: `PRODUCTION_TASKS=relink-profiles,membership-constraints,free-tier-migration,backfill-memberships` and `RELINK_ACCOUNTS="a@x.com, b@x.com, old@demo.example=new+alias@gmail.com"` (`old=new` when the old profile carries a different email). Run it (see above) and read the dry run: each old profile's contents, then each person's role, goals and holdings against the free limits, and Track A or B.
+3. Add `PRODUCTION_TASKS_APPLY=true` and run it again, then remove the secrets.
 
 ### Demo accounts on the live site
 
@@ -64,8 +77,8 @@ When someone's sign-in was replaced, signing in again creates a new, empty profi
 It skips anyone who already has goals, holdings, budget months or plans, and stops before changing anything if an account is missing or can't become its demo role.
 
 1. Each person signs in on the live site once.
-2. Deployment secrets: add `seed-demo` to `PRODUCTION_TASKS`, and `DEMO_ACCOUNTS="advisor=a@x.com, free=b@x.com, track_a=c@x.com, track_a=d@x.com, track_b=e@x.com"`. The super admin is `SUPER_ADMIN_EMAIL`. Redeploy and read the dry run.
-3. Add `PRODUCTION_TASKS_APPLY=true`, redeploy, then remove the secrets and redeploy again.
+2. Deployment secrets: add `seed-demo` to `PRODUCTION_TASKS`, and `DEMO_ACCOUNTS="advisor=a@x.com, free=b@x.com, track_a=c@x.com, track_a=d@x.com, track_b=e@x.com"`. The super admin is `SUPER_ADMIN_EMAIL`. Run it (see above) and read the dry run.
+3. Add `PRODUCTION_TASKS_APPLY=true` and run it again, then remove the secrets.
 
 ## Decisions for the product owner
 
