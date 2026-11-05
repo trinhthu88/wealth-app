@@ -7,8 +7,9 @@
  *
  * Runs inside the deployment (it needs the live database and sign-in service), from
  * scripts/run-production-tasks.mjs. Without --apply it only checks the accounts and lists what it
- * would add. Each person must have signed in on the live site once. Anyone who already has goals,
- * holdings, budget months or plans is skipped, so nothing is mixed into real data.
+ * would add. Each person must have signed in on the live site once. Anyone holding data of their own
+ * (anything that isn't their demo persona's) is skipped, so nothing is mixed into real data. Every step
+ * carries on from what an interrupted run left, so running it again finishes the job.
  *
  *   DEMO_ACCOUNTS="advisor=a@x.com, free=b@x.com, track_a=c@x.com, track_a=d@x.com, track_b=e@x.com"
  *   The super admin is SUPER_ADMIN_EMAIL. The first track_a uses persona 1, the second persona 2.
@@ -18,7 +19,8 @@ import type { AddressInfo } from "node:net";
 import { and, eq, inArray } from "drizzle-orm";
 import {
   db, pool, profilesTable, financialGoalsTable, clientHoldingsTable, clientBudgetMonthsTable,
-  advisedPlansTable, leadsTable, membershipsTable, clientProfilesTable,
+  advisedPlansTable, leadsTable, membershipsTable, clientProfilesTable, liabilitiesTable,
+  advisedPlanStatementsTable, financialPlansTable, planMilestonesTable, messagesTable, goalHoldingLinksTable,
 } from "@workspace/db";
 import { computeNetWorth } from "../lib/netWorthService";
 import { isRowActive } from "../lib/membershipStore";
@@ -276,20 +278,33 @@ async function resolve(email: string): Promise<Found | string> {
   return { ...p, isMember: isRowActive(m), advisorId: cp?.advisorId ?? null };
 }
 
-async function existingData(userId: string): Promise<string[]> {
+/**
+ * Whether this person holds anything other than their own demo persona's records. A run that was
+ * interrupted leaves part of the persona behind; that is carried on from, but anything else is the
+ * person's own data and is never mixed with.
+ */
+async function foreignData(userId: string, p: Persona): Promise<string[]> {
   const found: string[] = [];
-  const count = async (label: string, table: any, extra?: any) => {
-    const rows = await db.select({ id: table.userId }).from(table).where(extra ? and(eq(table.userId, userId), extra) : eq(table.userId, userId)).limit(1);
-    if (rows.length) found.push(label);
-  };
-  await count("goals", financialGoalsTable);
-  await count("holdings", clientHoldingsTable, eq(clientHoldingsTable.isActive, true));
-  await count("budget months", clientBudgetMonthsTable);
-  await count("advised plans", advisedPlansTable);
+  const titles = new Set(p.goals.map((g) => g.body.title as string));
+  const labels = new Set([...p.holdings.map((h) => h.body.label as string), "Surplus (auto)"]);
+  const plans = new Set([p.plan?.body.nickname, p.plan?.proposal?.nickname].filter(Boolean) as string[]);
+  const goals = await db.select({ title: financialGoalsTable.title }).from(financialGoalsTable).where(eq(financialGoalsTable.userId, userId));
+  const holdings = await db.select({ label: clientHoldingsTable.label }).from(clientHoldingsTable)
+    .where(and(eq(clientHoldingsTable.userId, userId), eq(clientHoldingsTable.isActive, true)));
+  const advised = await db.select({ nickname: advisedPlansTable.nickname }).from(advisedPlansTable).where(eq(advisedPlansTable.userId, userId));
+  const budget = await db.select({ id: clientBudgetMonthsTable.id }).from(clientBudgetMonthsTable)
+    .where(eq(clientBudgetMonthsTable.userId, userId)).limit(1);
+  if (goals.some((g) => !titles.has(g.title))) found.push("goals");
+  if (holdings.some((h) => !labels.has(h.label))) found.push("holdings");
+  if (advised.some((a) => !a.nickname || !plans.has(a.nickname))) found.push("advised plans");
+  // The persona's holdings come before its budget, so budget months without them are not the demo's.
+  if (budget.length && !holdings.some((h) => labels.has(h.label) && h.label !== "Surplus (auto)")) found.push("budget months");
   return found;
 }
 
-// ── Building one person ──────────────────────────────────────────────────────────────────────────
+const say = (line: string) => console.log(line);
+
+// ── Building one person. Every step finds what an earlier, interrupted run already made. ─────────
 
 async function onboard(id: string, p: Persona, keepName: string | null | undefined) {
   await call(id, "PUT", "/client/profile/basics", {
@@ -302,8 +317,14 @@ async function onboard(id: string, p: Persona, keepName: string | null | undefin
 
 async function addWealth(id: string, p: Persona): Promise<Map<string, string>> {
   const holdingIds = new Map<string, string>();
-  for (const h of p.holdings) holdingIds.set(h.key, (await call(id, "POST", "/client/holdings", h.body)).id);
-  for (const l of p.liabilities) await call(id, "POST", "/liabilities", l);
+  const have = await db.select({ id: clientHoldingsTable.id, label: clientHoldingsTable.label }).from(clientHoldingsTable)
+    .where(and(eq(clientHoldingsTable.userId, id), eq(clientHoldingsTable.isActive, true)));
+  for (const h of p.holdings) {
+    const existing = have.find((x) => x.label === h.body.label);
+    holdingIds.set(h.key, existing?.id ?? (await call(id, "POST", "/client/holdings", h.body)).id);
+  }
+  const debts = await db.select({ name: liabilitiesTable.name }).from(liabilitiesTable).where(eq(liabilitiesTable.userId, id));
+  for (const l of p.liabilities) if (!debts.some((d) => d.name === l.name)) await call(id, "POST", "/liabilities", l);
   return holdingIds;
 }
 
@@ -320,6 +341,7 @@ function budgetBody(p: Persona, month: string, i: number, holdingIds: Map<string
   };
 }
 
+// Saving a month again replaces it, so this is safe to repeat.
 async function addBudgets(id: string, p: Persona, holdingIds: Map<string, string>) {
   const list = months(p.budgetMonths);
   for (const [i, month] of list.entries()) await call(id, "POST", "/client/budget", budgetBody(p, month, i, holdingIds));
@@ -327,11 +349,16 @@ async function addBudgets(id: string, p: Persona, holdingIds: Map<string, string
 }
 
 async function addGoals(id: string, p: Persona, holdingIds: Map<string, string>, planId?: string) {
+  const have = await db.select({ id: financialGoalsTable.id, title: financialGoalsTable.title }).from(financialGoalsTable)
+    .where(eq(financialGoalsTable.userId, id));
   for (const g of p.goals) {
-    const goal = await call(id, "POST", "/goals", { ...g.body, currency: "USD" });
+    const goalId = have.find((x) => x.title === g.body.title)?.id ?? (await call(id, "POST", "/goals", { ...g.body, currency: "USD" })).id;
+    const linked = await db.select({ sourceType: goalHoldingLinksTable.sourceType, sourceId: goalHoldingLinksTable.sourceId })
+      .from(goalHoldingLinksTable).where(eq(goalHoldingLinksTable.goalId, goalId));
     for (const link of g.links) {
       const source = link.plan ? { sourceType: "advised_plan", sourceId: planId } : { sourceType: "self_holding", sourceId: holdingIds.get(link.holding!) };
-      await call(id, "POST", `/client/goals/${goal.id}/links`, { ...source, allocationPct: link.pct });
+      if (linked.some((l) => l.sourceType === source.sourceType && l.sourceId === source.sourceId)) continue;
+      await call(id, "POST", `/client/goals/${goalId}/links`, { ...source, allocationPct: link.pct });
     }
   }
 }
@@ -366,12 +393,18 @@ async function buildAdvised(acc: Account, p: Persona, superAdminId: string, advi
     if (!lead) throw new Error("the interest did not create a lead");
     await call(superAdminId, "PUT", `/leads/${lead.id}/assign`, { advisorId });
   }
+  say(`${acc.email}: client of the advisor`);
 
   const holdingIds = await addWealth(id, p);
   const budgetMonths = await addBudgets(id, p, holdingIds);
 
   // The advisor's work: the plan as a scenario, its statements, then in force with its policy number.
-  const created = await call(advisorId, "POST", `/advisor/clients/${id}/advised-plans`, { ...plan.body, status: "scenario" });
+  const plans = await db.select({ id: advisedPlansTable.id, nickname: advisedPlansTable.nickname }).from(advisedPlansTable)
+    .where(eq(advisedPlansTable.userId, id));
+  const planId = plans.find((x) => x.nickname === plan.body.nickname)?.id
+    ?? (await call(advisorId, "POST", `/advisor/clients/${id}/advised-plans`, { ...plan.body, status: "scenario" })).id;
+  const statements = await db.select({ periodStart: advisedPlanStatementsTable.periodStart }).from(advisedPlanStatementsTable)
+    .where(eq(advisedPlanStatementsTable.advisedPlanId, planId));
   let value = 0;
   let contributed = 0;
   for (const s of plan.statements) {
@@ -379,15 +412,19 @@ async function buildAdvised(acc: Account, p: Persona, superAdminId: string, advi
     const opening = value;
     value = Math.round((opening + s.contributions - fees + s.returns) * 100) / 100;
     contributed += s.contributions;
-    await call(advisorId, "POST", `/advisor/clients/${id}/advised-plans/${created.id}/statements`, {
+    if (statements.some((x) => x.periodStart === s.periodStart)) continue;
+    await call(advisorId, "POST", `/advisor/clients/${id}/advised-plans/${planId}/statements`, {
       periodStart: s.periodStart, periodEnd: s.periodEnd, statementDate: s.periodEnd, entryMode: "summary",
       openingValue: opening, closingValue: value, contributions: s.contributions, investmentReturns: s.returns, ...s.fees,
       funds: plan.funds.map((f) => ({ fundCode: f.fundCode, fundName: f.fundName, holdingValue: Math.round(value * f.share * 100) / 100, futureAllocationPct: f.futureAllocationPct })),
       newLatestAccountValue: value, newLatestNetContribution: contributed,
     });
   }
-  await call(advisorId, "PUT", `/advised-plans/${created.id}/status`, { status: "inforce", policyNumber: plan.policyNumber });
-  if (plan.proposal) await call(advisorId, "POST", `/advisor/clients/${id}/advised-plans`, plan.proposal);
+  await call(advisorId, "PUT", `/advised-plans/${planId}/status`, { status: "inforce", policyNumber: plan.policyNumber });
+  if (plan.proposal && !plans.some((x) => x.nickname === plan.proposal!.nickname)) {
+    await call(advisorId, "POST", `/advisor/clients/${id}/advised-plans`, plan.proposal);
+  }
+  say(`${acc.email}: savings plan in force`);
 
   // Going in force wrote the plan's premium into each budget month. Saving each month again, as the
   // client would, settles the surplus that goes to cash.
@@ -397,18 +434,34 @@ async function buildAdvised(acc: Account, p: Persona, superAdminId: string, advi
     await call(id, "POST", "/client/budget", budgetBody(p, month, i, holdingIds, advised));
   }
 
-  await addGoals(id, p, holdingIds, created.id);
+  await addGoals(id, p, holdingIds, planId);
 
-  const fp = await call(advisorId, "POST", `/advisor/clients/${id}/plan`, { title: plan.financialPlan.title, status: "active", nextReviewDate: "2027-05-31" });
-  for (const m of plan.financialPlan.milestones) await call(advisorId, "POST", `/plans/${fp.id}/milestones`, m);
+  const [existingPlan] = await db.select({ id: financialPlansTable.id }).from(financialPlansTable).where(eq(financialPlansTable.clientId, id));
+  const fpId = existingPlan?.id
+    ?? (await call(advisorId, "POST", `/advisor/clients/${id}/plan`, { title: plan.financialPlan.title, status: "active", nextReviewDate: "2027-05-31" })).id;
+  const milestones = await db.select({ title: planMilestonesTable.title }).from(planMilestonesTable).where(eq(planMilestonesTable.planId, fpId));
+  for (const m of plan.financialPlan.milestones) {
+    if (!milestones.some((x) => x.title === m.title)) await call(advisorId, "POST", `/plans/${fpId}/milestones`, m);
+  }
 
+  // Returns the existing conversation if there is one.
   const conversation = await call(advisorId, "POST", "/conversations", { clientId: id });
-  for (const m of plan.messages) {
-    await call(m.from === "advisor" ? advisorId : id, "POST", `/conversations/${conversation.id}/messages`, { content: m.content });
+  const [sent] = await db.select({ id: messagesTable.id }).from(messagesTable).where(eq(messagesTable.conversationId, conversation.id)).limit(1);
+  if (!sent) {
+    for (const m of plan.messages) {
+      await call(m.from === "advisor" ? advisorId : id, "POST", `/conversations/${conversation.id}/messages`, { content: m.content });
+    }
   }
 }
 
 // ── Main ─────────────────────────────────────────────────────────────────────────────────────────
+
+// By position in DEMO_ACCOUNTS, so a rerun gives each person the same persona.
+function personaFor(accounts: Account[], acc: Account): Persona {
+  if (acc.role === "free") return FREE;
+  if (acc.role === "track_b") return TRACK_B;
+  return TRACK_A[accounts.filter((a) => a.role === "track_a").indexOf(acc)];
+}
 
 export async function seedLiveDemo(accounts: Account[], apply: boolean): Promise<string[]> {
   const out: string[] = [];
@@ -437,8 +490,8 @@ export async function seedLiveDemo(accounts: Account[], apply: boolean): Promise
       if (!["free_user", "advisor"].includes(found.role)) problems.push(`${acc.email} is ${found.role}, not an account to make the advisor`);
       continue;
     }
-    const data = await existingData(found.id);
-    if (data.length) { out.push(`${acc.email}: skipped, already has ${data.join(", ")}`); continue; }
+    const data = await foreignData(found.id, personaFor(accounts, acc));
+    if (data.length) { out.push(`${acc.email}: skipped, already has its own ${data.join(", ")}`); continue; }
     // Starting points the app's own steps can carry on from.
     const advisorId = accounts.find((a) => a.role === "advisor")?.id;
     const fits = found.role === "free_user"
@@ -452,11 +505,7 @@ export async function seedLiveDemo(accounts: Account[], apply: boolean): Promise
   }
   if (problems.length) throw new Error(`Nothing was changed. ${problems.join("; ")}.`);
 
-  let trackA = 0;
-  const plan = toBuild.map((acc) => {
-    const persona = acc.role === "free" ? FREE : acc.role === "track_b" ? TRACK_B : TRACK_A[trackA++];
-    return { acc, persona };
-  });
+  const plan = toBuild.map((acc) => ({ acc, persona: personaFor(accounts, acc) }));
   for (const { acc, persona } of plan) {
     const what = `${persona.goals.length} goal(s), ${persona.holdings.length} holdings, ${persona.liabilities.length} liabilities, ${persona.budgetMonths} budget months`;
     const how = acc.role === "free" ? "stays free" : acc.role === "track_b" ? "free membership from the super admin (Track B)"
@@ -470,6 +519,8 @@ export async function seedLiveDemo(accounts: Account[], apply: boolean): Promise
     out.push("Dry run: nothing was changed. Run again with --apply.");
     return out;
   }
+  for (const line of out) say(line);
+  out.length = 0;
 
   const stop = await startApi();
   try {
@@ -478,14 +529,24 @@ export async function seedLiveDemo(accounts: Account[], apply: boolean): Promise
       await call(adminId, "PUT", `/admin/users/${advisor.id}`, { role: "advisor", ...(advisor.fullName ? {} : { fullName: "Trang (Advisor)" }) });
     }
     for (const { acc, persona } of plan) {
-      try {
-        if (acc.role === "free") await buildFree(acc, persona);
-        else if (acc.role === "track_b") await buildMember(acc, persona, adminId);
-        else await buildAdvised(acc, persona, adminId, advisor.id!);
-        if (acc.role !== "free") await computeNetWorth(acc.id!, { currency: "USD" }); // today's snapshot, as the nightly job takes
-        out.push(`${acc.email}: done`);
-      } catch (err) {
-        out.push(`${acc.email}: STOPPED part way: ${err instanceof Error ? err.message : err}`);
+      // Every step carries on from what is already there, so a failed attempt is simply repeated.
+      for (let attempt = 1; ; attempt++) {
+        try {
+          say(`${acc.email}: building${attempt > 1 ? ` (attempt ${attempt})` : ""}`);
+          if (acc.role === "free") await buildFree(acc, persona);
+          else if (acc.role === "track_b") await buildMember(acc, persona, adminId);
+          else await buildAdvised(acc, persona, adminId, advisor.id!);
+          if (acc.role !== "free") await computeNetWorth(acc.id!, { currency: "USD" }); // today's snapshot, as the nightly job takes
+          say(`${acc.email}: done`);
+          break;
+        } catch (err) {
+          const why = err instanceof Error ? err.message : String(err);
+          say(`${acc.email}: attempt ${attempt} stopped: ${why}`);
+          if (attempt === 3) { out.push(`${acc.email}: STOPPED part way, run again to finish: ${why}`); break; }
+          await new Promise((r) => setTimeout(r, 5000));
+          const again = await resolve(acc.email);
+          if (typeof again !== "string") Object.assign(acc, { isMember: again.isMember, advisorId: again.advisorId, fullName: again.fullName });
+        }
       }
     }
   } finally {
@@ -495,7 +556,8 @@ export async function seedLiveDemo(accounts: Account[], apply: boolean): Promise
   return out;
 }
 
-if (process.argv[1]?.endsWith("liveDemo.ts")) {
+// Run as the source (tsx) or as the bundle the API build makes (dist/seed/liveDemo.mjs).
+if (/liveDemo\.(ts|mjs)$/.test(process.argv[1] ?? "")) {
   const apply = process.argv.includes("--apply");
   (async () => {
     try {
