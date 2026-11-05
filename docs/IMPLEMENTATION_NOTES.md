@@ -24,6 +24,12 @@ Then in Lemon Squeezy and the environment:
 9. Select the variants at `/admin/membership`. Lemon Squeezy has no env fallback, so sign-up answers 503 until this is done.
 10. Point the Lemon Squeezy webhook at `/api/webhooks/payments`, with the events in `replit.md`.
 
+## Demo accounts on the live site
+
+`POST /api/admin/demo-accounts` (super admin only, button on `/admin/users`) creates four logins through the deployment's own Clerk instance: free user, Track B client, Track A client (with an in-force advised plan) and their advisor, each with sample data in the current tables. Clients are comped through `setCompedMembership` with reason "Demo account". Re-running gives each login a fresh password and keeps the data. Passwords appear once in the response and are never stored or logged.
+
+It is off unless `DEMO_ACCOUNTS_ENABLED=true` and `DEMO_ACCOUNTS_EMAIL` is a real mailbox; logins are its plus-addresses (`name+tala-demo-free@domain`), so if the Clerk instance has passwords off, email codes reach that inbox. Set both on the deployment for a demo and unset them afterwards. Payments can stay off (`PAYMENT_PROVIDER` unset) during a demo; "Become a member" then says it isn't available.
+
 ## Decisions for the product owner
 
 1. **Any live Stripe subscribers need a plan before this deploys.** The backfill carries them over as Stripe memberships, but with `PAYMENT_PROVIDER=lemonsqueezy` their Stripe webhooks are refused and they can't reach a billing portal, so their membership would stay active with nothing updating it. `paidBackfilled` in the dry run shows how many there are.
