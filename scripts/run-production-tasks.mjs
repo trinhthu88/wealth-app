@@ -7,6 +7,7 @@
 //
 //   PRODUCTION_TASKS=relink-profiles,membership-constraints,free-tier-migration,backfill-memberships
 //   RELINK_ACCOUNTS="person@x.com, old-demo@demo.example=new+alias@gmail.com"   (for relink-profiles)
+//   DEMO_ACCOUNTS="advisor=a@x.com, free=b@x.com, track_a=c@x.com, track_b=d@x.com"   (for seed-demo)
 //   PRODUCTION_TASKS_APPLY=true            (leave unset for a dry run)
 //   ACCOUNT_COPY_FILE=account-copy/bundle.json   (for copy-accounts; relative to the project root)
 //
@@ -30,6 +31,8 @@ const copyFile = process.env.ACCOUNT_COPY_FILE ? resolve(root, process.env.ACCOU
 
 const JOBS = {
   "relink-profiles": { file: "src/relink-live-profiles.ts", args: [] },
+  // Runs the API's own routes in-process, so it lives with the API server's code.
+  "seed-demo": { file: "../artifacts/api-server/src/seed/liveDemo.ts", args: [] },
   "membership-constraints": { file: "src/apply-membership-constraints.ts", args: [] },
   "free-tier-migration": { file: "src/migrate-free-tier-to-client.ts", args: [] },
   "backfill-memberships": { file: "src/backfill-memberships.ts", args: apply ? ["--comp-existing-clients"] : [] },
@@ -41,6 +44,10 @@ function runJob(name) {
   if (!job) { log(`${name}: unknown job, skipped. Known: ${Object.keys(JOBS).join(", ")}`); return Promise.resolve(false); }
   if (name === "relink-profiles" && !process.env.RELINK_ACCOUNTS) {
     log(`${name}: RELINK_ACCOUNTS is not set, skipped.`);
+    return Promise.resolve(false);
+  }
+  if (name === "seed-demo" && !process.env.DEMO_ACCOUNTS) {
+    log(`${name}: DEMO_ACCOUNTS is not set, skipped.`);
     return Promise.resolve(false);
   }
   if (name === "copy-accounts" && (!copyFile || !existsSync(copyFile))) {
@@ -68,6 +75,9 @@ function runJob(name) {
 async function main() {
   if (!process.env.DATABASE_URL) { log("DATABASE_URL is not set, nothing run."); return; }
   const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
+  // The database can drop this connection (a restart, a new deployment replacing this one). Without
+  // a listener that crashes this process; the jobs' own transactions roll back either way.
+  client.on("error", (err) => log(`lock connection dropped: ${err.message}`));
   await client.connect();
   try {
     const { rows } = await client.query("select pg_try_advisory_lock(hashtext('wealthapp:production-tasks')) as got");

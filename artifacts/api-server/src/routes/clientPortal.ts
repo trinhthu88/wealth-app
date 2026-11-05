@@ -25,7 +25,7 @@ import { getCurrentAdvisorIdForClient } from "../lib/currentAdvisor";
 import { parseDateOfBirth } from "../lib/profileFields";
 import { getEntitlementContext } from "../lib/entitlements";
 import { runCheckpointHook } from "../lib/checkpointEngine";
-import { earliestBudgetMonth } from "@workspace/tier-policy";
+import { checkAllowance, earliestBudgetMonth } from "@workspace/tier-policy";
 
 const router: IRouter = Router();
 
@@ -1034,10 +1034,23 @@ router.post("/client/budget", requireAuth, async (req, res): Promise<void> => {
     eq(clientHoldingTransactionsTable.sourceMonth, month),
     eq(clientHoldingTransactionsTable.source, "surplus_sweep"),
   ));
-  if (netSurplus > 0) {
-    const targetHoldingId = existingSweep?.holdingId ?? (await getOrCreateDefaultCashHolding(db, userId)).id;
+  // The surplus goes to a cash holding, created if there is none. Creating one counts against the
+  // holdings limit like any other, so at the cap with no cash holding the surplus stays in the
+  // budget instead of becoming one holding too many.
+  let sweepTargetId: string | null = existingSweep?.holdingId ?? null;
+  if (netSurplus > 0 && !sweepTargetId) {
+    const [cash] = await db.select({ id: clientHoldingsTable.id }).from(clientHoldingsTable).where(and(
+      eq(clientHoldingsTable.userId, userId), eq(clientHoldingsTable.holdingType, "cash"), eq(clientHoldingsTable.isActive, true),
+    )).limit(1);
+    if (cash) sweepTargetId = cash.id;
+    else {
+      const { tier, usage, leadStatus } = await getEntitlementContext(req);
+      if (checkAllowance(tier, "holdings", usage, leadStatus).allowed) sweepTargetId = (await getOrCreateDefaultCashHolding(db, userId)).id;
+    }
+  }
+  if (netSurplus > 0 && sweepTargetId) {
     await upsertMonthlyHoldingLedgerEntry(db, {
-      holdingId: targetHoldingId, userId, source: "surplus_sweep", sourceMonth: month,
+      holdingId: sweepTargetId, userId, source: "surplus_sweep", sourceMonth: month,
       amount: netSurplus, description: `Unattributed surplus — ${month}`,
     });
   } else if (existingSweep) {

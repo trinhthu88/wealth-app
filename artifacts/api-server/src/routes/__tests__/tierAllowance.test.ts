@@ -117,6 +117,31 @@ describe("holdings cap", () => {
     const u = await makeClient();
     for (let i = 0; i < 6; i++) await request(app).post("/api/client/holdings").set(asUser(u)).send(holding(i)).expect(201);
   });
+
+  const surplusMonth = { month: "2026-10-01", primaryIncome: 2000, housing: 500 };
+  const activeHoldings = async (u: string) =>
+    (await db.select().from(clientHoldingsTable).where(eq(clientHoldingsTable.userId, u))).filter((h) => h.isActive);
+
+  it("does not let a budget surplus create a holding past the cap", async () => {
+    const u = await makeUser();
+    for (let i = 0; i < 5; i++) await request(app).post("/api/client/holdings").set(asUser(u)).send(holding(i)).expect(201);
+    await request(app).post("/api/client/budget").set(asUser(u)).send(surplusMonth).expect(200);
+    expect(await activeHoldings(u)).toHaveLength(5);
+  });
+
+  it("still puts a surplus into a new cash holding below the cap, or into an existing one at it", async () => {
+    const below = await makeUser();
+    await request(app).post("/api/client/budget").set(asUser(below)).send(surplusMonth).expect(200);
+    expect((await activeHoldings(below)).map((h) => h.holdingType)).toEqual(["cash"]);
+
+    const atCap = await makeUser();
+    await request(app).post("/api/client/holdings").set(asUser(atCap)).send({ holdingType: "cash", label: "Savings", currentBalance: 100 }).expect(201);
+    for (let i = 0; i < 4; i++) await request(app).post("/api/client/holdings").set(asUser(atCap)).send(holding(i)).expect(201);
+    await request(app).post("/api/client/budget").set(asUser(atCap)).send(surplusMonth).expect(200);
+    const holdings = await activeHoldings(atCap);
+    expect(holdings).toHaveLength(5);
+    expect(Number(holdings.find((h) => h.holdingType === "cash")!.currentBalance)).toBeGreaterThan(100);
+  });
 });
 
 describe("scenario types", () => {

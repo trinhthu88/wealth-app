@@ -53,6 +53,20 @@ When someone's sign-in was replaced, signing in again creates a new, empty profi
 2. Deployment secrets: `PRODUCTION_TASKS=relink-profiles,membership-constraints,free-tier-migration,backfill-memberships` and `RELINK_ACCOUNTS="a@x.com, b@x.com, old@demo.example=new+alias@gmail.com"` (`old=new` when the old profile carries a different email). Redeploy and read the dry run in the log: each old profile's contents, then each person's role, goals and holdings against the free limits, and Track A or B.
 3. Add `PRODUCTION_TASKS_APPLY=true`, redeploy, then remove all three secrets and redeploy again.
 
+### Demo accounts on the live site
+
+`seed-demo` (`artifacts/api-server/src/seed/liveDemo.ts`) builds the demo accounts through the API's own routes, run in-process and signed in as each person in turn. Every row passes the same validation, tier limits and side effects as the screens:
+- the free account stays within the free limits (1 goal, under 5 holdings, the 4 budget months it can read)
+- membership comes from the super admin's comp
+- Track A comes from the client's interest lead being assigned to the advisor, then the advisor's plan going in force with a policy number
+- computed values (goal funding, budget totals, net worth) are left to the app
+
+It skips anyone who already has goals, holdings, budget months or plans, and stops before changing anything if an account is missing or can't become its demo role.
+
+1. Each person signs in on the live site once.
+2. Deployment secrets: add `seed-demo` to `PRODUCTION_TASKS`, and `DEMO_ACCOUNTS="advisor=a@x.com, free=b@x.com, track_a=c@x.com, track_a=d@x.com, track_b=e@x.com"`. The super admin is `SUPER_ADMIN_EMAIL`. Redeploy and read the dry run.
+3. Add `PRODUCTION_TASKS_APPLY=true`, redeploy, then remove the secrets and redeploy again.
+
 ## Decisions for the product owner
 
 1. **Any live Stripe subscribers need a plan before this deploys.** The backfill carries them over as Stripe memberships, but with `PAYMENT_PROVIDER=lemonsqueezy` their Stripe webhooks are refused and they can't reach a billing portal, so their membership would stay active with nothing updating it. `paidBackfilled` in the dry run shows how many there are.
@@ -138,7 +152,6 @@ Found by the browser test and fixed:
 | Removing `subscriptions` | Nothing writes it now. Delete it after production has run `backfill-memberships`, along with the `/billing/webhook` alias. |
 | C2 draft goal | The design keeps the refused goal as a draft. Not built. |
 | Net worth trend for free users | The nightly snapshot job covers investment clients only, so a free user's trend stays empty. |
-| Holding cap via surplus sweep | `POST /client/budget` can create a default cash holding, which can take a free user to six. |
 | Caps under concurrency | The guard counts and then writes, so simultaneous requests can pass a cap by one. |
 | `POST /goals/upsert-from-pathway` | No caller remains, but it still deletes extra goals (F-10). The brief named only `routes/pathway.ts`, and a test covers this route. Worth deleting. |
 | Legacy routes | `/budget` and `POST /health-score` have no UI callers left. |
