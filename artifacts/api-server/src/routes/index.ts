@@ -24,6 +24,7 @@ import solRouter from "./sol";
 import billingRouter from "./membership";
 import entitlementsRouter from "./entitlements";
 import checkpointsRouter from "./checkpoints";
+import productionTasksRouter from "./productionTasks";
 
 const router: IRouter = Router();
 
@@ -52,5 +53,6 @@ router.use(solRouter);
 router.use(billingRouter);
 router.use(entitlementsRouter);
 router.use(checkpointsRouter);
+router.use(productionTasksRouter);
 
 export default router;

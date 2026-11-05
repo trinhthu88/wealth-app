@@ -1,8 +1,9 @@
 // Runs one-off maintenance jobs from inside the deployed app, the only place that can reach the live
-// database. Started in the background next to the API server, so the site comes up as usual.
+// database. Started by a request to POST /api/internal/production-tasks, which streams this output
+// back (artifacts/api-server/src/routes/productionTasks.ts).
 //
 // Does nothing unless PRODUCTION_TASKS is set. Each listed job runs in order, as a dry run unless
-// PRODUCTION_TASKS_APPLY=true. Output goes to the deployment log, prefixed [production-tasks].
+// PRODUCTION_TASKS_APPLY=true. Output is prefixed [production-tasks].
 // A database advisory lock makes sure only one instance runs the jobs when several start at once.
 //
 //   PRODUCTION_TASKS=relink-profiles,membership-constraints,free-tier-migration,backfill-memberships
@@ -11,8 +12,8 @@
 //   PRODUCTION_TASKS_APPLY=true            (leave unset for a dry run)
 //   ACCOUNT_COPY_FILE=account-copy/bundle.json   (for copy-accounts; relative to the project root)
 //
-// Remove PRODUCTION_TASKS and redeploy once the jobs have applied, so they don't run again on the
-// next cold start. Every job is safe to repeat, but there is no reason to.
+// Remove PRODUCTION_TASKS once the jobs have applied, so a later request runs nothing. Every job is
+// safe to repeat.
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -84,7 +85,7 @@ async function main() {
   await client.connect();
   try {
     const { rows } = await client.query("select pg_try_advisory_lock(hashtext('wealthapp:production-tasks')) as got");
-    if (!rows[0].got) { log("another instance is running the jobs, this one skips them."); return; }
+    if (!rows[0].got) { log("another run holds the lock and is still going; this one skips the jobs. Try again in a few minutes."); return; }
     log(`running ${requested.join(", ")} as ${apply ? "APPLY" : "a dry run"}`);
     for (const name of requested) {
       const ok = await runJob(name);
