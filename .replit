@@ -38,7 +38,7 @@ externalPort = 3000
 [userenv]
 
 [userenv.shared]
-SUPER_ADMIN_EMAIL = "trinh.thu.mktg@gmail.com"
+SUPER_ADMIN_EMAIL = "trinhthu.mktg@gmail.com"
 
 [nix]
 channel = "stable-25_05"
