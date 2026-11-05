@@ -31,8 +31,11 @@ const copyFile = process.env.ACCOUNT_COPY_FILE ? resolve(root, process.env.ACCOU
 
 const JOBS = {
   "relink-profiles": { file: "src/relink-live-profiles.ts", args: [] },
-  // Runs the API's own routes in-process, so it lives with the API server's code.
-  "seed-demo": { file: "../artifacts/api-server/src/seed/liveDemo.ts", args: [] },
+  // Runs the API's own routes in-process, so it lives with the API server's code. The API build makes a
+  // ready-to-run copy; the source is the fallback.
+  "seed-demo": existsSync(resolve(root, "artifacts/api-server/dist/seed/liveDemo.mjs"))
+    ? { file: "../artifacts/api-server/dist/seed/liveDemo.mjs", args: [], built: true }
+    : { file: "../artifacts/api-server/src/seed/liveDemo.ts", args: [] },
   "membership-constraints": { file: "src/apply-membership-constraints.ts", args: [] },
   "free-tier-migration": { file: "src/migrate-free-tier-to-client.ts", args: [] },
   "backfill-memberships": { file: "src/backfill-memberships.ts", args: apply ? ["--comp-existing-clients"] : [] },
@@ -54,7 +57,7 @@ function runJob(name) {
     log(`${name}: ACCOUNT_COPY_FILE is missing or not found, skipped.`);
     return Promise.resolve(false);
   }
-  const args = ["--import", "tsx", job.file, ...job.args, ...(apply ? ["--apply"] : [])];
+  const args = [...(job.built ? ["--enable-source-maps"] : ["--import", "tsx"]), job.file, ...job.args, ...(apply ? ["--apply"] : [])];
   log(`${name}: starting (${apply ? "apply" : "dry run"})`);
   return new Promise((done) => {
     const child = spawn(process.execPath, args, {

@@ -234,9 +234,11 @@ router.post("/client/goals/:id/links", requireAuth, async (req, res): Promise<vo
     }).returning();
     res.status(201).json(link);
   } catch (err: any) {
-    if (err?.code === "23505") {
+    // Drizzle wraps the database error; its code is on the cause.
+    const code = err?.code ?? err?.cause?.code;
+    if (code === "23505") {
       res.status(409).json({ error: "This investment is already linked to this goal." });
-    } else if (err?.message?.includes("does not exist")) {
+    } else if (code === "42P01" || String(err?.cause?.message ?? err?.message ?? "").includes("does not exist")) {
       res.status(503).json({ error: "Goal linking requires a database migration. Please run the SQL migration first." });
     } else {
       res.status(500).json({ error: "Failed to link holding" });

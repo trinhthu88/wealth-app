@@ -14,12 +14,14 @@ async function buildAll() {
   const distDir = path.resolve(artifactDir, "dist");
   await rm(distDir, { recursive: true, force: true });
 
-  await esbuild({
-    entryPoints: [path.resolve(artifactDir, "src/index.ts")],
+  // The server, and the demo-data job run from scripts/run-production-tasks.mjs, built ahead so the
+  // job doesn't compile the API at run time on the live server.
+  for (const [entry, outdir] of [["src/index.ts", distDir], ["src/seed/liveDemo.ts", path.resolve(distDir, "seed")]]) await esbuild({
+    entryPoints: [path.resolve(artifactDir, entry)],
     platform: "node",
     bundle: true,
     format: "esm",
-    outdir: distDir,
+    outdir,
     outExtension: { ".js": ".mjs" },
     logLevel: "info",
     // Some packages may not be bundleable, so we externalize them, we can add more here as needed.
