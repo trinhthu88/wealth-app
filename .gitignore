@@ -51,3 +51,6 @@ Thumbs.db
 
 # Claude
 .claude-user/
+
+# Account copies between databases contain personal data
+account-copy/

@@ -9,7 +9,6 @@ import { requireAuth, requireRole } from "../middlewares/requireAuth";
 import { createUserWithProfile } from "../lib/createUserWithProfile";
 import { computeNetWorth } from "../lib/netWorthService";
 import { setCompedMembership } from "../lib/membershipStore";
-import { DEMO_ACCOUNTS, createDemoAccounts, demoAccountsEnabled, demoEmail } from "../lib/demoAccounts";
 import { z } from "zod/v4";
 
 const router: IRouter = Router();
@@ -317,32 +316,6 @@ router.delete("/admin/advised-strategy-returns/:id", ...adminGuard, async (req, 
   const id = req.params.id as string;
   await db.delete(advisedStrategyReturnsTable).where(eq(advisedStrategyReturnsTable.id, id));
   res.sendStatus(204);
-});
-
-// Demo logins for showing the app on the live site. Off unless DEMO_ACCOUNTS_ENABLED=true and
-// DEMO_ACCOUNTS_EMAIL is set; the page shows the button only when this says enabled.
-router.get("/admin/demo-accounts", ...adminGuard, async (_req, res): Promise<void> => {
-  if (!demoAccountsEnabled()) { res.json({ enabled: false, accounts: [] }); return; }
-  const emails = DEMO_ACCOUNTS.map((a) => demoEmail(a.tag));
-  const existing = await db.select({ email: profilesTable.email }).from(profilesTable).where(inArray(profilesTable.email, emails));
-  const have = new Set(existing.map((p) => p.email));
-  res.json({
-    enabled: true,
-    accounts: DEMO_ACCOUNTS.map((a) => ({ key: a.key, label: a.label, role: a.role, email: demoEmail(a.tag), exists: have.has(demoEmail(a.tag)) })),
-  });
-});
-
-router.post("/admin/demo-accounts", ...adminGuard, async (req, res): Promise<void> => {
-  if (!demoAccountsEnabled()) { res.status(404).json({ error: "Demo accounts are turned off on this deployment." }); return; }
-  try {
-    const accounts = await createDemoAccounts();
-    // The passwords are in this response only; it must not be cached anywhere.
-    res.set("Cache-Control", "no-store");
-    res.json({ accounts });
-  } catch (err) {
-    req.log.error({ err: err instanceof Error ? err.message : "unknown" }, "Demo account creation failed");
-    res.status(502).json({ error: "Could not create the demo accounts. Check the server log and try again." });
-  }
 });
 
 export default router;
