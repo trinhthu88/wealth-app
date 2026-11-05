@@ -2,8 +2,8 @@ import { useState } from "react";
 import { X } from "lucide-react";
 import { Link } from "wouter";
 import { useClientTrack } from "@/hooks/useClientTrack";
-import { projectMonthlyGrowth } from "@/lib/investmentCalculations";
 import Sol from "@/components/Sol";
+import CheckpointCard from "@/components/client/CheckpointCard";
 
 function fmtCompact(v: number) {
   if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
@@ -18,17 +18,16 @@ interface Props {
 
 export default function SurplusCTA({ surplus, monthKey }: Props) {
   const { isTrackA, loading } = useClientTrack();
+  if (loading || surplus <= 0) return null;
+  // Track A is past this checkpoint: for them this is a modelling shortcut, not an offer.
+  return isTrackA ? <ModelSurplus surplus={surplus} monthKey={monthKey} /> : <CheckpointCard codes={["C4_surplus"]} />;
+}
+
+function ModelSurplus({ surplus, monthKey }: Props) {
   const [dismissed, setDismissed] = useState(() =>
     localStorage.getItem(`surplus_cta_dismissed_${monthKey}`) === "1"
   );
-
-  if (loading || surplus <= 0 || dismissed) return null;
-
-  // 10-year projection at 7%
-  const projected = projectMonthlyGrowth(0, surplus, 7.0, 120);
-  const tenYearValue = projected[projected.length - 1].value;
-
-  const linkInline = "font-semibold text-forest underline decoration-forest/30 underline-offset-2 hover:decoration-forest";
+  if (dismissed) return null;
 
   return (
     <section
@@ -39,7 +38,6 @@ export default function SurplusCTA({ surplus, monthKey }: Props) {
         <Sol size="sm" animate="idle" showRays={false} />
       </div>
       <div className="flex-1 min-w-0">
-        {isTrackA ? (
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
             <p className="flex-1 min-w-[180px] text-[14px] text-forest leading-[1.45] text-pretty">
               You have <span className="font-semibold">{fmtCompact(surplus)}</span> surplus this month. Want me to run a scenario to see what investing it could do?
@@ -51,21 +49,6 @@ export default function SurplusCTA({ surplus, monthKey }: Props) {
               Model my surplus
             </Link>
           </div>
-        ) : (
-          <p className="text-[14px] text-forest leading-[1.45] text-pretty">
-            Investing your {fmtCompact(surplus)} surplus could grow to <span className="font-semibold">{fmtCompact(tenYearValue)}</span> over 10 years.{" "}
-            <Link
-              href={`/client/goals/what-if?type=increase_monthly&surplus=${Math.round(surplus)}`}
-              className={linkInline}
-            >
-              Run the numbers
-            </Link>
-            {" "}or{" "}
-            <Link href="/client/advisor/messages" className={linkInline}>
-              talk to an advisor
-            </Link>.
-          </p>
-        )}
       </div>
       <button
         onClick={() => {

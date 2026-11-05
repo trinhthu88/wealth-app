@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq, and, inArray } from "drizzle-orm";
 import { db, financialGoalsTable } from "@workspace/db";
-import { requireAuth } from "../middlewares/requireAuth";
+import { requireAuth, requireAllowance } from "../middlewares/requireAuth";
 import { resolveBlendedRate } from "../lib/blendedRate";
 import { computeNetWorth } from "../lib/netWorthService";
 import { solveCoastPoint } from "@workspace/goal-math";
@@ -37,7 +37,7 @@ function pickRetirementGoal<T extends { targetAmount: string | null; targetDate:
 // just weighted above. extraMonthly, if provided, re-solves with monthlyContribution
 // bumped by that amount so Sol can show a real "what if I added $X/month"
 // comparison — never an invented before/after pair.
-router.get("/client/plan/coast-point", requireAuth, async (req, res): Promise<void> => {
+router.get("/client/plan/coast-point", requireAuth, requireAllowance("coastPoint"), async (req, res): Promise<void> => {
   const userId = (req as any).userId;
   const extraMonthly = Math.max(0, parseFloat(String(req.query.extraMonthly ?? "0")) || 0);
 
@@ -47,6 +47,24 @@ router.get("/client/plan/coast-point", requireAuth, async (req, res): Promise<vo
 
   if (!goal || !goal.targetAmount || !goal.targetDate) {
     res.json({ available: false, reason: "no_retirement_goal" });
+    return;
+  }
+
+  // Preview: the same shape, blurred, with the goal name and none of the numbers.
+  if ((req as any).allowanceGate === "preview") {
+    res.json({
+      available: true,
+      blurred: true,
+      goalId: goal.id,
+      goalTitle: goal.title,
+      goalTargetDate: null,
+      monthlyContribution: null,
+      blendedAnnualReturnPct: null,
+      portfolioValue: null,
+      base: null,
+      accelerated: null,
+      extraMonthly: 0,
+    });
     return;
   }
 

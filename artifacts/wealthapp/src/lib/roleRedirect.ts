@@ -9,11 +9,14 @@ import type { OnboardingStage } from "@/hooks/useClientTrack";
 export function resolveRoleRedirectPath(
   role: Profile["role"] | undefined,
   onboardingStage: OnboardingStage,
+  pendingPayment = false,
 ): string {
   if (role === "super_admin") return "/admin/dashboard";
   if (role === "advisor") return "/advisor/dashboard";
-  if (role === "investment_client") {
-    return onboardingStage === "complete" ? "/client/dashboard" : "/client/onboarding";
-  }
-  return "/free/dashboard";
+  // A promoted client's next sign-in lands on the activation screen. "Not now" goes straight to
+  // /client/dashboard, so this doesn't trap them.
+  if (pendingPayment) return "/client/activate";
+  // DECISION: the brief says onboardingTrackComplete, but that column is deprecated;
+  // client_profiles.onboarding_stage owns onboarding state, so both tiers read it.
+  return onboardingStage === "complete" ? "/client/dashboard" : "/client/onboarding";
 }

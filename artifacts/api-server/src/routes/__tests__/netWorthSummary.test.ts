@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import request from "supertest";
+import { grantMembership } from "./helpers/membership";
 
 vi.mock("@clerk/express", () => ({
   clerkMiddleware: () => (_req: any, _res: any, next: any) => next(),
@@ -40,6 +41,7 @@ beforeAll(async () => {
     { id: advisorId, email: `${advisorId}@test.local`, role: "advisor" },
     { id: adminId, email: `${adminId}@test.local`, role: "super_admin" },
   ]);
+  await grantMembership(clientId);
   await db.insert(clientProfilesTable).values({ userId: clientId, advisorId });
   await db.insert(clientHoldingsTable).values({
     userId: clientId,

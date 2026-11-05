@@ -7,7 +7,7 @@ import {
   clientHoldingsTable, advisedPlansTable, healthScoresTable,
   priceCacheTable,
 } from "@workspace/db";
-import { requireAuth } from "../middlewares/requireAuth";
+import { requireAuth, requireAllowance } from "../middlewares/requireAuth";
 import { computeGoalFundingSummary, resolveHoldingValueUsd } from "../lib/goalProgressSnapshot";
 import { computeNetWorth, TICKER_BASED_TYPES } from "../lib/netWorthService";
 import { convertToUsd, getCurrencyRatesFor } from "@workspace/net-worth";
@@ -253,7 +253,7 @@ async function resolveAdvisorName(userId: string): Promise<string | null> {
 
 // ── POST /sol/chat ───────────────────────────────────────────────────────────
 
-router.post("/sol/chat", requireAuth, async (req, res): Promise<void> => {
+router.post("/sol/chat", requireAuth, requireAllowance("sol"), async (req, res): Promise<void> => {
   const userId = (req as any).userId;
   const { conversationId, message } = req.body as { conversationId?: string; message?: string };
   if (!message || typeof message !== "string" || !message.trim()) {

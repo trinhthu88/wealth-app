@@ -23,9 +23,8 @@ export function computeGoalProgress(goal: {
   targetAmount: number | null;
   targetDate: string | null;
   createdAt: string;
-}): GoalProgressResult {
+}, now: Date = new Date()): GoalProgressResult {
   const { currentAmount, targetAmount, targetDate, createdAt } = goal;
-  const now = new Date();
 
   if (!targetAmount || targetAmount <= 0) {
     return {

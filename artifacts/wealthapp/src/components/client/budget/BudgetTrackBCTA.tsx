@@ -1,14 +1,6 @@
-import TrackBConversionCTA from "@/components/client/TrackBConversionCTA";
+import CheckpointCard from "@/components/client/CheckpointCard";
 
-interface Props {
-  surplus: number;
-}
-
-export default function BudgetTrackBCTA({ surplus }: Props) {
-  return (
-    <TrackBConversionCTA
-      context="budget"
-      relevantValue={surplus > 0 ? surplus : undefined}
-    />
-  );
+/** C4 on a month with no surplus to show, where SurplusCTA has nothing to say. */
+export default function BudgetTrackBCTA() {
+  return <CheckpointCard codes={["C4_surplus"]} />;
 }

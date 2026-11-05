@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db, blogPostsTable } from "@workspace/db";
 import { requireAuth, requireRole } from "../middlewares/requireAuth";
 
@@ -12,7 +12,8 @@ router.get("/blog", async (_req, res): Promise<void> => {
 
 router.get("/blog/:slug", async (req, res): Promise<void> => {
   const rawSlug = Array.isArray(req.params.slug) ? req.params.slug[0] : req.params.slug;
-  const [post] = await db.select().from(blogPostsTable).where(eq(blogPostsTable.slug, rawSlug));
+  const [post] = await db.select().from(blogPostsTable)
+    .where(and(eq(blogPostsTable.slug, rawSlug), eq(blogPostsTable.status, "published")));
   if (!post) { res.status(404).json({ error: "Not found" }); return; }
   res.json(post);
 });

@@ -14,8 +14,8 @@ const checkConstraints = [
   {
     table: "client_profiles",
     name: "client_profiles_status_check",
-    values: ["active", "paused", "churned"],
-    ddl: "ALTER TABLE client_profiles ADD CONSTRAINT client_profiles_status_check CHECK (status IN ('active', 'paused', 'churned'))",
+    values: ["pending_payment", "active", "paused", "churned"],
+    ddl: "ALTER TABLE client_profiles ADD CONSTRAINT client_profiles_status_check CHECK (status IN ('pending_payment', 'active', 'paused', 'churned'))",
   },
   {
     table: "financial_goals",

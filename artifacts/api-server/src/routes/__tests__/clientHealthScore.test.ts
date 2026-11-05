@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import request from "supertest";
+import { grantMembership } from "./helpers/membership";
 
 vi.mock("@clerk/express", () => ({
   clerkMiddleware: () => (_req: any, _res: any, next: any) => next(),
@@ -32,6 +33,7 @@ beforeAll(async () => {
     { id: emptyClientId, email: `health-empty-${RUN_ID}@test.local`, role: "investment_client", createdAt: ESTABLISHED_CREATED_AT },
     { id: scoredClientId, email: `health-scored-${RUN_ID}@test.local`, role: "investment_client", createdAt: ESTABLISHED_CREATED_AT },
   ]);
+  await grantMembership(newClientId, emptyClientId, scoredClientId);
 
   // One budget month: 20% savings rate (income 5000, expenses 3000, investments
   // 1000 -> net 1000/5000), net_surplus > 0 -> counts toward savings consistency.

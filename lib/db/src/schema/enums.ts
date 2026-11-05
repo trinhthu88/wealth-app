@@ -12,7 +12,7 @@ export const advisedPlanStatusSchema = z.enum(advisedPlanStatusValues);
 export const leadStatusValues = ["unassigned", "active", "cold", "churned", "client"] as const;
 export const leadStatusSchema = z.enum(leadStatusValues);
 
-export const clientStatusValues = ["active", "paused", "churned"] as const;
+export const clientStatusValues = ["pending_payment", "active", "paused", "churned"] as const;
 export const clientStatusSchema = z.enum(clientStatusValues);
 
 export const onboardingStageValues = ["not_started", "profile", "complete"] as const;

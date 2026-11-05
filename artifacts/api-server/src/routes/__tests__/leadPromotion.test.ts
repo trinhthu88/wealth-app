@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import request from "supertest";
+import { grantMembership } from "./helpers/membership";
 
 vi.mock("@clerk/express", () => ({
   clerkMiddleware: () => (_req: any, _res: any, next: any) => next(),
@@ -27,7 +28,10 @@ async function cleanupUser(userId: string) {
   await db.delete(profilesTable).where(eq(profilesTable.id, userId));
 }
 
+const superAdminId = `super-admin-test-${RUN_ID}`;
+
 beforeAll(async () => {
+  await db.insert(profilesTable).values({ id: superAdminId, email: `${superAdminId}@test.local`, role: "super_admin" });
   await db.insert(profilesTable).values({
     id: advisorId, email: `advisor-${RUN_ID}@test.local`, fullName: "Advisor", role: "advisor",
   });
@@ -35,6 +39,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await db.delete(profilesTable).where(eq(profilesTable.id, advisorId));
+  await db.delete(profilesTable).where(eq(profilesTable.id, superAdminId));
 });
 
 describe("lead promotion (PUT /leads/:id → status: client)", () => {
@@ -59,7 +64,7 @@ describe("lead promotion (PUT /leads/:id → status: client)", () => {
       email: `${userId}@test.local`, userId, status: "unassigned",
     }).returning();
 
-    const res = await request(app).put(`/api/leads/${lead.id}`).set(asUser(advisorId)).send({ status: "client" }).expect(409);
+    const res = await request(app).put(`/api/leads/${lead.id}`).set(asUser(superAdminId)).send({ status: "client" }).expect(409);
     expect(res.body.error).toMatch(/assign this lead/i);
 
     await cleanupUser(userId);
@@ -80,7 +85,7 @@ describe("lead promotion (PUT /leads/:id → status: client)", () => {
     expect(profile.role).toBe("investment_client");
 
     const [cp] = await db.select().from(clientProfilesTable).where(eq(clientProfilesTable.userId, userId));
-    expect(cp.status).toBe("active");
+    expect(cp.status).toBe("pending_payment");
     expect(cp.advisorId).toBe(advisorId);
 
     const track = await request(app).get("/api/client/profile/track").set(asUser(userId)).expect(200);
@@ -140,7 +145,7 @@ describe("lead promotion (PUT /leads/:id → status: client)", () => {
 
     const rows = await db.select().from(clientProfilesTable).where(eq(clientProfilesTable.userId, userId));
     expect(rows).toHaveLength(1); // updated, not duplicated
-    expect(rows[0].status).toBe("active");
+    expect(rows[0].status).toBe("pending_payment");
     expect(rows[0].advisorId).toBe(advisorId);
 
     await cleanupUser(userId);

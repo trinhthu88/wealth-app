@@ -1,9 +1,12 @@
 import { Router, type IRouter } from "express";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, gte } from "drizzle-orm";
 import { db, assetsTable, liabilitiesTable, netWorthSnapshotsTable } from "@workspace/db";
 import { ClientGetNetWorthSummaryResponse } from "@workspace/api-zod";
 import { requireAuth, requireRole, requireAdvisorOwnsClient, requireAdvisorOwnsLead } from "../middlewares/requireAuth";
 import { computeNetWorth } from "../lib/netWorthService";
+
+import { getEntitlementContext } from "../lib/entitlements";
+import { earliestTrendDate } from "@workspace/tier-policy";
 
 const router: IRouter = Router();
 
@@ -136,8 +139,9 @@ router.delete("/liabilities/:id", requireAuth, async (req, res): Promise<void> =
 // ── Net worth snapshots ──────────────────────────────────────────────────────
 router.get("/client/networth/snapshots", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
+  const { tier } = await getEntitlementContext(req);
   const rows = await db.select().from(netWorthSnapshotsTable)
-    .where(eq(netWorthSnapshotsTable.userId, userId))
+    .where(and(eq(netWorthSnapshotsTable.userId, userId), gte(netWorthSnapshotsTable.snapshotDate, earliestTrendDate(tier))))
     .orderBy(desc(netWorthSnapshotsTable.snapshotDate))
     .limit(24); // 2 years of monthly snapshots
   res.json(rows.reverse()); // return ASC for charting

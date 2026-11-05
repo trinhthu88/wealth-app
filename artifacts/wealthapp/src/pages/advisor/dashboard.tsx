@@ -70,7 +70,7 @@ export default function AdvisorDashboard() {
                 <Link key={c.id} href={`/advisor/clients/${c.id}`} className="flex items-center justify-between py-2.5 hover:bg-paper rounded-[16px] px-3 -mx-3 transition-colors">
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-full bg-green-tint flex items-center justify-center text-[15px] font-semibold text-green shrink-0">
-                      {(c.fullName ?? c.email)[0].toUpperCase()}
+                      {(c.fullName || c.email)[0].toUpperCase()}
                     </div>
                     <div>
                       <div className="font-medium text-forest text-[15px]">{c.fullName ?? c.email}</div>

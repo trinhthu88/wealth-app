@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
 import AppShell from "@/components/AppShell";
 import { apiFetch } from "@/lib/api";
+import LeadActivityPanels from "@/components/advisor/LeadActivityPanels";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -218,6 +219,8 @@ export default function AdvisorLeadDetail() {
                   )}
                 </div>
               </div>
+
+              {leadUserId && <LeadActivityPanels leadUserId={leadUserId} />}
 
               <div>
                 <h3 className="font-display text-[18px] font-semibold text-forest mb-4">Goals</h3>

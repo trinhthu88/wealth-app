@@ -12,7 +12,7 @@ import { Plus, Star, Calendar, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-interface Lead { id: string; email: string; firstName: string | null; source: string | null; status: string; quizResult: unknown; healthScore: number | null; notes: string | null; createdAt: string; convertedUserId: string | null; }
+interface Lead { id: string; email: string; firstName: string | null; source: string | null; status: string; quizResult: unknown; healthScore: number | null; notes: string | null; createdAt: string; convertedUserId: string | null; pendingPayment?: boolean; }
 
 // unassigned (default) → active (assigned to an advisor) → cold | churned |
 // client. Pre-redesign values (new/contacted/qualified/lost/converted) are
@@ -38,7 +38,7 @@ export default function AdvisorLeads() {
   const { data: leads = [], isLoading } = useQuery<Lead[]>({ queryKey: ["leads"], queryFn: () => apiFetch<Lead[]>("/leads") });
 
   const add = useMutation({
-    mutationFn: (d: typeof form) => apiFetch("/leads", { method: "POST", body: JSON.stringify(d) }),
+    mutationFn: (d: typeof form) => apiFetch("/advisor/leads", { method: "POST", body: JSON.stringify(d) }),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["leads"] }); setOpen(false); toast.success("Lead added"); },
   });
 
@@ -142,7 +142,7 @@ export default function AdvisorLeads() {
               <div key={l.id} className="bg-surface rounded-[26px] px-6 py-5 flex items-center justify-between gap-4 shadow-[0_2px_14px_rgba(12,33,164,0.06)]">
                 <div className="flex items-center gap-4">
                   <div className="h-12 w-12 rounded-[16px] bg-sun-tint flex items-center justify-center text-[16px] font-semibold text-amber-ink shrink-0">
-                    {(l.firstName ?? l.email)[0].toUpperCase()}
+                    {(l.firstName || l.email)[0].toUpperCase()}
                   </div>
                   <div>
                     <div className="font-medium text-[16px] text-forest">{l.firstName ? `${l.firstName} — ` : ""}{l.email}</div>
@@ -155,6 +155,7 @@ export default function AdvisorLeads() {
                 </div>
                 <div className="flex items-center gap-4 shrink-0">
                   <span className={cn("text-[13px] px-3 py-1 rounded-full font-medium capitalize", STATUS_COLORS[l.status] ?? "bg-surface border border-hairline text-ink-60")}>{l.status}</span>
+                  {l.pendingPayment && <span className="ml-1.5 text-[13px] px-3 py-1 rounded-full font-medium inline-block bg-surface border border-hairline text-amber-ink">Pending payment</span>}
                   {l.convertedUserId ? (
                     <span className="text-[13px] text-ink-40 italic">Client account created</span>
                   ) : (

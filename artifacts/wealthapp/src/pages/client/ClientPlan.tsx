@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Map, CalendarDays, AlertTriangle } from "lucide-react";
 import ClientAppShell from "@/components/client/AppShell";
+import Gated from "@/components/client/Gated";
+import CoastPointPreview from "@/components/client/CoastPointPreview";
 import SolNarration from "@/components/client/SolNarration";
 import SolCard from "@/components/client/goals/SolCard";
 import RequestReviewSheet from "@/components/client/plan/RequestReviewSheet";
@@ -23,7 +25,7 @@ function monthsUntil(dateStr: string): number {
   return Math.max(12, (target.getFullYear() - now.getFullYear()) * 12 + (target.getMonth() - now.getMonth()));
 }
 
-export default function ClientPlan() {
+function ClientPlanContent() {
   const {
     plan, milestones,
     completedCount, inProgressCount, upcomingCount, totalCount, completionPct,
@@ -350,5 +352,13 @@ export default function ClientPlan() {
         />
       </div>
     </ClientAppShell>
+  );
+}
+
+export default function ClientPlan() {
+  return (
+    <Gated capability="plan" page lockedExtra={<CoastPointPreview />}>
+      <ClientPlanContent />
+    </Gated>
   );
 }

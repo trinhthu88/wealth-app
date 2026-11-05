@@ -1,16 +1,19 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Response } from "express";
 import { and, eq, inArray, desc } from "drizzle-orm";
 import {
   db, clientProfilesTable, profilesTable, advisedPlansTable,
-  clientBudgetMonthsTable, normalizeRiskProfile,
+  clientBudgetMonthsTable, normalizeRiskProfile, healthScoresTable,
+  membershipsTable,
 } from "@workspace/db";
-import { requireAuth, requireRole, requireAdvisorOwnsClient } from "../middlewares/requireAuth";
+import { requireAuth, requireRole, requireAdvisorOwnsClient, requireAdvisorOwnsLead } from "../middlewares/requireAuth";
 import { computeNetWorth } from "../lib/netWorthService";
+import { getEngagement } from "../lib/engagement";
 
 const router: IRouter = Router();
 
 const advisorGuard = [requireAuth, requireRole("advisor", "super_admin")];
 const advisorOwnsClientGuard = [...advisorGuard, requireAdvisorOwnsClient("id")];
+const advisorOwnsLeadGuard = [...advisorGuard, requireAdvisorOwnsLead("id")];
 
 // Explicit allowlist of client-profile fields an advisor may update through this endpoint.
 // advisorId, kycStatus, id, and any role/status field are intentionally excluded.
@@ -82,11 +85,11 @@ router.put("/advisor/clients/:id/client-profile", ...advisorOwnsClientGuard, asy
   res.json(cp);
 });
 
-router.get("/advisor/clients/:id/budget-summary", ...advisorOwnsClientGuard, async (req, res): Promise<void> => {
-  const clientId = req.params.id as string;
+// Budget sharing is the user's choice for leads and clients alike.
+async function sendBudgetSummary(userId: string, res: Response): Promise<void> {
   const [clientProfile] = await db.select({
     shareBudgetWithAdvisor: clientProfilesTable.shareBudgetWithAdvisor,
-  }).from(clientProfilesTable).where(eq(clientProfilesTable.userId, clientId));
+  }).from(clientProfilesTable).where(eq(clientProfilesTable.userId, userId));
   if (!clientProfile?.shareBudgetWithAdvisor) {
     res.status(403).json({ error: "The client has not shared their budget summary." });
     return;
@@ -99,11 +102,34 @@ router.get("/advisor/clients/:id/budget-summary", ...advisorOwnsClientGuard, asy
     surplus: clientBudgetMonthsTable.netSurplus,
     savingsRatePct: clientBudgetMonthsTable.savingsRatePct,
   }).from(clientBudgetMonthsTable)
-    .where(eq(clientBudgetMonthsTable.userId, clientId))
+    .where(eq(clientBudgetMonthsTable.userId, userId))
     .orderBy(desc(clientBudgetMonthsTable.month))
     .limit(12);
 
   res.json({ shared: true, months });
+}
+
+router.get("/advisor/clients/:id/budget-summary", ...advisorOwnsClientGuard, async (req, res): Promise<void> => {
+  await sendBudgetSummary(req.params.id as string, res);
+});
+
+// DECISION: a lead's budget honours shareBudgetWithAdvisor, like a client's. The brief asks
+// only for ownership scoping, but the sharing toggle is an explicit privacy choice, and
+// being assigned an advisor should not silently override it.
+router.get("/advisor/leads/:id/budget", ...advisorOwnsLeadGuard, async (req, res): Promise<void> => {
+  await sendBudgetSummary(req.params.id as string, res);
+});
+
+router.get("/advisor/leads/:id/score", ...advisorOwnsLeadGuard, async (req, res): Promise<void> => {
+  const history = await db.select().from(healthScoresTable)
+    .where(eq(healthScoresTable.userId, req.params.id as string))
+    .orderBy(desc(healthScoresTable.scoreDate), desc(healthScoresTable.createdAt))
+    .limit(12);
+  res.json({ latest: history[0] ?? null, history });
+});
+
+router.get("/advisor/leads/:id/engagement", ...advisorOwnsLeadGuard, async (req, res): Promise<void> => {
+  res.json(await getEngagement(req.params.id as string));
 });
 
 router.get("/advisor/clients", ...advisorGuard, async (req, res): Promise<void> => {
@@ -126,8 +152,10 @@ router.get("/advisor/clients", ...advisorGuard, async (req, res): Promise<void> 
     indicativeAmount: clientProfilesTable.indicativeAmount,
     onboardingStep: clientProfilesTable.onboardingStep,
     advisorId: clientProfilesTable.advisorId,
+    membershipSource: membershipsTable.source,
   }).from(profilesTable)
-    .innerJoin(clientProfilesTable, eq(clientProfilesTable.userId, profilesTable.id));
+    .innerJoin(clientProfilesTable, eq(clientProfilesTable.userId, profilesTable.id))
+    .leftJoin(membershipsTable, eq(membershipsTable.userId, profilesTable.id));
   // A client_profiles row alone does not make a client (free users may hold
   // preferences there); every client list filters on role.
   const isClient = eq(profilesTable.role, "investment_client");

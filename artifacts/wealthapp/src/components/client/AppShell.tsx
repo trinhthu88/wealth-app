@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { UserButton } from "@clerk/react";
 import { useProfile } from "@/hooks/useProfile";
+import { useEntitlements } from "@/hooks/useEntitlements";
 import { cn } from "@/lib/utils";
 import Sol from "../Sol";
 import {
@@ -54,6 +55,7 @@ function ClientNavigationLink({
 
 export default function ClientAppShell({ children }: { children: React.ReactNode }) {
   const { profile } = useProfile();
+  const { entitlements } = useEntitlements();
   const [location] = useLocation();
   const [collapsed, setCollapsed] = useState(false);
   const pathname = location.split(/[?#]/, 1)[0] || "/";
@@ -68,7 +70,7 @@ export default function ClientAppShell({ children }: { children: React.ReactNode
             <div className="min-w-0">
               <div className="font-display font-semibold text-forest text-xl tracking-tight leading-none">tala</div>
               <div className="text-[10px] font-sans font-bold tracking-[0.06em] uppercase mt-1 px-2 py-0.5 rounded-md inline-block bg-green-tint text-green">
-                Advised
+                {entitlements?.tier === "free" ? "Free plan" : "Advised"}
               </div>
             </div>
           )}

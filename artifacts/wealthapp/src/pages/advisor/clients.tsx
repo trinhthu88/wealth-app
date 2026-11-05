@@ -21,19 +21,21 @@ interface Client {
   createdAt: string;
   portfolioValue: number;
   plansCount: number;
+  membershipSource: string | null;
 }
 
-// Only active | paused | churned are ever set now — client_profiles.status
+// pending_payment means promoted but not yet paid. Otherwise only active | paused | churned are set now — client_profiles.status
 // represents an already-promoted client's account health (see lib/db/src/schema/clients.ts).
 // "prospect"/"pending" belonged to the pre-promotion pipeline, which now lives
 // entirely on the lead (see leads.ts / the advisor lead-detail page).
 const STATUS_COLORS: Record<string, string> = {
+  pending_payment: "bg-surface border border-hairline text-amber-ink",
   active: "bg-green-tint text-green",
   paused: "bg-surface border border-hairline text-ink-60",
   churned: "bg-clay-tint text-clay-ink",
 };
 
-const STATUS_FILTERS = ["all", "active", "paused", "churned"];
+const STATUS_FILTERS = ["all", "pending_payment", "active", "paused", "churned"];
 
 const fmtUSD = (v: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(v);
 
@@ -77,7 +79,7 @@ export default function AdvisorClients() {
             <button key={s} onClick={() => setStatusFilter(s)}
               className={cn("text-[13px] px-4 py-2 rounded-full font-medium transition-colors capitalize border",
                 statusFilter === s ? "bg-forest text-paper border-forest" : "bg-surface border-hairline text-ink-60 hover:bg-paper")}>
-              {s === "all" ? `All (${clients.length})` : `${s} (${clients.filter(c => c.status === s).length})`}
+              {s === "all" ? `All (${clients.length})` : `${s.replace(/_/g, " ")} (${clients.filter(c => c.status === s).length})`}
             </button>
           ))}
         </div>
@@ -110,7 +112,7 @@ export default function AdvisorClients() {
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-3">
                       <div className="h-10 w-10 rounded-full bg-green-tint flex items-center justify-center text-[15px] font-semibold text-green shrink-0">
-                        {(c.fullName ?? c.email)[0].toUpperCase()}
+                        {(c.fullName || c.email)[0].toUpperCase()}
                       </div>
                       <div>
                         <div className="font-medium text-[15px] text-forest">{c.fullName ?? "—"}</div>
@@ -122,6 +124,9 @@ export default function AdvisorClients() {
                     <span className={cn("text-[13px] px-3 py-1 rounded-full font-medium capitalize inline-block", STATUS_COLORS[c.status ?? "active"] ?? "bg-surface border border-hairline text-ink-60")}>
                       {(c.status ?? "—").replace(/_/g, " ")}
                     </span>
+                    {c.membershipSource === "comped" && (
+                      <span className="ml-1.5 text-[13px] px-3 py-1 rounded-full font-medium inline-block bg-breeze text-forest">Comped</span>
+                    )}
                   </td>
                   <td className="px-5 py-3 text-[14px] text-ink-60 capitalize hidden md:table-cell">{c.riskProfile ?? "—"}</td>
                   <td className="px-5 py-3 text-[15px] text-forest font-semibold text-right tabular-nums hidden md:table-cell">{c.portfolioValue > 0 ? fmtUSD(c.portfolioValue) : "—"}</td>

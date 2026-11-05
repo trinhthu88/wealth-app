@@ -6,6 +6,11 @@ import Sol from "@/components/Sol";
 import CurrencyField from "@/components/shared/CurrencyField";
 import WealthScoreCard from "@/components/client/dashboard/WealthScoreCard";
 import ClientSetupChecklistCard from "@/components/client/ClientSetupChecklistCard";
+import AdvisorCard from "@/components/client/dashboard/AdvisorCard";
+import MembershipCard from "@/components/client/dashboard/MembershipCard";
+import EngagementStrip from "@/components/client/dashboard/EngagementStrip";
+import ConversionCTASection from "@/components/client/dashboard/sections/ConversionCTASection";
+import SmartUpgradeCard from "@/components/SmartUpgradeCard";
 import ClientRiskCheckSheet from "@/components/client/ClientRiskCheckSheet";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useProfile } from "@/hooks/useProfile";
@@ -160,6 +165,7 @@ export default function ClientDashboard() {
     <ClientAppShell>
       <div className="space-y-4 pb-8">
         <ClientSetupChecklistCard onRiskCheck={() => setShowRiskCheck(true)} />
+        <SmartUpgradeCard />
 
         {/* Total wealth — the one key number on Home */}
         <section aria-label="Total wealth" className="px-1 pt-1">
@@ -385,7 +391,7 @@ export default function ClientDashboard() {
         </section>
 
         {/* Coming up */}
-        {(nextMilestone || (data.isTrackA && data.advisorName)) && (
+        {nextMilestone && (
           <section aria-label="Coming up" className="space-y-3 pt-1">
             <h2 className="font-sans text-[16px] font-semibold tracking-normal text-forest px-1">Coming up</h2>
             {nextMilestone && (
@@ -409,49 +415,18 @@ export default function ClientDashboard() {
                 </div>
               </Link>
             )}
-            {data.isTrackA && data.advisorName && (
-              <Link href="/client/advisor/messages" className="bg-surface rounded-[24px] p-3 flex items-center gap-3.5">
-                <div className="w-[68px] h-[68px] rounded-[20px] bg-breeze flex-none flex items-center justify-center font-display text-[24px] text-forest">
-                  {data.advisorName.split(" ").map(p => p[0]).join("")}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="tala-eyebrow text-ink-40">Your advisor</div>
-                  <div className="text-[14px] text-forest mt-1 leading-snug text-pretty">
-                    {advisorFirstName}: “Need an adjustment to your plan? Send a message directly.”
-                  </div>
-                </div>
-                <div className="w-9 h-9 rounded-full bg-forest text-paper flex-none flex items-center justify-center">
-                  <MessageSquare className="h-4 w-4" aria-hidden="true" />
-                </div>
-              </Link>
-            )}
           </section>
         )}
+
+        <ConversionCTASection />
 
         {/* Wealth Score */}
         <WealthScoreCard />
 
-        {/* Track B Conversion CTA */}
-        {data.isTrackB && (
-          <div className="bg-breeze rounded-[24px] p-5">
-            <div className="flex items-start gap-3 mb-4">
-              <Sol size="sm" animate="breathe" />
-              <div className="min-w-0">
-                <div className="text-[16px] font-semibold text-forest mb-1">Upgrade to Advised</div>
-                <div className="text-[14px] text-forest text-pretty leading-snug">
-                  Unlock personalized strategies, goal projections, and a dedicated advisor to accelerate your wealth.
-                </div>
-              </div>
-            </div>
-            <Link
-              href="/client/advisor/messages"
-              onClick={() => track("upgrade_cta_clicked", { location: "client_dashboard_track_b_cta" })}
-              className="bg-forest text-paper rounded-full h-11 px-5 text-[14px] font-semibold inline-flex items-center hover:opacity-90 transition-opacity"
-            >
-              Talk to an advisor
-            </Link>
-          </div>
-        )}
+        {/* Advisor card: conversion state for free users, the advisor for clients */}
+        <MembershipCard />
+        <AdvisorCard />
+        <EngagementStrip />
       </div>
       <ClientRiskCheckSheet isOpen={showRiskCheck} onClose={() => setShowRiskCheck(false)} />
     </ClientAppShell>

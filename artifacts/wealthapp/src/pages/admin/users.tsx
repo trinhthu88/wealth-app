@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import AppShell from "@/components/AppShell";
 import PageHeader from "@/components/PageHeader";
+import DemoAccountsPanel from "@/components/admin/DemoAccountsPanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
@@ -102,6 +103,8 @@ export default function AdminUsers() {
           </Button>
         }
       />
+
+      <DemoAccountsPanel />
 
       {/* Create User Modal */}
       {showCreate && (
@@ -209,7 +212,7 @@ export default function AdminUsers() {
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-3">
                       <div className="h-10 w-10 rounded-[14px] bg-green-tint flex items-center justify-center text-[15px] font-bold text-green shrink-0">
-                        {(u.fullName ?? u.email)[0].toUpperCase()}
+                        {(u.fullName || u.email)[0].toUpperCase()}
                       </div>
                       <div>
                         <div className="font-medium text-[15px] text-forest">{u.fullName ?? "—"}</div>

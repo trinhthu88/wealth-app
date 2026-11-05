@@ -14,7 +14,7 @@ import {
   profilesTable,
   normalizeRiskProfile,
 } from "@workspace/db";
-import { requireAuth, requireRole, requireAdvisorOwnsClient, requirePackageReadAccess, requireAdvisorOwnsPackage } from "../middlewares/requireAuth";
+import { requireAuth, requireRole, requireAdvisorOwnsClient, requirePackageReadAccess, requireAdvisorOwnsPackage, requireAllowance } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
 
@@ -141,9 +141,7 @@ router.get("/client-profile/me", requireAuth, async (req, res): Promise<void> =>
   const userId = (req as any).userId;
   const [cp] = await db.select().from(clientProfilesTable).where(eq(clientProfilesTable.userId, userId));
   if (!cp) {
-    // Auto-create if investment_client
-    const [created] = await db.insert(clientProfilesTable).values({ userId }).returning();
-    res.json(created);
+    res.status(404).json({ error: "Client profile not found" });
     return;
   }
   res.json(cp);
@@ -373,14 +371,22 @@ router.get("/packages/:id/transactions", requireAuth, requirePackageReadAccess("
   res.json(txs);
 });
 
+/** A package's rows belong to its owner. The body never decides that. */
+async function packageOwner(clientPackageId: string): Promise<string> {
+  const [pkg] = await db.select({ userId: clientPackagesTable.userId }).from(clientPackagesTable)
+    .where(eq(clientPackagesTable.id, clientPackageId));
+  return pkg.userId; // requireAdvisorOwnsPackage has already 404ed a missing package.
+}
+
 router.post("/packages/:id/transactions", requireAuth, requireRole("advisor", "super_admin"), requireAdvisorOwnsPackage("id"), async (req, res): Promise<void> => {
   const createdBy = (req as any).userId;
   const clientPackageId = req.params.id as string;
-  const { userId, fundId, transactionDate, transactionType, amountUsd, units, pricePerUnitUsd, notes } = req.body;
-  if (!userId || !transactionDate || !transactionType || !amountUsd) {
-    res.status(400).json({ error: "userId, transactionDate, transactionType, amountUsd required" });
+  const { fundId, transactionDate, transactionType, amountUsd, units, pricePerUnitUsd, notes } = req.body;
+  if (!transactionDate || !transactionType || !amountUsd) {
+    res.status(400).json({ error: "transactionDate, transactionType, amountUsd required" });
     return;
   }
+  const userId = await packageOwner(clientPackageId);
   const [tx] = await db.insert(packageTransactionsTable).values({
     clientPackageId, userId, fundId, transactionDate, transactionType,
     amountUsd, units, pricePerUnitUsd, notes, createdBy,
@@ -400,7 +406,8 @@ router.get("/packages/:id/snapshots", requireAuth, requirePackageReadAccess("id"
 
 router.post("/packages/:id/snapshots", requireAuth, requireRole("advisor", "super_admin"), requireAdvisorOwnsPackage("id"), async (req, res): Promise<void> => {
   const clientPackageId = req.params.id as string;
-  const { userId, snapshotDate, totalInvestedUsd, totalValueUsd, totalReturnPercent, fundBreakdown } = req.body;
+  const { snapshotDate, totalInvestedUsd, totalValueUsd, totalReturnPercent, fundBreakdown } = req.body;
+  const userId = await packageOwner(clientPackageId);
   const existing = await db.select().from(portfolioSnapshotsTable)
     .where(and(eq(portfolioSnapshotsTable.clientPackageId, clientPackageId), eq(portfolioSnapshotsTable.snapshotDate, snapshotDate)));
   let snap;
@@ -447,7 +454,7 @@ router.get("/scenarios", requireAuth, async (req, res): Promise<void> => {
   res.json(rows);
 });
 
-router.post("/scenarios", requireAuth, async (req, res): Promise<void> => {
+router.post("/scenarios", requireAuth, requireAllowance("scenarios"), async (req, res): Promise<void> => {
   const userId = (req as any).userId;
   const { scenarioType, linkedGoalId, linkedPackageId, inputData, outputData, isAdvisorPushed, advisorNote } = req.body;
   if (!scenarioType || !inputData || !outputData) { res.status(400).json({ error: "scenarioType, inputData, outputData required" }); return; }

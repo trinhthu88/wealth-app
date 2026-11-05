@@ -10,10 +10,10 @@ import { profilesTable } from "./profiles";
 // converted) are remapped by scripts/src/migrate-leads-status.ts — see that
 // script for the exact mapping and its audit log.
 //
-// source is free text; values in active use include the anonymous quiz funnel
-// plus the authenticated-CTA sources added for the lead pipeline redesign:
-// "goal_scenario_cta" (GoalScenarioCTA.tsx) and "smart_upgrade_card"
-// (SmartUpgradeCard.tsx).
+// source: an authenticated interest action stores a checkpoint code (see
+// @workspace/tier-policy and POST /leads/from-interest); the anonymous quiz funnel and
+// rows from before the checkpoint engine hold free text. The membership webhook stores
+// self_serve_member, and a comped free user's lead stores comped_member.
 export const leadsTable = pgTable("leads", {
   id: uuid("id").primaryKey().defaultRandom(),
   email: text("email").notNull(),

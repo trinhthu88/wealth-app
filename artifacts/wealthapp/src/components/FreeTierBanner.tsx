@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { Link } from "wouter";
-import { X } from "lucide-react";
-import Sol from "@/components/Sol";
+import { X, Lock } from "lucide-react";
+import TalkToAdvisorButton from "@/components/TalkToAdvisorButton";
 import { useProfile } from "@/hooks/useProfile";
 import { useManageSubscription } from "@/hooks/useManageSubscription";
 import { track } from "@/lib/analytics";
@@ -12,14 +11,10 @@ interface Props {
   storageKey: string;
 }
 
-/**
- * Free-plan Sol tip card (Blue Breeze). The CTA routes to the Advisor tab,
- * where the plans live; dismissal is remembered per page via `storageKey`.
- */
 export default function FreeTierBanner({ feature, benefit, storageKey }: Props) {
-  const [dismissed, setDismissed] = useState(() => {
-    try { return localStorage.getItem(`free_banner_${storageKey}`) === "1"; } catch { return false; }
-  });
+  const [dismissed, setDismissed] = useState(
+    () => localStorage.getItem(`free_banner_${storageKey}`) === "1"
+  );
   const { profile } = useProfile();
   const isSubscribed = profile?.role === "investment_client";
   const manageSubscription = useManageSubscription();
@@ -27,20 +22,13 @@ export default function FreeTierBanner({ feature, benefit, storageKey }: Props) 
   if (dismissed) return null;
 
   const location = `free_tier_banner_${storageKey}`;
-  const ctaClass =
-    "mt-3 inline-flex h-11 items-center rounded-full bg-forest px-5 text-[14px] font-semibold text-paper whitespace-nowrap transition-opacity hover:opacity-90 disabled:opacity-60";
 
   return (
-    <section
-      aria-label="Your plan"
-      className="relative flex items-start gap-3 rounded-[24px] bg-breeze p-4 pr-12 text-forest"
-    >
-      <div className="shrink-0 mt-0.5">
-        <Sol size="sm" animate="idle" showRays={false} />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-[14px] font-semibold leading-[1.45] text-pretty">{feature}.</p>
-        <p className="mt-1 text-[13px] leading-[1.5] text-forest/80 text-pretty">{benefit}</p>
+    <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-[#0C21A4]/5 border border-[#0C21A4]/10 text-sm">
+      <Lock className="h-3.5 w-3.5 text-[#0C21A4]/40 shrink-0" />
+      <p className="flex-1 text-slate-600 text-xs leading-relaxed">
+        <span className="font-semibold text-[#0C21A4]">Free plan:</span> {feature}.{" "}
+        <span className="text-slate-500">{benefit}</span>{" "}
         {isSubscribed ? (
           <button
             type="button"
@@ -49,31 +37,30 @@ export default function FreeTierBanner({ feature, benefit, storageKey }: Props) 
               manageSubscription.mutate();
             }}
             disabled={manageSubscription.isPending}
-            className={ctaClass}
+            className="text-[#0C21A4] font-medium hover:underline whitespace-nowrap disabled:opacity-60"
           >
-            Manage subscription
+            Manage subscription →
           </button>
         ) : (
-          <Link
-            href="/free/advisor"
-            onClick={() => track("upgrade_cta_clicked", { location, action: "open_advisor" })}
-            className={ctaClass}
+          <TalkToAdvisorButton
+            source="C7_direct"
+            location={location}
+            className="text-[#0C21A4] font-medium hover:underline whitespace-nowrap disabled:opacity-60"
           >
-            See how
-          </Link>
+            Talk to an advisor →
+          </TalkToAdvisorButton>
         )}
-      </div>
+      </p>
       <button
-        type="button"
         onClick={() => {
-          try { localStorage.setItem(`free_banner_${storageKey}`, "1"); } catch { /* storage unavailable */ }
+          localStorage.setItem(`free_banner_${storageKey}`, "1");
           setDismissed(true);
         }}
         aria-label="Dismiss"
-        className="absolute top-1 right-1 flex h-11 w-11 items-center justify-center rounded-full text-forest/60 transition-colors hover:bg-forest/10 hover:text-forest"
+        className="text-slate-400 hover:text-slate-600 transition-colors shrink-0"
       >
-        <X className="h-4 w-4" />
+        <X className="h-3.5 w-3.5" />
       </button>
-    </section>
+    </div>
   );
 }

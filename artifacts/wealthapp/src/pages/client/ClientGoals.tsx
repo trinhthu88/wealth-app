@@ -5,6 +5,10 @@ import ClientAppShell from "@/components/client/AppShell";
 import SolNarration from "@/components/client/SolNarration";
 import GoalsSummaryBar from "@/components/client/goals/GoalsSummaryBar";
 import AddGoalSheet from "@/components/client/goals/AddGoalSheet";
+import { gateMessage } from "@workspace/tier-policy";
+import { useCapAttempt, useCapability } from "@/hooks/useEntitlements";
+import LockedGoalSlotCard from "@/components/LockedGoalSlotCard";
+import { CapNotice } from "@/components/client/Gated";
 import EditGoalSheet from "@/components/client/goals/EditGoalSheet";
 import GoalHoldingLinks from "@/components/client/goals/GoalHoldingLinks";
 import GoalScenarioCTA from "@/components/client/goals/GoalScenarioCTA";
@@ -304,7 +308,7 @@ function GoalCardInline({ goal, index, plans, holdings, allLinks, allGoals, solS
             actionLabel: isTrackA ? "Run a scenario" : "See how an advisor can help",
           }}
           onAccept={() => {
-            createLead.mutate("goal_scenario_cta"); // same CTA slot GoalScenarioCTA owns for at_risk
+            createLead.mutate("C3_off_track"); // same CTA slot GoalScenarioCTA owns for at_risk
             setLocation(isTrackA ? `/client/goals/what-if?goalId=${goal.id}&type=retire_earlier` : "/client/advisor/messages");
           }}
           onDismiss={() => { localStorage.setItem(`sol_offtrack_dismissed_${goal.id}`, "1"); setOffTrackDismissed(true); }}
@@ -357,6 +361,9 @@ export default function ClientGoals() {
     const params = new URLSearchParams(window.location.search);
     if (params.get("newGoal") === "true") setShowAdd(true);
   }, []);
+  const goalCap = useCapability("goals");
+  const capAttempt = useCapAttempt("/goals");
+  const goalCapMessage = goalCap.atCap ? gateMessage("goals", goalCap.limits?.goals ?? null) : null;
 
   const totalActive = activeGoals.length;
   const totalValue = activeGoals.reduce((sum, g) => sum + g.computedCurrentAmount, 0);
@@ -412,13 +419,17 @@ export default function ClientGoals() {
         <div className="flex items-center justify-between gap-3 pt-1 mb-[4px]">
           <h1 className="font-display text-[34px] leading-[1.05] text-forest">Goals</h1>
           <button
-            onClick={() => setShowAdd(true)}
-            className="w-11 h-11 shrink-0 rounded-full bg-forest text-paper flex items-center justify-center cursor-pointer hover:bg-forest-700 transition-colors"
+            onClick={() => (goalCap.atCap ? capAttempt.mutate() : setShowAdd(true))}
+            aria-disabled={goalCap.atCap}
+            title={goalCapMessage ?? undefined}
+            className="w-11 h-11 shrink-0 rounded-full bg-forest text-paper flex items-center justify-center cursor-pointer aria-disabled:cursor-not-allowed aria-disabled:opacity-40 hover:bg-forest-700 transition-colors"
             aria-label="Add goal"
           >
             <Plus className="h-5 w-5" aria-hidden="true" />
           </button>
         </div>
+        {goalCapMessage && <CapNotice message={goalCapMessage} />}
+        <LockedGoalSlotCard />
 
         <>
             {targetGoal && targetGoal.progressPct != null && (

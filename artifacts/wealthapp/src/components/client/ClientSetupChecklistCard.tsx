@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import { ArrowUpRight, Check, ChevronRight, Eye, EyeOff, LoaderCircle, RotateCw } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useEntitlements } from "@/hooks/useEntitlements";
 import {
   getGetClientSetupChecklistQueryKey,
   useGetClientSetupChecklist,
@@ -53,7 +54,15 @@ function SetupItem({ item, onRiskCheck, onStartingFromZero, pending }: {
   );
 }
 
-export default function ClientSetupChecklistCard({ onRiskCheck }: Props) {
+// The setup checklist is built around an advisor relationship, and its route serves
+// investment clients only, so a free user has no card.
+export default function ClientSetupChecklistCard(props: Props) {
+  const { entitlements, isLoading } = useEntitlements();
+  if (isLoading || entitlements?.tier === "free") return null;
+  return <ClientSetupChecklistCardContent {...props} />;
+}
+
+function ClientSetupChecklistCardContent({ onRiskCheck }: Props) {
   const queryClient = useQueryClient();
   const { data, isLoading, isError, refetch } = useGetClientSetupChecklist();
   const preferences = useUpdateClientSetupChecklistPreferences();

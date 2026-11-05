@@ -10,6 +10,8 @@ import { useProfile } from "@/hooks/useProfile";
 import { useOnboardingStage } from "@/hooks/useClientTrack";
 import { resolveRoleRedirectPath } from "@/lib/roleRedirect";
 import { resolveLegacyClientLocation } from "@/lib/clientNavigation";
+import { CLIENT_SCREEN_ROLES } from "@/lib/clientRoutes";
+import { useEntitlements } from "@/hooks/useEntitlements";
 import { setTokenGetter } from "@/lib/api";
 import { trackPageView, resetUser } from "@/lib/analytics";
 import { useEffect, useRef, lazy, Suspense } from "react";
@@ -24,17 +26,6 @@ const ToolsPage = lazy(() => import("@/pages/tools"));
 const BillingSuccess = lazy(() => import("@/pages/billing/success"));
 const BillingCancel = lazy(() => import("@/pages/billing/cancel"));
 
-const FreeDashboard = lazy(() => import("@/pages/free/dashboard"));
-const PathwayPage = lazy(() => import("@/pages/free/pathway"));
-const FreeOnboardingPage = lazy(() => import("@/pages/free/onboarding"));
-const BudgetPage = lazy(() => import("@/pages/free/budget"));
-const GoalsPage = lazy(() => import("@/pages/free/goals"));
-const NetWorthPage = lazy(() => import("@/pages/free/networth"));
-const HealthScorePage = lazy(() => import("@/pages/free/healthscore"));
-const MilestonesPage = lazy(() => import("@/pages/free/milestones"));
-const FreePortfolioPage = lazy(() => import("@/pages/free/portfolio"));
-const FreeSettingsPage = lazy(() => import("@/pages/free/settings"));
-const FreeAdvisorPage = lazy(() => import("@/pages/free/advisor"));
 
 const ClientDashboard = lazy(() => import("@/pages/client/ClientDashboard"));
 const ClientPortfolio = lazy(() => import("@/pages/client/ClientPortfolio"));
@@ -47,6 +38,7 @@ const ClientNetWorth = lazy(() => import("@/pages/client/networth"));
 const ClientDocuments = lazy(() => import("@/pages/client/documents"));
 const ClientMessages = lazy(() => import("@/pages/client/messages"));
 const ClientOnboarding = lazy(() => import("@/pages/client/ClientOnboarding"));
+const ActivateMembership = lazy(() => import("@/pages/client/ActivateMembership"));
 const ClientPackageDetail = lazy(() => import("@/pages/client/package-detail"));
 const ClientScenarios = lazy(() => import("@/pages/client/ClientScenarios"));
 const ClientBudget = lazy(() => import("@/pages/client/budget"));
@@ -66,6 +58,7 @@ const AdminClients = lazy(() => import("@/pages/admin/clients"));
 const AdminLeads = lazy(() => import("@/pages/admin/leads"));
 const AdminPrices = lazy(() => import("@/pages/admin/prices"));
 const AdminBenchmarks = lazy(() => import("@/pages/admin/benchmarks"));
+const AdminMembership = lazy(() => import("@/pages/admin/membership"));
 
 const NotFound = lazy(() => import("@/pages/not-found"));
 
@@ -192,12 +185,13 @@ function ProtectedRoute({ component: C, role }: { component: React.ComponentType
 
 function RoleRedirect() {
   const { profile, isLoading } = useProfile();
-  const isInvestmentClient = profile?.role === "investment_client";
-  const { onboardingStage, isLoading: trackLoading } = useOnboardingStage(isInvestmentClient);
+  const usesClientScreens = profile?.role === "investment_client" || profile?.role === "free_user";
+  const { onboardingStage, isLoading: trackLoading } = useOnboardingStage(usesClientScreens);
+  const { entitlements, isLoading: entitlementsLoading } = useEntitlements();
 
-  if (isLoading || trackLoading) return <PageLoader />;
+  if (isLoading || trackLoading || entitlementsLoading) return <PageLoader />;
   if (!profile) return <Redirect to="/sign-in" />;
-  return <Redirect to={resolveRoleRedirectPath(profile.role, onboardingStage)} />;
+  return <Redirect to={resolveRoleRedirectPath(profile.role, onboardingStage, !!entitlements?.membership.pendingPayment)} />;
 }
 
 function SignInPage() {
@@ -229,6 +223,9 @@ function LegacyClientRedirect() {
   return target ? null : <NotFound />;
 }
 
+// Routes take their element as children, never an inline component function, which is a new
+// component type on every render, so any re-render here (ClientRouteLayer re-renders on each
+// profile change) would remount the whole page and lose its state, such as the onboarding step.
 function AppRoutes() {
   return (
     <Suspense fallback={<PageLoader />}>
@@ -244,36 +241,29 @@ function AppRoutes() {
       <Route path="/sign-in/*?" component={SignInPage} />
       <Route path="/sign-up/*?" component={SignUpPage} />
 
-      <Route path="/dashboard" component={() => <RoleRedirect />} />
+      <Route path="/dashboard"><RoleRedirect /></Route>
 
-      <Route path="/free/dashboard" component={() => <ProtectedRoute component={FreeDashboard} />} />
-      <Route path="/free/onboarding" component={() => <ProtectedRoute component={FreeOnboardingPage} />} />
-      <Route path="/free/pathway" component={() => <ProtectedRoute component={PathwayPage} />} />
-      <Route path="/free/budget" component={() => <ProtectedRoute component={BudgetPage} />} />
-      <Route path="/free/goals" component={() => <ProtectedRoute component={GoalsPage} />} />
-      <Route path="/free/networth" component={() => <ProtectedRoute component={NetWorthPage} />} />
-      <Route path="/free/health-score" component={() => <ProtectedRoute component={HealthScorePage} />} />
-      <Route path="/free/milestones" component={() => <ProtectedRoute component={MilestonesPage} />} />
-      <Route path="/free/portfolio" component={() => <ProtectedRoute component={FreePortfolioPage} />} />
-      <Route path="/free/settings" component={() => <ProtectedRoute component={FreeSettingsPage} />} />
-      <Route path="/free/advisor" component={() => <ProtectedRoute component={FreeAdvisorPage} />} />
 
-      <Route path="/client/onboarding" component={() => <ProtectedRoute component={ClientOnboarding} role={["investment_client", "super_admin"]} />} />
-      <Route path="/client/dashboard" component={() => <ProtectedRoute component={ClientDashboard} role={["investment_client", "super_admin"]} />} />
-      <Route path="/client/money" component={() => <ProtectedRoute component={ClientBudget} role={["investment_client", "super_admin"]} />} />
-      <Route path="/client/wealth" component={() => <Redirect to="/client/wealth/overview" />} />
-      <Route path="/client/wealth/overview" component={() => <ProtectedRoute component={ClientNetWorth} role={["investment_client", "super_admin"]} />} />
-      <Route path="/client/wealth/property-debts" component={() => <ProtectedRoute component={ClientNetWorth} role={["investment_client", "super_admin"]} />} />
-      <Route path="/client/wealth/investments" component={() => <ProtectedRoute component={ClientPortfolio} role={["investment_client", "super_admin"]} />} />
-      <Route path="/client/wealth/investments/holding/:holdingId" component={() => <ProtectedRoute component={HoldingDetail} role={["investment_client", "super_admin"]} />} />
-      <Route path="/client/wealth/investments/:planId/funds/:fundCode" component={() => <ProtectedRoute component={FundDetail} role={["investment_client", "super_admin"]} />} />
-      <Route path="/client/wealth/investments/packages/:id" component={() => <ProtectedRoute component={ClientPackageDetail} role={["investment_client", "super_admin"]} />} />
-      <Route path="/client/wealth/investments/:planId" component={() => <ProtectedRoute component={AdvisedPlanDetail} role={["investment_client", "super_admin"]} />} />
-      <Route path="/client/goals/goals" component={() => <ProtectedRoute component={ClientGoals} role={["investment_client", "super_admin"]} />} />
-      <Route path="/client/goals/my-plan" component={() => <ProtectedRoute component={ClientPlan} role={["investment_client", "super_admin"]} />} />
-      <Route path="/client/goals/what-if" component={() => <ProtectedRoute component={ClientScenarios} role={["investment_client", "super_admin"]} />} />
-      <Route path="/client/advisor/messages" component={() => <ProtectedRoute component={ClientMessages} role={["investment_client", "super_admin"]} />} />
-      <Route path="/client/advisor/documents" component={() => <ProtectedRoute component={ClientDocuments} role={["investment_client", "super_admin"]} />} />
+      {/* The free pages are gone; old links land on the right client screen. */}
+      <Route path="/free/*?"><Redirect to="/dashboard" /></Route>
+
+      <Route path="/client/activate"><ProtectedRoute component={ActivateMembership} role={CLIENT_SCREEN_ROLES} /></Route>
+      <Route path="/client/onboarding"><ProtectedRoute component={ClientOnboarding} role={CLIENT_SCREEN_ROLES} /></Route>
+      <Route path="/client/dashboard"><ProtectedRoute component={ClientDashboard} role={CLIENT_SCREEN_ROLES} /></Route>
+      <Route path="/client/money"><ProtectedRoute component={ClientBudget} role={CLIENT_SCREEN_ROLES} /></Route>
+      <Route path="/client/wealth"><Redirect to="/client/wealth/overview" /></Route>
+      <Route path="/client/wealth/overview"><ProtectedRoute component={ClientNetWorth} role={CLIENT_SCREEN_ROLES} /></Route>
+      <Route path="/client/wealth/property-debts"><ProtectedRoute component={ClientNetWorth} role={CLIENT_SCREEN_ROLES} /></Route>
+      <Route path="/client/wealth/investments"><ProtectedRoute component={ClientPortfolio} role={CLIENT_SCREEN_ROLES} /></Route>
+      <Route path="/client/wealth/investments/holding/:holdingId"><ProtectedRoute component={HoldingDetail} role={CLIENT_SCREEN_ROLES} /></Route>
+      <Route path="/client/wealth/investments/:planId/funds/:fundCode"><ProtectedRoute component={FundDetail} role={CLIENT_SCREEN_ROLES} /></Route>
+      <Route path="/client/wealth/investments/packages/:id"><ProtectedRoute component={ClientPackageDetail} role={CLIENT_SCREEN_ROLES} /></Route>
+      <Route path="/client/wealth/investments/:planId"><ProtectedRoute component={AdvisedPlanDetail} role={CLIENT_SCREEN_ROLES} /></Route>
+      <Route path="/client/goals/goals"><ProtectedRoute component={ClientGoals} role={CLIENT_SCREEN_ROLES} /></Route>
+      <Route path="/client/goals/my-plan"><ProtectedRoute component={ClientPlan} role={CLIENT_SCREEN_ROLES} /></Route>
+      <Route path="/client/goals/what-if"><ProtectedRoute component={ClientScenarios} role={CLIENT_SCREEN_ROLES} /></Route>
+      <Route path="/client/advisor/messages"><ProtectedRoute component={ClientMessages} role={CLIENT_SCREEN_ROLES} /></Route>
+      <Route path="/client/advisor/documents"><ProtectedRoute component={ClientDocuments} role={CLIENT_SCREEN_ROLES} /></Route>
 
       {/* Legacy client links redirect to their new place and retain query strings. */}
       <Route path="/client/portfolio/holding/:holdingId" component={LegacyClientRedirect} />
@@ -289,26 +279,27 @@ function AppRoutes() {
       <Route path="/client/goals" component={LegacyClientRedirect} />
       <Route path="/client/scenarios" component={LegacyClientRedirect} />
       {/* Wealth Score is now a home-screen card + bottom sheet only (no standalone page). */}
-      <Route path="/client/health-score" component={() => <Redirect to="/client/dashboard" />} />
+      <Route path="/client/health-score"><Redirect to="/client/dashboard" /></Route>
       <Route path="/client/documents" component={LegacyClientRedirect} />
       <Route path="/client/budget" component={LegacyClientRedirect} />
       <Route path="/client/messages" component={LegacyClientRedirect} />
 
-      <Route path="/advisor/dashboard" component={() => <ProtectedRoute component={AdvisorDashboard} role={["advisor", "super_admin"]} />} />
-      <Route path="/advisor/clients" component={() => <ProtectedRoute component={AdvisorClients} role={["advisor", "super_admin"]} />} />
-      <Route path="/advisor/clients/:id" component={() => <ProtectedRoute component={AdvisorClientDetail} role={["advisor", "super_admin"]} />} />
-      <Route path="/advisor/tasks" component={() => <ProtectedRoute component={AdvisorTasks} role={["advisor", "super_admin"]} />} />
-      <Route path="/advisor/leads" component={() => <ProtectedRoute component={AdvisorLeads} role={["advisor", "super_admin"]} />} />
-      <Route path="/advisor/leads/:id" component={() => <ProtectedRoute component={AdvisorLeadDetail} role={["advisor", "super_admin"]} />} />
+      <Route path="/advisor/dashboard"><ProtectedRoute component={AdvisorDashboard} role={["advisor", "super_admin"]} /></Route>
+      <Route path="/advisor/clients"><ProtectedRoute component={AdvisorClients} role={["advisor", "super_admin"]} /></Route>
+      <Route path="/advisor/clients/:id"><ProtectedRoute component={AdvisorClientDetail} role={["advisor", "super_admin"]} /></Route>
+      <Route path="/advisor/tasks"><ProtectedRoute component={AdvisorTasks} role={["advisor", "super_admin"]} /></Route>
+      <Route path="/advisor/leads"><ProtectedRoute component={AdvisorLeads} role={["advisor", "super_admin"]} /></Route>
+      <Route path="/advisor/leads/:id"><ProtectedRoute component={AdvisorLeadDetail} role={["advisor", "super_admin"]} /></Route>
 
-      <Route path="/admin/dashboard" component={() => <ProtectedRoute component={AdminDashboard} role={["super_admin"]} />} />
-      <Route path="/admin/users" component={() => <ProtectedRoute component={AdminUsers} role={["super_admin"]} />} />
-      <Route path="/admin/clients" component={() => <ProtectedRoute component={AdminClients} role={["super_admin"]} />} />
-      <Route path="/admin/leads" component={() => <ProtectedRoute component={AdminLeads} role={["super_admin"]} />} />
-      <Route path="/admin/prices" component={() => <ProtectedRoute component={AdminPrices} role={["super_admin"]} />} />
-      <Route path="/admin/benchmarks" component={() => <ProtectedRoute component={AdminBenchmarks} role={["super_admin"]} />} />
-      <Route path="/admin/blog" component={() => <ProtectedRoute component={AdminBlog} role={["super_admin", "advisor"]} />} />
-      <Route path="/admin/funds" component={() => <ProtectedRoute component={AdminFunds} role={["super_admin"]} />} />
+      <Route path="/admin/dashboard"><ProtectedRoute component={AdminDashboard} role={["super_admin"]} /></Route>
+      <Route path="/admin/users"><ProtectedRoute component={AdminUsers} role={["super_admin"]} /></Route>
+      <Route path="/admin/clients"><ProtectedRoute component={AdminClients} role={["super_admin"]} /></Route>
+      <Route path="/admin/leads"><ProtectedRoute component={AdminLeads} role={["super_admin"]} /></Route>
+      <Route path="/admin/prices"><ProtectedRoute component={AdminPrices} role={["super_admin"]} /></Route>
+      <Route path="/admin/benchmarks"><ProtectedRoute component={AdminBenchmarks} role={["super_admin"]} /></Route>
+      <Route path="/admin/blog"><ProtectedRoute component={AdminBlog} role={["super_admin", "advisor"]} /></Route>
+      <Route path="/admin/funds"><ProtectedRoute component={AdminFunds} role={["super_admin"]} /></Route>
+      <Route path="/admin/membership"><ProtectedRoute component={AdminMembership} role={["super_admin"]} /></Route>
 
       <Route component={NotFound} />
     </Switch>
@@ -320,16 +311,13 @@ function ClientRouteLayer() {
   const [location] = useLocation();
   const { profile } = useProfile();
   const isClientPage = location.startsWith("/client/");
-  // Free screens inside the app shell (onboarding is a standalone flow).
-  const isFreeShellPage = location.startsWith("/free/") && !location.startsWith("/free/onboarding");
 
   return (
     <>
       <AppRoutes />
-      {profile?.role === "investment_client" && isClientPage && (
+      {(profile?.role === "investment_client" || profile?.role === "free_user") && isClientPage && (
         <FloatingSolChat isOnboarding={location.split(/[?#]/, 1)[0] === "/client/onboarding"} />
       )}
-      {profile?.role === "free_user" && isFreeShellPage && <FloatingSolChat />}
     </>
   );
 }

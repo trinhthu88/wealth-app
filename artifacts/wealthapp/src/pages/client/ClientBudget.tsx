@@ -435,7 +435,7 @@ export default function ClientBudget() {
           <BudgetHistoryChart months={months} />
         </div>
 
-        <BudgetTrackBCTA surplus={netSurplus} />
+        {netSurplus <= 0 && <BudgetTrackBCTA />}
       </div>
 
       <NumericKeypadSheet

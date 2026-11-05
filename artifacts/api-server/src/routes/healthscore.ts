@@ -5,6 +5,7 @@ import {
   pathwayProgressTable, assetsTable, liabilitiesTable, profilesTable,
 } from "@workspace/db";
 import { requireAuth } from "../middlewares/requireAuth";
+import { runCheckpointHook } from "../lib/checkpointEngine";
 import { calculateProjection, computeGoalProgress } from "@workspace/goal-math";
 import { convertToUsd, getCurrencyRatesFor } from "@workspace/net-worth";
 import { computeGoalFundingSummary } from "../lib/goalProgressSnapshot";
@@ -262,6 +263,7 @@ router.post("/health-score", requireAuth, async (req, res): Promise<void> => {
       },
     })
     .returning();
+  await runCheckpointHook(userId);
   res.status(existingToday ? 200 : 201).json(score);
 });
 

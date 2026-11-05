@@ -2,8 +2,7 @@ import { useState } from "react";
 import { TrendingUp, X } from "lucide-react";
 import { Link } from "wouter";
 import { useClientTrack } from "@/hooks/useClientTrack";
-import { useCreateLeadFromInterest } from "@/hooks/useCreateLeadFromInterest";
-import { track } from "@/lib/analytics";
+import CheckpointCard from "@/components/client/CheckpointCard";
 import type { GoalStatus } from "@/hooks/useGoalProgress";
 
 interface Props {
@@ -12,21 +11,21 @@ interface Props {
   status: GoalStatus;
 }
 
-export default function GoalScenarioCTA({ goalId, goalTitle, status }: Props) {
-  const { isTrackA, isTrackB, loading } = useClientTrack();
+export default function GoalScenarioCTA(props: Props) {
+  const { isTrackA, loading } = useClientTrack();
+  if (loading) return null;
+  // Track A is past this checkpoint: for them this is a modelling shortcut, not an offer.
+  return isTrackA
+    ? <ModelGoal {...props} />
+    : <CheckpointCard codes={["C3_off_track"]} goalId={props.goalId} className="mt-3" />;
+}
+
+function ModelGoal({ goalId, status }: Props) {
   const [dismissed, setDismissed] = useState(() =>
     localStorage.getItem(`goal_cta_dismissed_${goalId}`) === "1"
   );
-  const createLead = useCreateLeadFromInterest();
-
-  if (loading || dismissed) return null;
+  if (dismissed) return null;
   if (status !== "at_risk" && status !== "off_track") return null;
-
-  // These are in-app routes (wouter Link) — no page unload, so firing this
-  // without awaiting it doesn't risk the request being aborted.
-  function markInterest() {
-    createLead.mutate("goal_scenario_cta");
-  }
 
   function dismiss() {
     setDismissed(true);
@@ -37,29 +36,13 @@ export default function GoalScenarioCTA({ goalId, goalTitle, status }: Props) {
     <div className="mt-3 flex items-start gap-3 p-4 rounded-[16px] bg-sun-tint text-forest">
       <TrendingUp className="h-4 w-4 text-clay-ink shrink-0 mt-0.5" />
       <div className="flex-1 min-w-0 text-[13.5px] leading-[1.45] text-forest">
-        {isTrackA ? (
-          <>
-            This goal needs attention. Run a scenario to see how adjusting your investment could get you back on track.{" "}
+                    This goal needs attention. Run a scenario to see how adjusting your investment could get you back on track.{" "}
             <Link
               href={`/client/goals/what-if?goalId=${goalId}&type=retire_earlier`}
-              onClick={markInterest}
               className="font-semibold text-forest underline underline-offset-2 hover:no-underline"
             >
               Model this goal →
             </Link>
-          </>
-        ) : (
-          <>
-            An advised investment plan could help accelerate "{goalTitle}".{" "}
-            <Link
-              href="/client/advisor/messages"
-              onClick={() => { markInterest(); track("upgrade_cta_clicked", { location: "goal_scenario_cta" }); }}
-              className="font-semibold text-forest underline underline-offset-2 hover:no-underline"
-            >
-              See how an advisor can help →
-            </Link>
-          </>
-        )}
       </div>
       <button
         onClick={dismiss}

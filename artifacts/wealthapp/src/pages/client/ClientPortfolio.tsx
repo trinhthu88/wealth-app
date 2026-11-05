@@ -6,6 +6,10 @@ import CurrencyToggle from "@/components/client/CurrencyToggle";
 import CurrencyField from "@/components/shared/CurrencyField";
 import SolNarration from "@/components/client/SolNarration";
 import AddHoldingSheet from "@/components/client/portfolio/self/AddHoldingSheet";
+import { gateMessage } from "@workspace/tier-policy";
+import { useCapAttempt, useCapability, useEntitlements } from "@/hooks/useEntitlements";
+import BringUnderManagementCompare from "@/components/client/scenarios/BringUnderManagementCompare";
+import { CapNotice } from "@/components/client/Gated";
 import EditHoldingSheet from "@/components/client/portfolio/self/EditHoldingSheet";
 import HoldingTransactionsDrawer from "@/components/client/portfolio/self/HoldingTransactionsDrawer";
 import AdvisedPlanSection from "@/components/client/portfolio/advised/AdvisedPlanSection";
@@ -42,6 +46,11 @@ export default function ClientPortfolio() {
   const { plans, loading: plansLoading } = useAdvisedPlans();
   const { holdings, addHolding, updateHolding, deleteHolding, loading: holdingsLoading } = useClientHoldings();
   const { advisorName } = usePlan();
+
+  const holdingCap = useCapability("holdings");
+  const capAttempt = useCapAttempt("/client/holdings");
+  const isFreeTier = useEntitlements().entitlements?.tier === "free";
+  const holdingCapMessage = holdingCap.atCap ? gateMessage("holdings", holdingCap.limits?.holdings ?? null) : null;
 
   const [tab, setTab] = useState<Tab>("advised");
   const [addOpen, setAddOpen] = useState(false);
@@ -215,11 +224,14 @@ export default function ClientPortfolio() {
               )}
             </div>
 
+            {holdingCapMessage && <CapNotice message={holdingCapMessage} />}
+            {isFreeTier && <BringUnderManagementCompare holdings={holdings} />}
             <div className="flex justify-center pt-1">
               <button
                 type="button"
-                onClick={() => setAddOpen(true)}
-                className="inline-flex h-11 items-center gap-2 rounded-full bg-forest px-5 text-[14px] font-semibold text-paper transition-colors hover:bg-forest-700"
+                onClick={() => (holdingCap.atCap ? capAttempt.mutate() : setAddOpen(true))}
+                aria-disabled={holdingCap.atCap}
+                className="inline-flex h-11 items-center gap-2 rounded-full bg-forest px-5 text-[14px] font-semibold text-paper aria-disabled:cursor-not-allowed aria-disabled:opacity-40 transition-colors hover:bg-forest-700"
               >
                 <Plus className="h-4 w-4" aria-hidden="true" />
                 Add holding

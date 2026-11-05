@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useUser } from "@clerk/react";
 import { apiFetch } from "@/lib/api";
+import { invalidateEntitlements } from "@/hooks/useEntitlements";
 import { track } from "@/lib/analytics";
 import { toast } from "sonner";
 import { useAdvisedPlans } from "./useAdvisedPlans";
@@ -146,6 +147,7 @@ export function useGoals() {
     qc.invalidateQueries({ queryKey: ["client-goals"] });
     qc.invalidateQueries({ queryKey: ["client-goal-links"] });
     qc.invalidateQueries({ queryKey: ["dashboard-goals"] });
+    invalidateEntitlements(qc);
   };
 
   const addGoalMut = useMutation({

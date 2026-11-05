@@ -1,7 +1,6 @@
 import { Router, type IRouter } from "express";
 import healthRouter from "./health";
 import profilesRouter from "./profiles";
-import pathwayRouter from "./pathway";
 import budgetRouter from "./budget";
 import goalsRouter from "./goals";
 import networthRouter from "./networth";
@@ -22,14 +21,15 @@ import clientPortalRouter from "./clientPortal";
 import coastPointRouter from "./coastPoint";
 import clientHealthScoreRouter from "./clientHealthScore";
 import solRouter from "./sol";
-import billingRouter from "./billing";
+import billingRouter from "./membership";
+import entitlementsRouter from "./entitlements";
+import checkpointsRouter from "./checkpoints";
 
 const router: IRouter = Router();
 
 router.use(clientPortalRouter);
 router.use(healthRouter);
 router.use(profilesRouter);
-router.use(pathwayRouter);
 router.use(budgetRouter);
 router.use(goalsRouter);
 router.use(networthRouter);
@@ -50,5 +50,7 @@ router.use(coastPointRouter);
 router.use(clientHealthScoreRouter);
 router.use(solRouter);
 router.use(billingRouter);
+router.use(entitlementsRouter);
+router.use(checkpointsRouter);
 
 export default router;

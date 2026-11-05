@@ -1,6 +1,8 @@
 import { pgTable, text, boolean, timestamp, uuid } from "drizzle-orm/pg-core";
 import { profilesTable } from "./profiles";
 
+// Deprecated: memberships is the owner. Nothing writes this table now. It stays as the source for
+// scripts/src/backfill-memberships.ts until production has run that script.
 export const subscriptionsTable = pgTable("subscriptions", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: text("user_id").notNull().references(() => profilesTable.id,

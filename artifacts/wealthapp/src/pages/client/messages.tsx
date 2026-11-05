@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import ClientAppShell from "@/components/client/AppShell";
+import Gated from "@/components/client/Gated";
 import { apiFetch } from "@/lib/api";
 import { queryClient } from "@/lib/queryClient";
 import { useProfile } from "@/hooks/useProfile";
@@ -25,7 +26,7 @@ function formatDateSeparator(dateStr: string): string {
   return d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 }
 
-export default function ClientMessages() {
+function ClientMessagesContent() {
   const { profile } = useProfile();
   const { advisorName, advisorId, completionPct, nextMilestone } = usePlan();
   const [activeConvId, setActiveConvId] = useState<string | null>(null);
@@ -36,7 +37,7 @@ export default function ClientMessages() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const { data: clientPreferences } = useQuery<ClientProfilePreferences>({
+  const { data: clientPreferences, isPending: clientPreferencesPending } = useQuery<ClientProfilePreferences>({
     queryKey: ["client-profile-me"],
     queryFn: () => apiFetch<ClientProfilePreferences>("/client-profile/me"),
   });
@@ -133,7 +134,7 @@ export default function ClientMessages() {
             <input
               type="checkbox"
               checked={clientPreferences?.shareBudgetWithAdvisor ?? false}
-              disabled={!clientPreferences || updateBudgetSharing.isPending}
+              disabled={clientPreferencesPending || updateBudgetSharing.isPending}
               onChange={event => updateBudgetSharing.mutate(event.target.checked)}
               className="h-5 w-5 shrink-0 accent-[var(--forest)]"
             />
@@ -270,5 +271,13 @@ export default function ClientMessages() {
         nextMilestoneTitle={nextMilestone?.title ?? null}
       />
     </ClientAppShell>
+  );
+}
+
+export default function ClientMessages() {
+  return (
+    <Gated capability="messages" page>
+      <ClientMessagesContent />
+    </Gated>
   );
 }

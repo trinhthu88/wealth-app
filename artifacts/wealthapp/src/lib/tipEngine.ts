@@ -42,7 +42,7 @@ export function generateWeeklyTip(data: TipData): Tip {
       title: "Your goal needs attention",
       body: `Your "${goal.title}" is off track. An advisor can help close the gap without requiring you to save more each month.`,
       actionLabel: "See breakdown",
-      actionRoute: "/free/goals",
+      actionRoute: "/client/goals/goals",
     };
   }
 
@@ -52,7 +52,7 @@ export function generateWeeklyTip(data: TipData): Tip {
       title: "You're almost on track",
       body: `Your "${goal.title}" is within reach — just $${Math.round(goal.monthlyShortfall ?? 0).toLocaleString()}/month more would put you fully on track.`,
       actionLabel: "Update my budget",
-      actionRoute: "/free/budget",
+      actionRoute: "/client/money",
     };
   }
 
@@ -62,7 +62,7 @@ export function generateWeeklyTip(data: TipData): Tip {
       title: "Your savings vs your peers",
       body: `You're saving ${effectiveSavingsRate.toFixed(0)}% effectively. People your age average ${ageBenchmarkSavingsRate}%. Closing this gap adds years to your retirement date.`,
       actionLabel: "Review my budget",
-      actionRoute: "/free/budget",
+      actionRoute: "/client/money",
     };
   }
 
@@ -71,8 +71,8 @@ export function generateWeeklyTip(data: TipData): Tip {
       type: "expat_tip",
       title: "Are your investments expat-optimised?",
       body: "As an expat, local investment accounts may offer better returns than home country accounts. An advisor can review your options.",
-      actionLabel: "Book a free review",
-      actionRoute: "/book",
+      actionLabel: "Talk to an advisor",
+      actionRoute: "/client/dashboard",
     };
   }
 
@@ -82,7 +82,7 @@ export function generateWeeklyTip(data: TipData): Tip {
       title: "Your net worth grew this month",
       body: `Net worth is up ${sym}${Math.round(netWorthDelta).toLocaleString()} since last month — momentum is building. Keep your savings rate consistent and consider whether your surplus could be working harder.`,
       actionLabel: "Talk to an advisor",
-      actionRoute: "/book",
+      actionRoute: "/client/dashboard",
     };
   }
 
@@ -92,7 +92,7 @@ export function generateWeeklyTip(data: TipData): Tip {
       title: "Net worth dipped this month",
       body: `Net worth is down ${sym}${Math.round(Math.abs(netWorthDelta)).toLocaleString()} since last month. One down month isn't cause for alarm — reviewing your budget usually reveals whether it was a one-off or a pattern.`,
       actionLabel: "Review my budget",
-      actionRoute: "/free/budget",
+      actionRoute: "/client/money",
     };
   }
 
@@ -102,7 +102,7 @@ export function generateWeeklyTip(data: TipData): Tip {
       title: "Three quick wins for your score",
       body: `Your score is ${healthScore}/100. Reach 20% savings (+5 pts), complete your pathway (+5 pts), and set a goal target date (+5 pts).`,
       actionLabel: "See my score",
-      actionRoute: "/free/health-score",
+      actionRoute: "/client/dashboard",
     };
   }
 
@@ -112,7 +112,7 @@ export function generateWeeklyTip(data: TipData): Tip {
       title: "Finish setting up your profile",
       body: "Your financial pathway isn't fully complete yet. A complete profile gives you — and any advisor you work with — a much clearer picture, and it takes less than 5 minutes to finish.",
       actionLabel: "Continue your pathway",
-      actionRoute: "/free/onboarding",
+      actionRoute: "/client/onboarding",
     };
   }
 
@@ -122,7 +122,7 @@ export function generateWeeklyTip(data: TipData): Tip {
       title: `${streakWeeks}-week streak — you're building something real`,
       body: "Consistent financial tracking is one of the strongest predictors of long-term wealth. You're in the top 20% for engagement.",
       actionLabel: "View achievements",
-      actionRoute: "/free/dashboard",
+      actionRoute: "/client/dashboard",
     };
   }
 
@@ -131,7 +131,7 @@ export function generateWeeklyTip(data: TipData): Tip {
     title: "Are your savings working hard enough?",
     body: "Vietnam bank deposit rates average 4.5–5.2% in 2025. Make sure your savings rate reflects what you're actually earning.",
     actionLabel: "Update savings rate",
-    actionRoute: "/free/dashboard",
+    actionRoute: "/client/dashboard",
   };
 }
 

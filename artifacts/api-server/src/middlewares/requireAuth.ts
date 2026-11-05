@@ -1,5 +1,6 @@
 import { getAuth } from "@clerk/express";
 import type { Request, Response, NextFunction } from "express";
+import { checkAllowance, gateMessage, type Capability } from "@workspace/tier-policy";
 
 function paramAsString(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
@@ -32,6 +33,52 @@ export function requireRole(...roles: string[]) {
     }
     (req as any).userRole = profile.role;
     next();
+  };
+}
+
+/**
+ * Checks the caller against the tier policy. Answers true when the capability may
+ * proceed; otherwise sends 403 { code: "LIMIT", capability, limit, checkpoint } and
+ * answers false. For handlers whose check depends on the row being changed.
+ * A preview gate proceeds with req.allowanceGate set, so the handler can trim its response.
+ */
+export async function checkAllowanceFor(
+  req: Request,
+  res: Response,
+  capability: Capability,
+  options: { scenarioType?: string } = {},
+): Promise<boolean> {
+  const { getEntitlementContext } = await import("../lib/entitlements");
+  const { tier, usage, leadStatus } = await getEntitlementContext(req);
+  const result = checkAllowance(tier, capability, usage, leadStatus, options);
+  (req as any).allowanceGate = result.gate;
+  if (result.allowed) return true;
+  // C2 and the sixth-holding path of C5 fire here, from the refused attempt itself.
+  if (result.checkpoint && (capability === "goals" || capability === "holdings")) {
+    const { raiseCheckpoint } = await import("../lib/checkpointEngine");
+    await raiseCheckpoint((req as any).userId, result.checkpoint, {
+      capability,
+      limit: result.limit,
+      used: capability === "goals" ? usage.goals : usage.holdings,
+    });
+  }
+  res.status(403).json({
+    code: "LIMIT",
+    capability,
+    limit: result.limit,
+    checkpoint: result.checkpoint,
+    error: gateMessage(capability, result.limit),
+  });
+  return false;
+}
+
+/** Must run after requireAuth. Gates a route on the caller's tier; see lib/tier-policy. */
+export function requireAllowance(capability: Capability) {
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const scenarioType = capability === "scenarios" && typeof req.body?.scenarioType === "string"
+      ? req.body.scenarioType
+      : undefined;
+    if (await checkAllowanceFor(req, res, capability, { scenarioType })) next();
   };
 }
 

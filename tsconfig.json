@@ -19,6 +19,12 @@
       "path": "./lib/net-worth"
     },
     {
+      "path": "./lib/tier-policy"
+    },
+    {
+      "path": "./lib/checkpoints"
+    },
+    {
       "path": "./lib/integrations-anthropic-ai"
     }
   ]

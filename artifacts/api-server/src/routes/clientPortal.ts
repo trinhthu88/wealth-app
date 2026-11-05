@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
-import { eq, desc, and, ne, sql, count, or } from "drizzle-orm";
+import { eq, desc, and, ne, sql, count, or, gte } from "drizzle-orm";
+import { z } from "zod/v4";
 import {
   CompleteClientOnboardingBody,
   GetClientSetupChecklistResponse,
@@ -15,13 +16,16 @@ import {
   conversationsTable, messagesTable, advisedStrategyReturnsTable,
   advisedPlanStatusSchema,
 } from "@workspace/db";
-import { requireAuth, requireRole, requireAdvisorOwnsClient, requireAdvisorOwnsLead, requireAdvisorOwnsClientOrLead, requireAdvisorOwnsPlan } from "../middlewares/requireAuth";
+import { requireAuth, requireRole, requireAdvisorOwnsClient, requireAdvisorOwnsLead, requireAdvisorOwnsClientOrLead, requireAdvisorOwnsPlan, requireAllowance, checkAllowanceFor } from "../middlewares/requireAuth";
 import { resolveHoldingBenchmark, getDeviationWarning } from "../lib/benchmarks";
 import { recordHoldingTransaction, upsertMonthlyHoldingLedgerEntry, getOrCreateDefaultCashHolding } from "../lib/holdingTransactions";
 import { syncAdvisedPlanContributionsToBudget } from "../lib/advisedPlanBudgetSync";
 import { computeNetWorth } from "../lib/netWorthService";
 import { getCurrentAdvisorIdForClient } from "../lib/currentAdvisor";
 import { parseDateOfBirth } from "../lib/profileFields";
+import { getEntitlementContext } from "../lib/entitlements";
+import { runCheckpointHook } from "../lib/checkpointEngine";
+import { earliestBudgetMonth } from "@workspace/tier-policy";
 
 const router: IRouter = Router();
 
@@ -442,9 +446,22 @@ router.get("/advisor/clients/:id/advised-plans", requireAuth, requireRole("advis
   res.json(plans);
 });
 
+/**
+ * Passing requireAdvisorOwnsClientOrLead proves the advisor owns :clientId, not :planId, so
+ * statement routes must also check the plan is that client's. Otherwise an advisor could read or
+ * write another client's statements by naming their own client with someone else's plan.
+ */
+async function planBelongsToClient(planId: string, clientId: string): Promise<boolean> {
+  if (!z.uuid().safeParse(planId).success) return false;
+  const [plan] = await db.select({ userId: advisedPlansTable.userId }).from(advisedPlansTable)
+    .where(eq(advisedPlansTable.id, planId));
+  return plan?.userId === clientId;
+}
+
 // ── Advisor: get statements for a plan ───────────────────────────────────
 router.get("/advisor/clients/:clientId/advised-plans/:planId/statements", requireAuth, requireRole("advisor", "super_admin"), requireAdvisorOwnsClientOrLead("clientId"), async (req, res): Promise<void> => {
   const planId = req.params.planId as string;
+  if (!(await planBelongsToClient(planId, req.params.clientId as string))) { res.status(404).json({ error: "Not found" }); return; }
   const stmts = await db.select().from(advisedPlanStatementsTable)
     .where(eq(advisedPlanStatementsTable.advisedPlanId, planId))
     .orderBy(desc(advisedPlanStatementsTable.periodEnd));
@@ -492,6 +509,7 @@ router.post("/advisor/clients/:clientId/advised-plans/:planId/statements", requi
   const advisorId = (req as any).userId;
   const planId = req.params.planId as string;
   const clientId = req.params.clientId as string;
+  if (!(await planBelongsToClient(planId, clientId))) { res.status(404).json({ error: "Not found" }); return; }
   const {
     periodStart, periodEnd, statementDate, entryMode,
     openingValue, closingValue, contributions, extraAllocations,
@@ -666,7 +684,7 @@ router.get("/advisor/leads/:id/holdings", requireAuth, requireRole("advisor", "s
   res.json(await getActiveHoldingsForUser(rawId));
 });
 
-router.post("/client/holdings", requireAuth, async (req, res): Promise<void> => {
+router.post("/client/holdings", requireAuth, requireAllowance("holdings"), async (req, res): Promise<void> => {
   const userId = (req as any).userId;
   const {
     holdingType, label, currency, purchaseDate, notes, expectedAnnualReturnPct,
@@ -707,6 +725,7 @@ router.post("/client/holdings", requireAuth, async (req, res): Promise<void> => 
     totalInvestedOther: totalInvestedOther != null ? String(totalInvestedOther) : null,
   }).returning();
 
+  await runCheckpointHook(userId);
   res.status(201).json(holding);
 });
 
@@ -729,6 +748,13 @@ router.put("/client/holdings/:id", requireAuth, async (req, res): Promise<void> 
   const userId = (req as any).userId;
   const id = req.params.id as string;
   const body = req.body;
+
+  // A removed holding does not use a slot, so restoring one passes the same cap as adding one.
+  if (body.isActive === true) {
+    const [current] = await db.select({ isActive: clientHoldingsTable.isActive }).from(clientHoldingsTable)
+      .where(and(eq(clientHoldingsTable.id, id), eq(clientHoldingsTable.userId, userId)));
+    if (current && !current.isActive && !(await checkAllowanceFor(req, res, "holdings"))) return;
+  }
 
   const updates: Record<string, unknown> = { updatedAt: new Date() };
   for (const k of HOLDING_TEXT_FIELDS) {
@@ -885,8 +911,9 @@ router.get("/client/advised-strategy-returns", requireAuth, async (req, res): Pr
 router.get("/client/budget", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
   const limit = parseInt(String(req.query.limit ?? "12"), 10);
+  const { tier } = await getEntitlementContext(req);
   const months = await db.select().from(clientBudgetMonthsTable)
-    .where(eq(clientBudgetMonthsTable.userId, userId))
+    .where(and(eq(clientBudgetMonthsTable.userId, userId), gte(clientBudgetMonthsTable.month, earliestBudgetMonth(tier))))
     .orderBy(desc(clientBudgetMonthsTable.month))
     .limit(limit);
   res.json(months);
@@ -895,6 +922,8 @@ router.get("/client/budget", requireAuth, async (req, res): Promise<void> => {
 router.get("/client/budget/:month", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
   const month = req.params.month as string;
+  const { tier } = await getEntitlementContext(req);
+  if (month < earliestBudgetMonth(tier)) { res.status(404).json({ error: "Not found" }); return; }
   const [row] = await db.select().from(clientBudgetMonthsTable)
     .where(and(eq(clientBudgetMonthsTable.userId, userId), eq(clientBudgetMonthsTable.month, month)));
   if (!row) { res.status(404).json({ error: "Not found" }); return; }
@@ -1017,6 +1046,7 @@ router.post("/client/budget", requireAuth, async (req, res): Promise<void> => {
     });
   }
 
+  await runCheckpointHook(userId);
   res.json(row);
 });
 
@@ -1055,7 +1085,7 @@ router.get("/client/scenarios", requireAuth, async (req, res): Promise<void> => 
   res.json(rows);
 });
 
-router.post("/client/scenarios", requireAuth, async (req, res): Promise<void> => {
+router.post("/client/scenarios", requireAuth, requireAllowance("scenarios"), async (req, res): Promise<void> => {
   const userId = (req as any).userId;
   const {
     scenarioName, scenarioType, sourceType, sourceId, linkedGoalId,
@@ -1351,7 +1381,7 @@ router.get("/client/dashboard/goals", requireAuth, async (req, res): Promise<voi
 // eventually ships) plus the advisor/review info the pathway header needs —
 // both of which must be present regardless of whether a plan row exists, so
 // this never collapses to a bare `null` response.
-router.get("/client/plan", requireAuth, async (req, res): Promise<void> => {
+router.get("/client/plan", requireAuth, requireAllowance("plan"), async (req, res): Promise<void> => {
   const userId = (req as any).userId;
 
   const [plan] = await db.select().from(financialPlansTable)
@@ -1406,7 +1436,7 @@ router.get("/client/plan", requireAuth, async (req, res): Promise<void> => {
 });
 
 // ── Milestone comments ────────────────────────────────────────────────────
-router.get("/client/plan/milestones/:id/comments", requireAuth, async (req, res): Promise<void> => {
+router.get("/client/plan/milestones/:id/comments", requireAuth, requireAllowance("plan"), async (req, res): Promise<void> => {
   const userId = (req as any).userId;
   const milestoneId = req.params.id as string;
   const context = await getMilestoneCommentContext(milestoneId, userId);
@@ -1428,7 +1458,7 @@ router.get("/client/plan/milestones/:id/comments", requireAuth, async (req, res)
   res.json(comments);
 });
 
-router.post("/client/plan/milestones/:id/comments", requireAuth, async (req, res): Promise<void> => {
+router.post("/client/plan/milestones/:id/comments", requireAuth, requireAllowance("plan"), async (req, res): Promise<void> => {
   const userId = (req as any).userId;
   const milestoneId = req.params.id as string;
   const { content } = req.body;
@@ -1443,7 +1473,7 @@ router.post("/client/plan/milestones/:id/comments", requireAuth, async (req, res
 });
 
 // ── Review request message ────────────────────────────────────────────────
-router.post("/client/plan/review-request", requireAuth, async (req, res): Promise<void> => {
+router.post("/client/plan/review-request", requireAuth, requireAllowance("plan"), async (req, res): Promise<void> => {
   const userId = (req as any).userId;
   const { message } = req.body;
   if (typeof message !== "string" || !message.trim()) { res.status(400).json({ error: "message required" }); return; }
