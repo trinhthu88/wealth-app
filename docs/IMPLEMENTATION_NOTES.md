@@ -152,7 +152,6 @@ Found by the browser test and fixed:
 | Removing `subscriptions` | Nothing writes it now. Delete it after production has run `backfill-memberships`, along with the `/billing/webhook` alias. |
 | C2 draft goal | The design keeps the refused goal as a draft. Not built. |
 | Net worth trend for free users | The nightly snapshot job covers investment clients only, so a free user's trend stays empty. |
-| Holding cap via surplus sweep | `POST /client/budget` can create a default cash holding, which can take a free user to six. |
 | Caps under concurrency | The guard counts and then writes, so simultaneous requests can pass a cap by one. |
 | `POST /goals/upsert-from-pathway` | No caller remains, but it still deletes extra goals (F-10). The brief named only `routes/pathway.ts`, and a test covers this route. Worth deleting. |
 | Legacy routes | `/budget` and `POST /health-score` have no UI callers left. |
