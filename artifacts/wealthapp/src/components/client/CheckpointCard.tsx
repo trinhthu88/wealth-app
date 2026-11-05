@@ -4,6 +4,7 @@ import { useCheckpoint } from "@/hooks/useCheckpoint";
 import { checkpointCopy } from "@/lib/checkpointCopy";
 import { cn } from "@/lib/utils";
 import Sol from "@/components/Sol";
+import C8PlanPreview from "@/components/client/C8PlanPreview";
 
 interface Props {
   codes: readonly CheckpointCode[];
@@ -31,6 +32,9 @@ export default function CheckpointCard({ codes, className, goalId }: Props) {
       <div className="shrink-0"><Sol size="sm" animate="idle" showRays={false} /></div>
       <div className="min-w-0 flex-1">
         <p className="text-pretty text-[14px] leading-[1.45] text-forest">{body}</p>
+        {checkpoint.code === "C8_plan_preview" && (
+          <C8PlanPreview monthlySurplus={Number(checkpoint.snapshot.monthlySurplus) || 0} />
+        )}
         {action && (
           <button
             type="button"

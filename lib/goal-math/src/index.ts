@@ -35,3 +35,4 @@ export { computeGoalProgress } from "./pacingProgress";
 export type { GoalStatus, GoalProgressResult } from "./pacingProgress";
 export { solveCoastPoint } from "./coastPoint";
 export type { CoastPointInput, CoastPointResult } from "./coastPoint";
+export { projectRegularSavings } from "./projectRegularSavings";

@@ -97,6 +97,7 @@ Found by the browser test and fixed:
 ### Phase 9: free-user completion (in progress)
 - A1: Free users receive their overall score and weakest sub-score insight only; the score-breakdown capability is limited by entitlements, and free score history is omitted.
 - A2: A goal refused by the cap is retained as a draft, excluded from active-goal calculations, and shown under "Waiting for membership"; drafts activate after promotion or membership activation only when the goals allowance permits. Before adding the `draft` CHECK value, the development `financial_goals` table was backed up (24 rows). Drizzle push reported success but left the existing CHECK unchanged, so a targeted transactional development-only ALTER updated it; the row count remained 24.
+- A3: C8 now shows a read-only 10- and 25-year monthly-savings example using the latest surplus and the admin-configured strategy return. The pure `projectRegularSavings` calculation is tested, and projections are not stored. It uses the RSP return where configured, falling back to the first configured strategy return as the existing comparison tool does.
 
 ### Metrics
 - `pnpm --filter @workspace/scripts run funnel-report` (add `--weeks=<n>`, default 12). "Promoted within 30 days" uses the lead's `updatedAt` as the promotion date, so a later edit to a promoted lead can drop it from that count.
@@ -106,7 +107,6 @@ Found by the browser test and fixed:
 | Item | Why it matters |
 |---|---|
 | Lead detail reuses client screens | The brief asks for the client screens in read-only mode. The client pages fetch their own `/client/*` data, so reuse needs them to accept a data source. This branch adds read-only panels beside the existing summary instead. |
-| Advised plan preview | The sample plan built from the user's surplus is not built. C8 shows an offer card. `advisedPlans` is served in entitlements but not enforced on `/client/advised-plans*`, which only return the caller's own plans. |
 | Comp controls in the UI | `PUT /admin/users/:id/membership` works and the badge shows, but `/admin/clients` has no button yet, so comping takes an API call. |
 | Trial-ending and lapse emails | C11 and C12 appear on the dashboard only, as the addendum says. Someone who doesn't sign in during the two-day window sees no C11, and is charged. Stripe's own trial reminder email can cover this. |
 | Removing `subscriptions` | Nothing writes it now. Delete it after production has run `backfill-memberships`, along with the `/billing/webhook` alias. |
