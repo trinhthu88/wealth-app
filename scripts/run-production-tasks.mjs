@@ -68,6 +68,9 @@ function runJob(name) {
 async function main() {
   if (!process.env.DATABASE_URL) { log("DATABASE_URL is not set, nothing run."); return; }
   const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
+  // The database can drop this connection (a restart, a new deployment replacing this one). Without
+  // a listener that crashes this process; the jobs' own transactions roll back either way.
+  client.on("error", (err) => log(`lock connection dropped: ${err.message}`));
   await client.connect();
   try {
     const { rows } = await client.query("select pg_try_advisory_lock(hashtext('wealthapp:production-tasks')) as got");

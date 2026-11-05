@@ -177,6 +177,7 @@ if (process.argv[1]?.endsWith("relink-live-profiles.ts")) {
   const url = process.env.TARGET_DATABASE_URL || process.env.DATABASE_URL;
   if (!url) { console.error("Set DATABASE_URL."); process.exit(1); }
   const pool = new pg.Pool({ connectionString: url });
+  pool.on("error", (err) => console.error(`database connection dropped: ${err.message}`));
   relink(pool, parsePairs(list), apply)
     .then((lines) => { for (const l of lines) console.log(l); })
     .catch((err) => { console.error(err instanceof Error ? err.message : err); process.exitCode = 1; })
