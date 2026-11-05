@@ -7,15 +7,19 @@ interface Props {
   darkMode?: boolean;
 }
 
-const SIZES = { sm: 56, md: 100, lg: 160 };
+// lg matches the free Health score hero (132px ring, 12px stroke).
+const SIZES = { sm: 56, md: 100, lg: 132 };
 const STROKE = { sm: 5, md: 8, lg: 12 };
+// Fraunces light (font-display + tabular-nums forces weight 300).
+const NUM_SIZE = { sm: "text-[18px]", md: "text-[30px]", lg: "text-[52px]" };
 
 export default function HealthScoreRing({ score, size = "md", animate = true, darkMode = false }: Props) {
   const px = SIZES[size];
   const stroke = STROKE[size];
   const r = (px - stroke) / 2;
   const circ = 2 * Math.PI * r;
-  const offset = circ - (Math.min(100, Math.max(0, score)) / 100) * circ;
+  const clamped = Math.min(100, Math.max(0, score));
+  const offset = circ - (clamped / 100) * circ;
 
   const circleRef = useRef<SVGCircleElement>(null);
 
@@ -31,23 +35,19 @@ export default function HealthScoreRing({ score, size = "md", animate = true, da
     return () => clearTimeout(timeout);
   }, [score, animate, circ, offset]);
 
-  // Token colors (index.css): green #0C21A4, sun #FF891F, clay #FF891F —
-  // matches the same 3-tier scale used elsewhere for score/status coloring.
-  const color = darkMode ? "white"
-    : score >= 70 ? "var(--green)"
-    : score >= 40 ? "var(--sun)"
-    : "var(--clay)";
-
-  const trackColor = darkMode ? "rgba(255,255,255,0.2)" : "var(--track)";
-
-  const fontSize = { sm: "text-xs", md: "text-base", lg: "text-2xl" }[size];
+  // Light surfaces: Cobalt ring on the soft track, Sunset Pop only when the
+  // score needs attention. On a Cobalt hero card (darkMode) the ring is always
+  // Spring Field on a translucent white track, as in the approved design.
+  const needsAttention = !darkMode && clamped > 0 && clamped < 40;
+  const color = darkMode ? "var(--field)" : needsAttention ? "var(--sun)" : "var(--forest)";
+  const trackColor = darkMode ? "rgba(255, 255, 255, 0.16)" : "var(--track)";
 
   return (
     <div
       className="relative inline-flex items-center justify-center"
       style={{ width: px, height: px }}
       role="img"
-      aria-label={`Health score: ${Math.round(score)} out of 100`}
+      aria-label={`Health score: ${Math.round(clamped)} out of 100`}
     >
       <svg width={px} height={px} style={{ transform: "rotate(-90deg)" }} aria-hidden="true">
         <circle cx={px / 2} cy={px / 2} r={r} fill="none" stroke={trackColor} strokeWidth={stroke} />
@@ -62,12 +62,13 @@ export default function HealthScoreRing({ score, size = "md", animate = true, da
           strokeLinecap="round"
           strokeDasharray={circ}
           strokeDashoffset={animate ? circ : offset}
-          style={!animate ? {} : undefined}
         />
       </svg>
       <div className="absolute inset-0 flex items-center justify-center" aria-hidden="true">
-        <span className={`font-bold ${fontSize}`} style={{ color: darkMode ? "white" : color }}>
-          {Math.round(score)}
+        <span
+          className={`font-display tabular-nums leading-none tracking-[-0.05em] ${NUM_SIZE[size]} ${darkMode ? "text-paper" : "text-forest"}`}
+        >
+          {Math.round(clamped)}
         </span>
       </div>
     </div>
