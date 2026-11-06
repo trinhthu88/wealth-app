@@ -47,6 +47,9 @@ interface Goal {
   targetAmount: string | null;
   currentAmount: string | null;
   targetDate: string | null;
+  /** Computed from the goal's linked sources of funds, in USD. */
+  funding: { currentAmount: number };
+  targetAmountUsd: number | null;
 }
 
 interface Task { id: string; title: string; priority: string; status: string; dueDate: string | null; }
@@ -332,15 +335,15 @@ export default function AdvisorClientDetail() {
                       {g.status.replace(/_/g, " ")}
                     </span>
                   </div>
-                  {g.targetAmount && (
+                  {g.targetAmountUsd != null && g.targetAmountUsd > 0 && (
                     <div className="mt-4 pt-4 border-t border-hairline">
                       <div className="flex justify-between text-[13px] mb-2">
                         <span className="text-ink-60">Progress</span>
-                        <span className="font-medium text-forest tabular-nums">{fmtCurrency(parseFloat(g.currentAmount || "0"))} / {fmtCurrency(parseFloat(g.targetAmount))}</span>
+                        <span className="font-medium text-forest tabular-nums">{fmtCurrency(g.funding.currentAmount)} / {fmtCurrency(g.targetAmountUsd)}</span>
                       </div>
                       <div className="h-2 w-full bg-paper rounded-full overflow-hidden">
                         <div className="h-full bg-green rounded-full"
-                          style={{ width: `${Math.min(100, (parseFloat(g.currentAmount || "0") / parseFloat(g.targetAmount)) * 100)}%` }} />
+                          style={{ width: `${Math.min(100, (g.funding.currentAmount / g.targetAmountUsd) * 100)}%` }} />
                       </div>
                     </div>
                   )}

@@ -33,6 +33,8 @@ interface Lead {
 interface Goal {
   id: string; title: string; goalType: string; status: string;
   targetAmount: string | null; currentAmount: string | null; targetDate: string | null;
+  /** Computed from the goal's linked sources of funds, in USD. */
+  funding: { currentAmount: number }; targetAmountUsd: number | null;
 }
 interface Asset { id: string; name: string; category: string; valueUsd: string; }
 interface Liability { id: string; name: string; category: string; balanceUsd: string; }
@@ -232,10 +234,10 @@ export default function AdvisorLeadDetail() {
                       <div key={g.id} className="bg-surface border border-hairline rounded-[26px] p-6 shadow-[0_2px_14px_rgba(12,33,164,0.06)]">
                         <h4 className="font-display text-[18px] font-semibold text-forest mb-1">{g.title}</h4>
                         <p className="text-[13px] text-ink-40 tracking-wide uppercase capitalize">{g.goalType.replace(/_/g, " ")}</p>
-                        {g.targetAmount && (
+                        {g.targetAmountUsd != null && g.targetAmountUsd > 0 && (
                           <div className="mt-4 pt-4 border-t border-hairline flex justify-between text-[13px]">
                             <span className="text-ink-60">Progress</span>
-                            <span className="font-medium text-forest tabular-nums">{fmtCurrency(parseFloat(g.currentAmount || "0"))} / {fmtCurrency(parseFloat(g.targetAmount))}</span>
+                            <span className="font-medium text-forest tabular-nums">{fmtCurrency(g.funding.currentAmount)} / {fmtCurrency(g.targetAmountUsd)}</span>
                           </div>
                         )}
                       </div>

@@ -55,14 +55,7 @@ async function toolGetGoalProgress(userId: string, input: { goalId?: string }) {
   if (scoped.length === 0) return { goals: [] };
 
   const goals = await Promise.all(scoped.map(async g => {
-    if (!g.targetAmount || !g.targetDate) {
-      return {
-        id: g.id, title: g.title, goalType: g.goalType,
-        targetAmount: g.targetAmount ? parseFloat(g.targetAmount) : null,
-        currentAmount: Math.round(parseFloat(g.currentAmount ?? "0") || 0),
-        targetDate: g.targetDate, status: g.status, progressPct: null,
-      };
-    }
+    // Always read funding from the goal's linked sources, even without a target or date.
     const summary = await computeGoalFundingSummary(userId, g);
     return {
       id: g.id, title: g.title, goalType: g.goalType,
