@@ -65,7 +65,25 @@ export function useNetWorthSummary() {
     item.source === "liability" || item.source === "mortgage",
   );
 
+  // One categorisation for every screen: holdings, advised plans and manual
+  // assets all land in a bucket by what they are, not by where they were entered.
+  const manualAssets = items.manualAssets as ManualAsset[];
+  const assetByCategory: Record<string, number> = {};
+  for (const a of syncedAssets) assetByCategory[a.category] = (assetByCategory[a.category] ?? 0) + a.valueUsd;
+  for (const a of manualAssets) {
+    const cat = a.category || "other_asset";
+    assetByCategory[cat] = (assetByCategory[cat] ?? 0) + a.valueUsd;
+  }
+  const cashTotal = (assetByCategory.cash ?? 0) + (assetByCategory.savings ?? 0);
+  const propertyTotal = (assetByCategory.property ?? 0) + (assetByCategory.real_estate ?? 0);
+  const assetsTotal = Object.values(assetByCategory).reduce((sum, v) => sum + v, 0);
+
   return {
+    assetByCategory,
+    cashTotal,
+    propertyTotal,
+    /** Everything that is not cash or property, so the three Home cards add up to total assets. */
+    investmentsTotal: assetsTotal - cashTotal - propertyTotal,
     totalAssets: summary?.totalAssets ?? 0,
     totalLiabilities: summary?.totalLiabilities ?? 0,
     netWorth: summary?.netWorth ?? 0,
@@ -73,7 +91,7 @@ export function useNetWorthSummary() {
     liabilityCount: liabilitiesInSummary.length,
     syncedAssets,
     syncedLiabilities,
-    manualAssets: items.manualAssets as ManualAsset[],
+    manualAssets,
     manualLiabilities: items.manualLiabilities,
     loading: summaryQuery.isLoading || items.loading,
     addAsset: items.addAsset,

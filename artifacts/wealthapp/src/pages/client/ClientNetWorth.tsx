@@ -24,13 +24,12 @@ import { useNetWorthSummary } from "@/hooks/useNetWorthSummary";
 import { useNetWorthTrend } from "@/hooks/useNetWorthTrend";
 import { usePlan } from "@/hooks/usePlan";
 
-const CASH_CATEGORIES = new Set(["cash", "savings"]);
 
 export default function ClientNetWorth() {
   const [location] = useLocation();
   const isPropertyDebts = location.split(/[?#]/, 1)[0] === "/client/wealth/property-debts";
   const {
-    syncedAssets, syncedLiabilities, manualAssets, manualLiabilities,
+    syncedLiabilities, manualAssets, manualLiabilities, assetByCategory, cashTotal,
     totalAssets, totalLiabilities, netWorth, assetCount, liabilityCount, loading,
     addAsset, updateAsset, deleteAsset, addLiability, updateLiability, deleteLiability,
   } = useNetWorthSummary();
@@ -48,10 +47,7 @@ export default function ClientNetWorth() {
     liabilityByCategory[l.category] = (liabilityByCategory[l.category] ?? 0) + l.balanceUsd;
   }
 
-  const cashValue = [...syncedAssets, ...manualAssets]
-    .filter(a => CASH_CATEGORIES.has(a.category))
-    .reduce((s, a) => s + a.valueUsd, 0);
-  const cashPct = totalAssets > 0 ? Math.round((cashValue / totalAssets) * 100) : 0;
+  const cashPct = totalAssets > 0 ? Math.round((cashTotal / totalAssets) * 100) : 0;
   const placeCount = assetCount + liabilityCount;
   const manualAssetTotal = manualAssets.reduce((sum, asset) => sum + asset.valueUsd, 0);
   const manualLiabilityTotal = manualLiabilities.reduce((sum, liability) => sum + liability.balanceUsd, 0);
@@ -105,8 +101,7 @@ export default function ClientNetWorth() {
             <NetWorthTrendChart trendData={trendData} hasHistory={hasHistory} />
 
             <NetWorthSummaryBar
-              syncedAssets={syncedAssets}
-              manualAssets={manualAssets}
+              assetByCategory={assetByCategory}
               totalAssets={totalAssets}
               totalLiabilities={totalLiabilities}
               liabilityByCategory={liabilityByCategory}

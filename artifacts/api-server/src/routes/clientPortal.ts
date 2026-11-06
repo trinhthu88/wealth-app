@@ -25,6 +25,7 @@ import { getCurrentAdvisorIdForClient } from "../lib/currentAdvisor";
 import { parseDateOfBirth } from "../lib/profileFields";
 import { getEntitlementContext } from "../lib/entitlements";
 import { runCheckpointHook } from "../lib/checkpointEngine";
+import { computeGoalFundingSummary } from "../lib/goalProgressSnapshot";
 import { checkAllowance, earliestBudgetMonth } from "@workspace/tier-policy";
 
 const router: IRouter = Router();
@@ -1375,13 +1376,25 @@ router.get("/client/dashboard/advisor", requireAuth, async (req, res): Promise<v
 });
 
 // ── Dashboard: top goals ──────────────────────────────────────────────────
+// Goal progress comes from the goal's linked sources of funds (the same
+// computeGoalFundingSummary the Goals page uses), never the raw currentAmount
+// column, which stays 0 once a goal is funded by links. Amounts are in USD.
+const GOAL_PRIORITY_RANK: Record<string, number> = { high: 0, medium: 1, low: 2 };
 router.get("/client/dashboard/goals", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as any).userId;
   const goals = await db.select().from(financialGoalsTable)
-    .where(eq(financialGoalsTable.userId, userId))
-    .orderBy(financialGoalsTable.priority)
-    .limit(3);
-  res.json(goals);
+    .where(and(eq(financialGoalsTable.userId, userId), eq(financialGoalsTable.status, "active")));
+  const top = goals
+    .sort((a, b) => (GOAL_PRIORITY_RANK[a.priority] ?? 3) - (GOAL_PRIORITY_RANK[b.priority] ?? 3)
+      || a.createdAt.getTime() - b.createdAt.getTime())
+    .slice(0, 3);
+  const summaries = await Promise.all(top.map((goal) => computeGoalFundingSummary(userId, goal)));
+  res.json(summaries.map((s) => ({
+    ...s,
+    currentAmount: String(s.funding.currentAmount),
+    targetAmount: s.targetAmountUsd == null ? null : String(s.targetAmountUsd),
+    currency: "USD",
+  })));
 });
 
 // ── Client plan ───────────────────────────────────────────────────────────

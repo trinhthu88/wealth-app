@@ -156,8 +156,8 @@ export default function ClientDashboard() {
   const wealthChangePct = wealthChange != null && wealthChangeBase !== 0 ? (wealthChange / Math.abs(wealthChangeBase)) * 100 : null;
 
   // ── Where the wealth sits ──
-  const cashTotal = netWorthSummary.manualAssets.filter(a => a.category === "cash").reduce((sum, a) => sum + a.valueUsd, 0);
-  const propertyTotal = netWorthSummary.manualAssets.filter(a => a.category === "property").reduce((sum, a) => sum + a.valueUsd, 0);
+  // Same buckets as the Net Worth breakdown: a cash holding counts as cash, not as an investment.
+  const { cashTotal, propertyTotal, investmentsTotal } = netWorthSummary;
 
   const GOAL_TINTS = ["bg-field", "bg-breeze", "bg-surface"];
 
@@ -230,7 +230,7 @@ export default function ClientDashboard() {
             )}
             <div>
               <div className="font-display tabular-nums text-[38px] leading-none tracking-[-0.04em]">
-                <CurrencyField amountUsd={data.portfolio.totalValue} compact />
+                <CurrencyField amountUsd={investmentsTotal} compact />
               </div>
               <div className="text-[12.5px] text-mint mt-2 tabular-nums">
                 {topPlan ? (

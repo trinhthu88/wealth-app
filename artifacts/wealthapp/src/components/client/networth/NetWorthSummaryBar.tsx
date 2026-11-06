@@ -1,5 +1,4 @@
 import { useState } from "react";
-import type { SyncedAsset, ManualAsset } from "@/hooks/useNetWorthItems";
 
 const ASSET_CATEGORIES: Record<string, { label: string; color: string }> = {
   investment:  { label: "Investments",   color: "var(--forest)" },
@@ -32,27 +31,18 @@ function fmtUsd(v: number) {
 }
 
 interface Props {
-  syncedAssets: SyncedAsset[];
-  manualAssets: ManualAsset[];
+  /** From useNetWorthSummary, the same buckets Home uses. */
+  assetByCategory: Record<string, number>;
   totalAssets: number;
   totalLiabilities: number;
   liabilityByCategory: Record<string, number>;
 }
 
 export default function NetWorthSummaryBar({
-  syncedAssets, manualAssets, totalAssets, totalLiabilities, liabilityByCategory,
+  assetByCategory, totalAssets, totalLiabilities, liabilityByCategory,
 }: Props) {
   const [hovered, setHovered] = useState<string | null>(null);
 
-  // Build asset segment totals
-  const assetByCategory: Record<string, number> = {};
-  for (const a of syncedAssets) {
-    assetByCategory[a.category] = (assetByCategory[a.category] ?? 0) + a.valueUsd;
-  }
-  for (const a of manualAssets) {
-    const cat = a.category || "other_asset";
-    assetByCategory[cat] = (assetByCategory[cat] ?? 0) + a.valueUsd;
-  }
 
   const assetSegments = Object.entries(assetByCategory)
     .filter(([, v]) => v > 0)
